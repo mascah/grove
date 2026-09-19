@@ -65,6 +65,9 @@ Do not clean up hypothetical stray state automatically.
 
 ## Next
 
+Use the [combined repair handoff](../../docs/prompts/W-006-W-008-implementation.txt)
+after W-007 in the same assignment's isolated worktree.
+
 Fable: reproduce R6 in a disposable repository, including the outside-repository
 lock path, then implement the linked plan and prove the surrounding parent is
 unchanged except for expected fixture outputs. Return focused commits and

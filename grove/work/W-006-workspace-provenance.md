@@ -77,6 +77,9 @@ worktree alone. Completion here is separate from integration into main.
 
 ## Next
 
+Use the [combined repair handoff](../../docs/prompts/W-006-W-008-implementation.txt)
+to implement W-006, W-007, and W-008 serially in one isolated worktree.
+
 Fable: start from main plus these review artifacts in a fresh worktree; reproduce
 R1/R2 before changing code, follow the linked plan, and return focused commits,
 verification results, and independent review evidence. Do not add interactive

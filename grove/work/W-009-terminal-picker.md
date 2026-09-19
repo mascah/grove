@@ -196,5 +196,7 @@ verify this design against those interfaces, implement the linked plan in an
 isolated worktree, and return a runnable demo plus test/review evidence. The
 owner has selected the terminal experience and requested earlier Kanban value.
 The board-first recommendation and its checkout-scoped status policy should be
-kept explicit in the handoff; do not silently invent a cross-branch card status. Worktree creation and agent execution
-remain separate later work. No implementation is authorized in this review turn.
+kept explicit in the handoff; do not silently invent a cross-branch card status.
+Use the [board implementation handoff](../../docs/prompts/W-009-implementation.txt)
+when assigning execution. Worktree creation and agent execution remain separate
+later work. W-010 proposes reusable work preparation and does not block this board.

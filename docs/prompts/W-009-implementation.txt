@@ -1,0 +1,53 @@
+Implement Grove W-009: the first terminal Kanban board, with explicit
+cross-branch version selection inside each card. Complete implementation,
+verification, independent review, and committed evidence; do not merge or push.
+
+Read docs/restart-brief.md first, then AGENTS.md, docs/record-model.md, and
+docs/work-execution.md. Retrieve W-009 and Q-001 with go run ./cmd/grove show.
+Read docs/plans/W-009-terminal-picker.md and the linked records/review evidence.
+The filename is historical: the selected first screen is the Kanban board,
+not a standalone version picker. Use W-009's documented design and plan as the
+implementation scope; earlier review-only wording refers to preparation.
+
+Before starting, verify W-006/W-007/W-008 repair commits and review fixes are
+actually integrated into main. Done statuses alone are insufficient. If they
+are not integrated, report the missing prerequisite and stop before creating
+an implementation on an obsolete base; do not merge them yourself.
+
+Inspect status, branches/worktrees, and recent history. Use a fresh isolated
+worktree from the verified main, preserving concurrent work and old worktrees.
+If W-009 already has implementation, inspect and resume/verify that work rather
+than duplicating it. Report branch, worktree, and base before editing.
+
+Deliver the documented grove board [WORK_ID] [--json] experience:
+- One clearly labelled live checkout supplies work-status columns and titles.
+- Cards open grouped committed/live versions with each source's own status;
+  choosing a card never silently selects a workspace or an aggregate status.
+- Work absent from that checkout remains discoverable under Other sources.
+- Explicit version selection calls the repaired workspace resolver. Stale,
+  missing, invalid, incomplete, and ambiguous cases remain visible and honest.
+- Support the planned checkout chooser, navigation, details, refresh, resizing,
+  cancellation, safe text rendering, and clean separation of terminal UI from
+  final workspace output.
+
+Use the plan's Bubble Tea v2 recommendation and pinned dependency baseline;
+verify compatibility during implementation. Preserve existing CLI contracts.
+Do not add record editing/drag-and-drop, worktree creation, editor/shell/agent
+launching, a running service, claims, or a runner schema. W-010's reusable-work
+entrypoint is separate and is not a prerequisite for this board assignment.
+
+Use go run ./cmd/grove to manage record fields. Follow docs/work-execution.md
+for evidence, focused commits, review, and reconciliation. Do not invoke the
+installed predecessor CLI/workflows or change sibling repositories.
+
+Run model/behavior tests, a real board-to-card-to-version-to-workspace-to-show
+fixture, pseudo-terminal restoration/cancellation tests, state-preservation
+checks, full/race suites, vet, formatting, Grove check, and documentation checks.
+Obtain independent review, fix consequential findings, and return a runnable
+Kanban demo. Distinguish automated acceptance from owner usability feedback;
+do not claim the latter occurred or mark required acceptance met without it.
+
+Proceed on routine technical choices without repeated approval requests; ask
+only for consequential product/scope conflicts or real blockers. Finish with
+commits, verification/review results, the demo command, remaining limits, and
+any specific owner judgment needed. Integration remains a separate action.

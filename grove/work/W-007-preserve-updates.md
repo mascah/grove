@@ -73,6 +73,9 @@ is evidence; lack of an old fixture does not authorize narrowing it.
 
 ## Next
 
+Use the [combined repair handoff](../../docs/prompts/W-006-W-008-implementation.txt)
+after W-006 in the same assignment's isolated worktree.
+
 Fable: reproduce the four update failures in the linked plan on the current
 base; implement byte-span/separator repairs and exact configuration guards;
 return focused commits, evidence, and independent review. Do not expand the

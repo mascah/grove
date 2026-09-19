@@ -77,6 +77,14 @@ Selected direction:
   investments; the detailed board interaction remains proposed.
 - Eventual agent execution from that workspace, with `claude -p` as the concrete
   first-provider idea. Exact invocation and lifecycle behavior need validation.
+- Near-term dogfooding need identified on 2026-09-19: repeated requests for
+  implementation prompts expose the missing restart-native `/work` equivalent.
+  The [shared execution guide](work-execution.md) and saved handoff prompts now
+  provide reusable instructions. [W-010](../grove/work/W-010-work-handoffs.md)
+  proposes a thin work entrypoint and deterministic context/prompt preparation
+  before supervised launching. A future Kanban Implement action can reuse that
+  prepared assignment; launch, cancellation, recovery, and result reconciliation
+  still need their own contract. This does not add agent launching to W-009.
 - A clean implementation start, informed by the working skills and nullsec
   experience rather than constrained by the first application's architecture.
 
@@ -335,6 +343,14 @@ that order because shared ownership overlaps. These are repair proposals under
 the existing contracts, not completed work or new product decisions. Preserve
 the retained W-004/W-005 worktree; it has no commits missing from main. Review
 and integration of the repairs remain separate steps.
+
+For current implementation assignments, use the
+[W-006–W-008 handoff](prompts/W-006-W-008-implementation.txt) for one serial repair
+worktree and the separate [W-009 handoff](prompts/W-009-implementation.txt) after
+the repair commits are integrated. Both reference the shared execution guide;
+the work records and plans remain the specifications. Shape W-010 soon after
+the repairs so future assignments need only work IDs, without making it a new
+prerequisite that delays the board.
 
 After the repairs, the selected next user outcome is a terminal Kanban board
 with explicit version selection inside each card. On 2026-09-19 the owner
