@@ -230,3 +230,15 @@ func TestOddGitPathsRoundTrip(t *testing.T) {
 		t.Fatalf("nothing may appear beside the checkouts: %q", entries)
 	}
 }
+
+func TestInspectConfigurationRemovedDuringRead(t *testing.T) {
+	root, wt := deepFixture(t)
+	project := filepath.Join(root, "outer/sub")
+	res, err := inspect(project, "W-001", func() {
+		must(t, os.Remove(filepath.Join(wt, "outer/sub/grove.yaml")))
+	})
+	must(t, err)
+	if s := source(t, res, "live", "feature"); res.Complete || s.Valid || !strings.Contains(strings.Join(s.Diagnostics, "\n"), "grove.yaml changed or disappeared") {
+		t.Fatalf("a project whose configuration vanished during the read: %+v", s)
+	}
+}

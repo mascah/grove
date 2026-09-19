@@ -8,6 +8,8 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -122,7 +124,11 @@ func inspect(root, id string, between func()) (*Result, error) {
 			// The registration can stay put while the checkout is deleted
 			// (newly prunable), replaced, or its project location swapped.
 			again := enterWorktree(w, common)
-			_, located := again.locate(common, prefix)
+			dir, located := again.locate(common, prefix)
+			var current []byte
+			if located {
+				current, _ = os.ReadFile(filepath.Join(dir, "grove.yaml"))
+			}
 			switch {
 			case len(again.Diagnostics) != 0:
 				s.fail("worktree stopped being enterable while being read: " + strings.Join(again.Diagnostics, "; "))
@@ -130,6 +136,8 @@ func inspect(root, id string, between func()) (*Result, error) {
 				s.fail("worktree was replaced while being read")
 			case s.Present && !located:
 				s.fail("the project location disappeared while being read")
+			case s.Valid && project.Revision(current) != s.ConfigRevision:
+				s.fail("grove.yaml changed or disappeared while being read")
 			}
 		}
 	}

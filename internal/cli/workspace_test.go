@@ -251,3 +251,49 @@ func TestNewlineCheckoutCLI(t *testing.T) {
 		t.Fatalf("update must create nothing beside the checkout: %q", entries)
 	}
 }
+
+// W-006 at the command line: a feature checkout whose project prefix is a
+// symlink to another repository's valid project contributes no version, makes
+// the result incomplete, and an earlier selection of it prints no workspace.
+func TestForeignProjectPrefixCLI(t *testing.T) {
+	root := gitFixture(t)
+	gitIn(t, root, "mv", "grove.yaml", "sub.yaml")
+	if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, root, "mv", "sub.yaml", "sub/grove.yaml")
+	gitIn(t, root, "mv", "docs", "sub/docs")
+	gitIn(t, root, "commit", "-q", "-m", "nested")
+	wt := filepath.Join(filepath.Dir(root), "feature-wt")
+	gitIn(t, root, "worktree", "add", "-q", "-b", "feature", wt)
+	project := filepath.Join(root, "sub")
+	earlier := versionSelector(t, project, "W-001", "live feature-wt refs/heads/feature")
+	if err := os.RemoveAll(filepath.Join(wt, "sub")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(gitFixture(t), filepath.Join(wt, "sub")); err != nil {
+		t.Fatal(err)
+	}
+
+	var out, errOut bytes.Buffer
+	if code := Run([]string{"versions", "W-001", "--json"}, project, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "is a symlink") {
+		t.Fatalf("code=%d stderr=%s", code, errOut.String())
+	}
+	var listed struct {
+		Complete bool
+		Records  []struct{ Versions []map[string]any }
+	}
+	if err := json.Unmarshal(out.Bytes(), &listed); err != nil || listed.Complete || len(listed.Records) != 1 {
+		t.Fatalf("%v %s", err, out.String())
+	}
+	for _, v := range listed.Records[0].Versions {
+		if v["kind"] == "live" && v["ref"] == "refs/heads/feature" {
+			t.Fatalf("the foreign project was attributed to the feature checkout: %v", v)
+		}
+	}
+	out.Reset()
+	errOut.Reset()
+	if code := Run([]string{"workspace", "--source", earlier, "--json"}, project, &out, &errOut); code != 1 || out.Len() != 0 || !strings.Contains(errOut.String(), "is not a valid source") {
+		t.Fatalf("code=%d stdout=%q stderr=%s", code, out.String(), errOut.String())
+	}
+}

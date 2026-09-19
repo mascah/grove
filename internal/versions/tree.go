@@ -63,7 +63,8 @@ func treeFS(root, commit string) (fstest.MapFS, bool, error) {
 		meta, name, ok := strings.Cut(entry, "\t")
 		// With -t, the prefix directory and each of its parents are listed
 		// too ("./", "../", "../../") when root is below the repository root.
-		if strings.Trim(name, "./") == "" {
+		// Only those end in a slash; a real entry named "..." does not.
+		if strings.HasSuffix(name, "/") && strings.Trim(name, "./") == "" {
 			continue
 		}
 		fields := strings.Fields(meta)

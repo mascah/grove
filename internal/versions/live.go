@@ -15,7 +15,10 @@ import (
 // identity asks Git where dir is: its Git directory and its path inside the
 // worktree. The Git directory is unique to one worktree of one repository.
 // ponytail: one git process per path, because rev-parse cannot delimit paths
-// that contain newlines; batch if inspecting many worktrees becomes slow.
+// that contain newlines. A live checkout costs about ten rev-parse processes
+// per inspection (entering, the prefix, the record folder, and the second
+// inventory's re-entry) where it used to cost one; batch them or skip the
+// prefix checks for root projects if inspecting many worktrees becomes slow.
 func identity(dir string) (gitDir, prefix string, err error) {
 	if gitDir, err = repo.GitPath(dir, "--git-dir"); err == nil {
 		prefix, err = repo.GitPath(dir, "--show-prefix")
