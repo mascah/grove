@@ -92,12 +92,35 @@ files and the CLI without a daemon or provider account.
 
 ## Future launch boundary
 
+The owner described two proposal sources and a later board action on 2026-09-19:
+interactive shaping, unattended research/planning, then an option to start
+headless implementation when activating selected work. The companion
+[W-011](W-011-shaping-entrypoint.md) owns authoring instructions; this record
+continues to own the implementation assignment. Do not turn it into a combined
+shaping, scheduler, TUI mutation, and runner project.
+
+The reusable instructions need an explicit interaction mode. An interactive
+caller can ask for a consequential missing decision; a headless caller must
+persist the question/affected work and return a concrete waiting condition,
+continuing only independent authorized work. Include outcome, allowed writes,
+verification/review obligations, and completion/wait/stop conditions in the
+assignment. A provider-specific session ID or launch command is not the mandate.
+
 The same prepared assignment can later feed a Kanban Implement control and
 `claude -p`. That action must separately define launch authorization, fresh
 source/workspace binding, input revisions, attempt identity, duplicate-start
 handling, logs/results, exit/failure states, cancellation, interruption recovery,
 and reconciliation. A saved prompt or background PID is not a supervised run.
 Do not smuggle these policies into the first board or add a run schema here.
+
+Settled lifecycle requirement: closing the TUI leaves running sessions working;
+reopening reconnects to them, while Stop is a separate action. The
+[shaping and runner evidence review](../../docs/reviews/2026-09-19-shaping-and-runner-evidence.md)
+examines Bench's stream capture and tmux host as possible sources of mechanisms.
+No runtime choice is settled. Raw events, provider completion, verified work
+acceptance, and integration must remain distinct. Status updates alone must not
+trigger a process; the later activation UI should offer manual activation or
+explicitly starting implementation.
 
 ## Acceptance
 
@@ -118,6 +141,10 @@ Do not smuggle these policies into the first board or add a run schema here.
    Verify missing-plan preparation, external blockers, serial batch handoffs,
    interruption/resume, and pending human judgment for the supported path.
    Do not claim full `/work` equivalence from prompt-generation tests alone.
+7. The assignment states whether human interaction is available. A simulated
+   headless missing-decision case produces a durable question/wait handoff,
+   without invented answers, automatic retries, or a provider launch. Interactive
+   and headless instructions share outcome/constraints/acceptance sources.
 
 ## Constraints and dependencies
 

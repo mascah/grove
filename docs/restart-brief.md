@@ -79,6 +79,10 @@ Selected direction:
   investments; the detailed board interaction remains proposed.
 - Eventual agent execution from that workspace, with `claude -p` as the concrete
   first-provider idea. Exact invocation and lifecycle behavior need validation.
+- Lifecycle choice settled on 2026-09-19: running agent sessions continue when
+  the TUI closes; reopening reconnects, and Stop is a separate action. This does
+  not promise automatic recovery after machine shutdown. The run owner must be
+  independent of the viewing TUI; tmux is a candidate, not a selected dependency.
 - Near-term dogfooding need identified on 2026-09-19: repeated requests for
   implementation prompts expose the missing restart-native `/work` equivalent.
   The [shared execution guide](work-execution.md) and saved handoff prompts now
@@ -91,6 +95,17 @@ Selected direction:
   is required input to W-010: its preparation, review, recovery, and closure
   responsibilities extend beyond prompt generation. Adapt or explicitly defer
   them; the current guide is only a partial baseline.
+- Emerging authoring/execution workflow, described by the owner on 2026-09-19:
+  interactive Claude/Codex sessions create and refine proposed work, questions,
+  and decisions through the CLI; bounded scheduled/triggered headless research
+  can also propose work. Moving proposed work to Active would offer launching a
+  headless implementation session. Detailed launch and publication policy is
+  still proposed. A status edit alone does not authorize a launch or prove that
+  one is running. [W-011](../grove/work/W-011-shaping-entrypoint.md) proposes the
+  immediate interactive shaping guide; W-010 owns the reusable work assignment.
+  Scheduling and run supervision remain later work, outside W-009. Inspect the
+  [predecessor/Bench evidence](reviews/2026-09-19-shaping-and-runner-evidence.md)
+  before designing those mechanisms. Streamed activity is not work acceptance.
 - A clean implementation start, informed by the working skills and nullsec
   experience rather than constrained by the first application's architecture.
 
@@ -122,7 +137,8 @@ this does not adopt the predecessor's preparation or execution policies.
 “Stateless CLI” means commands need no resident application process. Project
 records and recoverable coordination necessarily have state. File-backed,
 local-first, and no required daemon express the intended properties more
-precisely. Whether an optional running UI supervises launched jobs is open.
+precisely. Optional agent execution needs a run owner that outlives the viewing
+UI; neither ordinary record access nor opening the board requires that owner.
 
 ## Why this is worth exploring
 
@@ -283,7 +299,8 @@ too disruptive. [Git worktree facilities](https://git-scm.com/docs/git-worktree)
    lifetimes remain future design.
 2. **What does one run promise?** Define its input, actor/attempt identity,
    working directory, output, failure/wait state, cancellation, interruption
-   recovery, and reconciliation. Establish what happens when the TUI exits.
+   recovery, and reconciliation. TUI exit now explicitly leaves runs working;
+   define ownership and reconnection independently of the UI process.
    Reuse existing export/run/reconcile ideas only after inspecting their fit.
 3. **How should the first TUI feel in use?** The owner selected the terminal
    experience and requested early Kanban value. W-009 proposes the checkout
@@ -357,6 +374,14 @@ the repair commits are integrated. Both reference the shared execution guide;
 the work records and plans remain the specifications. Shape W-010 soon after
 the repairs so future assignments need only work IDs, without making it a new
 prerequisite that delays the board.
+
+On 2026-09-19 the owner reported a Claude session implementing W-006–W-008,
+with W-009 planned afterward. A separate repair worktree is present; that report
+does not establish completion or integration. Keep ongoing requirements work
+outside that checkout. Refine W-010's shared interactive/headless assignment
+and W-011's authoring guide while repairs proceed. Resolve where unattended
+proposals are published before promising they appear in a particular checkout's
+Proposed column; W-009's Other sources shelf already exposes branch-only work.
 
 After the repairs, the selected next user outcome is a terminal Kanban board
 with explicit version selection inside each card. On 2026-09-19 the owner
