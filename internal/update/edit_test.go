@@ -131,6 +131,8 @@ func TestEditTaggedAndAnchoredEntries(t *testing.T) {
 		{"tagged value", "---\nid: !!str W-001\ntitle: !!str hello # c\n---\n", "title", `"t"`, "---\nid: !!str W-001\ntitle: \"t\" # c\n---\n"},
 		{"anchored value", "---\ntitle: &t hello\nstatus: open\n---\n", "title", "t", "---\ntitle: t\nstatus: open\n---\n"},
 		{"tagged quoted value", "---\ntitle: !!str \"he\\\"llo\"\nstatus: open\n---\n", "status", "resolved", "---\ntitle: !!str \"he\\\"llo\"\nstatus: resolved\n---\n"},
+		{"tagged quoted key", "---\n!!str \"title\": hello\nstatus: open\n---\n", "title", "t", "---\n!!str \"title\": t\nstatus: open\n---\n"},
+		{"anchored key", "---\n&k title: hello\nstatus: open\n---\n", "title", "t", "---\n&k title: t\nstatus: open\n---\n"},
 		{"tagged key with later-line value", "---\n!!str members:\n- a\nstatus: open\n---\n", "members", "[]", "---\n!!str members: []\nstatus: open\n---\n"},
 		{"anchored flow list", "---\nmembers: &m [a, b] # c\nstatus: open\n---\n", "members", `["c"]`, "---\nmembers: [\"c\"] # c\nstatus: open\n---\n"},
 		{"unset tagged", "---\nid: W-001\nsize: !!str small\nstatus: open\n---\n", "size", "", "---\nid: W-001\nstatus: open\n---\n"},
@@ -159,6 +161,11 @@ func TestEditRefusesUnsupportedSpans(t *testing.T) {
 				t.Fatal("expected a refusal")
 			}
 		})
+	}
+	// The key guard compares the source with the parsed key.
+	e := &editor{fm: []byte("aaa: 1\n")}
+	if e.keyStartsAt(&yaml.Node{Value: "bbb"}, 0) || !e.keyStartsAt(&yaml.Node{Value: "aaa"}, 0) {
+		t.Fatal("a key must be found where the parser put it")
 	}
 	// A comment line inside a removed list goes with the list; one after it stays.
 	src := "---\nmembers:\n# why these members\n- W-002\n# after the list\nstatus: open\n---\n"

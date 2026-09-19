@@ -200,15 +200,14 @@ func (e *editor) offset(line, column int) (int, error) {
 }
 
 func (e *editor) keyStartsAt(k *yaml.Node, off int) bool {
-	rest := e.fm[off:]
-	switch k.Style {
+	rest := e.fm[e.skipProperties(off):]
+	switch k.Style &^ yaml.TaggedStyle {
 	case yaml.DoubleQuotedStyle:
 		return len(rest) > 0 && rest[0] == '"'
 	case yaml.SingleQuotedStyle:
 		return len(rest) > 0 && rest[0] == '\''
 	default:
-		return k.Style&yaml.TaggedStyle == 0 && k.Anchor == "" && bytes.HasPrefix(rest, []byte(k.Value)) ||
-			bytes.HasPrefix(rest, []byte(k.Value[:0]+string(e.fm[off:e.skipProperties(off)])))
+		return bytes.HasPrefix(rest, []byte(k.Value))
 	}
 }
 
