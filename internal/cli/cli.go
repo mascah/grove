@@ -18,7 +18,8 @@ const usage = "Usage: grove [--project DIR] list | show ID | check | new TYPE TI
 	"  list       List records in the selected checkout\n" +
 	"  show ID    Print the complete Markdown source for a record\n" +
 	"  check      Validate configuration, records, and relationships\n" +
-	"  new        Create a work, question, or decision record with the next shared ID\n\n" +
+	"  new        Create a work, question, or decision record with the next shared ID;\n" +
+	"             put -- before a title that starts with a dash\n\n" +
 	"--project DIR selects a directory containing grove.yaml.\n" +
 	"Without it, search upward from the current directory, stopping at Git boundaries.\n" +
 	"Project/file context is written to stderr; results are written to stdout.\n"
@@ -50,7 +51,12 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 	case "new":
 		path, err := create.New(p, a.kind, a.title, a.slug, time.Now(), errOut)
 		if err != nil {
-			fmt.Fprintf(errOut, "grove: %s\n", visible(err.Error()))
+			for i, line := range strings.Split(err.Error(), "\n") {
+				if i == 0 {
+					line = "grove: " + line
+				}
+				fmt.Fprintln(errOut, visible(line))
+			}
 			return 1
 		}
 		return writeResult(out, errOut, []byte(path+"\n"))
@@ -90,7 +96,7 @@ func parseArgs(args []string) (a invocation, err error) {
 	var positional []string
 	literal := false
 	// option consumes "--name VALUE" or "--name=VALUE" into *target, once.
-	option := func(i *int, name string, target *string) (bool, error) {
+	option := func(i *int, name, what string, target *string) (bool, error) {
 		arg := args[*i]
 		if arg != name && !strings.HasPrefix(arg, name+"=") {
 			return false, nil
@@ -101,14 +107,14 @@ func parseArgs(args []string) (a invocation, err error) {
 		if arg == name {
 			*i++
 			if *i >= len(args) {
-				return true, fmt.Errorf("%s requires a value", name)
+				return true, fmt.Errorf("%s requires a %s", name, what)
 			}
 			*target = args[*i]
 		} else {
 			*target = strings.TrimPrefix(arg, name+"=")
 		}
 		if strings.TrimSpace(*target) == "" {
-			return true, fmt.Errorf("%s requires a nonempty value", name)
+			return true, fmt.Errorf("%s requires a nonempty %s", name, what)
 		}
 		return true, nil
 	}
@@ -126,9 +132,9 @@ func parseArgs(args []string) (a invocation, err error) {
 			a.help = true
 			continue
 		}
-		matched, err := option(&i, "--project", &a.project)
+		matched, err := option(&i, "--project", "directory", &a.project)
 		if !matched && err == nil {
-			matched, err = option(&i, "--slug", &a.slug)
+			matched, err = option(&i, "--slug", "slug", &a.slug)
 		}
 		if err != nil {
 			return a, err

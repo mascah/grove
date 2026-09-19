@@ -33,7 +33,6 @@ var kinds = map[string]kind{
 var (
 	slugPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
 	idLine      = regexp.MustCompile(`^id:\s*["']?([WQD])-([0-9]+)["']?\s*$`)
-	gitIDLine   = `^id:[[:space:]]*["']?%s-[0-9]+["']?[[:space:]]*$`
 )
 
 // New allocates the next ID for kind, creates the record without overwriting
@@ -60,8 +59,9 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 	id := fmt.Sprintf("%s-%03d", k.prefix, n)
 	relative := path.Join(filepath.ToSlash(p.RecordDir), k.folder, id+"-"+slug+".md")
 	stamp := now.UTC().Format("2006-01-02T15:04:05Z")
-	content := fmt.Sprintf("---\nid: %q\ntype: %s\ntitle: %s\nstatus: %s\ncreated: %q\nupdated: %q\n---\n\n%s",
-		id, kindName, strconv.Quote(title), k.status, stamp, stamp, k.body)
+	// %q emits Go escapes, a subset of YAML double-quoted escapes.
+	content := fmt.Sprintf("---\nid: %q\ntype: %s\ntitle: %q\nstatus: %s\ncreated: %q\nupdated: %q\n---\n\n%s",
+		id, kindName, title, k.status, stamp, stamp, k.body)
 	full := filepath.Join(p.Root, filepath.FromSlash(relative))
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		return "", fmt.Errorf("%s reserved but not created: %w", id, err)
@@ -187,7 +187,7 @@ func readCounters(path string) (map[string]int, error) {
 		if len(fields) == 2 {
 			n, err = strconv.Atoi(fields[1])
 		}
-		if len(fields) != 2 || err != nil || n < 1 || !slices.Contains([]string{"W", "Q", "D"}, fields[0]) {
+		if len(fields) != 2 || err != nil || n < 1 || len(fields[0]) != 1 || !strings.Contains("WQD", fields[0]) {
 			return nil, fmt.Errorf("%s is corrupt (%q); fix or remove it to reinitialize from existing records", path, line)
 		}
 		counters[fields[0]] = n
@@ -232,12 +232,13 @@ func highestUsed(root, recordDir, showPrefix, prefix string) (int, error) {
 			highest = n
 		}
 	}
-	refs, err := gitOutput(root, "for-each-ref", "--format=%(objectname)", "refs/heads", "refs/remotes")
+	refs, err := gitOutput(root, "for-each-ref", "--format=%(objectname)", "refs/heads", "refs/remotes", "refs/tags")
 	if err != nil {
 		return 0, err
 	}
 	if trees := strings.Fields(refs); len(trees) != 0 {
-		args := append([]string{"-C", root, "grep", "-h", "-I", "-E", fmt.Sprintf(gitIDLine, prefix)}, trees...)
+		// git grep only pre-filters; note validates every line.
+		args := append([]string{"-C", root, "grep", "-h", "-I", "-e", "^id:"}, trees...)
 		cmd := exec.Command("git", append(args, "--", recordDir)...)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -260,19 +261,27 @@ func highestUsed(root, recordDir, showPrefix, prefix string) (int, error) {
 			continue
 		}
 		tree := filepath.Join(wt, filepath.FromSlash(showPrefix), recordDir)
-		_ = filepath.WalkDir(tree, func(p string, entry fs.DirEntry, err error) error {
-			if err != nil || entry.IsDir() || filepath.Ext(p) != ".md" {
+		err := filepath.WalkDir(tree, func(p string, entry fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if entry.IsDir() || filepath.Ext(p) != ".md" {
 				return nil
 			}
 			data, err := os.ReadFile(p)
 			if err != nil {
-				return nil
+				return err
 			}
 			for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n") {
 				note(line)
 			}
 			return nil
 		})
+		// A worktree without the record folder is normal; anything else would
+		// silently lower the floor and risk reissuing an ID.
+		if err != nil && !(errors.Is(err, fs.ErrNotExist) && strings.HasPrefix(err.Error(), "lstat "+tree)) {
+			return 0, fmt.Errorf("cannot scan worktree records: %w", err)
+		}
 	}
 	return highest, nil
 }

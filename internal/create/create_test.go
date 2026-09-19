@@ -77,23 +77,28 @@ func TestAllocateFloorsFromRefsAndWorktrees(t *testing.T) {
 	root := repo(t)
 	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
-	write(t, wt, "grove/work/W-003-committed-on-branch.md", record("W-003", "work", "proposed"))
+	// W-007 exists only in the feature branch's history, so the ref scan alone
+	// can find it; W-005 exists only as a live file in the worktree.
+	write(t, wt, "grove/work/W-007-committed-on-branch.md", record("W-007", "work", "proposed"))
 	git(t, wt, "add", "-A")
 	git(t, wt, "commit", "-q", "-m", "branch record")
+	if err := os.Remove(filepath.Join(wt, "grove/work/W-007-committed-on-branch.md")); err != nil {
+		t.Fatal(err)
+	}
 	write(t, wt, "grove/work/W-005-live-only.md", record("W-005", "work", "proposed"))
 
 	var report bytes.Buffer
 	n, err := Allocate(root, "grove", "W", &report)
-	if err != nil || n != 6 {
-		t.Fatalf("got %d, %v; want 6 from committed W-003 and live W-005", n, err)
+	if err != nil || n != 8 {
+		t.Fatalf("got %d, %v; want 8 from committed W-007 and live W-005", n, err)
 	}
 	if !strings.Contains(strings.ToLower(report.String()), "initialized") {
 		t.Fatalf("first allocation should report initialization: %q", report.String())
 	}
 	report.Reset()
 	n, err = Allocate(wt, "grove", "W", &report)
-	if err != nil || n != 7 {
-		t.Fatalf("got %d, %v; want 7 from the shared counter", n, err)
+	if err != nil || n != 9 {
+		t.Fatalf("got %d, %v; want 9 from the shared counter", n, err)
 	}
 	if report.Len() != 0 {
 		t.Fatalf("steady-state allocation should be silent: %q", report.String())
@@ -150,6 +155,47 @@ func TestAllocateConcurrentAcrossWorktrees(t *testing.T) {
 		if n != i+2 {
 			t.Fatalf("expected 2..21 without duplicates, got %v", got)
 		}
+	}
+}
+
+func TestAllocateRefusesWhenAWorktreeCannotBeScanned(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("permission checks do not apply to root")
+	}
+	root := repo(t)
+	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
+	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
+	hidden := filepath.Join(wt, "grove/work/W-030-unreadable.md")
+	write(t, wt, "grove/work/W-030-unreadable.md", record("W-030", "work", "proposed"))
+	if err := os.Chmod(hidden, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(hidden, 0o644) })
+	if n, err := Allocate(root, "grove", "W", &bytes.Buffer{}); err == nil {
+		t.Fatalf("issued %d although a worktree record could not be read", n)
+	}
+	if _, err := os.Stat(filepath.Join(stateDir(t, root), "next-ids")); !os.IsNotExist(err) {
+		t.Fatalf("no counter may be written when the floor is unknown: %v", err)
+	}
+}
+
+func TestPersistenceFailureIssuesNoIDAndCreatesNoFile(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("permission checks do not apply to root")
+	}
+	root := repo(t)
+	dir := stateDir(t, root)
+	write(t, dir, "lock", "")
+	if err := os.Chmod(dir, 0o500); err != nil { // lock opens, counter temp file cannot be created
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0o755) })
+	p := load(t, root)
+	if _, err := New(p, "work", "Blocked", "blocked", time.Now(), &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "no ID issued") {
+		t.Fatalf("expected a persistence diagnostic, got %v", err)
+	}
+	if entries, _ := os.ReadDir(filepath.Join(root, "grove/work")); len(entries) != 1 {
+		t.Fatalf("failed allocation must create nothing: %v", entries)
 	}
 }
 

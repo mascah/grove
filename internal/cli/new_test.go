@@ -55,6 +55,10 @@ func TestNewCreatesRecordAndReadCommandsLeaveNoState(t *testing.T) {
 	if code := Run([]string{"check"}, root, &out, &errOut); code != 0 || !strings.Contains(out.String(), "4 records") {
 		t.Fatalf("created records must validate: %s %s", out.String(), errOut.String())
 	}
+	out.Reset()
+	if code := Run([]string{"list"}, root, &out, &errOut); code != 0 || !strings.Contains(out.String(), "W-002  work      proposed  Second thing") {
+		t.Fatalf("list must show the created record: %s", out.String())
+	}
 }
 
 func TestNewUsageAndFailures(t *testing.T) {
