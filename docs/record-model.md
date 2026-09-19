@@ -266,6 +266,11 @@ if the project no longer validates. It requires Git and never overwrites.
 or question `blocks` by editing only those frontmatter entries plus `updated`;
 [W-003](../grove/work/W-003-update-records.md) owns its request, preservation,
 locking, and failure-reporting contract, and prints `{id, path, revision, changed}`.
+`versions [ID] [--json]` reads the same project location on every local
+branch tip and in every registered worktree, validating each source alone by
+these rules, and prints one row or JSON object per observed version with a
+selector; [W-004](../grove/work/W-004-record-versions.md) owns its source,
+output, incomplete-result, and selector contract. It requires Git and reads only.
 
 - `list`: show ID, type, status, and title, ordered by `created` ascending with
   undated records last, then ID prefix and numeric suffix as the tie-breaker.
@@ -355,9 +360,9 @@ different branches are versions to reconcile, not automatically ID collisions.
 ## First dogfooding boundary
 
 The CLI now lists, shows, and validates the records tracking its own development
-in one checkout, creates records with shared IDs, and updates their fields
-while refusing stale writes. Branch aggregation and workspace navigation build
-on that foundation.
+in one checkout, creates records with shared IDs, updates their fields
+while refusing stale writes, and shows each record's versions across local
+branches and worktrees. Workspace navigation builds on that foundation.
 
 Structured attachments, review/report records, artifact ingestion, and agent
 attempts are deferred. Ordinary Markdown links and prose can carry supporting

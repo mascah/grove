@@ -47,13 +47,16 @@ the convention `show --json` and `update --expect` use), `repo.CommonDir`
 - Live change against HEAD: each live record is compared by ID with the
   HEAD commit's validated records: `unchanged`, `modified`, `renamed`
   (same bytes, different path), `added`; records at HEAD missing from live
-  files appear as `deleted` rows without content or selector. A HEAD whose
-  project does not validate makes the comparison impossible and the live
-  source invalid; an absent project at HEAD is an empty baseline.
+  files appear as `deleted` rows without content or selector. An absent
+  project at HEAD, or an unborn HEAD, is an empty baseline. A HEAD whose
+  project does not validate cannot be compared with: the live source stays
+  valid and selectable, each of its versions has `change: unknown`, and the
+  source carries a `note` saying why (revised after review; discarding a
+  valid checkout because an old commit is broken was judged less useful).
 - Completeness: any invalid source sets `complete: false` and exit 1 while
   valid sources still print. Inventory failure (no Git, not a repository,
   listing errors) is an error with no view. An ID absent from every valid
-  source is `record X not found in any inspected source`, exit 1.
+  source is `record X not found in any valid source`, exit 1.
 
 ### Selector (W-004, consumed by W-005)
 
@@ -66,8 +69,10 @@ live:<locator>:<ref|detached>@<commit12>:<id>@<rev12>:<binding16>
 and of the record's `sha256:` content revision; they attribute the common
 staleness causes. `binding16` is the first sixteen hex digits of the SHA-256
 over the NUL-joined identity tuple: repository common directory, prefix,
-kind, ref (or `detached`), worktree Git directory (live only), full commit,
-configuration revision, record ID, record path, full content revision. Refs
+kind, ref (or `detached`), worktree path and Git directory (live only), full
+commit, configuration revision, record ID, record path, full content
+revision. The readable part omits the prefix; two projects in one repository
+differ only in the digest. Refs
 and locators cannot contain `:`; hex cannot contain `@`, so the grammar splits
 on `:` and the last `@`. Content equality alone never produces the same
 selector in two sources.
@@ -78,7 +83,7 @@ selector in two sources.
 
 ```
 project, repository, prefix, complete,
-sources: [{kind, ref|null, commit, worktree?, locator?, detached?, present, valid, config_revision?, diagnostics: [...]}],
+sources: [{kind, ref|null, commit, worktree?, locator?, detached?, present, valid, config_revision?, note?, diagnostics: [...]}],
 records: [{id, versions: [{selector?, kind, ref|null, commit, worktree?, locator?, path, revision?, config_revision, type, title, status, change?, head_path?, source?}]}]
 ```
 
@@ -108,13 +113,13 @@ creates nothing and never calls `repo.CommonDir`.
 
 ## Ordered steps
 
-1. [ ] W-004 active. Loader: `project.LoadFS(fs.FS)`; `Load` wraps
+1. [x] W-004 active. Loader: `project.LoadFS(fs.FS)`; `Load` wraps
    `os.DirFS`; `Project.Config` retains configuration bytes;
    `repo.Locate` finds the common directory without creating anything.
-2. [ ] `internal/versions`: tree FS from Git objects, inventory, live
-   comparison, selectors, deterministic ordering, `Inspect(root, id, between)`.
-3. [ ] CLI `versions [ID] [--json]`, usage, stderr context, exit codes.
-4. [ ] W-004 fixtures (table below), suites, race, vet, gofmt, `check`,
+2. [x] `internal/versions`: tree FS from Git objects, inventory, live
+   comparison, selectors, deterministic ordering, `Inspect(root, id)`.
+3. [x] CLI `versions [ID] [--json]`, usage, stderr context, exit codes.
+4. [x] W-004 fixtures (table below), suites, race, vet, gofmt, `check`,
    Git-state hashes, independent review, fixes, evidence, W-004 done.
 5. [ ] `internal/workspace`: selector parsing, resolution, attribution.
 6. [ ] CLI `workspace --source SELECTOR [--json]`.
@@ -126,11 +131,12 @@ creates nothing and never calls `repo.CommonDir`.
 | Item | Check |
 | --- | --- |
 | W-004: main/feature statuses and bodies, committed and live labels | `TestInspectMainAndFeature` |
-| W-004: branch without checkout; detached, dirty, untracked, deleted, renamed, identical | `TestInspectBranchWithoutCheckout`, `TestInspectLiveChanges` |
+| W-004: branch without checkout; detached, dirty, untracked, deleted, renamed, identical | `TestInspectBranchWithoutCheckoutAndDetached`, `TestInspectLiveChanges` |
 | W-004: source-specific configuration, project below root, dependency missing in one source | `TestInspectPrefixAndConfig`, `TestInspectSourceLocalValidation` |
-| W-004: invalid YAML, duplicate IDs, inaccessible worktree, changing identity | `TestInspectIncomplete`, `TestInspectUnstable` |
+| W-004: invalid YAML, duplicate IDs, inaccessible worktree, changing identity | `TestInspectIncomplete`, `TestInspectUnstable`, `TestVersionsIncompleteAndNotFound` |
+| W-004: unborn HEAD, HEAD whose project is invalid | `TestInspectUnbornAndInvalidHEAD` |
 | W-004: bytes and revisions agree with BOM/CRLF; selectors differ for identical content | `TestInspectBytesAndSelectors` |
-| W-004: paths with spaces, tabs, newlines; repeated reads order consistently | `TestInspectPaths`, `TestVersionsCLI` |
+| W-004: paths with spaces, tabs, newlines; repeated reads order consistently | `TestInspectPathsAndRepeatedReads`, `TestVersionsCLI` |
 | W-004: refs, index, records, allocator state unchanged; existing suites | `TestVersionsLeavesGitUnchanged`, whole suite |
 | W-005: live selection from main, project below root, no Git change | `TestWorkspaceLive` |
 | W-005: committed selection resolves; differing live content refuses | `TestWorkspaceCommitted` |
@@ -154,4 +160,56 @@ commit before any W-005 file exists.
 
 ## Progress and evidence
 
-(filled in as steps complete)
+### W-004
+
+Commits on `worktree-W-004-W-005`: `5c08930` (plan, W-004 active),
+`2b688f7` (loader over `fs.FS`, `repo.Locate`), `b5125fc` (`versions`),
+`ca420f5` (review fixes). Base `b20d2b0`.
+
+- `gofmt -l .` clean, `go vet ./...`, `go test ./...`, and
+  `go test -race ./...` pass for every package; `go run ./cmd/grove check`
+  reports 9 records.
+- `internal/versions` fixtures: main/feature statuses and bodies from each
+  branch with four ordered versions, distinct selectors for identical bytes,
+  the same selectors from either checkout; a branch without a checkout and a
+  detached worktree; modified, deleted (row without content or selector),
+  added, renamed (with `head_path`), and moved-and-changed records, plus a
+  checkout whose HEAD has no project; a project below the repository root
+  whose branches configure different record folders, with configuration
+  revisions hashing exact `grove.yaml` bytes and a branch without the project
+  listed as absent; a dependency present only on main leaving the feature's
+  committed and live sources invalid without admitting their records; invalid
+  YAML, duplicate IDs, a symlinked configuration, and a prunable worktree
+  each attributed to their source with the result incomplete and valid
+  sources still contributing; a HEAD move, worktree removal, detachment, and
+  a newly registered worktree during reading each marked unstable; BOM plus
+  CRLF bytes and revisions agreeing in all four sources; a worktree path with
+  newline, tab, and space and a record path with a space round-tripping, with
+  three repeated reads ordering identically; an unborn HEAD listing records
+  as added; an invalid HEAD project noted with `change: unknown`; a plain
+  directory refused.
+- `internal/cli` fixtures: usage errors exit 2; table rows and stderr source
+  lines; JSON fields for live and committed versions; a control character in
+  a worktree path preserved in JSON and escaped in text; incomplete results
+  exit 1 with valid rows printed; not-found exit 1; an invalid current
+  checkout attributed once as a live source; `TestVersionsLeavesGitUnchanged`
+  hashing both checkouts, including `.git`, across text and JSON reads with
+  no `.git/grove` created.
+- Real use in this worktree: `versions W-004` showed main `proposed` and this
+  branch `active`, four rows, no authority chosen; with an uncommitted edit
+  the live row became `modified` with a new selector, and every file under
+  the repository's `.git` hashed identically before and after.
+- Independent review (reviewer agent, `2b688f7..b5125fc`, read-only with
+  scratch repositories): no blocking findings. Should-fix, all addressed in
+  `ca420f5`: an unborn HEAD made the only live source invalid (now an empty
+  baseline); an invalid HEAD project was undocumented and untested (contract
+  amended above, test added); the Git-state test named in this plan did not
+  exist (added). Nits taken: the test hook left the exported API, commit
+  abbreviation is guarded, plan names and the not-found wording match the
+  code. Nit recorded: the readable selector omits the prefix. The reviewer
+  confirmed identical validation for trees and checkouts, no record leakage
+  from invalid sources, no side-effecting Git subcommands, and deterministic
+  ordering.
+- Limits: no fetch, remotes, tags, or history; separate clones are separate
+  repositories; a source can change after it was read, which selectors
+  expose at resolution time rather than prevent.

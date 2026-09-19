@@ -2,7 +2,8 @@
 
 A local project workspace for humans and agents, built around a CLI and durable files.
 
-**Status: the first Go CLI lists, shows, validates, creates, and updates local project records.**
+**Status: the first Go CLI lists, shows, validates, creates, and updates local
+project records, and shows each record's versions across local branches.**
 
 Start with [the restart brief](docs/restart-brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
@@ -24,6 +25,7 @@ go run ./cmd/grove check
 go run ./cmd/grove new work "Title of the work" --slug short-name
 go run ./cmd/grove show W-001 --json
 go run ./cmd/grove update W-001 --expect sha256:HEX --set status=active --unset size
+go run ./cmd/grove versions W-001 --json
 go run ./cmd/grove --project /path/to/project check
 ```
 
@@ -51,8 +53,22 @@ through a write lock in that same directory; `update` refuses a stale
 `--expect`, an invalid project, or any change it observes while preparing the
 write, and reports when a failure happened after the file was replaced.
 
+`versions [ID]` shows one row per version of each record: its committed
+version on every local branch tip and its live version in every registered
+worktree, grouped by ID with each source's own status, so main can see a
+feature branch's progress without switching or merging. Live rows say how the
+file compares with that checkout's HEAD (`unchanged`, `modified`, `renamed`,
+`added`, `deleted`). Every row ends with a selector that binds the repository,
+source, commit, configuration, record path, and content revision; identical
+bytes in two sources get two selectors. Sources are listed on stderr with any
+diagnostics; an invalid or unreadable source makes the result incomplete and
+the exit code 1 while valid sources still print. `--json` adds each version's
+exact source text. No status is chosen as authoritative, and the command
+writes nothing: no refs, index, worktrees, records, or coordination state.
+
 Use `go test ./...`, `go test -race ./...`, and `go vet ./...` for verification.
-Cross-branch views, TUI, and agent execution remain future work.
+Locating a selected version's workspace, TUI, and agent execution remain
+future work.
 
 The intended experience combines linked work, questions, research, project
 knowledge, and evidence. A CLI serves agents and humans; a TUI can make the
