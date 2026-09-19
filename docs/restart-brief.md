@@ -60,6 +60,13 @@ Selected direction:
 - A clean implementation start, informed by the working skills and nullsec
   experience rather than constrained by the first application's architecture.
 
+Starting scope accepted on 2026-09-18: use work, questions, and decisions as the
+minimum to begin dogfooding. Defer implementing structured attachments such as
+reviews and reports; ordinary prose and links can support early development.
+The [starter record model](record-model-draft.md) contains concrete examples and
+proposed field/lifecycle semantics for review. Acceptance of the starting scope
+does not automatically approve those detailed schema choices.
+
 “Stateless CLI” means commands need no resident application process. Project
 records and recoverable coordination necessarily have state. File-backed,
 local-first, and no required daemon express the intended properties more
@@ -264,11 +271,12 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next conversation:** draft and review the minimal record examples in step 1,
+**Next conversation:** review the [minimal record examples](record-model-draft.md),
 starting with what a work item means and what software must interpret from it.
-Names, required fields, statuses, and storage syntax remain proposals. This
-sequence is the current recommendation, not authorization to implement an
-unreviewed schema or initialize the predecessor's templates.
+The starting scope is accepted; required fields, statuses, identity allocation,
+and storage syntax remain proposals. Settle that small contract and choose the
+implementation stack, then build the first inspection commands against Grove's
+own records. Do not initialize the predecessor's templates implicitly.
 
 ## Reset and scope record
 
