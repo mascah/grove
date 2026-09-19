@@ -129,7 +129,7 @@ func TestAllocateCorrectsCounterBelowFloor(t *testing.T) {
 
 func TestAllocateConcurrentAcrossWorktrees(t *testing.T) {
 	root := gitProject(t)
-	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
+	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-odd\n\twt ") // W-008: a path Git quotes for display
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
 	roots := []string{root, wt}
 	var mu sync.Mutex

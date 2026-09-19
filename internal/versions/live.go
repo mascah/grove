@@ -15,10 +15,11 @@ import (
 // identity asks Git where dir is: its Git directory and its path inside the
 // worktree. The Git directory is unique to one worktree of one repository.
 // ponytail: one git process per path, because rev-parse cannot delimit paths
-// that contain newlines. A live checkout costs about ten rev-parse processes
-// per inspection (entering, the prefix, the record folder, and the second
-// inventory's re-entry) where it used to cost one; batch them or skip the
-// prefix checks for root projects if inspecting many worktrees becomes slow.
+// that contain newlines. A live checkout costs six to eight rev-parse
+// processes per inspection (entering, the prefix, the record folder, and the
+// second inventory's re-entry) where it used to cost one: measured 10 to 31
+// Git processes for main plus three worktrees. Batch them if inspecting many
+// worktrees becomes slow.
 func identity(dir string) (gitDir, prefix string, err error) {
 	if gitDir, err = repo.GitPath(dir, "--git-dir"); err == nil {
 		prefix, err = repo.GitPath(dir, "--show-prefix")
@@ -44,27 +45,23 @@ func enterWorktree(w repo.Worktree, common string) *Source {
 		return s
 	}
 	gitDir, itsPrefix, err := identity(w.Path)
-	var itsCommon string
-	if err == nil {
-		itsCommon, err = repo.GitPath(w.Path, "--git-common-dir")
-	}
 	if err != nil {
 		s.fail("cannot enter worktree: " + err.Error())
 		return s
 	}
-	// A plain directory inside another checkout answers with that checkout's
-	// identity and a prefix; a worktree's own root has none.
-	if itsCommon != common || itsPrefix != "" {
-		s.fail("worktree path no longer belongs to this repository")
-		return s
-	}
+	// The Git directory of one of this repository's worktrees is its common
+	// directory or directly below <common>/worktrees, so it identifies the
+	// repository too. A plain directory inside another checkout answers with
+	// that checkout's identity and a prefix; a worktree's own root has none.
 	switch rest, linked := strings.CutPrefix(gitDir, filepath.Join(common, "worktrees")+string(filepath.Separator)); {
+	case itsPrefix != "":
+		s.fail("worktree path no longer belongs to this repository")
 	case gitDir == common:
 		s.GitDir, s.Locator = gitDir, "."
 	case linked && rest != "" && !strings.ContainsRune(rest, filepath.Separator):
 		s.GitDir, s.Locator = gitDir, rest
 	default:
-		s.fail("unrecognized worktree Git directory " + gitDir)
+		s.fail("worktree path no longer belongs to this repository")
 	}
 	return s
 }
