@@ -308,26 +308,26 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** integrate branch `worktree-W-004-W-005` into main.
-[W-004](../grove/work/W-004-record-versions.md) and
-[W-005](../grove/work/W-005-record-workspace.md) are done in that branch
-context: `versions` shows each record's committed version on every local
-branch and live version in every worktree with a selector per version, and
-`workspace --source` resolves a selected version to its existing checkout or
-refuses with the reason, both implemented, reviewed, and verified on
-2026-09-19 per the [coordination plan](plans/W-004-W-005-coordination.md).
-Integration is a separate step; the owner performs it. W-003 was integrated
-at `b20d2b0`. After integration, the next investment is the interactive Open
-workspace experience over these commands: presenting version rows, explicit
-selection, and creating a linked worktree for a branch that has no checkout,
-which the CLI deliberately refuses today. Keep implementation serial while
-CLI and project-loader ownership overlaps. Creation is complete in
-[W-002](../grove/work/W-002-create-records.md): use `go run ./cmd/grove new`
-for every new record; the allocator per [D-003](../grove/decisions/D-003-allocator-mechanism.md)
-shares one counter across linked worktrees, and separate-clone and import
-conflicts stay out of scope. Inspection is complete in
-[W-001](../grove/work/W-001-inspect-records.md): use `list`, `show ID`, or `check`. Keep the installed sibling CLI untouched;
-TUI and execution remain later work.
+**Next action:** shape the interactive Open workspace experience over the
+integrated CLI. [W-004](../grove/work/W-004-record-versions.md) and
+[W-005](../grove/work/W-005-record-workspace.md) were integrated into main at
+`5041ae1` on 2026-09-19: `versions` shows each record's committed version on
+every local branch and live version in every worktree with a selector per
+version, and `workspace --source` resolves a selected version to its existing
+checkout or refuses with the reason, per the
+[coordination plan](plans/W-004-W-005-coordination.md). The next investment
+is presenting those version rows, explicit selection, and creating a linked
+worktree for a branch that has no checkout, which the CLI deliberately
+refuses today; choose the interface stack against that bounded slice. Keep
+implementation serial while CLI and project-loader ownership overlaps.
+Creation is complete in [W-002](../grove/work/W-002-create-records.md): use
+`go run ./cmd/grove new` for every new record; the allocator per
+[D-003](../grove/decisions/D-003-allocator-mechanism.md) shares one counter
+across linked worktrees, and separate-clone and import conflicts stay out of
+scope. Inspection is complete in
+[W-001](../grove/work/W-001-inspect-records.md): use `list`, `show ID`, or
+`check`. Keep the installed sibling CLI untouched; TUI and execution remain
+later work.
 
 ## Reset and scope record
 

@@ -9,7 +9,7 @@ size: medium
 depends_on: ["W-004"]
 relates_to: ["Q-001", "W-003"]
 created: "2026-09-19T17:50:01Z"
-updated: "2026-09-19T19:58:30Z"
+updated: "2026-09-19T20:05:45Z"
 ---
 
 ## Outcome
@@ -125,10 +125,8 @@ revision check because the workspace can change after resolution.
 
 ## Next
 
-Integrate `worktree-W-004-W-005` into main. Then shape the interactive Open
-workspace action over `versions` and `workspace`, including explicit
+Integrated into main at `5041ae1` on 2026-09-19. Next, shape the interactive
+Open workspace action over `versions` and `workspace`, including explicit
 creation of a linked worktree for a branch without a checkout, which this
-command refuses today. After these CLI foundations, shape
-the interactive Open workspace action and explicit creation for branches
-without a checkout. Do not
-treat path resolution as completion of that entire user experience.
+command refuses today. Do not treat path resolution as completion of that
+entire user experience.

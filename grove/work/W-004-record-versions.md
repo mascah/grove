@@ -9,7 +9,7 @@ size: medium
 depends_on: []
 relates_to: ["Q-001", "W-003"]
 created: "2026-09-19T17:49:58Z"
-updated: "2026-09-19T19:49:48Z"
+updated: "2026-09-19T20:05:45Z"
 ---
 
 ## Outcome
@@ -147,5 +147,5 @@ at resolution time.
 
 ## Next
 
-W-005 consumes the selector in the same branch. Integration of this branch
-into main is a separate step for the owner.
+W-005 consumed the selector in the same branch; both were integrated into
+main at `5041ae1` on 2026-09-19.
