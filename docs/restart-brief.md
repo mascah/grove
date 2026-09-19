@@ -1,8 +1,8 @@
 # Grove restart brief
 
 Captured: 2026-09-18.
-Status: product direction and starter file defaults selected; the Go inspection
-CLI reads and validates the operational records. This document is the restart's
+Status: product direction and starter file defaults selected; the Go CLI
+reads, validates, and creates the operational records. This document is the restart's
 current source of intent.
 
 ## Intent and authority
@@ -79,7 +79,8 @@ clones remain outside that coordination guarantee. [D-002](../grove/decisions/D-
 records the revision; the [record model](record-model.md#on-disk-contract) owns
 the current schema and allocation requirements. Operational records now use
 names such as `W-001-inspect-records.md`, with dates retained in frontmatter.
-Go is selected for implementation; no allocator exists yet.
+W-002 implements creation and the shared allocator accepted in
+[D-003](../grove/decisions/D-003-allocator-mechanism.md).
 
 The owner then proposed carrying richer work metadata from nullsec W-032 into
 the starter model: members, dependencies, priority, size, and kind, to support
@@ -277,8 +278,8 @@ Related details to resolve at the appropriate boundary:
 2. Walk one work record through creation, implementation on a branch, review,
    integration, and reopening. Keep work, an execution attempt, and review
    evidence distinct. Resolve identity, version selection, and completion meaning.
-3. The Go CLI now lists, shows, and validates the agreed records. Follow with
-   safe mutations. Use actual Grove development records for dogfooding;
+3. The Go CLI now lists, shows, validates, and creates the agreed records.
+   Follow with status and field updates. Use actual Grove development records for dogfooding;
    keep the restart brief as the
    direction owner until an explicit migration avoids duplicate ownership.
 4. Add the combined board and Open workspace interaction over those operations.
@@ -289,14 +290,14 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** implement [W-002](../grove/work/W-002-create-records.md)
-using the accepted [D-003](../grove/decisions/D-003-allocator-mechanism.md)
-flock/counter/ref-scan allocator:
-`grove new` with shared sequential IDs across linked worktrees, recovery from
-committed and live records, and non-overwriting creation. Separate-clone and
-import conflicts stay explicit and out of scope. Inspection is complete in
-[W-001](../grove/work/W-001-inspect-records.md): use `go run ./cmd/grove list`,
-`show W-001`, or `check`. Keep the installed sibling CLI untouched;
+**Next action:** shape [W-003](../grove/work/W-003-update-records.md), status
+and field updates with a content-based revision check, then decide whether the
+combined board or one interactive view follows. Creation is complete in
+[W-002](../grove/work/W-002-create-records.md): use `go run ./cmd/grove new`
+for every new record; the allocator per [D-003](../grove/decisions/D-003-allocator-mechanism.md)
+shares one counter across linked worktrees, and separate-clone and import
+conflicts stay out of scope. Inspection is complete in
+[W-001](../grove/work/W-001-inspect-records.md): use `list`, `show ID`, or `check`. Keep the installed sibling CLI untouched;
 cross-branch aggregation, TUI, and execution remain later work.
 
 ## Reset and scope record
@@ -312,5 +313,5 @@ does not alter any external service, database, credential, remote repository,
 or installed CLI. The sibling skills and nullsec projects remain unchanged.
 No runner has been launched and no TUI framework has been selected. The new
 Markdown/frontmatter format and file defaults are selected; `grove.yaml` and
-operational records exist, and the inspection CLI is implemented and verified
-locally. It has not replaced the installed sibling executable.
+operational records exist, and the inspection and creation CLI is implemented
+and verified locally. It has not replaced the installed sibling executable.

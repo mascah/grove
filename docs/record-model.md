@@ -84,8 +84,9 @@ folders, timestamps, and optional planning values. Later that day, the owner
 accepted sequential IDs allocated across local worktrees and short filenames
 after finding the original random-ID/timestamp filenames difficult to browse.
 These revised defaults govern the operational records. W-001 implements the
-discovery, validation, graph, and inspection behavior below. Future mutation
-and allocation behavior remains design to implement and verify. This section
+discovery, validation, graph, and inspection behavior below; W-002 implements
+creation and allocation per [D-003](../grove/decisions/D-003-allocator-mechanism.md).
+Updates and other mutations remain design to implement and verify. This section
 owns the schema; the brief owns direction.
 
 ### Configuration and discovery
@@ -143,8 +144,8 @@ decisions/D-001-starter-defaults.md
 
 Keep dates in frontmatter. The number supplies allocation order within each
 record type; it does not prove creation time, priority, or execution order.
-Use a short descriptive slug, with the full title in frontmatter. Proposed
-creation behavior: accept an explicit slug, or derive lowercase ASCII
+Use a short descriptive slug, with the full title in frontmatter. `grove new`
+accepts an explicit `--slug`, or derives lowercase ASCII
 letters/digits separated by hyphens from the title, trim to at most 32 characters
 and strip trailing hyphens, falling back to `record` when empty. Generated names
 stay short even when titles are long. Title edits do not extend the filename.
@@ -165,7 +166,7 @@ renumbering older records. Require canonical padding and a prefix matching
 no abbreviated-ID lookup. Numeric ordering must not rely on lexicographic
 sorting once the counter expands.
 
-For Git projects, future creation commands coordinate through the shared
+For Git projects, creation commands coordinate through the shared
 directory returned by `git rev-parse --path-format=absolute --git-common-dir`.
 Do not derive it from a worktree's `.git` path: linked worktrees have private
 metadata as well as a shared common directory. This is supported by
@@ -186,8 +187,8 @@ worktree, or configured record-root path. It is local coordination state, not a
 tracked project record; no daemon is required. A Grove-owned directory under
 the Git common directory is the intended home. [D-003](../grove/decisions/D-003-allocator-mechanism.md)
 owns the accepted state encoding, lock primitive, and recovery protocol for
-[W-002](../grove/work/W-002-create-records.md) to test with the creation command. No counter or allocator is installed by this documentation
-change, and the read-only inspection commands must not initialize one.
+[W-002](../grove/work/W-002-create-records.md) to test with the creation command. `grove new` initializes and maintains `grove/next-ids` under `grove/lock` in
+that common directory; the read-only inspection commands never create them.
 
 Separate clones do not share reservations. Directly authored IDs also bypass
 allocation. Imported records and independently allocated clone histories require
@@ -246,11 +247,15 @@ types into one precedence graph. A group may depend on delivery of its own
 members without making membership an execution prerequisite for each child.
 Cross-branch relationships remain outside this reader's scope.
 
-### First inspection commands
+### First commands
 
 `list`, `show <id>`, and `check` read the selected checkout's live files,
 including uncommitted records. Present the selected project path so the source
-is clear. No command changes records, dates, configuration, or Git state.
+is clear. Those commands change no records, dates, configuration, or Git state.
+`new <type> <title> [--slug SLUG]` allocates the next ID as specified above,
+writes `<id>-<slug>.md` with a body skeleton and equal `created`/`updated`
+timestamps, prints the root-relative path, and fails without deleting the file
+if the project no longer validates. It requires Git and never overwrites.
 
 - `list`: show ID, type, status, and title, ordered by `created` ascending with
   undated records last, then ID prefix and numeric suffix as the tie-breaker.
@@ -339,7 +344,7 @@ different branches are versions to reconcile, not automatically ID collisions.
 ## First dogfooding boundary
 
 The CLI now lists, shows, and validates the records tracking its own development
-in one checkout. Safe creation and updates follow. Branch aggregation and
+in one checkout, and creates records with shared IDs. Updates follow. Branch aggregation and
 workspace navigation build on that foundation.
 
 Structured attachments, review/report records, artifact ingestion, and agent

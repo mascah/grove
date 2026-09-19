@@ -5,7 +5,7 @@ title: Allocate IDs with flock, a counter file, and a ref scan floor
 status: accepted
 relates_to: ["D-002", "W-002"]
 created: "2026-09-19T15:25:51Z"
-updated: "2026-09-19T15:28:53Z"
+updated: "2026-09-19T15:52:00Z"
 ---
 
 ## Acceptance
@@ -24,8 +24,8 @@ under `<git-common-dir>/grove/`:
 2. **Reservations:** `next-ids`, three lines such as `W 3`, written to a
    temp file, fsynced, and renamed while the lock is held. Rename is atomic;
    a torn write cannot produce a half-updated counter.
-3. **Floor:** on every allocation, scan the configured record path in all
-   local branch and remote-tracking refs with one `git grep` for
+3. **Floor:** on every allocation, scan the configured record path in every
+   local ref (branches, remote-tracking refs, and tags) with one `git grep` for
    `^id: "<prefix>-<digits>"$`, plus the live record trees of every worktree
    from `git worktree list --porcelain`. The issued number is
    `max(counter, highest observed + 1)`.
@@ -58,6 +58,11 @@ message. Ordinary output from the read-only commands never creates this state.
 Probed 2026-09-19 in this repository: a process that took the lock and exited
 without unlocking released it to a second process immediately, and
 `git grep` across all local refs returned exactly the four record IDs.
+W-002 implemented the mechanism in `internal/create` the same day; its tests
+cover the floor from refs and live worktree files, counter initialization and
+below-floor correction, twenty concurrent allocations across two worktrees, a
+consumed reservation after a failed creation, and lock release when the holder
+is killed. The first real allocation issued W-003 in this repository.
 
 ## Reconsideration
 

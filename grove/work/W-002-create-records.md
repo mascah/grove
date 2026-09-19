@@ -2,7 +2,7 @@
 id: "W-002"
 type: work
 title: Create records with shared sequential ID allocation
-status: active
+status: done
 kind: feature
 priority: 2
 size: medium
@@ -10,7 +10,7 @@ members: []
 depends_on: []
 relates_to: ["W-001", "D-002", "D-003", "Q-001"]
 created: "2026-09-19T15:25:51Z"
-updated: "2026-09-19T15:31:23Z"
+updated: "2026-09-19T15:52:00Z"
 ---
 
 ## Outcome
@@ -84,8 +84,18 @@ write counter via temp file, fsync, rename; unlock; then create the file with
 deleting the file. Git commands used: `rev-parse --git-common-dir`,
 `worktree list --porcelain`, `for-each-ref`, `grep`.
 
+## Evidence
+
+Closed 2026-09-19 on branch `worktree-W-002` at `8d359e3`. The
+[implementation plan](../../docs/plans/W-002-create.md) records the tests,
+race/vet/format results, the real creation of W-003 through the command, and
+the independent review. Every acceptance line above has a fixture test; the
+review's blocking finding, an unreadable file in another worktree silently
+lowering the floor, was fixed and covered before closure. Structural
+validation of the created record is proven; usefulness of the body skeleton
+is the owner's judgment.
+
 ## Next
 
-Execute the [implementation plan](../../docs/plans/W-002-create.md) on branch
-`worktree-W-002`: allocator tests and implementation, then creation and the
-`new` command, then verification and independent review before close.
+Integrate this branch into main, then shape
+[W-003](W-003-update-records.md) for status and field updates.

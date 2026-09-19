@@ -11,8 +11,8 @@ direction, observed evidence, and proposed design; preserve those distinctions.
   The starter file defaults use short sequential IDs, replacing the random-ID
   trial. Future allocation coordinates across local worktrees through Git's
   common metadata directory; reading records requires no allocator state.
-  W-001 implements the first reader contract. Safe mutations, the UI framework,
-  and runner contract remain to be resolved.
+  W-001 implements the reader and W-002 record creation with shared
+  allocation. Updates, the UI framework, and runner contract remain open.
 - Keep deterministic validation and state changes in software where useful;
   do not assume software can replace judgment instructions or prove acceptance.
 - Record settled choices and the concrete next action in the brief while it
@@ -22,7 +22,8 @@ direction, observed evidence, and proposed design; preserve those distinctions.
   instructions; retrieve their Grove knowledge through `grove status`,
   `grove find`, and `grove context` from the relevant repository.
 - The installed `grove` command currently belongs to the sibling skills project.
-  Use `go run ./cmd/grove` for this restart's `grove.yaml` and `grove/` records.
+  Use `go run ./cmd/grove` for this restart's `grove.yaml` and `grove/` records;
+  create records with `go run ./cmd/grove new`, never by hand-numbering.
   Do not use the predecessor's initialization or validation commands here.
 - The archived application's service authority, architecture, credentials,
   deployment procedures, and backlog are historical. Do not revive them as

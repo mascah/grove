@@ -2,7 +2,7 @@
 
 A local project workspace for humans and agents, built around a CLI and durable files.
 
-**Status: the first Go CLI lists, shows, and validates local project records.**
+**Status: the first Go CLI lists, shows, validates, and creates local project records.**
 
 Start with [the restart brief](docs/restart-brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
@@ -21,10 +21,12 @@ Requires Go 1.26 or later. Run from this repository:
 go run ./cmd/grove list
 go run ./cmd/grove show W-001
 go run ./cmd/grove check
+go run ./cmd/grove new work "Title of the work" --slug short-name
 go run ./cmd/grove --project /path/to/project check
 ```
 
-These commands read live files without modifying them. `list` shows ID, type,
+The first three commands read live files without modifying them; `new` adds
+one file and prints its path. `list` shows ID, type,
 status, and title; `show` prints the exact Markdown source; `check` validates
 metadata and relationships. Project/file context and errors go to stderr, so
 stdout can be redirected. Exit codes are 0 for success, 1 for inspection/output
@@ -34,8 +36,13 @@ Without `--project`, discovery searches upward for `grove.yaml` and stops at
 the current Git checkout boundary. Plain directories also work. Any invalid
 record makes the command fail; no partial list or record is printed.
 
+`new` requires a Git checkout: it takes the next `W-`, `Q-`, or `D-` number
+from a counter under the repository's common Git directory, shared by every
+linked worktree, and floors it by the highest ID on any local ref or worktree.
+Never number new records by hand.
+
 Use `go test ./...`, `go test -race ./...`, and `go vet ./...` for verification.
-Creation/update commands and the shared sequential-ID allocator are next;
+Status and field updates from the CLI are next;
 cross-branch views, TUI, and agent execution remain future work.
 
 The intended experience combines linked work, questions, research, project
