@@ -580,3 +580,38 @@ func TestUnchangedGuardCatchesEditorDrift(t *testing.T) {
 		t.Fatalf("equal priorities behind different pointers must compare equal: %v", err)
 	}
 }
+
+// W-007: the review's update reproducers, at the level a user reaches them.
+func TestUpdatePreservesAcceptedForms(t *testing.T) {
+	const stamped = "updated: \"2026-09-19T18:30:00Z\""
+	t.Run("comment before a later-line value", func(t *testing.T) {
+		root := gitProject(t)
+		write(t, root, "grove/work/W-001-first.md", strings.Replace(work, "title: First", "title: # retain\n  First", 1))
+		apply(t, root, "W-001", []Field{{"title", "New"}})
+		want := strings.NewReplacer("title: First", "title: # retain\n  \"New\"", "updated: \"2026-09-19T12:00:00Z\"", stamped).Replace(work)
+		if got := read(t, root, "grove/work/W-001-first.md"); got != want {
+			t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+		}
+	})
+	t.Run("final two flow entries", func(t *testing.T) {
+		for _, unsets := range [][]string{{"kind", "size"}, {"size", "kind"}} {
+			root := gitProject(t)
+			write(t, root, "grove/work/W-001-first.md", "---\n{id: W-001, type: work, title: T, status: proposed, kind: fix, size: small}\n---\nBody\n")
+			apply(t, root, "W-001", nil, unsets...)
+			want := "---\n{id: W-001, type: work, title: T, status: proposed, " + stamped + "}\n---\nBody\n"
+			if got := read(t, root, "grove/work/W-001-first.md"); got != want {
+				t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+			}
+		}
+	})
+	t.Run("explicit keys", func(t *testing.T) {
+		root := gitProject(t)
+		source := strings.NewReplacer("status: proposed", "? status\n: proposed", "relates_to: [\"Q-001\"]", "? relates_to\n: [\"Q-001\"] # why").Replace(work)
+		write(t, root, "grove/work/W-001-first.md", source)
+		apply(t, root, "W-001", []Field{{"status", "active"}}, "relates_to")
+		want := strings.NewReplacer("status: proposed", "? status\n: active", "relates_to: [\"Q-001\"]\n", "", "updated: \"2026-09-19T12:00:00Z\"", stamped).Replace(work)
+		if got := read(t, root, "grove/work/W-001-first.md"); got != want {
+			t.Fatalf("got:\n%s\nwant:\n%s", got, want)
+		}
+	})
+}

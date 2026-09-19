@@ -73,10 +73,11 @@ func Edit(source []byte, changes []change) ([]byte, error) {
 		if !e.keyStartsAt(k, keyOff) {
 			return nil, fmt.Errorf("frontmatter: cannot locate key %s", k.Value)
 		}
-		e.entries = append(e.entries, entry{key: k, value: v, keyOff: keyOff, valOff: valOff})
+		e.entries = append(e.entries, entry{key: k, value: v, start: e.entryStart(keyOff), keyOff: keyOff, valOff: valOff})
 	}
 	var spans []span
 	var appends []change
+	var removed []int // flow entries, whose separators are planned together
 	for _, c := range changes {
 		idx := -1
 		for i, en := range e.entries {
@@ -84,19 +85,27 @@ func Edit(source []byte, changes []change) ([]byte, error) {
 				idx = i
 			}
 		}
-		if idx < 0 {
-			if !c.remove {
-				appends = append(appends, c)
+		switch {
+		case idx < 0 && !c.remove:
+			appends = append(appends, c)
+		case idx < 0:
+		case c.remove && e.flow:
+			removed = append(removed, idx)
+		default:
+			s, err := e.edit(idx, c)
+			if err != nil {
+				return nil, err
 			}
-			continue
+			spans = append(spans, s)
 		}
-		s, err := e.edit(idx, c)
+	}
+	if e.flow {
+		planned, err := e.planFlow(removed, appends)
 		if err != nil {
 			return nil, err
 		}
-		spans = append(spans, s)
-	}
-	if len(appends) != 0 {
+		spans = append(spans, planned...)
+	} else if len(appends) != 0 {
 		s, err := e.append(appends)
 		if err != nil {
 			return nil, err
@@ -125,8 +134,8 @@ func Edit(source []byte, changes []change) ([]byte, error) {
 }
 
 type entry struct {
-	key, value     *yaml.Node
-	keyOff, valOff int
+	key, value            *yaml.Node
+	start, keyOff, valOff int // start is the explicit-key "?" when there is one
 }
 
 type editor struct {
@@ -217,67 +226,194 @@ func (e *editor) skipProperties(off int) int {
 	return off
 }
 
-// bound is the first offset an entry's value may not reach: the next key, or
+// entryStart returns the offset of the "?" indicator before an explicit key
+// at keyOff, or keyOff itself for an ordinary key.
+func (e *editor) entryStart(keyOff int) int {
+	j := keyOff
+	for j > 0 && (e.fm[j-1] == ' ' || e.fm[j-1] == '\t') {
+		j--
+	}
+	if j > 0 && j < keyOff && e.fm[j-1] == '?' && (j == 1 || isSpace(e.fm[j-2]) || e.fm[j-2] == '{' || e.fm[j-2] == ',') {
+		return j - 1
+	}
+	return keyOff
+}
+
+// bound is the first offset an entry's value may not reach: the next entry, or
 // the mapping's end.
 func (e *editor) bound(idx int) int {
 	if idx+1 < len(e.entries) {
-		return e.entries[idx+1].keyOff
+		return e.entries[idx+1].start
 	}
 	return e.end
 }
 
-func (e *editor) edit(idx int, c change) (span, error) {
+// entryEnd returns the offset just past the value of entry idx.
+func (e *editor) entryEnd(idx int) (int, error) {
 	en := e.entries[idx]
 	end, err := e.valueEnd(en.value, en.valOff, e.flow, e.indent)
 	if err != nil {
-		return span{}, fmt.Errorf("frontmatter: %s: %w", c.key, err)
+		return 0, fmt.Errorf("frontmatter: %s: %w", en.key.Value, err)
 	}
 	if end <= en.valOff || end > e.bound(idx) {
-		return span{}, fmt.Errorf("frontmatter: %s: cannot safely identify the value span", c.key)
+		return 0, fmt.Errorf("frontmatter: %s: cannot safely identify the value span", en.key.Value)
 	}
-	if !c.remove {
-		if en.value.Line == en.key.Line {
-			return span{en.valOff, end, c.value}, nil
+	return end, nil
+}
+
+// edit plans a replaced value, or a removed entry of a block mapping.
+func (e *editor) edit(idx int, c change) (span, error) {
+	en := e.entries[idx]
+	end, err := e.entryEnd(idx)
+	if err != nil {
+		return span{}, err
+	}
+	if c.remove {
+		start := bytes.LastIndexByte(e.fm[:en.start], '\n') + 1
+		lineEnd := bytes.IndexByte(e.fm[end:], '\n')
+		if lineEnd < 0 {
+			return span{start, len(e.fm), ""}, nil
 		}
-		after, err := e.afterColon(en)
-		if err != nil {
-			return span{}, err
-		}
+		return span{start, end + lineEnd + 1, ""}, nil
+	}
+	if en.value.Line == en.key.Line {
+		return span{en.valOff, end, c.value}, nil
+	}
+	after, err := e.afterColon(en)
+	if err != nil {
+		return span{}, err
+	}
+	if after > en.valOff {
+		return span{}, fmt.Errorf("frontmatter: %s: cannot locate the key's colon", c.key)
+	}
+	if !bytes.Contains(e.fm[after:en.valOff], []byte("#")) {
 		return span{after, end, " " + c.value}, nil
 	}
-	if e.flow {
-		start := en.keyOff
-		// Prefer the following separator; otherwise the preceding one.
-		i := end
-		for i < len(e.fm) && (e.fm[i] == ' ' || e.fm[i] == '\t') {
-			i++
+	// Comments sit between the colon and the value: keep them and put the new
+	// value where the old one began. Only a block sequence may start at its
+	// key's indentation, so any other replacement is indented further there.
+	pad := ""
+	if column := en.valOff - (bytes.LastIndexByte(e.fm[:en.valOff], '\n') + 1); !e.flow && column <= e.indent {
+		pad = strings.Repeat(" ", e.indent+2-column)
+	}
+	return span{en.valOff, end, pad + c.value}, nil
+}
+
+// planFlow plans the removed entries and appended fields of a flow mapping
+// together, so each separator is removed at most once and an append knows
+// whether a separator survives before it. An entry takes the comma that
+// follows it; the last entry instead takes the comma before the removed run it
+// ends, when only whitespace separates them. A comma hidden behind a comment
+// stays as a trailing comma, which YAML allows. A removed entry's inline
+// comment goes with it; standalone comment lines stay.
+func (e *editor) planFlow(removed []int, appends []change) ([]span, error) {
+	parts := make([]string, len(appends))
+	for i, c := range appends {
+		parts[i] = c.key + ": " + c.value
+	}
+	added := strings.Join(parts, ", ")
+	if len(e.entries) == 0 {
+		if added == "" {
+			return nil, nil
 		}
-		if i < len(e.fm) && e.fm[i] == ',' {
-			i++
-			for i < len(e.fm) && (e.fm[i] == ' ' || e.fm[i] == '\t') {
-				i++
+		return []span{{e.end, e.end, added}}, nil
+	}
+	last := len(e.entries) - 1
+	slices.Sort(removed)
+	removed = slices.Compact(removed)
+	var spans []span
+	for n, idx := range removed {
+		end, err := e.entryEnd(idx)
+		if err != nil {
+			return nil, err
+		}
+		s := span{start: e.entries[idx].start, end: end}
+		after := e.skipBlanks(end)
+		following := after < len(e.fm) && e.fm[after] == ','
+		if following {
+			after = e.skipBlanks(after + 1)
+			s.end = after
+		}
+		if after < len(e.fm) && e.fm[after] == '#' {
+			for after < len(e.fm) && e.fm[after] != '\n' && e.fm[after] != '\r' {
+				after++
 			}
-			return span{start, i, ""}, nil
+			s.end = after
 		}
-		j := start
-		for j > 0 && strings.ContainsRune(" \t\r\n", rune(e.fm[j-1])) {
-			j--
+		consumed := false
+		if !following {
+			// ponytail: a separator on a later line than its entry's value is
+			// refused; scan comments and line breaks for it if such files appear.
+			if idx != last {
+				return nil, fmt.Errorf("frontmatter: %s: cannot locate the separator after the entry", e.entries[idx].key.Value)
+			}
+			first := n // of the removed run that ends the mapping
+			for first > 0 && removed[first-1] == removed[first]-1 {
+				first--
+			}
+			j := e.entries[removed[first]].start
+			for j > 0 && isSpace(e.fm[j-1]) {
+				j--
+			}
+			if j > 0 && e.fm[j-1] == ',' {
+				consumed = true
+				if first == n {
+					s.start = j - 1
+				} else {
+					spans[first].start = j - 1
+				}
+			}
 		}
-		if j > 0 && e.fm[j-1] == ',' {
-			return span{j - 1, end, ""}, nil
+		if idx == last && added != "" {
+			switch {
+			case following:
+				s.text = added + ", "
+			case consumed:
+				s.text = ", " + added
+			default:
+				s.text = added
+			}
+			added = ""
 		}
-		return span{start, end, ""}, nil
+		if s.text == "" {
+			s = e.wholeLine(s)
+		}
+		spans = append(spans, s)
 	}
-	start := bytes.LastIndexByte(e.fm[:en.keyOff], '\n') + 1
-	lineEnd := bytes.IndexByte(e.fm[end:], '\n')
-	if lineEnd < 0 {
-		return span{start, len(e.fm), ""}, nil
+	if added != "" {
+		end, err := e.entryEnd(last)
+		if err != nil {
+			return nil, err
+		}
+		spans = append(spans, span{end, end, ", " + added})
 	}
-	return span{start, end + lineEnd + 1, ""}, nil
+	return spans, nil
+}
+
+func (e *editor) skipBlanks(i int) int {
+	for i < len(e.fm) && (e.fm[i] == ' ' || e.fm[i] == '\t') {
+		i++
+	}
+	return i
+}
+
+// wholeLine widens a removal that leaves only whitespace on its line to the
+// line itself, so no blank line remains.
+func (e *editor) wholeLine(s span) span {
+	lineStart := bytes.LastIndexByte(e.fm[:s.start], '\n') + 1
+	end := s.end
+	if end < len(e.fm) && e.fm[end] == '\r' {
+		end++
+	}
+	if len(bytes.TrimLeft(e.fm[lineStart:s.start], " \t")) == 0 && end < len(e.fm) && e.fm[end] == '\n' {
+		return span{lineStart, end + 1, ""}
+	}
+	return s
 }
 
 // afterColon returns the offset just past the key's colon, for values that
-// start on a later line than their key.
+// start on a later line than their key. An explicit key's colon is on a later
+// line than the key, after optional comments.
 func (e *editor) afterColon(en entry) (int, error) {
 	var err error
 	end := e.skipProperties(en.keyOff)
@@ -292,7 +428,13 @@ func (e *editor) afterColon(en entry) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	for end < len(e.fm) && (e.fm[end] == ' ' || e.fm[end] == '\t') {
+	for end < len(e.fm) && (isSpace(e.fm[end]) || e.fm[end] == '#') {
+		if e.fm[end] == '#' {
+			for end < len(e.fm) && e.fm[end] != '\n' {
+				end++
+			}
+			continue
+		}
 		end++
 	}
 	if end >= len(e.fm) || e.fm[end] != ':' {
@@ -301,26 +443,16 @@ func (e *editor) afterColon(en entry) (int, error) {
 	return end + 1, nil
 }
 
+// append adds fields after the last line of a block mapping.
 func (e *editor) append(appends []change) (span, error) {
 	var b strings.Builder
-	if !e.flow {
-		if len(e.fm) != 0 && e.fm[len(e.fm)-1] != '\n' {
-			return span{}, errors.New("frontmatter: mapping does not end with a newline")
-		}
-		for _, c := range appends {
-			fmt.Fprintf(&b, "%s%s: %s\n", strings.Repeat(" ", e.indent), c.key, c.value)
-		}
-		return span{len(e.fm), len(e.fm), b.String()}, nil
-	}
-	last := e.entries[len(e.entries)-1]
-	end, err := e.valueEnd(last.value, last.valOff, true, e.indent)
-	if err != nil || end > e.bound(len(e.entries)-1) {
-		return span{}, fmt.Errorf("frontmatter: cannot append after %s", last.key.Value)
+	if len(e.fm) != 0 && e.fm[len(e.fm)-1] != '\n' {
+		return span{}, errors.New("frontmatter: mapping does not end with a newline")
 	}
 	for _, c := range appends {
-		fmt.Fprintf(&b, ", %s: %s", c.key, c.value)
+		fmt.Fprintf(&b, "%s%s: %s\n", strings.Repeat(" ", e.indent), c.key, c.value)
 	}
-	return span{end, end, b.String()}, nil
+	return span{len(e.fm), len(e.fm), b.String()}, nil
 }
 
 // valueEnd returns the offset just past a value's syntax, excluding trailing
