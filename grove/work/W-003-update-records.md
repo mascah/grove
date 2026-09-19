@@ -268,8 +268,9 @@ separate step. Do not start W-004/W-005 as part of this assignment.
 
 ## Next
 
-Integrate `worktree-W-003` into main. Then finish W-004's output/source
-selector contract and W-005's consuming contract. While Fable implements W-003, finish W-004's output/source
-selector contract and W-005's consuming contract. Implement those sequentially
-after reviewing the actual shared interfaces; W-004's read-only behavior has no
-hard dependency on updates, while W-005 requires W-004.
+Integrated into main at `b20d2b0` on 2026-09-19; W-004/W-005 subsequently
+integrated at `5041ae1`. The [integrated review](../../docs/reviews/2026-09-19-integrated-cli.md)
+found additional accepted-form preservation and configuration-check gaps.
+[W-007](W-007-preserve-updates.md) owns the proposed repairs; the historical
+review above remains evidence of what was checked at that time, not proof of
+those later cases. Do not repeat integration of the old implementation branch.

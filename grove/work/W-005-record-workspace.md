@@ -16,7 +16,7 @@ updated: "2026-09-19T20:05:45Z"
 
 Given an explicitly selected record version, locate and validate its existing
 checkout so a person or future UI can enter the right editing context without
-switching main. This proposed CLI foundation is one part of Open workspace;
+switching main. This implemented CLI foundation is one part of Open workspace;
 automatic checkout creation and interactive opening remain follow-on design.
 
 ## Why now
@@ -38,9 +38,9 @@ prerequisite because this operation consumes its source identity contract.
 - Q-001 owns the selection policy. W-003 remains responsible for safe updates
   after a caller enters a checkout; a returned path is not future write authority.
 
-## Design proposal
+## Implemented technical contract
 
-Proposed CLI surface: `grove workspace --source SELECTOR [--json]`, consuming
+CLI surface: `grove workspace --source SELECTOR [--json]`, consuming
 W-004's version selector. Success prints the absolute project directory within
 the target checkout; JSON includes checkout path, project path, record path,
 branch/HEAD, and the validated current content revision. Human diagnostics go
@@ -125,8 +125,10 @@ revision check because the workspace can change after resolution.
 
 ## Next
 
-Integrated into main at `5041ae1` on 2026-09-19. Next, shape the interactive
-Open workspace action over `versions` and `workspace`, including explicit
-creation of a linked worktree for a branch without a checkout, which this
-command refuses today. Do not treat path resolution as completion of that
-entire user experience.
+Integrated into main at `5041ae1` on 2026-09-19. Repair the routing/freshness
+and Git-path defects in [W-006](W-006-workspace-provenance.md) and
+[W-008](W-008-git-paths.md) before building actions on this command. The
+[integrated review](../../docs/reviews/2026-09-19-integrated-cli.md) supplies
+reproducers and distinguishes tested behavior from remaining limits. Then shape
+the interactive existing-workspace experience; checkout creation needs its own
+write/failure design. Path resolution is not that entire experience.

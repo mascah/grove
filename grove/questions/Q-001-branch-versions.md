@@ -20,7 +20,7 @@ each version without silently editing the wrong checkout?
 The [restart brief](../../docs/restart-brief.md#cross-branch-view-and-branch-context-editing-2026-09-18)
 owns the accepted branch-context direction and the earlier routing experiment.
 The answer below settles presentation and explicit version selection. Detailed
-source and routing contracts belong to the proposed W-004 and W-005 designs.
+source and routing contracts belong to W-004/W-005 and their coordination plan.
 
 This question previously blocked W-004 and W-005. Its resolved status removes
 that policy blocker; it does not establish implementation readiness or completed
@@ -54,12 +54,14 @@ source selection; timestamps alone must not establish authority.
 
 ## Remaining design ownership
 
-[W-004](../work/W-004-record-versions.md) owns the proposed source scope,
+[W-004](../work/W-004-record-versions.md) owns the source scope,
 committed/live representation, validation, output, and selector contract.
-[W-005](../work/W-005-record-workspace.md) owns proposed workspace lookup,
+[W-005](../work/W-005-record-workspace.md) owns workspace lookup,
 freshness checks, and missing/ambiguous-checkout outcomes. The owner's answer
-does not approve every technical proposal in those work records. Finalize those
-contracts during shaping without reopening this settled presentation choice.
+does not approve every technical proposal in those work records. Those contracts
+were subsequently implemented and integrated; the
+[coordination plan](../../docs/plans/W-004-W-005-coordination.md) retains their
+finalized technical details without changing this settled presentation choice.
 
 ## Inspected evidence
 
@@ -75,12 +77,14 @@ in [ls-tree](https://git-scm.com/docs/git-ls-tree), and worktree branch, HEAD,
 path, and detached state in
 [worktree porcelain output](https://git-scm.com/docs/git-worktree#_porcelain_format).
 These provide discovery inputs, not a transactional selection or a Grove claim.
-The current repository has only main and one checkout; this inspection does
-not supply new evidence for conflicting branches. The earlier fixture in the
-brief establishes only basic routing feasibility.
+At that historical inspection the repository had only main and one checkout;
+it did not supply new evidence for conflicting branches. The earlier fixture
+in the brief establishes only basic routing feasibility.
 
 ## Next
 
-Retain this answer as the policy reference for W-004 and W-005. Prepare their
-remaining contracts and acceptance fixtures, including differing branch statuses
-and explicit workspace selection. No combined view has been implemented yet.
+Retain this accepted answer for all future workspace presentation. W-004/W-005
+are integrated at `5041ae1`; their CLI exposes explicit versions and resolves
+existing workspaces. The [integrated review](../../docs/reviews/2026-09-19-integrated-cli.md)
+records proposed reliability repairs before interactive actions. An interactive
+view, automatic checkout creation, and agent launching remain unimplemented.

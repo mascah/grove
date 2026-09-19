@@ -335,7 +335,7 @@ The earlier illustrative examples have been replaced by real records:
 - [Decision: starter defaults](../grove/decisions/D-001-starter-defaults.md)
   records acceptance and points here for the schema rather than copying it.
 - [Work: create records](../grove/work/W-002-create-records.md) owns the
-  proposed creation command and shared allocation.
+  implemented creation command and shared allocation.
 - [Decision: sequential IDs](../grove/decisions/D-002-sequential-ids.md)
   records the naming revision and starter-record ID migration.
 
@@ -367,8 +367,9 @@ The CLI now lists, shows, and validates the records tracking its own development
 in one checkout, creates records with shared IDs, updates their fields
 while refusing stale writes, shows each record's versions across local
 branches and worktrees, and locates the existing checkout holding a selected
-version. An interactive workspace and automatic checkout creation build on
-that foundation.
+version. The [integrated CLI review](reviews/2026-09-19-integrated-cli.md) records
+remaining contract defects and proposed W-006/W-007/W-008 repairs. An interactive
+workspace and automatic checkout creation are future investments after repairs.
 
 Structured attachments, review/report records, artifact ingestion, and agent
 attempts are deferred. Ordinary Markdown links and prose can carry supporting

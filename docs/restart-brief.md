@@ -68,9 +68,12 @@ Selected direction:
   that answer. W-004 and W-005 implemented the CLI foundations on
   2026-09-19: `versions` and `workspace`, with the selector contract in
   their shared [coordination plan](plans/W-004-W-005-coordination.md). The
-  interactive Open workspace action, creating a worktree for a branch
-  without one, a checkout-local board, and agent launching are later
-  investments.
+  owner subsequently selected a terminal version picker for existing workspaces
+  after reliability repairs, then asked to see a Kanban board sooner.
+  [W-009](../grove/work/W-009-terminal-picker.md) now proposes a board-first TUI:
+  one checkout supplies column statuses, while each card exposes explicit
+  cross-branch versions. Worktree creation and agent launching remain later
+  investments; the detailed board interaction remains proposed.
 - Eventual agent execution from that workspace, with `claude -p` as the concrete
   first-provider idea. Exact invocation and lifecycle behavior need validation.
 - A clean implementation start, informed by the working skills and nullsec
@@ -242,7 +245,8 @@ the existing feature worktree through porcelain output, and edited its record.
 Main's current branch, copy of the record, and unrelated staged changes remained
 unchanged. The fixture was removed. This proves basic routing feasibility only;
 concurrent writers, branch-change races, workspace provisioning, and recovery
-were not tested. No product implementation exists yet.
+were not tested by that early probe. W-004/W-005 subsequently implemented the
+read-only foundations; the review below qualifies their current reliability.
 
 Earlier alternative retained for reconsideration: a separate `grove-project`
 branch with a shared working directory was also proven locally feasible in a
@@ -266,10 +270,11 @@ too disruptive. [Git worktree facilities](https://git-scm.com/docs/git-worktree)
    working directory, output, failure/wait state, cancellation, interruption
    recovery, and reconciliation. Establish what happens when the TUI exits.
    Reuse existing export/run/reconcile ideas only after inspecting their fit.
-3. **What is the next useful interactive interface?** Go inspection commands now
-   read real Grove data. An interactive view could validate navigation; one
-   executable action would test the harness boundary. Choose a TUI stack against
-   that bounded slice when it becomes the next investment.
+3. **How should the first TUI feel in use?** The owner selected the terminal
+   experience and requested early Kanban value. W-009 proposes the checkout
+   board and explicit version view; validate that interaction in an owner demo
+   after the CLI repairs. Its Bubble Tea recommendation is still a technical
+   proposal, and agent execution is outside the first interaction.
 
 Related details to resolve at the appropriate boundary:
 
@@ -308,26 +313,48 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** shape the interactive Open workspace experience over the
-integrated CLI. [W-004](../grove/work/W-004-record-versions.md) and
-[W-005](../grove/work/W-005-record-workspace.md) were integrated into main at
-`5041ae1` on 2026-09-19: `versions` shows each record's committed version on
-every local branch and live version in every worktree with a selector per
-version, and `workspace --source` resolves a selected version to its existing
-checkout or refuses with the reason, per the
-[coordination plan](plans/W-004-W-005-coordination.md). The next investment
-is presenting those version rows, explicit selection, and creating a linked
-worktree for a branch that has no checkout, which the CLI deliberately
-refuses today; choose the interface stack against that bounded slice. Keep
-implementation serial while CLI and project-loader ownership overlaps.
-Creation is complete in [W-002](../grove/work/W-002-create-records.md): use
-`go run ./cmd/grove new` for every new record; the allocator per
-[D-003](../grove/decisions/D-003-allocator-mechanism.md) shares one counter
-across linked worktrees, and separate-clone and import conflicts stay out of
-scope. Inspection is complete in
-[W-001](../grove/work/W-001-inspect-records.md): use `list`, `show ID`, or
-`check`. Keep the installed sibling CLI untouched; TUI and execution remain
-later work.
+**Next action:** repair the integrated CLI contracts before building interactive
+workspace actions. The [2026-09-19 review](reviews/2026-09-19-integrated-cli.md)
+verified W-003 integration at `b20d2b0` and W-004/W-005 integration at
+`5041ae1`, with main at `9b7f730`. Full/race suites, vet, formatting, checkout
+validation, and real selection → resolution → inspection passed. Additional
+probes nevertheless demonstrated wrong-repository routing through a symlinked
+project prefix, success for a checkout deleted during inspection, comment loss
+and valid-update refusals, an ignored configuration change, and newline-path
+parsing that writes a lock outside the actual Git directory.
+
+Proposed repair handoffs, each with a specification and linked implementation
+plan: [W-006](../grove/work/W-006-workspace-provenance.md) validates live project
+ownership and final workspace freshness;
+[W-007](../grove/work/W-007-preserve-updates.md) repairs source-preserving edits
+and configuration-change refusal;
+[W-008](../grove/work/W-008-git-paths.md) preserves Git paths and coordination
+locations. Recommend one Fable agent in a fresh isolated worktree, serially in
+that order because shared ownership overlaps. These are repair proposals under
+the existing contracts, not completed work or new product decisions. Preserve
+the retained W-004/W-005 worktree; it has no commits missing from main. Review
+and integration of the repairs remain separate steps.
+
+After the repairs, the recommended next user outcome is a terminal Kanban board
+with explicit version selection inside each card. The owner selected the terminal
+experience on 2026-09-19, then asked for Kanban sooner. Proposed policy: columns
+show one labelled live checkout's statuses, card details group all versions by ID,
+and an Other sources shelf exposes work absent from that checkout. Workspace
+selection remains explicit, incomplete results visible, and stale selections
+require refresh. This brings board value into the first TUI; it does not select
+one authoritative status across branches. [W-009](../grove/work/W-009-terminal-picker.md) owns
+the proposed screen, keyboard/output contract, acceptance, and linked plan.
+Bubble Tea v2 is the documented technical recommendation; no framework has
+been installed or adopted as implemented architecture. Keep worktree creation
+as a separate design with
+explicit destination and failure policies; agent launches, claims, and mutation
+through an interactive view come later. Q-001's accepted policy stays unchanged.
+
+The implemented CLI remains useful for dogfooding: `list`, `show`, `check`,
+`new`, `update`, `versions`, and `workspace`, subject to the review's concrete
+limits. Use `go run ./cmd/grove new` for every new record and `update` for field
+changes; keep the installed sibling CLI untouched. Separate-clone and import
+conflicts remain outside the local allocator guarantee.
 
 ## Reset and scope record
 

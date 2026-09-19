@@ -18,7 +18,8 @@ From one checkout, inspect the records on local branch tips and in registered
 worktrees, with enough source information to choose which version to act on.
 Main can show Fable's branch progress without switching branches or merging
 records. Q-001's grouping and explicit-selection policy is accepted; the
-implementation contract below remains proposed.
+technical contract below was implemented and finalized in the linked
+coordination plan; the later integrated review records remaining defects.
 
 ## Why now
 
@@ -41,9 +42,9 @@ alongside this feature but is not a read-only inspection prerequisite.
 - First scope: local branch tips and registered live worktrees in the same
   repository. No fetch, remote refs, tags, historical search, or persistent index.
 
-## Design proposal
+## Implemented technical contract
 
-Proposed CLI surface: `grove versions [ID] [--json]`, with existing `--project`
+CLI surface: `grove versions [ID] [--json]`, with existing `--project`
 discovery. Without ID, list grouped observations for all three record types;
 with ID, restrict presentation to that identity after validating each source.
 Plain directories fail with a clear Git-required diagnostic.
@@ -149,3 +150,9 @@ at resolution time.
 
 W-005 consumed the selector in the same branch; both were integrated into
 main at `5041ae1` on 2026-09-19.
+
+[W-006](W-006-workspace-provenance.md) and [W-008](W-008-git-paths.md) own
+proposed repairs from the [integrated review](../../docs/reviews/2026-09-19-integrated-cli.md),
+including live project ownership, observed worktree disappearance, and exact Git
+path handling. The done status records the original implemented outcome; these
+follow-ups qualify its reliability without implying an unmerged branch.
