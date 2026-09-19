@@ -2,7 +2,7 @@
 id: "W-003"
 type: work
 title: "Update record status and fields from the CLI"
-status: proposed
+status: active
 kind: feature
 priority: 3
 size: medium
@@ -10,15 +10,16 @@ members: []
 depends_on: []
 relates_to: ["W-002", "D-003"]
 created: "2026-09-19T15:36:19Z"
-updated: "2026-09-19T17:59:55Z"
+updated: "2026-09-19T18:42:39Z"
 ---
 
 ## Outcome
 
 Change one record's status and fields from the CLI, preserving human-authored
 Markdown and refusing stale updates. Grove's own records are the first data.
-This specification is ready for owner review; it is not yet approved for
-implementation. It replaces the earlier open-ended shaping proposal.
+The owner approved this specification on 2026-09-19 and authorized
+implementation; the [implementation plan](../../docs/plans/W-003-update.md)
+maps acceptance to checks and records evidence.
 
 ## Why now
 
@@ -241,8 +242,8 @@ separate step. Do not start W-004/W-005 as part of this assignment.
 
 ## Next
 
-Owner review of this concrete specification, then preparation of Fable's W-003
-implementation plan. While Fable implements W-003, finish W-004's output/source
+Implement per the [plan](../../docs/plans/W-003-update.md) on
+`worktree-W-003`, then independent review and closure. While Fable implements W-003, finish W-004's output/source
 selector contract and W-005's consuming contract. Implement those sequentially
 after reviewing the actual shared interfaces; W-004's read-only behavior has no
 hard dependency on updates, while W-005 requires W-004.
