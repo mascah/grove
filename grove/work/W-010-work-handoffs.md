@@ -39,6 +39,22 @@ These are authored instructions, not an installed skill, generated context
 bundle, readiness proof, or agent execution capability. They do not complete
 this record's reusable entrypoint outcome.
 
+## Predecessor behavior reviewed
+
+The owner explicitly requested review of the actual
+`../skills/skills/work/SKILL.md`. The
+[2026-09-19 predecessor review](../../docs/reviews/2026-09-19-predecessor-work.md)
+inspected that skill, its supporting instructions, instruction-generator code,
+and headless adapter at sibling revision `ec87bb2`. It is required design input
+for this work, not authority to invoke predecessor workflows here.
+
+The old skill prepared missing plans, coordinated implementers and reviewers,
+bounded retries, recovered interrupted attempts, verified connected behavior,
+and reconciled evidence before an integration handoff. Its `grove launch`
+printed instructions; frozen export/reconcile and a `claude -p` process adapter
+were separate facilities. The current shared guide implements only part of that
+instructional responsibility and must not be presented as equivalent already.
+
 ## Proposed first slice
 
 Package the execution guide as a thin repository-owned `/work`-equivalent
@@ -48,6 +64,16 @@ The CLI assembles facts; the instructions supply implementation/review judgment.
 Keep one owner for the guide: an adapter should reference it, not fork its rules.
 A command name and adapter location should be selected during preparation against
 the actual harness; no unsupported command is claimed here.
+
+Use the review's responsibility mapping to select the supported execution path:
+plan preparation, implementation/review ownership, bounded retry/stop conditions,
+checkpoint recovery, and evidence reconciliation must be explicit. Do not copy
+the predecessor's model assignments or controller API by assumption. Keep
+unimplemented controller/runner behavior visibly deferred. The instruction
+entrypoint may prepare missing plans within the authorized outcome; distinguish
+that preparation task from a frozen, implementation-ready assignment. A missing
+required source is an error, while an absent plan must produce an explicit
+preparation step rather than silent omission or a false readiness claim.
 
 Include the selected project/checkout/branch, record paths and exact content
 revisions, linked plans and review evidence, prerequisites and their observed
@@ -81,12 +107,17 @@ Do not smuggle these policies into the first board or add a run schema here.
    their owning artifacts. Changes to a record produce changed revision/context;
    no duplicated specification or stale copied acceptance silently wins.
 3. Tests cover missing/invalid records and links, explicit order, multi-ID scope,
-   changed source revisions and partial/oversized context. Preparation performs
-   no filesystem/Git/project-state writes and launches nothing.
+   changed source revisions and partial/oversized context. CLI prompt/context
+   preparation performs no filesystem/Git/project-state writes and launches
+   nothing; agent-authored plans belong to the separately authorized execution.
 4. The entrypoint obeys the restart schema/CLI and preserves the distinction
    between implementation completion, review, human judgment, and integration.
 5. Dogfood the entrypoint on a real prepared work assignment and retain the
    generated handoff and observed shortcomings before designing automatic launch.
+6. Document reuse/adaptation/deferral of the reviewed predecessor responsibilities.
+   Verify missing-plan preparation, external blockers, serial batch handoffs,
+   interruption/resume, and pending human judgment for the supported path.
+   Do not claim full `/work` equivalence from prompt-generation tests alone.
 
 ## Constraints and dependencies
 
@@ -102,6 +133,8 @@ implementation concurrency with the repair branch.
 Shape this small dogfooding capability soon after the reliability repairs, before
 expanding into supervised agent launching; it may be used for W-009 if ready,
 but must not delay the requested board. Inspect the predecessor's execution
-responsibilities through its own project instructions/CLI, select the thin
-adapter and deterministic context interface, and link an implementation plan
-here. Use the shared guide and saved prompts for current assignments meanwhile.
+responsibility mapping in the completed review, select the supported execution
+path, thin adapter, and deterministic context interface, and link an
+implementation plan here. Resolve harness mechanics through inspection; ask the
+owner only for consequential preferences or scope changes. Use the shared guide
+and saved prompts for current assignments meanwhile.

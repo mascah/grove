@@ -18,13 +18,16 @@ See work in a terminal Kanban board, inspect differing committed/live versions
 inside a card, and explicitly select an existing workspace without copying an
 opaque selector. On 2026-09-19 the owner preferred the board over a standalone
 version picker as the first terminal experience after reliability fixes.
-Board-first is selected direction; the detailed layout, context policy and
+The owner then selected bare `grove` as the TUI entrypoint, with the board as its
+first screen; do not add a `grove board` subcommand. Board-first and this
+entrypoint are selected direction; the detailed layout, context policy and
 framework choice below remain proposed design, not shipped behavior.
 [Implementation plan](../../docs/plans/W-009-terminal-picker.md).
 
 ## What the TUI means here
 
-The terminal becomes a persistent keyboard-driven board while the command runs.
+Calling `grove` with no arguments opens the persistent terminal application,
+initially containing the Kanban board. In this checkout use `go run ./cmd/grove`.
 Left/Right move between status columns; Up/Down move between cards. Enter opens a
 card's versions and source details. Leaving restores the ordinary shell screen.
 Grove still reads local files without a server, and the board stores no duplicate
@@ -66,9 +69,13 @@ decisions remain available through the CLI; they do not gain work-status columns
 
 ## Command and interaction proposal
 
-`grove board [WORK_ID] [--json]` uses existing project discovery and Git scope.
-Show only work groups; an optional work ID restricts the cards/shelf but still
-requires a concrete version choice. Reject a non-work ID as usage error.
+`grove` with no subcommand launches the TUI using existing project discovery
+and Git scope. Optional `--project DIR` selects its initial project; `--json`
+changes only the final workspace result, not the interactive display. Thus
+`grove [--project DIR] [--json]` is the proposed full default-mode syntax.
+Show all work groups; no positional work-ID shortcut or `board` subcommand.
+Keep existing explicit subcommands noninteractive. `grove --help`, `grove -h`,
+and `grove help` print usage and exit without project discovery or terminal setup.
 
 - Left/Right (h/l) switch columns; Up/Down (j/k) move cards. At widths below
   100 columns show one status column at a time with all four status tabs and
@@ -92,7 +99,9 @@ requires a concrete version choice. Reject a non-work ID as usage error.
   absolute project path plus newline on stdout (or workspace's existing JSON
   shape under `--json`), and prints escaped target/source context on stderr.
   The UI uses stderr; stdin and stderr must be terminals. Nonterminal use refuses
-  before raw mode and points to versions/workspace. Help needs no project/TTY.
+  before raw mode with exit 1, no stdout result, and guidance to explicit CLI
+  subcommands (`list`, `versions`, `workspace`) or `--help`; it must not hang or
+  silently switch to a different result format. Help needs no project/TTY.
   JSON is the lossless path interface for paths with control characters.
 - A refused resolution stays in the version view with its reason and r refresh
   guidance. Missing checkout never creates one. Deleted rows remain visible but
@@ -159,8 +168,10 @@ No record or configuration changes, index/ref changes, worktree provisioning,
 claims, agent launches, child shell/editor, body editing, or new record schema.
 Terminal mode/output is the only intended interactive side effect. Do not create
 debug/panic log files in the repository; strip the framework's debug-log switch
-from the UI environment and do not enable file logging. Keep existing CLI output
-and ordinary local-file use intact.
+from the UI environment and do not enable file logging. Keep existing explicit
+subcommand output and ordinary local-file use intact. The deliberate CLI behavior
+change is that an absent subcommand requests the TUI rather than returning the
+current command-required usage error.
 
 ## Acceptance
 
@@ -188,6 +199,10 @@ and ordinary local-file use intact.
 6. Targeted/full/race suites, vet, formatting, Grove check, dependency review,
    and independent behavior review pass. Owner usability feedback on a real
    Kanban demo remains separate evidence from automated tests or screenshots.
+7. Bare `grove` launches the TUI in a terminal, initially showing the board.
+   Optional project/JSON flags obey the default-mode contract; help works outside
+   a project without a TTY. Nonterminal default use refuses promptly and existing
+   explicit subcommands retain their contracts. No `board` subcommand is added.
 
 ## Next
 

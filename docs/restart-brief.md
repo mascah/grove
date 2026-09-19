@@ -73,7 +73,9 @@ Selected direction:
   a separate picker as the starting screen.
   [W-009](../grove/work/W-009-terminal-picker.md) designs that board-first TUI:
   one checkout supplies column statuses, while each card exposes explicit
-  cross-branch versions. Worktree creation and agent launching remain later
+  cross-branch versions. The owner selected bare `grove` (no arguments) to open
+  the TUI, with the board as its first screen; there will be no `grove board`
+  subcommand. Worktree creation and agent launching remain later
   investments; the detailed board interaction remains proposed.
 - Eventual agent execution from that workspace, with `claude -p` as the concrete
   first-provider idea. Exact invocation and lifecycle behavior need validation.
@@ -85,6 +87,10 @@ Selected direction:
   before supervised launching. A future Kanban Implement action can reuse that
   prepared assignment; launch, cancellation, recovery, and result reconciliation
   still need their own contract. This does not add agent launching to W-009.
+  The [actual predecessor `/work` review](reviews/2026-09-19-predecessor-work.md)
+  is required input to W-010: its preparation, review, recovery, and closure
+  responsibilities extend beyond prompt generation. Adapt or explicitly defer
+  them; the current guide is only a partial baseline.
 - A clean implementation start, informed by the working skills and nullsec
   experience rather than constrained by the first application's architecture.
 

@@ -3,15 +3,16 @@
 > For Fable: execute serially in an isolated worktree using repository
 > instructions and an inline execution workflow. Do not merge automatically.
 
-**Goal:** show a checkout-scoped Kanban board with grouped version inspection
-and explicit existing-workspace selection.
+**Goal:** launch Grove's TUI when called without a subcommand, initially showing
+a checkout-scoped Kanban board with grouped version inspection and explicit
+existing-workspace selection. Do not add a `grove board` subcommand.
 
 **Spec:** [W-009](../../grove/work/W-009-terminal-picker.md), including the
 selected experience, proposed screen, keyboard contract, output and cancellation
 semantics, dependency rationale, and acceptance.
 
 **Architecture:** a small `internal/tui` model renders `versions.Result` and
-issues cancellable read operations. Existing CLI and version contracts retain
+issues cancellable read operations. Existing explicit CLI and version contracts retain
 their noninteractive behavior. UI rendering uses stderr, with a workspace result
 on stdout only after successful selection and terminal restoration.
 
@@ -73,7 +74,7 @@ type Backend struct {
 ```
 
 Use `tea.Model` (`Init`, `Update`, `View`) and v2 `tea.KeyPressMsg`.
-Model fields include root/id, result, board source identity (locator/path/ref),
+Model fields include root, result, board source identity (locator/path/ref),
 column/card/shelf focus, current card ID, focused version identity, checkout
 chooser/version/detail/source view, dimensions/scroll offsets, one active operation/cancel func,
 request generation, error text, and optional final Workspace. Row identity is
@@ -101,7 +102,7 @@ Derive four columns from Version.Record where Type == work and Source equals
 the explicitly scoped live source, retaining version ordering from Inspect.
 Derive the shelf from work groups with no live record in that source. Test
 divergent titles/statuses, question/decision exclusion, empty columns, detached
-context, deleted rows, incomplete valid subsets, no matching work ID, invalid
+context, deleted rows, incomplete valid subsets, no work records, invalid
 context versus empty board, inventory failure, and a disappeared card after
 refresh. On context identity changes require a new checkout choice.
 - [ ] Implement asynchronous `tea.Cmd` effects with owned cancellable contexts.
@@ -117,7 +118,7 @@ Expose:
 
 ```go
 // nil workspace and nil error means ordinary user cancellation.
-func Run(ctx context.Context, root, id string, input, screen *os.File) (*versions.Workspace, error)
+func Run(ctx context.Context, root string, input, screen *os.File) (*versions.Workspace, error)
 ```
 
 `context.Canceled` represents interruption to the CLI; use `tea.WithInput`,
@@ -148,20 +149,29 @@ environment with TEA_DEBUG removed and never enable file logging.
   Windows PTY coverage. Unit tests alone do not prove terminal lifecycle.
 - [ ] Run view/model/PTY tests and commit `feat(tui): render the terminal Kanban board and version view`.
 
-## Task 4: Expose board and prove the connected workflow
+## Task 4: Make the TUI the default invocation and prove the connected workflow
 
-Files: `internal/cli/cli.go`, new `internal/cli/board.go`, `board_test.go`,
+Files: `internal/cli/cli.go`, `cli_test.go`, new `internal/cli/tui.go`, `tui_test.go`,
 `internal/cli/workspace.go` (shared result formatting), README and work/plan bodies.
-Keep `cli.Run` signature unchanged: board requires `os.Stdin` and errOut to be
+Keep `cli.Run` signature unchanged: the TUI requires `os.Stdin` and errOut to be
 terminal `*os.File` handles; ordinary tests with buffers exercise refusal/help.
 Run real interactive behavior through the PTY harness. Extract existing workspace
-result formatting into a private CLI helper shared by workspace and board.
+result formatting into a private CLI helper shared by workspace and the TUI.
 
-- [ ] Add parser tests for `board [WORK_ID] [--json]`, both --project placements,
-  duplicate/unknown options, non-work IDs and excess arguments; help must need no project/TTY.
+- [ ] Add parser tests for no arguments, project-only/JSON-only invocation and
+  both flag orders in `grove [--project DIR] [--json]`. Default mode accepts no
+  positionals; reject `board`, bare work IDs, duplicate/unknown options, and
+  subcommand-only flags (`--source`, `--slug`, `--expect`, `--set`, `--unset`).
+  Do not let the new default bypass normal option validation. Retain explicit
+  subcommand parsing. `--help`, `-h`, and `help` need no project/TTY and never
+  enter the UI. Update the existing nil-arguments usage-error expectation in
+  `TestUsageAndMissingID`: no command now selects the TUI, not a usage error.
   Reject nonterminal stdin/stderr before entering raw mode with exit 1 and
-  guidance to versions/workspace. stdout may be redirected.
-- [ ] Route board through the same project discovery/invalid-current-checkout
+  no stdout, with guidance to list/versions/workspace and --help. stdout may be
+  redirected; --json selects only the final result encoding and still needs a TTY.
+- [ ] Dispatch the default TUI before synchronous `project.Load` in `cli.Run`.
+  Pass an empty ID filter to InspectContext; the first screen includes all work.
+  Route the TUI through the same project discovery/invalid-current-checkout
   allowance as versions. Begin reads in the UI so startup/loading stays responsive.
   Do not synchronously pre-load the full project before launching the TUI: extract
   a discovery-only helper in `internal/project` shared with `Load` if necessary;
@@ -177,7 +187,9 @@ result formatting into a private CLI helper shared by workspace and board.
   Hash all Git/config/records/unrelated files across every path; no state changes.
 - [ ] Run targeted tests, `go test -count=1 ./...`, `go test -race -count=1 ./...`,
   `go vet ./...`, formatting, `go run ./cmd/grove check`, and the PTY harness.
-  Commit `feat(cli): expose the terminal Kanban board` with documentation.
+  Commit `feat(cli): launch the TUI by default` with documentation. Show
+  `go run ./cmd/grove` as this checkout's demo command; document explicit help
+  and noninteractive subcommands without claiming the installed CLI was replaced.
 - [ ] Obtain independent review against W-009 acceptance and provide a runnable
   owner demo. Record human feedback separately from automated evidence. Reconcile
   the work record and brief via current CLI/body edits; no branch merge or

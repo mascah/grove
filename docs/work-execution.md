@@ -6,6 +6,12 @@ work ID or set of IDs. It is ordinary repository documentation, not an installed
 assignment supplies authorization and scope. Reading this file alone does not
 start work or authorize a launch, merge, or push.
 
+This guide is a partial baseline, not a proven replacement for the predecessor's
+controller, recovery, and closure workflow. The
+[predecessor review](reviews/2026-09-19-predecessor-work.md) maps those
+responsibilities for W-010; its deferred mechanisms are not instructions to
+invoke unsupported commands here.
+
 ## Authority and scope
 
 Read `docs/restart-brief.md` first, then `AGENTS.md`, `docs/record-model.md`, the

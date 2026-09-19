@@ -19,7 +19,12 @@ worktree from the verified main, preserving concurrent work and old worktrees.
 If W-009 already has implementation, inspect and resume/verify that work rather
 than duplicating it. Report branch, worktree, and base before editing.
 
-Deliver the documented grove board [WORK_ID] [--json] experience:
+Deliver the TUI as Grove's default invocation: bare grove opens it, initially
+showing the Kanban board. In this checkout the demo is go run ./cmd/grove.
+Do not add a grove board subcommand or a positional work-ID shortcut.
+- Keep explicit subcommands noninteractive and help usable without a project
+  or TTY. Refuse nonterminal default use promptly with CLI guidance. Optional
+  --project and --json follow W-009's documented default-mode/output contract.
 - One clearly labelled live checkout supplies work-status columns and titles.
 - Cards open grouped committed/live versions with each source's own status;
   choosing a card never silently selects a workspace or an aggregate status.
@@ -31,7 +36,8 @@ Deliver the documented grove board [WORK_ID] [--json] experience:
   final workspace output.
 
 Use the plan's Bubble Tea v2 recommendation and pinned dependency baseline;
-verify compatibility during implementation. Preserve existing CLI contracts.
+verify compatibility during implementation. Preserve existing explicit CLI
+contracts; replacing the no-command usage error with TUI startup is intentional.
 Do not add record editing/drag-and-drop, worktree creation, editor/shell/agent
 launching, a running service, claims, or a runner schema. W-010's reusable-work
 entrypoint is separate and is not a prerequisite for this board assignment.

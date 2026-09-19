@@ -89,7 +89,8 @@ TUI and agent execution remain future work. The
 [integrated CLI review](docs/reviews/2026-09-19-integrated-cli.md) records known
 workspace-provenance, update-preservation, and Git-path defects; W-006 through
 W-008 are proposed repairs before interactive actions depend on these commands.
-The owner selected a Kanban board as the first terminal experience;
+The owner selected bare `grove` to open the TUI, initially showing a Kanban board;
+this default startup remains unimplemented and adds no `board` subcommand.
 [W-009](grove/work/W-009-terminal-picker.md) proposes its checkout-scoped layout
 with version details and explicit workspace selection inside each card.
 
