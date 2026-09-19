@@ -18,7 +18,9 @@ func relationships(r *Record) []struct {
 	}
 }
 
-func validateGraph(records []*Record) []Diagnostic {
+// Validate reports identity and relationship problems across a complete
+// record set. Callers substituting a candidate record must pass the whole set.
+func Validate(records []*Record) []Diagnostic {
 	var ds []Diagnostic
 	index := map[string][]*Record{}
 	for _, r := range records {

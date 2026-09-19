@@ -95,7 +95,7 @@ func Load(cwd, explicit string) (*Project, []Diagnostic) {
 			problem(err.Error())
 			return nil
 		}
-		record, problems := parseRecord(relative, kind, source)
+		record, problems := ParseRecord(relative, kind, source)
 		p.Records = append(p.Records, record)
 		ds = append(ds, problems...)
 		return nil
@@ -104,7 +104,7 @@ func Load(cwd, explicit string) (*Project, []Diagnostic) {
 		ds = append(ds, Diagnostic{Path: filepath.ToSlash(recordDir), Message: err.Error()})
 	}
 	slices.SortFunc(p.Records, compareRecords)
-	ds = append(ds, validateGraph(p.Records)...)
+	ds = append(ds, Validate(p.Records)...)
 	return p, sortedDiagnostics(ds)
 }
 

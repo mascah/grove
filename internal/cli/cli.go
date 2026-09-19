@@ -3,6 +3,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
@@ -14,9 +15,10 @@ import (
 	"github.com/mascah/grove/internal/project"
 )
 
-const usage = "Usage: grove [--project DIR] list | show ID | check | new TYPE TITLE [--slug SLUG]\n\n" +
+const usage = "Usage: grove [--project DIR] list | show ID [--json] | check | new TYPE TITLE [--slug SLUG]\n\n" +
 	"  list       List records in the selected checkout\n" +
-	"  show ID    Print the complete Markdown source for a record\n" +
+	"  show ID    Print the complete Markdown source for a record;\n" +
+	"             --json prints {id, path, revision, source} instead\n" +
 	"  check      Validate configuration, records, and relationships\n" +
 	"  new        Create a work, question, or decision record with the next shared ID;\n" +
 	"             put -- before a title that starts with a dash\n\n" +
@@ -75,6 +77,11 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 				if _, err := fmt.Fprintf(errOut, "File: %s\n", visible(r.Path)); err != nil {
 					return 1
 				}
+				if a.json {
+					return writeResult(out, errOut, marshal(map[string]any{
+						"id": r.ID, "path": r.Path, "revision": project.Revision(r.Source), "source": string(r.Source),
+					}))
+				}
 				return writeResult(out, errOut, r.Source)
 			}
 		}
@@ -89,7 +96,17 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 
 type invocation struct {
 	project, command, id, kind, title, slug string
-	help                                    bool
+	help, json                              bool
+}
+
+// marshal encodes one flat object; the inputs are strings and booleans, which
+// cannot fail to encode.
+func marshal(object map[string]any) []byte {
+	var buffer bytes.Buffer
+	encoder := json.NewEncoder(&buffer)
+	encoder.SetEscapeHTML(false)
+	encoder.Encode(object)
+	return buffer.Bytes()
 }
 
 func parseArgs(args []string) (a invocation, err error) {
@@ -132,6 +149,13 @@ func parseArgs(args []string) (a invocation, err error) {
 			a.help = true
 			continue
 		}
+		if arg == "--json" {
+			if a.json {
+				return a, fmt.Errorf("--json may only be supplied once")
+			}
+			a.json = true
+			continue
+		}
 		matched, err := option(&i, "--project", "directory", &a.project)
 		if !matched && err == nil {
 			matched, err = option(&i, "--slug", "slug", &a.slug)
@@ -153,6 +177,9 @@ func parseArgs(args []string) (a invocation, err error) {
 	a.command = positional[0]
 	if a.slug != "" && a.command != "new" {
 		return a, fmt.Errorf("--slug applies only to new")
+	}
+	if a.json && a.command != "show" {
+		return a, fmt.Errorf("--json applies only to show")
 	}
 	switch a.command {
 	case "list", "check":

@@ -2,6 +2,8 @@ package project
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"regexp"
@@ -184,7 +186,18 @@ func (m *metadata) dateField(key string) *time.Time {
 	return &date
 }
 
-func parseRecord(path, folderType string, source []byte) (*Record, []Diagnostic) {
+// Revision identifies exact file content: "sha256:" plus the lowercase hex
+// SHA-256 of every byte, including any BOM and line endings. Timestamps are an
+// authoring convention; callers detecting stale input must compare content.
+func Revision(source []byte) string {
+	sum := sha256.Sum256(source)
+	return "sha256:" + hex.EncodeToString(sum[:])
+}
+
+// ParseRecord validates one record's source against the schema for the type
+// folder it sits in. Writers use it so the candidate they produce is judged by
+// the same rules the reader applies.
+func ParseRecord(path, folderType string, source []byte) (*Record, []Diagnostic) {
 	r := &Record{Path: path, Source: source}
 	fail := func(message string) (*Record, []Diagnostic) {
 		return r, []Diagnostic{{Path: path, Field: "frontmatter", Message: message}}
