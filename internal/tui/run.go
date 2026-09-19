@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -24,6 +26,19 @@ func Run(ctx context.Context, root string, input, screen *os.File) (*versions.Wo
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
+	// The framework handles SIGINT and SIGTERM. A hangup (the window closed,
+	// the connection dropped) would otherwise end the process with a Git
+	// child still running and the terminal in raw mode.
+	hangup := make(chan os.Signal, 1)
+	signal.Notify(hangup, syscall.SIGHUP)
+	defer signal.Stop(hangup)
+	go func() {
+		select {
+		case <-hangup:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
 	m := New(ctx, root, Backend{Inspect: versions.InspectContext, Resolve: versions.ResolveContext})
 	out := &watched{File: screen, stop: cancel}
 	_, err := tea.NewProgram(m, tea.WithContext(ctx), tea.WithInput(input), tea.WithOutput(out)).Run()

@@ -84,8 +84,10 @@ func Resolve(root, selector string) (*Workspace, error) {
 	return ResolveContext(context.Background(), root, selector)
 }
 
-// ResolveContext is Resolve with cancellation, as InspectContext: once ctx is
-// done, through the final check, the error is ctx.Err() with no Workspace.
+// ResolveContext is Resolve with cancellation, as InspectContext: a cancelled
+// call never returns a Workspace, and a Git read or final check it interrupts
+// reports ctx.Err(). A refusal already computed from a completed inspection
+// may still be returned; it was true of what was read.
 func ResolveContext(ctx context.Context, root, selector string) (*Workspace, error) {
 	return resolveWith(ctx, root, selector, nil)
 }

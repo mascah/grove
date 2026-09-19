@@ -267,6 +267,41 @@ def blocked_git(root, wt, base):
             pass
 
 
+def hangup(root, wt, base):
+    """SIGHUP (the window closed) still kills a blocked Git child and restores modes."""
+    tools = os.path.join(base, "tools-hup")
+    os.makedirs(tools, exist_ok=True)
+    flag, fifo = os.path.join(tools, "block"), os.path.join(tools, "started")
+    with open(os.path.join(tools, "git"), "w") as f:
+        f.write(f'#!/bin/sh\nif [ -e "{flag}" ]; then echo $$ > "{fifo}"; exec sleep 600; fi\nexec "{GIT}" "$@"\n')
+    os.chmod(os.path.join(tools, "git"), 0o755)
+    os.mkfifo(fifo)
+    s = Session(root, env=clean_env(PATH=tools + os.pathsep + os.environ["PATH"]))
+    s.expect("First on main")
+    open(flag, "w").close()
+    s.send(b"r")
+    reader = os.open(fifo, os.O_RDONLY | os.O_NONBLOCK)
+    deadline, data = time.monotonic() + TIMEOUT, b""
+    while not data.endswith(b"\n"):
+        check(time.monotonic() < deadline, "the blocked git never started")
+        s.pump()
+        try:
+            data += os.read(reader, 64)
+        except BlockingIOError:
+            pass
+    os.close(reader)
+    s.proc.send_signal(signal.SIGHUP)
+    code, out = s.finish()
+    os.remove(flag)
+    s.restored()
+    check(code == 1 and out == b"", f"exit {code}, stdout {out!r}")
+    try:
+        os.kill(int(data), 0)
+        raise AssertionError("the git child outlived a hangup")
+    except ProcessLookupError:
+        pass
+
+
 def output_failure(root, wt, base):
     """The screen goes away mid-session: exit 1, no result, input modes restored."""
     s = Session(root, stderr="pty2")
@@ -308,7 +343,7 @@ def writes_no_logs(root, wt, base):
     check(code == 0 and os.listdir(logs) == [], f"log files appeared: {os.listdir(logs)}")
 
 
-SCENARIOS = [select_and_show, leave_without_selecting, refuses_without_terminal, blocked_git, output_failure, resize, writes_no_logs]
+SCENARIOS = [select_and_show, leave_without_selecting, refuses_without_terminal, blocked_git, hangup, output_failure, resize, writes_no_logs]
 
 
 def main():

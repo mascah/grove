@@ -106,7 +106,7 @@ func catFile(ctx context.Context, root string, shas []string) ([][]byte, error) 
 		return nil, nil
 	}
 	cmd := exec.CommandContext(ctx, "git", "-C", root, "cat-file", "--batch")
-	cmd.WaitDelay = repo.GitWaitDelay
+	cmd.WaitDelay = repo.WaitDelay(ctx)
 	cmd.Stdin = strings.NewReader(strings.Join(shas, "\n") + "\n")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr

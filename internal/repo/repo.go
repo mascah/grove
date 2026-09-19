@@ -78,15 +78,22 @@ func Git(dir string, args ...string) (string, error) {
 	return GitContext(context.Background(), dir, args...)
 }
 
-// GitWaitDelay bounds the wait for a killed git's output pipes, which a
-// descendant process may still hold open.
-const GitWaitDelay = 2 * time.Second
+// WaitDelay bounds the wait for a killed git's output pipes, which a
+// descendant process may still hold open. A context that cannot be cancelled
+// gets none: the commands that predate cancellation keep waiting for Git and
+// whatever it started, however long a hook or helper holds the pipe.
+func WaitDelay(ctx context.Context) time.Duration {
+	if ctx.Done() == nil {
+		return 0
+	}
+	return 2 * time.Second
+}
 
 // GitContext is Git with cancellation: once ctx is done the process is killed
 // and collected, and the error is ctx.Err() instead of a Git diagnostic.
 func GitContext(ctx context.Context, dir string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...)
-	cmd.WaitDelay = GitWaitDelay
+	cmd.WaitDelay = WaitDelay(ctx)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
@@ -94,9 +101,17 @@ func GitContext(ctx context.Context, dir string, args ...string) (string, error)
 		return "", ctx.Err()
 	}
 	if err != nil {
-		return "", fmt.Errorf("git %s: %s", args[0], strings.TrimSpace(stderr.String()))
+		return "", gitError(args[0], stderr.String(), err)
 	}
 	return string(out), nil
+}
+
+// gitError reports Git's own words, or the failure itself when Git said nothing.
+func gitError(command, stderr string, err error) error {
+	if stderr = strings.TrimSpace(stderr); stderr != "" {
+		return fmt.Errorf("git %s: %s", command, stderr)
+	}
+	return fmt.Errorf("git %s: %w", command, err)
 }
 
 // AllocatorLock serializes ID reservation; WriteLock serializes record
