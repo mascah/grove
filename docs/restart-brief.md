@@ -328,37 +328,37 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** repair the integrated CLI contracts before building interactive
-workspace actions. The [2026-09-19 review](reviews/2026-09-19-integrated-cli.md)
-verified W-003 integration at `b20d2b0` and W-004/W-005 integration at
-`5041ae1`, with main at `9b7f730`. Full/race suites, vet, formatting, checkout
-validation, and real selection → resolution → inspection passed. Additional
-probes nevertheless demonstrated wrong-repository routing through a symlinked
-project prefix, success for a checkout deleted during inspection, comment loss
-and valid-update refusals, an ignored configuration change, and newline-path
-parsing that writes a lock outside the actual Git directory.
+**Next action:** integrate the completed CLI repairs, then build the board.
+The [2026-09-19 review](reviews/2026-09-19-integrated-cli.md) verified W-003
+integration at `b20d2b0` and W-004/W-005 integration at `5041ae1`, and
+demonstrated wrong-repository routing through a symlinked project prefix,
+success for a checkout deleted during inspection, comment loss and
+valid-update refusals, an ignored configuration change, and newline-path
+parsing that wrote a lock outside the actual Git directory.
 
-Proposed repair handoffs, each with a specification and linked implementation
-plan: [W-006](../grove/work/W-006-workspace-provenance.md) validates live project
-ownership and final workspace freshness;
-[W-007](../grove/work/W-007-preserve-updates.md) repairs source-preserving edits
-and configuration-change refusal;
-[W-008](../grove/work/W-008-git-paths.md) preserves Git paths and coordination
-locations. Recommend one Fable agent in a fresh isolated worktree, serially in
-that order because shared ownership overlaps. These are repair proposals under
-the existing contracts, not completed work or new product decisions. Preserve
-the retained W-004/W-005 worktree; it has no commits missing from main. Review
-and integration of the repairs remain separate steps.
+Those defects are repaired on branch `worktree-W-006-W-008` (base `2d6de36`):
+[W-006](../grove/work/W-006-workspace-provenance.md) verifies live project
+ownership through every prefix component and re-checks the selected target
+before returning a workspace; [W-007](../grove/work/W-007-preserve-updates.md)
+preserves comments, edits explicit keys, plans flow separators for the whole
+request, and compares exact configuration bytes in update and creation;
+[W-008](../grove/work/W-008-git-paths.md) reads every Git path on its own and
+shares one NUL-delimited worktree inventory with the allocator. Each failure
+was reproduced on the base before its fix. The
+[repair evidence](reviews/2026-09-19-repairs-W-006-W-008.md) holds commits,
+suite results, independent review dispositions, and remaining limits. These
+repair existing contracts; they add no product decision. Done records assert
+completion on that branch: establish integration by Git ancestry, not by
+status, and keep it a separate, explicit step. Preserve the retained
+W-004/W-005 worktree; it has no commits missing from main.
 
-For current implementation assignments, use the
-[W-006–W-008 handoff](prompts/W-006-W-008-implementation.txt) for one serial repair
-worktree and the separate [W-009 handoff](prompts/W-009-implementation.txt) after
-the repair commits are integrated. Both reference the shared execution guide;
-the work records and plans remain the specifications. Shape W-010 soon after
-the repairs so future assignments need only work IDs, without making it a new
-prerequisite that delays the board.
+After integration, use the [W-009 handoff](prompts/W-009-implementation.txt);
+the [W-006–W-008 handoff](prompts/W-006-W-008-implementation.txt) is spent.
+Both reference the shared execution guide; the work records and plans remain
+the specifications. Shape W-010 soon after so future assignments need only
+work IDs, without making it a new prerequisite that delays the board.
 
-After the repairs, the selected next user outcome is a terminal Kanban board
+The selected next user outcome is a terminal Kanban board
 with explicit version selection inside each card. On 2026-09-19 the owner
 preferred the board over a standalone version picker. Version selection supports
 choosing the correct workspace when branches differ; the board supplies the
@@ -376,8 +376,8 @@ explicit destination and failure policies; agent launches, claims, and mutation
 through an interactive view come later. Q-001's accepted policy stays unchanged.
 
 The implemented CLI remains useful for dogfooding: `list`, `show`, `check`,
-`new`, `update`, `versions`, and `workspace`, subject to the review's concrete
-limits. Use `go run ./cmd/grove new` for every new record and `update` for field
+`new`, `update`, `versions`, and `workspace`, subject to the limits recorded
+in the review and the repair evidence. Use `go run ./cmd/grove new` for every new record and `update` for field
 changes; keep the installed sibling CLI untouched. Separate-clone and import
 conflicts remain outside the local allocator guarantee.
 

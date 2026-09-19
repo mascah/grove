@@ -64,7 +64,10 @@ file compares with that checkout's HEAD (`unchanged`, `modified`, `renamed`,
 source, commit, configuration, record path, and content revision; identical
 bytes in two sources get two selectors. Sources are listed on stderr with any
 diagnostics; an invalid or unreadable source makes the result incomplete and
-the exit code 1 while valid sources still print. `--json` adds each version's
+the exit code 1 while valid sources still print. A live project must be
+inside its registered checkout: a project location reached through a symlink,
+or belonging to another nested repository, is invalid, while a missing one is
+simply absent. `--json` adds each version's
 exact source text. No status is chosen as authoritative, and the command
 writes nothing: no refs, index, worktrees, records, or coordination state.
 
@@ -77,7 +80,8 @@ the record still has the committed bytes; otherwise, or when no or several
 worktrees hold the branch, it refuses and says to run `versions` again and
 select a live version. Any change since selection (branch or HEAD moved,
 worktree moved or removed, attached or detached state, configuration, record
-path, or content) refuses with the reason. The command never creates a
+path, or content) refuses with the reason, and the selected checkout is
+re-read once more just before its path is returned. The command never creates a
 worktree, switches a branch, launches anything, claims ownership, or edits a
 record; the directory it prints is a location, not write authority, and a
 later `update` performs its own revision check. These two commands are the
@@ -86,9 +90,9 @@ worktree for a branch without one remains future work.
 
 Use `go test ./...`, `go test -race ./...`, and `go vet ./...` for verification.
 TUI and agent execution remain future work. The
-[integrated CLI review](docs/reviews/2026-09-19-integrated-cli.md) records known
+[integrated CLI review](docs/reviews/2026-09-19-integrated-cli.md) found
 workspace-provenance, update-preservation, and Git-path defects; W-006 through
-W-008 are proposed repairs before interactive actions depend on these commands.
+W-008 repair them, with [evidence and remaining limits](docs/reviews/2026-09-19-repairs-W-006-W-008.md).
 The owner selected bare `grove` to open the TUI, initially showing a Kanban board;
 this default startup remains unimplemented and adds no `board` subcommand.
 [W-009](grove/work/W-009-terminal-picker.md) proposes its checkout-scoped layout

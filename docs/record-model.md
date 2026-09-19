@@ -367,9 +367,10 @@ The CLI now lists, shows, and validates the records tracking its own development
 in one checkout, creates records with shared IDs, updates their fields
 while refusing stale writes, shows each record's versions across local
 branches and worktrees, and locates the existing checkout holding a selected
-version. The [integrated CLI review](reviews/2026-09-19-integrated-cli.md) records
-remaining contract defects and proposed W-006/W-007/W-008 repairs. An interactive
-workspace and automatic checkout creation are future investments after repairs.
+version. The [integrated CLI review](reviews/2026-09-19-integrated-cli.md) found
+contract defects that W-006/W-007/W-008 repair; their
+[evidence](reviews/2026-09-19-repairs-W-006-W-008.md) lists the remaining limits.
+An interactive workspace and automatic checkout creation are future investments.
 
 Structured attachments, review/report records, artifact ingestion, and agent
 attempts are deferred. Ordinary Markdown links and prose can carry supporting
