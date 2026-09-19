@@ -13,7 +13,7 @@ import (
 // across branch tips and worktrees. Sources and their diagnostics go to
 // stderr; rows or JSON go to stdout even when the result is incomplete.
 func runVersions(root string, a invocation, out, errOut io.Writer) int {
-	res, err := versions.Inspect(root, a.id, nil)
+	res, err := versions.Inspect(root, a.id)
 	if err != nil {
 		report(errOut, err)
 		return 1
@@ -65,6 +65,14 @@ func runVersions(root string, a invocation, out, errOut io.Writer) int {
 	return code
 }
 
+// short abbreviates a commit for one-line output.
+func short(commit string) string {
+	if len(commit) > 12 {
+		return commit[:12]
+	}
+	return commit
+}
+
 func sourceCell(s *versions.Source) string {
 	ref := s.Ref
 	if ref == "" {
@@ -77,7 +85,7 @@ func sourceCell(s *versions.Source) string {
 }
 
 func describeSource(s *versions.Source) string {
-	text := sourceCell(s) + " " + s.Commit[:12]
+	text := sourceCell(s) + " " + short(s.Commit)
 	if s.Kind == "live" {
 		text += " " + s.Worktree
 	}

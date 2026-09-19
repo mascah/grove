@@ -71,10 +71,12 @@ type Result struct {
 
 // Inspect reads every local branch tip and registered worktree of root's
 // repository at root's prefix. id restricts Groups to one record; an empty
-// Groups with an id means the record is in no valid source. between runs
-// after the reads and before the worktree inventory is compared, so tests can
-// change identities; callers pass nil.
-func Inspect(root, id string, between func()) (*Result, error) {
+// Groups with an id means the record is in no valid source.
+func Inspect(root, id string) (*Result, error) { return inspect(root, id, nil) }
+
+// inspect is Inspect with a hook that runs after the reads and before the
+// worktree inventory is compared, so tests can change identities meanwhile.
+func inspect(root, id string, between func()) (*Result, error) {
 	common, prefix, err := repo.Locate(root)
 	if err != nil {
 		return nil, err
@@ -140,7 +142,11 @@ func Inspect(root, id string, between func()) (*Result, error) {
 			continue
 		}
 		s.project, s.Valid, s.ConfigRevision = p, true, project.Revision(p.Config)
-		s.baseline = loadTree(root, w.head, trees)
+		if strings.Trim(w.head, "0") == "" { // unborn branch: nothing is committed yet
+			s.baseline = &tree{}
+		} else {
+			s.baseline = loadTree(root, w.head, trees)
+		}
 		if s.baseline.err != nil {
 			s.fail("cannot read HEAD " + w.head + ": " + s.baseline.err.Error())
 		} else if s.baseline.present && !s.baseline.valid() {
@@ -259,15 +265,16 @@ func (s *Source) change(r *project.Record) (change, headPath string) {
 	return "unchanged", ""
 }
 
-// selector binds one observation to its repository, prefix, source identity,
-// commit, configuration, record path, and content. The readable commit and
+// selector binds one observation to its repository, prefix, source identity
+// (kind, ref, worktree path and Git directory), commit, configuration, record
+// path, and content. The readable commit and
 // revision prefixes attribute common staleness; the binding digest decides.
 func selector(common, prefix string, s *Source, id, path, revision string) string {
 	ref := s.Ref
 	if ref == "" {
 		ref = "detached"
 	}
-	sum := sha256.Sum256([]byte(strings.Join([]string{common, prefix, s.Kind, ref, s.GitDir, s.Commit, s.ConfigRevision, id, path, revision}, "\x00")))
+	sum := sha256.Sum256([]byte(strings.Join([]string{common, prefix, s.Kind, ref, s.Worktree, s.GitDir, s.Commit, s.ConfigRevision, id, path, revision}, "\x00")))
 	tail := fmt.Sprintf("%s@%s:%s@%s:%s", ref, s.Commit[:12], id, strings.TrimPrefix(revision, "sha256:")[:12], hex.EncodeToString(sum[:8]))
 	if s.Kind == "live" {
 		return "live:" + s.Locator + ":" + tail

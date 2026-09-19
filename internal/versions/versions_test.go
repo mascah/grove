@@ -85,9 +85,9 @@ func addWorktree(t *testing.T, root, name, commitish string, options ...string) 
 	return path
 }
 
-func inspect(t *testing.T, root, id string) *Result {
+func mustInspect(t *testing.T, root, id string) *Result {
 	t.Helper()
-	res, err := Inspect(root, id, nil)
+	res, err := Inspect(root, id)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,7 +136,7 @@ func TestInspectMainAndFeature(t *testing.T) {
 	tip := commit(t, wt, "feature progress")
 	mainTip := git(t, root, "rev-parse", "HEAD")
 
-	res := inspect(t, root, "")
+	res := mustInspect(t, root, "")
 	if !res.Complete || res.Prefix != "" || res.Project != root {
 		t.Fatalf("unexpected result header: %+v", res)
 	}
@@ -194,14 +194,14 @@ func TestInspectMainAndFeature(t *testing.T) {
 	if two := group(t, res, "W-002"); len(two.Versions) != 2 || two.Versions[0].Source.Ref != "refs/heads/feature" || two.Versions[1].Source.Locator != "feature" {
 		t.Fatalf("W-002 exists only on the feature: %+v", two.Versions)
 	}
-	if only := inspect(t, root, "W-002"); len(only.Groups) != 1 || only.Groups[0].ID != "W-002" || len(only.Sources) != 4 {
+	if only := mustInspect(t, root, "W-002"); len(only.Groups) != 1 || only.Groups[0].ID != "W-002" || len(only.Sources) != 4 {
 		t.Fatalf("an ID filter keeps every source: %+v", only.Groups)
 	}
-	if none := inspect(t, root, "W-009"); len(none.Groups) != 0 || !none.Complete {
+	if none := mustInspect(t, root, "W-009"); len(none.Groups) != 0 || !none.Complete {
 		t.Fatalf("an absent ID is an empty, complete result: %+v", none.Groups)
 	}
 	// The same call from the feature worktree sees the same picture.
-	again := inspect(t, wt, "")
+	again := mustInspect(t, wt, "")
 	if again.Project != wt || !reflect.DeepEqual(selectorsOf(res), selectorsOf(again)) {
 		t.Fatalf("selectors depend on the repository, not the invoking checkout")
 	}
@@ -241,7 +241,7 @@ func TestInspectBranchWithoutCheckoutAndDetached(t *testing.T) {
 	git(t, root, "worktree", "remove", "--force", wt)
 	detached := addWorktree(t, root, "det", "orphan", "--detach")
 
-	res := inspect(t, root, "W-001")
+	res := mustInspect(t, root, "W-001")
 	if !res.Complete {
 		t.Fatalf("unexpected diagnostics: %+v", res.Sources)
 	}
@@ -287,7 +287,7 @@ func TestInspectLiveChanges(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	res := inspect(t, root, "")
+	res := mustInspect(t, root, "")
 	if !res.Complete {
 		t.Fatalf("unexpected diagnostics: %+v", res.Sources)
 	}
@@ -318,7 +318,7 @@ func TestInspectLiveChanges(t *testing.T) {
 	empty := addWorktree(t, root, "empty", git(t, root, "commit-tree", "-m", "empty", git(t, root, "hash-object", "-t", "tree", "--stdin", "-w")), "--detach")
 	write(t, empty, "grove.yaml", config)
 	write(t, empty, "grove/work/W-001-first.md", record("W-001", "work", "proposed", "x\n"))
-	res = inspect(t, root, "W-001")
+	res = mustInspect(t, root, "W-001")
 	if v := find(t, group(t, res, "W-001"), "live", "empty"); v.Change != "added" || !res.Complete {
 		t.Fatalf("no project at HEAD means an empty baseline: %+v", v)
 	}
@@ -340,7 +340,7 @@ func TestInspectPrefixAndConfig(t *testing.T) {
 	commit(t, wt, "feature config")
 	git(t, root, "branch", "-q", "bare-branch", git(t, root, "commit-tree", "-m", "no project", git(t, root, "hash-object", "-t", "tree", "--stdin", "-w")))
 
-	res := inspect(t, filepath.Join(root, "sub"), "")
+	res := mustInspect(t, filepath.Join(root, "sub"), "")
 	if res.Prefix != "sub/" || !res.Complete {
 		t.Fatalf("prefix=%q sources=%s", res.Prefix, dump(res))
 	}
@@ -371,7 +371,7 @@ func TestInspectSourceLocalValidation(t *testing.T) {
 	write(t, root, "grove/work/W-009-ninth.md", record("W-009", "work", "done", "Only on main.\n"))
 	commit(t, root, "ninth on main")
 
-	res := inspect(t, root, "")
+	res := mustInspect(t, root, "")
 	if res.Complete {
 		t.Fatal("a dependency missing in one source keeps that source invalid")
 	}
@@ -425,7 +425,7 @@ func TestInspectIncomplete(t *testing.T) {
 	}
 	commit(t, symlinked, "symlinked configuration")
 
-	res := inspect(t, root, "")
+	res := mustInspect(t, root, "")
 	if res.Complete {
 		t.Fatal("invalid sources make the result incomplete")
 	}
@@ -472,7 +472,7 @@ func TestInspectUnstable(t *testing.T) {
 	moving := addWorktree(t, root, "moving", "", "-b", "moving")
 	leaving := addWorktree(t, root, "leaving", "", "-b", "leaving")
 	detaching := addWorktree(t, root, "detaching", "", "-b", "detaching")
-	res, err := Inspect(root, "", func() {
+	res, err := inspect(root, "", func() {
 		write(t, moving, "grove/work/W-002-second.md", record("W-002", "work", "proposed", "x\n"))
 		commit(t, moving, "moved")
 		git(t, root, "worktree", "remove", "--force", leaving)
@@ -515,7 +515,7 @@ func TestInspectBytesAndSelectors(t *testing.T) {
 	commit(t, root, "bom crlf")
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
 
-	res := inspect(t, root, "W-002")
+	res := mustInspect(t, root, "W-002")
 	g := group(t, res, "W-002")
 	sum := sha256.Sum256([]byte(bom))
 	want := "sha256:" + hex.EncodeToString(sum[:])
@@ -540,7 +540,7 @@ func TestInspectPathsAndRepeatedReads(t *testing.T) {
 	write(t, wt, "grove/work/W-002-with space.md", record("W-002", "work", "proposed", "x\n"))
 	commit(t, wt, "odd path")
 
-	res := inspect(t, root, "")
+	res := mustInspect(t, root, "")
 	s := source(t, res, "live", "odd-name-with-space")
 	if s.Worktree != wt || !s.Valid {
 		t.Fatalf("worktree path must round-trip: %+v", s)
@@ -550,10 +550,53 @@ func TestInspectPathsAndRepeatedReads(t *testing.T) {
 		t.Fatalf("record path and selector: %+v", v)
 	}
 	for i := 0; i < 3; i++ {
-		again := inspect(t, root, "")
+		again := mustInspect(t, root, "")
 		if !reflect.DeepEqual(selectorsOf(again), selectorsOf(res)) || !slices.Equal(groupIDs(again), groupIDs(res)) {
 			t.Fatal("repeated unchanged reads must order identically")
 		}
+	}
+}
+
+func TestInspectUnbornAndInvalidHEAD(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	git(t, root, "init", "-q", "-b", "main")
+	write(t, root, "grove.yaml", config)
+	write(t, root, "grove/work/W-001-first.md", record("W-001", "work", "proposed", "x\n"))
+	res := mustInspect(t, root, "")
+	if !res.Complete || len(res.Sources) != 1 || res.Sources[0].Locator != "." || !res.Sources[0].Valid {
+		t.Fatalf("a project with no commits yet is one valid live source: %s", dump(res))
+	}
+	if v := find(t, group(t, res, "W-001"), "live", "."); v.Change != "added" {
+		t.Fatalf("every record is added before the first commit: %+v", v)
+	}
+	// A HEAD whose project does not validate cannot be compared with, but the
+	// valid live checkout still counts; its changes are unknown and noted.
+	commit(t, root, "first")
+	temp := addWorktree(t, root, "temp", "", "-b", "bad")
+	write(t, temp, "grove/work/W-001-copy.md", record("W-001", "work", "done", "dup\n"))
+	bad := commit(t, temp, "duplicate ids")
+	git(t, root, "worktree", "remove", "--force", temp)
+	wt := addWorktree(t, root, "det", bad, "--detach")
+	git(t, root, "branch", "-q", "-D", "bad")
+	if err := os.Remove(filepath.Join(wt, "grove/work/W-001-copy.md")); err != nil {
+		t.Fatal(err)
+	}
+	res = mustInspect(t, root, "")
+	if !res.Complete || len(res.Sources) != 3 {
+		t.Fatalf("the fixed live checkout is valid; only its comparison is unknown: %s", dump(res))
+	}
+	det := source(t, res, "live", "det")
+	if !det.Valid || !strings.Contains(det.Note, "HEAD "+bad+" does not validate") {
+		t.Fatalf("expected a note on the detached source: %+v", det)
+	}
+	if v := find(t, group(t, res, "W-001"), "live", "det"); v.Change != "unknown" || v.Selector == "" {
+		t.Fatalf("changes against an invalid HEAD are unknown but the version is selectable: %+v", v)
 	}
 }
 
@@ -561,7 +604,7 @@ func TestInspectRequiresGit(t *testing.T) {
 	root := t.TempDir()
 	write(t, root, "grove.yaml", config)
 	write(t, root, "grove/work/W-001-first.md", record("W-001", "work", "proposed", "x\n"))
-	if _, err := Inspect(root, "", nil); err == nil || !strings.Contains(err.Error(), "requires a Git repository") {
+	if _, err := Inspect(root, ""); err == nil || !strings.Contains(err.Error(), "requires a Git repository") {
 		t.Fatalf("plain directories need a Git diagnostic: %v", err)
 	}
 }

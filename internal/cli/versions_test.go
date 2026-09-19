@@ -48,10 +48,29 @@ func TestVersionsUsage(t *testing.T) {
 	}
 }
 
+// Every file under .git (refs, index, worktree metadata, allocator state) and
+// every file in both checkouts hashes identically after text and JSON reads,
+// and no coordination folder appears.
+func TestVersionsLeavesGitUnchanged(t *testing.T) {
+	root, wt := featureFixture(t)
+	write(t, wt, "docs/records/questions/dirty.md", strings.Replace(question, "Q-001", "Q-002", 1))
+	before := map[string]map[string][32]byte{root: hashes(t, root), wt: hashes(t, wt)}
+	for _, args := range [][]string{{"versions"}, {"versions", "W-001", "--json"}, {"--project", wt, "versions", "Q-002"}} {
+		var out, errOut bytes.Buffer
+		if code := Run(args, root, &out, &errOut); code != 0 {
+			t.Fatalf("%v: %s", args, errOut.String())
+		}
+	}
+	if !reflect.DeepEqual(before[root], hashes(t, root)) || !reflect.DeepEqual(before[wt], hashes(t, wt)) {
+		t.Fatal("versions must leave Git metadata, records, and dirty files unchanged")
+	}
+	if _, err := os.Stat(filepath.Join(root, ".git", "grove")); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("versions must not create coordination state: %v", err)
+	}
+}
+
 func TestVersionsCLI(t *testing.T) {
 	root, wt := featureFixture(t)
-	before := hashes(t, filepath.Join(root, ".git"))
-	beforeWt := hashes(t, wt)
 	var out, errOut bytes.Buffer
 	if code := Run([]string{"versions", "W-001"}, root, &out, &errOut); code != 0 {
 		t.Fatal(errOut.String())
@@ -76,12 +95,6 @@ func TestVersionsCLI(t *testing.T) {
 		if !strings.Contains(errOut.String(), want) {
 			t.Fatalf("missing %q in stderr:\n%s", want, errOut.String())
 		}
-	}
-	if !reflect.DeepEqual(before, hashes(t, filepath.Join(root, ".git"))) || !reflect.DeepEqual(beforeWt, hashes(t, wt)) {
-		t.Fatal("versions must leave Git metadata, records, and the worktree unchanged")
-	}
-	if _, err := os.Stat(filepath.Join(root, ".git", "grove")); !errors.Is(err, fs.ErrNotExist) {
-		t.Fatalf("versions must not create coordination state: %v", err)
 	}
 	out.Reset()
 	errOut.Reset()
