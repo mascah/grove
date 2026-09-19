@@ -19,7 +19,8 @@ import (
 )
 
 const usage = "Usage: grove [--project DIR] list | show ID [--json] | check | new TYPE TITLE [--slug SLUG]\n" +
-	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n\n" +
+	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n" +
+	"       grove [--project DIR] versions [ID] [--json]\n\n" +
 	"  list       List records in the selected checkout\n" +
 	"  show ID    Print the complete Markdown source for a record;\n" +
 	"             --json prints {id, path, revision, source} instead\n" +
@@ -28,7 +29,10 @@ const usage = "Usage: grove [--project DIR] list | show ID [--json] | check | ne
 	"             put -- before a title that starts with a dash\n" +
 	"  update ID  Change frontmatter fields when the file still matches --expect\n" +
 	"             (the revision from show --json); prints {id, path, revision, changed}.\n" +
-	"             Lists are JSON arrays such as '[\"W-001\"]'; priority is 1-5.\n\n" +
+	"             Lists are JSON arrays such as '[\"W-001\"]'; priority is 1-5.\n" +
+	"  versions   Show each record's committed version on every local branch and live\n" +
+	"             version in every worktree, with a selector per version; exit 1 if any\n" +
+	"             source could not be inspected. Reads only; nothing is created.\n\n" +
 	"--project DIR selects a directory containing grove.yaml.\n" +
 	"Without it, search upward from the current directory, stopping at Git boundaries.\n" +
 	"Project/file context is written to stderr; results are written to stdout.\n"
@@ -50,13 +54,17 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 			return 1
 		}
 	}
-	if len(ds) != 0 {
+	// versions reports this checkout as one live source among others, so an
+	// invalid current project is attributed there rather than ending the command.
+	if len(ds) != 0 && (p == nil || a.command != "versions") {
 		for _, d := range ds {
 			fmt.Fprintln(errOut, visible(d.String()))
 		}
 		return 1
 	}
 	switch a.command {
+	case "versions":
+		return runVersions(p.Root, a, out, errOut)
 	case "update":
 		res, err := update.Apply(p.Root, a.request, time.Now(), nil)
 		if err != nil {
@@ -250,8 +258,8 @@ func parseArgs(args []string) (a invocation, err error) {
 	if a.slug != "" && a.command != "new" {
 		return a, fmt.Errorf("--slug applies only to new")
 	}
-	if a.json && a.command != "show" {
-		return a, fmt.Errorf("--json applies only to show")
+	if a.json && a.command != "show" && a.command != "versions" {
+		return a, fmt.Errorf("--json applies only to show and versions")
 	}
 	if (a.request.Expect != "" || len(fields) != 0) && a.command != "update" {
 		return a, fmt.Errorf("--expect, --set, and --unset apply only to update")
@@ -265,6 +273,12 @@ func parseArgs(args []string) (a invocation, err error) {
 		if len(positional) != 2 {
 			err = fmt.Errorf("show requires exactly one record ID")
 		} else {
+			a.id = positional[1]
+		}
+	case "versions":
+		if len(positional) > 2 {
+			err = fmt.Errorf("versions takes at most one record ID")
+		} else if len(positional) == 2 {
 			a.id = positional[1]
 		}
 	case "new":
