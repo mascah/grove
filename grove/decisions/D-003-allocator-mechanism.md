@@ -2,13 +2,18 @@
 id: "D-003"
 type: decision
 title: Allocate IDs with flock, a counter file, and a ref scan floor
-status: proposed
+status: accepted
 relates_to: ["D-002", "W-002"]
 created: "2026-09-19T15:25:51Z"
-updated: "2026-09-19T15:25:51Z"
+updated: "2026-09-19T15:28:53Z"
 ---
 
-## Proposal
+## Acceptance
+
+On 2026-09-19 the owner accepted this mechanism with "I accept D-003".
+[W-002](../work/W-002-create-records.md) implements and tests it.
+
+## Mechanism
 
 Implement the [allocation requirements](../../docs/record-model.md#identity-and-dates)
 for [W-002](../work/W-002-create-records.md) with three standard-library pieces

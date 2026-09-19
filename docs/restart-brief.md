@@ -289,9 +289,9 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** the owner decides on [D-003](../grove/decisions/D-003-allocator-mechanism.md),
-the proposed flock/counter/ref-scan allocator, then
-[W-002](../grove/work/W-002-create-records.md) is planned and implemented:
+**Next action:** implement [W-002](../grove/work/W-002-create-records.md)
+using the accepted [D-003](../grove/decisions/D-003-allocator-mechanism.md)
+flock/counter/ref-scan allocator:
 `grove new` with shared sequential IDs across linked worktrees, recovery from
 committed and live records, and non-overwriting creation. Separate-clone and
 import conflicts stay explicit and out of scope. Inspection is complete in

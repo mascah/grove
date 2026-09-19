@@ -185,7 +185,7 @@ The counter belongs to the local repository's Grove project, not to a branch,
 worktree, or configured record-root path. It is local coordination state, not a
 tracked project record; no daemon is required. A Grove-owned directory under
 the Git common directory is the intended home. [D-003](../grove/decisions/D-003-allocator-mechanism.md)
-proposes the state encoding, lock primitive, and recovery protocol for
+owns the accepted state encoding, lock primitive, and recovery protocol for
 [W-002](../grove/work/W-002-create-records.md) to test with the creation command. No counter or allocator is installed by this documentation
 change, and the read-only inspection commands must not initialize one.
 
