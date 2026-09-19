@@ -68,8 +68,11 @@ reviews and reports; ordinary prose and links can support early development.
 The owner subsequently accepted the [starter record model](record-model.md):
 Markdown with YAML frontmatter, the four required fields, optional typed
 relationships, explicit lifecycles, and the initial validation boundary.
-Identity allocation and file layout/configuration remain to be settled. Go is
-selected for implementation. The examples are not yet operational project records.
+Random IDs are accepted as a starting trial; the owner prefers chronological
+file ordering and wants to revisit if randomness proves awkward. Exact ID format
+and file layout/configuration remain to be settled. A flat folder and nesting
+under `docs/` were assistant proposals, not requirements. Go is selected for
+implementation. The examples are not yet operational project records.
 
 “Stateless CLI” means commands need no resident application process. Project
 records and recoverable coordination necessarily have state. File-backed,
@@ -274,7 +277,7 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** settle ID generation and file layout/configuration for the
+**Next action:** settle the random-ID format and file layout/configuration for the
 accepted [record model](record-model.md). Go is selected for the first CLI. Prepare
 the first inspection commands against Grove's own records. Do not initialize
 the predecessor's templates implicitly.

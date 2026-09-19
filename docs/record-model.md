@@ -2,8 +2,9 @@
 
 Status: core model accepted, 2026-09-18, on the owner's response "yup this looks
 good" to the draft. This covers the representation, fields, relationships,
-lifecycles, and initial validation boundary below. Identity allocation and
-storage layout/versioning remain open. No implementation exists yet.
+lifecycles, and initial validation boundary below. Random IDs are accepted as
+a trial; their exact format and storage layout/versioning remain open.
+No implementation exists yet.
 [The restart brief](restart-brief.md) owns product direction; these examples
 are not an additional operational backlog.
 
@@ -26,24 +27,31 @@ Three optional relationship fields are sufficient for the initial examples:
   question may be relevant without blocking work.
 - Any record `relates_to`: related record IDs, with no implied ordering or gate.
 
-The illustrative IDs below are readable placeholders, not a selected allocation
-scheme. Choose an allocation method that handles independent branch creation
-before implementing record creation. Links resolve by stable ID, not filename.
+The illustrative IDs below are readable placeholders. The owner accepts starting
+with random IDs as a trial, while preferring some chronological ordering of files.
+Generate identities independently across checkouts; specify encoding and length
+before implementing creation. Links resolve by stable ID, not filename.
+Chronological presentation can use creation metadata or a filename date prefix
+independently of identity; neither is selected here. Revisit if random ordering
+makes the actual file workflow awkward.
 The first implementation also needs a schema-version marker; its location and
 project configuration remain to be settled with storage layout.
 
-Proposed defaults for those remaining choices:
+Remaining layout proposals:
 
-- Generate type-prefixed random IDs independently in each checkout, preserving
-  them through renames and branch creation. Avoid a shared sequential counter.
-  The encoding/length and abbreviated lookup behavior still need specification.
 - Use root `grove.yaml` for the schema version and a configurable record folder,
-  defaulting to `docs/grove/records/`. Keep all three types in that folder; type
-  is metadata rather than inferred from the directory name.
+  with a visible root-level `grove/` containing `work/`, `questions/`, and
+  `decisions/` as the current recommendation. This makes browsing records by
+  purpose straightforward. `docs/grove/` remains a possible configured location;
+  nesting under `docs/` is not a product requirement.
+- The earlier flat `docs/grove/records/` proposal minimized directory conventions,
+  but had no stronger product justification. Prefer useful manual navigation
+  over simplifying the directory traversal. Exact discovery and folder/type
+  validation rules remain to be specified; identity stays in metadata.
 - Use `<id>-<readable-slug>.md` filenames for navigation. Relationships use the
   stored ID, so a filename change does not invalidate them.
 
-These defaults are recommendations, not part of the earlier core-model approval.
+Layout and filename defaults remain recommendations, not selected decisions.
 
 ## Three examples
 
