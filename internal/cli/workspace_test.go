@@ -202,3 +202,52 @@ func TestWorkspaceCheckoutDeletedDuringInspection(t *testing.T) {
 		t.Fatalf("code=%d stdout=%q stderr=%s", code, out.String(), errOut.String())
 	}
 }
+
+// W-008: a main checkout whose name contains a newline round-trips exactly
+// through versions, workspace, and update; JSON carries the raw path, text
+// output escapes it, and the write lock lands under the real common directory.
+func TestNewlineCheckoutCLI(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	parent, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(parent, "new\nline")
+	write(t, root, "grove.yaml", "schema_version: 1\nrecords: docs/records\n")
+	write(t, root, "docs/records/work/renamed.md", work)
+	write(t, root, "docs/records/questions/question.md", question)
+	gitIn(t, root, "init", "-q", "-b", "main")
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "commit", "-q", "-m", "init")
+
+	var out, errOut bytes.Buffer
+	if code := Run([]string{"workspace", "--source", versionSelector(t, root, "W-001", "live . refs/heads/main"), "--json"}, root, &out, &errOut); code != 0 {
+		t.Fatal(errOut.String())
+	}
+	var got map[string]any
+	if err := json.Unmarshal(out.Bytes(), &got); err != nil || got["project"] != root || got["checkout"] != root {
+		t.Fatalf("json must carry the exact path: %v %v", got, err)
+	}
+	if !strings.Contains(errOut.String(), `new\nline`) || strings.Contains(errOut.String(), "new\nline") {
+		t.Fatalf("stderr escapes control characters: %q", errOut.String())
+	}
+	if entries, _ := os.ReadDir(parent); len(entries) != 1 {
+		t.Fatalf("reads must create nothing beside the checkout: %q", entries)
+	}
+	if _, err := os.Stat(filepath.Join(root, ".git", "grove")); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("reads must not create coordination state: %v", err)
+	}
+	out.Reset()
+	errOut.Reset()
+	if code := Run([]string{"update", "W-001", "--expect", showJSON(t, root, "W-001")["revision"].(string), "--set", "status=active"}, root, &out, &errOut); code != 0 {
+		t.Fatal(errOut.String())
+	}
+	if _, err := os.Stat(filepath.Join(root, ".git", "grove", "write.lock")); err != nil {
+		t.Fatalf("the write lock belongs under the real common directory: %v", err)
+	}
+	if entries, _ := os.ReadDir(parent); len(entries) != 1 {
+		t.Fatalf("update must create nothing beside the checkout: %q", entries)
+	}
+}

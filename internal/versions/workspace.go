@@ -222,18 +222,18 @@ func workspace(res *Result, v Version) *Workspace {
 // and changes after this check remain possible.
 func recheck(root string, res *Result, sel Selection, tip string, lv Version) error {
 	const reselect = "; run versions and reselect"
-	worktrees, err := listWorktrees(root)
+	worktrees, err := repo.Worktrees(root)
 	if err != nil {
 		return err
 	}
 	var target *Source
 	for _, w := range worktrees {
 		switch {
-		case w.bare:
-		case w.path == lv.Source.Worktree:
+		case w.Bare:
+		case w.Path == lv.Source.Worktree:
 			target = enterWorktree(w, res.Repository)
 			target.load(root, res.Repository, res.Prefix, map[string]*tree{})
-		case sel.Kind == "committed" && w.branch == sel.Ref:
+		case sel.Kind == "committed" && w.Branch == sel.Ref:
 			if other := enterWorktree(w, res.Repository); other.Locator != "" {
 				return fmt.Errorf("worktree %s also checked out %s while its workspace was being resolved%s", other.Locator, sel.Ref, reselect)
 			}

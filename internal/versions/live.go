@@ -12,38 +12,39 @@ import (
 	"github.com/mascah/grove/internal/repo"
 )
 
-// identity asks Git where dir is: its Git directory, its common directory,
-// and its path inside the worktree.
-func identity(dir string) (gitDir, common, prefix string, err error) {
-	out, err := repo.Git(dir, "rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir", "--show-prefix")
-	if err != nil {
-		return "", "", "", err
+// identity asks Git where dir is: its Git directory and its path inside the
+// worktree. The Git directory is unique to one worktree of one repository.
+// ponytail: one git process per path, because rev-parse cannot delimit paths
+// that contain newlines; batch if inspecting many worktrees becomes slow.
+func identity(dir string) (gitDir, prefix string, err error) {
+	if gitDir, err = repo.GitPath(dir, "--git-dir"); err == nil {
+		prefix, err = repo.GitPath(dir, "--show-prefix")
 	}
-	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
-	if len(lines) != 3 {
-		return "", "", "", fmt.Errorf("git rev-parse: unexpected reply %q", out)
-	}
-	return lines[0], lines[1], lines[2], nil
+	return gitDir, prefix, err
 }
 
 // enterWorktree starts a live source for a registered worktree. The source
 // gets a Git directory and locator only when the path is an enterable checkout
 // of the repository at common, judged from the path itself and not from its
 // registration alone.
-func enterWorktree(w worktree, common string) *Source {
-	s := &Source{Kind: "live", Ref: w.branch, Commit: w.head, Worktree: w.path}
-	if w.prunable != "" {
-		s.fail("worktree is prunable: " + w.prunable)
+func enterWorktree(w repo.Worktree, common string) *Source {
+	s := &Source{Kind: "live", Ref: w.Branch, Commit: w.Head, Worktree: w.Path}
+	if w.Prunable != "" {
+		s.fail("worktree is prunable: " + w.Prunable)
 		return s
 	}
-	if info, err := os.Lstat(w.path); err != nil {
+	if info, err := os.Lstat(w.Path); err != nil {
 		s.fail("cannot enter worktree: " + err.Error())
 		return s
 	} else if !info.IsDir() {
 		s.fail("worktree path is a symlink or not a directory")
 		return s
 	}
-	gitDir, itsCommon, itsPrefix, err := identity(w.path)
+	gitDir, itsPrefix, err := identity(w.Path)
+	var itsCommon string
+	if err == nil {
+		itsCommon, err = repo.GitPath(w.Path, "--git-common-dir")
+	}
 	if err != nil {
 		s.fail("cannot enter worktree: " + err.Error())
 		return s
@@ -93,7 +94,7 @@ func (s *Source) locate(common, prefix string) (dir string, ok bool) {
 			return "", false
 		}
 	}
-	if err := s.owns(dir, common, prefix); err != nil {
+	if err := s.owns(dir, prefix); err != nil {
 		s.fail(err.Error())
 		return "", false
 	}
@@ -101,12 +102,12 @@ func (s *Source) locate(common, prefix string) (dir string, ok bool) {
 }
 
 // owns checks that Git places dir in this source's worktree at prefix.
-func (s *Source) owns(dir, common, prefix string) error {
-	gitDir, itsCommon, itsPrefix, err := identity(dir)
+func (s *Source) owns(dir, prefix string) error {
+	gitDir, itsPrefix, err := identity(dir)
 	if err != nil {
 		return fmt.Errorf("cannot identify %s: %w", dir, err)
 	}
-	if gitDir != s.GitDir || itsCommon != common || itsPrefix != prefix {
+	if gitDir != s.GitDir || itsPrefix != prefix {
 		return fmt.Errorf("%s belongs to another repository or worktree, not to this checkout", dir)
 	}
 	return nil
@@ -138,7 +139,7 @@ func (s *Source) load(root, common, prefix string, trees map[string]*tree) {
 	}
 	// The loader already refuses symlinks in the record folder's path; a nested
 	// repository there would be foreign in the same way as one at the prefix.
-	if err := s.owns(filepath.Join(dir, filepath.FromSlash(p.RecordDir)), common, prefix+strings.Trim(filepath.ToSlash(filepath.Clean(p.RecordDir)), "/")+"/"); err != nil {
+	if err := s.owns(filepath.Join(dir, filepath.FromSlash(p.RecordDir)), prefix+strings.Trim(filepath.ToSlash(filepath.Clean(p.RecordDir)), "/")+"/"); err != nil {
 		s.fail(err.Error())
 		return
 	}

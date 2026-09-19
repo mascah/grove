@@ -618,3 +618,55 @@ func TestUpdatePreservesAcceptedForms(t *testing.T) {
 		}
 	})
 }
+
+// W-008: a main checkout named "new\nline" once put the write lock in a
+// sibling ".../new/grove". Locks and counters belong under the real common
+// directory, from the main and a linked checkout alike.
+func TestCoordinationStateStaysUnderTheCommonDirectory(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	parent, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, wt := filepath.Join(parent, "new\nline"), filepath.Join(parent, "linked\twt ")
+	write(t, root, "grove.yaml", "schema_version: 1\nrecords: grove\n")
+	write(t, root, "grove/work/W-001-first.md", work)
+	write(t, root, "grove/questions/Q-001-which.md", question)
+	git(t, root, "init", "-q", "-b", "main")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "init")
+	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
+
+	apply(t, root, "W-001", []Field{{"status", "active"}})
+	apply(t, wt, "W-001", []Field{{"status", "done"}})
+	for _, dir := range []string{root, wt} {
+		p, ds := project.Load(dir, dir)
+		if len(ds) != 0 {
+			t.Fatal(ds)
+		}
+		if _, err := create.New(p, "work", "Odd", "odd", now, &bytes.Buffer{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// The second creation came from the other checkout and the shared counter.
+	if _, err := os.Stat(filepath.Join(wt, "grove/work/W-003-odd.md")); err != nil {
+		t.Fatalf("linked checkouts must share one ID sequence: %v", err)
+	}
+	var state []string
+	filepath.WalkDir(parent, func(path string, entry os.DirEntry, err error) error {
+		if err == nil && slices.Contains([]string{"write.lock", "lock", "next-ids"}, entry.Name()) {
+			state = append(state, path)
+		}
+		return nil
+	})
+	slices.Sort(state)
+	common := filepath.Join(root, ".git", "grove")
+	if want := []string{filepath.Join(common, "lock"), filepath.Join(common, "next-ids"), filepath.Join(common, "write.lock")}; !slices.Equal(state, want) {
+		t.Fatalf("coordination state: %q\nwant %q", state, want)
+	}
+	if entries, _ := os.ReadDir(parent); len(entries) != 2 {
+		t.Fatalf("nothing may appear beside the checkouts: %q", entries)
+	}
+}

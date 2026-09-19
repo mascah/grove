@@ -34,16 +34,31 @@ func Locate(root string) (common, prefix string, err error) {
 	if _, err := exec.LookPath("git"); err != nil {
 		return "", "", errors.New("this command requires Git on PATH; coordination state lives in the repository's common directory")
 	}
-	out, err := Git(root, "rev-parse", "--path-format=absolute", "--git-common-dir", "--show-prefix")
+	if common, err = GitPath(root, "--git-common-dir"); err == nil {
+		prefix, err = GitPath(root, "--show-prefix")
+	}
 	if err != nil {
 		return "", "", fmt.Errorf("this command requires a Git repository; coordination state lives in its common directory (%w)", err)
 	}
-	lines := strings.SplitN(strings.TrimRight(out, "\n"), "\n", 2)
-	common = lines[0]
-	if len(lines) == 2 {
-		prefix = lines[1]
+	if !filepath.IsAbs(common) {
+		return "", "", fmt.Errorf("git reported the common directory %q, which is not an absolute path", common)
 	}
 	return common, prefix, nil
+}
+
+// GitPath answers one path-producing rev-parse option for dir, such as
+// --git-dir, --git-common-dir, or --show-prefix. A path may itself contain
+// newlines and trailing blanks, so each path is asked for on its own and only
+// the one terminator Git appends is removed.
+func GitPath(dir, option string) (string, error) {
+	out, err := Git(dir, "rev-parse", "--path-format=absolute", option)
+	if err != nil {
+		return "", err
+	}
+	if !strings.HasSuffix(out, "\n") {
+		return "", fmt.Errorf("git rev-parse %s: missing output terminator", option)
+	}
+	return strings.TrimSuffix(out, "\n"), nil
 }
 
 // Git runs one git command in dir and returns its stdout.

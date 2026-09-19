@@ -82,7 +82,7 @@ func inspect(root, id string, between func()) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	first, err := listWorktrees(root)
+	first, err := repo.Worktrees(root)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func inspect(root, id string, between func()) (*Result, error) {
 		result.Sources = append(result.Sources, s)
 	}
 	for _, w := range first {
-		if w.bare {
+		if w.Bare {
 			continue
 		}
 		s := enterWorktree(w, common)
@@ -103,7 +103,7 @@ func inspect(root, id string, between func()) (*Result, error) {
 	if between != nil {
 		between()
 	}
-	second, err := listWorktrees(root)
+	second, err := repo.Worktrees(root)
 	if err != nil {
 		return nil, err
 	}
@@ -113,11 +113,11 @@ func inspect(root, id string, between func()) (*Result, error) {
 			continue
 		}
 		seen[s.Worktree] = true
-		i := slices.IndexFunc(second, func(w worktree) bool { return w.path == s.Worktree })
+		i := slices.IndexFunc(second, func(w repo.Worktree) bool { return w.Path == s.Worktree })
 		if i < 0 {
 			s.fail("worktree was removed while being read")
-		} else if w := second[i]; w.head != s.Commit || w.branch != s.Ref {
-			s.fail(fmt.Sprintf("worktree changed while being read: %s to %s", describe(s.Ref, s.Commit), describe(w.branch, w.head)))
+		} else if w := second[i]; w.Head != s.Commit || w.Branch != s.Ref {
+			s.fail(fmt.Sprintf("worktree changed while being read: %s to %s", describe(s.Ref, s.Commit), describe(w.Branch, w.Head)))
 		} else if s.Locator != "" {
 			// The registration can stay put while the checkout is deleted
 			// (newly prunable), replaced, or its project location swapped.
@@ -134,8 +134,8 @@ func inspect(root, id string, between func()) (*Result, error) {
 		}
 	}
 	for _, w := range second {
-		if !w.bare && !seen[w.path] {
-			s := &Source{Kind: "live", Ref: w.branch, Commit: w.head, Worktree: w.path}
+		if !w.Bare && !seen[w.Path] {
+			s := &Source{Kind: "live", Ref: w.Branch, Commit: w.Head, Worktree: w.Path}
 			s.fail("worktree appeared while being read")
 			result.Sources = append(result.Sources, s)
 		}
@@ -294,44 +294,4 @@ func listBranches(root string) ([]branch, error) {
 		}
 	}
 	return branches, nil
-}
-
-type worktree struct {
-	path, head, branch, prunable string
-	bare                         bool
-}
-
-// listWorktrees parses the NUL-terminated porcelain format, so paths with
-// spaces or newlines survive.
-func listWorktrees(root string) ([]worktree, error) {
-	out, err := repo.Git(root, "worktree", "list", "--porcelain", "-z")
-	if err != nil {
-		return nil, err
-	}
-	var worktrees []worktree
-	var w worktree
-	for _, line := range strings.Split(out, "\x00") {
-		key, value, _ := strings.Cut(line, " ")
-		switch key {
-		case "":
-			if w.path != "" {
-				worktrees = append(worktrees, w)
-			}
-			w = worktree{}
-		case "worktree":
-			w.path = value
-		case "HEAD":
-			w.head = value
-		case "branch":
-			w.branch = value
-		case "bare":
-			w.bare = true
-		case "prunable":
-			w.prunable = value
-			if w.prunable == "" {
-				w.prunable = "no reason given"
-			}
-		}
-	}
-	return worktrees, nil
 }
