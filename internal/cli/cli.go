@@ -1,4 +1,4 @@
-// Package cli implements Grove's read-only command interface.
+// Package cli implements Grove's command interface.
 package cli
 
 import (
@@ -8,14 +8,17 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"time"
 
+	"github.com/mascah/grove/internal/create"
 	"github.com/mascah/grove/internal/project"
 )
 
-const usage = "Usage: grove [--project DIR] list | show ID | check\n\n" +
+const usage = "Usage: grove [--project DIR] list | show ID | check | new TYPE TITLE [--slug SLUG]\n\n" +
 	"  list       List records in the selected checkout\n" +
 	"  show ID    Print the complete Markdown source for a record\n" +
-	"  check      Validate configuration, records, and relationships\n\n" +
+	"  check      Validate configuration, records, and relationships\n" +
+	"  new        Create a work, question, or decision record with the next shared ID\n\n" +
 	"--project DIR selects a directory containing grove.yaml.\n" +
 	"Without it, search upward from the current directory, stopping at Git boundaries.\n" +
 	"Project/file context is written to stderr; results are written to stdout.\n"
@@ -23,15 +26,15 @@ const usage = "Usage: grove [--project DIR] list | show ID | check\n\n" +
 // Run returns 0 on success, 1 for inspection/output errors, and 2 for usage errors.
 // cwd is explicit so callers and tests never need to change the process directory.
 func Run(args []string, cwd string, out, errOut io.Writer) int {
-	selected, command, id, help, err := parseArgs(args)
+	a, err := parseArgs(args)
 	if err != nil {
 		fmt.Fprintf(errOut, "grove: %s\n\n%s", err, usage)
 		return 2
 	}
-	if help {
+	if a.help {
 		return writeResult(out, errOut, []byte(usage))
 	}
-	p, ds := project.Load(cwd, selected)
+	p, ds := project.Load(cwd, a.project)
 	if p != nil {
 		if _, err := fmt.Fprintf(errOut, "Project: %s\n", visible(p.Root)); err != nil {
 			return 1
@@ -43,7 +46,14 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		}
 		return 1
 	}
-	switch command {
+	switch a.command {
+	case "new":
+		path, err := create.New(p, a.kind, a.title, a.slug, time.Now(), errOut)
+		if err != nil {
+			fmt.Fprintf(errOut, "grove: %s\n", visible(err.Error()))
+			return 1
+		}
+		return writeResult(out, errOut, []byte(path+"\n"))
 	case "list":
 		var buffer bytes.Buffer
 		table := tabwriter.NewWriter(&buffer, 0, 4, 2, ' ', 0)
@@ -55,14 +65,14 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		return writeResult(out, errOut, buffer.Bytes())
 	case "show":
 		for _, r := range p.Records {
-			if r.ID == id {
+			if r.ID == a.id {
 				if _, err := fmt.Fprintf(errOut, "File: %s\n", visible(r.Path)); err != nil {
 					return 1
 				}
 				return writeResult(out, errOut, r.Source)
 			}
 		}
-		fmt.Fprintf(errOut, "grove: record %s not found in this project\n", visible(id))
+		fmt.Fprintf(errOut, "grove: record %s not found in this project\n", visible(a.id))
 		return 1
 	case "check":
 		return writeResult(out, errOut, fmt.Appendf(nil, "OK: %d records\n", len(p.Records)))
@@ -71,67 +81,94 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 	}
 }
 
-func parseArgs(args []string) (selected, command, id string, help bool, err error) {
+type invocation struct {
+	project, command, id, kind, title, slug string
+	help                                    bool
+}
+
+func parseArgs(args []string) (a invocation, err error) {
 	var positional []string
-	projectSet, literal := false, false
+	literal := false
+	// option consumes "--name VALUE" or "--name=VALUE" into *target, once.
+	option := func(i *int, name string, target *string) (bool, error) {
+		arg := args[*i]
+		if arg != name && !strings.HasPrefix(arg, name+"=") {
+			return false, nil
+		}
+		if *target != "" {
+			return true, fmt.Errorf("%s may only be supplied once", name)
+		}
+		if arg == name {
+			*i++
+			if *i >= len(args) {
+				return true, fmt.Errorf("%s requires a value", name)
+			}
+			*target = args[*i]
+		} else {
+			*target = strings.TrimPrefix(arg, name+"=")
+		}
+		if strings.TrimSpace(*target) == "" {
+			return true, fmt.Errorf("%s requires a nonempty value", name)
+		}
+		return true, nil
+	}
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
-		switch {
-		case !literal && arg == "--":
-			literal = true
-		case !literal && (arg == "--help" || arg == "-h"):
-			help = true
-		case !literal && (arg == "--project" || strings.HasPrefix(arg, "--project=")):
-			if projectSet {
-				err = fmt.Errorf("--project may only be supplied once")
-				return
-			}
-			projectSet = true
-			if arg == "--project" {
-				i++
-				if i >= len(args) {
-					err = fmt.Errorf("--project requires a directory")
-					return
-				}
-				selected = args[i]
-			} else {
-				selected = strings.TrimPrefix(arg, "--project=")
-			}
-			if strings.TrimSpace(selected) == "" {
-				err = fmt.Errorf("--project requires a nonempty directory")
-				return
-			}
-		case !literal && strings.HasPrefix(arg, "-"):
-			err = fmt.Errorf("unknown option %s", visible(arg))
-			return
-		default:
+		if literal || !strings.HasPrefix(arg, "-") {
 			positional = append(positional, arg)
+			continue
+		}
+		if arg == "--" {
+			literal = true
+			continue
+		}
+		if arg == "--help" || arg == "-h" {
+			a.help = true
+			continue
+		}
+		matched, err := option(&i, "--project", &a.project)
+		if !matched && err == nil {
+			matched, err = option(&i, "--slug", &a.slug)
+		}
+		if err != nil {
+			return a, err
+		}
+		if !matched {
+			return a, fmt.Errorf("unknown option %s", visible(arg))
 		}
 	}
-	if help || (len(positional) == 1 && positional[0] == "help") {
-		help = true
-		return
+	if a.help || (len(positional) == 1 && positional[0] == "help") {
+		a.help = true
+		return a, nil
 	}
 	if len(positional) == 0 {
-		err = fmt.Errorf("a command is required")
-		return
+		return a, fmt.Errorf("a command is required")
 	}
-	command = positional[0]
-	switch command {
+	a.command = positional[0]
+	if a.slug != "" && a.command != "new" {
+		return a, fmt.Errorf("--slug applies only to new")
+	}
+	switch a.command {
 	case "list", "check":
 		if len(positional) != 1 {
-			err = fmt.Errorf("%s takes no positional arguments", command)
+			err = fmt.Errorf("%s takes no positional arguments", a.command)
 		}
 	case "show":
 		if len(positional) != 2 {
 			err = fmt.Errorf("show requires exactly one record ID")
 		} else {
-			id = positional[1]
+			a.id = positional[1]
+		}
+	case "new":
+		if len(positional) != 3 {
+			err = fmt.Errorf("new requires a record type and a title")
+		} else {
+			a.kind, a.title = positional[1], positional[2]
 		}
 	default:
-		err = fmt.Errorf("unknown command %s", visible(command))
+		err = fmt.Errorf("unknown command %s", visible(a.command))
 	}
-	return
+	return a, err
 }
 
 func writeResult(out, errOut io.Writer, content []byte) int {

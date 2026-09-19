@@ -12,8 +12,9 @@ import (
 )
 
 type Project struct {
-	Root    string
-	Records []*Record
+	Root      string
+	RecordDir string // configured record folder, relative to Root
+	Records   []*Record
 }
 
 // Load reads a whole project. Any diagnostics make the project unsuitable for
@@ -50,6 +51,7 @@ func Load(cwd, explicit string) (*Project, []Diagnostic) {
 	if len(config.errors) != 0 {
 		return p, sortedDiagnostics(config.errors)
 	}
+	p.RecordDir = recordDir
 	recordRoot := filepath.Join(root, recordDir)
 	var ds []Diagnostic
 	folders := map[string]string{"work": "work", "questions": "question", "decisions": "decision"}
