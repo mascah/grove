@@ -9,7 +9,7 @@ size: medium
 depends_on: ["W-004"]
 relates_to: ["Q-001", "W-003"]
 created: "2026-09-19T17:50:01Z"
-updated: "2026-09-19T17:54:10Z"
+updated: "2026-09-19T19:28:19Z"
 ---
 
 ## Outcome
@@ -90,8 +90,10 @@ and independent review of stale selections and unintended Git writes.
 
 ## Next
 
-Finish W-004's selector specification under Q-001's accepted policy, then
-prepare this unit's implementation steps. After these CLI foundations, shape
+The [coordination plan](../../docs/plans/W-004-W-005-coordination.md) fixes
+the consumed selector and this command's resolution contract, with ordered
+steps and acceptance-to-check mapping; implement after W-004 closes in the
+same branch. After these CLI foundations, shape
 the interactive Open workspace action and explicit creation for branches
 without a checkout. Do not
 treat path resolution as completion of that entire user experience.

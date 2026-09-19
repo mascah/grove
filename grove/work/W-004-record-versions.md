@@ -2,14 +2,14 @@
 id: "W-004"
 type: work
 title: "Inspect record versions across local branches"
-status: proposed
+status: active
 kind: feature
 priority: 2
 size: medium
 depends_on: []
 relates_to: ["Q-001", "W-003"]
 created: "2026-09-19T17:49:58Z"
-updated: "2026-09-19T17:54:10Z"
+updated: "2026-09-19T19:28:20Z"
 ---
 
 ## Outcome
@@ -115,6 +115,8 @@ vet, and independent review of source identity and incomplete-result handling.
 
 ## Next
 
-Finalize the JSON/selector contract and ordered implementation plan using
-Q-001's accepted policy. W-005 consumes this source identity. Do not dispatch
-this draft as an already approved specification.
+The [coordination plan](../../docs/plans/W-004-W-005-coordination.md) records
+the finalized JSON, ordering, incomplete-result, and selector contract decided
+on 2026-09-19 under Q-001's accepted policy, with the ordered steps and
+acceptance-to-check mapping. Implement, verify, and review per that plan;
+W-005 consumes the selector.
