@@ -136,3 +136,26 @@ a committed route. A live explicit selection must still disambiguate duplicates.
   `go run ./cmd/grove update`; keep evidence in the record/plan bodies.
 - [ ] Return focused Conventional Commits, tested candidate revision, review
   disposition, and remaining limits. Do not merge or remove old worktrees.
+
+## Implementation notes, 2026-09-19
+
+Implemented on branch `worktree-W-006-W-008` from base `2d6de36`; the
+[work record](../../grove/work/W-006-workspace-provenance.md) owns the evidence.
+Bounded adjustments to this plan, and why:
+
+- The middle-prefix fixture needs a project two levels below the repository
+  root. That exposed a separate defect at the base: `ls-tree -t` lists each
+  parent of the prefix (`../`, `../../`), only `./` was skipped, and every
+  committed source of such a project failed. `d5666dd` fixes it; without it
+  R1 cannot be reproduced for a deep prefix.
+- `live.go` holds entering, locating, ownership, and loading. The final check
+  (`recheck`) lives beside `Resolve` in `workspace.go`, its only caller.
+- Entering a worktree also requires an empty `--show-prefix` at its root. A
+  plain directory standing where a locked worktree used to be, inside another
+  checkout, otherwise answers with that checkout's identity.
+- The record folder's ownership is checked like the prefix's. The loader
+  already refuses symlinks there; a nested repository was the remaining way
+  for a configured path to leave the checkout.
+- After review, the second inventory also compares `grove.yaml` bytes, so a
+  configuration that vanishes during the read invalidates the source in
+  `versions` too, not only at `workspace`'s final check.
