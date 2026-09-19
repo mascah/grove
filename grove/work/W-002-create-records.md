@@ -2,7 +2,7 @@
 id: "W-002"
 type: work
 title: Create records with shared sequential ID allocation
-status: proposed
+status: active
 kind: feature
 priority: 2
 size: medium
@@ -10,7 +10,7 @@ members: []
 depends_on: []
 relates_to: ["W-001", "D-002", "D-003", "Q-001"]
 created: "2026-09-19T15:25:51Z"
-updated: "2026-09-19T15:25:51Z"
+updated: "2026-09-19T15:31:23Z"
 ---
 
 ## Outcome
@@ -86,6 +86,6 @@ deleting the file. Git commands used: `rev-parse --git-common-dir`,
 
 ## Next
 
-Prepare `docs/plans/W-002-create.md` against this checkout after the owner
-accepts D-003: tests first for allocation, recovery, concurrency, and creation;
-then implement `internal/alloc` and the `new` command.
+Execute the [implementation plan](../../docs/plans/W-002-create.md) on branch
+`worktree-W-002`: allocator tests and implementation, then creation and the
+`new` command, then verification and independent review before close.
