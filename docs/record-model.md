@@ -184,9 +184,9 @@ Allocation requirements for cooperating Grove commands in one local repository:
 The counter belongs to the local repository's Grove project, not to a branch,
 worktree, or configured record-root path. It is local coordination state, not a
 tracked project record; no daemon is required. A Grove-owned directory under
-the Git common directory is the intended home. Exact state encoding, lock
-primitive, and crash-recovery protocol must be specified and tested with the
-creation command. No counter or allocator is installed by this documentation
+the Git common directory is the intended home. [D-003](../grove/decisions/D-003-allocator-mechanism.md)
+proposes the state encoding, lock primitive, and recovery protocol for
+[W-002](../grove/work/W-002-create-records.md) to test with the creation command. No counter or allocator is installed by this documentation
 change, and the read-only inspection commands must not initialize one.
 
 Separate clones do not share reservations. Directly authored IDs also bypass
@@ -309,6 +309,8 @@ The earlier illustrative examples have been replaced by real records:
   owns the unresolved version-selection question; it does not block local inspection.
 - [Decision: starter defaults](../grove/decisions/D-001-starter-defaults.md)
   records acceptance and points here for the schema rather than copying it.
+- [Work: create records](../grove/work/W-002-create-records.md) owns the
+  proposed creation command and shared allocation.
 - [Decision: sequential IDs](../grove/decisions/D-002-sequential-ids.md)
   records the naming revision and starter-record ID migration.
 

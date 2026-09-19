@@ -289,16 +289,15 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** shape safe record creation and shared ID allocation against the
-[allocation requirements](record-model.md#identity-and-dates). Specify locking,
-durable reservations, initialization from existing branch/worktree records,
-crash recovery, and non-overwriting file creation before implementing mutations.
-Keep separate-clone/import conflicts explicit. Inspection is complete in
+**Next action:** the owner decides on [D-003](../grove/decisions/D-003-allocator-mechanism.md),
+the proposed flock/counter/ref-scan allocator, then
+[W-002](../grove/work/W-002-create-records.md) is planned and implemented:
+`grove new` with shared sequential IDs across linked worktrees, recovery from
+committed and live records, and non-overwriting creation. Separate-clone and
+import conflicts stay explicit and out of scope. Inspection is complete in
 [W-001](../grove/work/W-001-inspect-records.md): use `go run ./cmd/grove list`,
-`show W-001`, or `check` to inspect this project. Its evidence covers fixture
-tests, a real linked-worktree experiment, and unchanged-file checks. The reader
-neither requires nor initializes allocator state. Keep the installed sibling
-CLI untouched; cross-branch aggregation, TUI, and execution remain later work.
+`show W-001`, or `check`. Keep the installed sibling CLI untouched;
+cross-branch aggregation, TUI, and execution remain later work.
 
 ## Reset and scope record
 
