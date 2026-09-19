@@ -63,7 +63,8 @@ type Group struct {
 // Result is the inventory and observations of one inspection.
 type Result struct {
 	Project, Repository, Prefix string
-	Complete                    bool // every source is valid or absent
+	GitDir                      string // root's own worktree: the live source with this Git directory
+	Complete                    bool   // every source is valid or absent
 	Sources                     []*Source
 	Groups                      []Group
 }
@@ -89,7 +90,11 @@ func inspect(ctx context.Context, root, id string, between func()) (*Result, err
 	if err != nil {
 		return nil, err
 	}
-	result := &Result{Project: root, Repository: common, Prefix: prefix}
+	here, err := repo.GitPathContext(ctx, root, "--git-dir")
+	if err != nil {
+		return nil, err
+	}
+	result := &Result{Project: root, Repository: common, Prefix: prefix, GitDir: here}
 	branches, err := listBranches(ctx, root)
 	if err != nil {
 		return nil, err
