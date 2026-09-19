@@ -86,8 +86,9 @@ after finding the original random-ID/timestamp filenames difficult to browse.
 These revised defaults govern the operational records. W-001 implements the
 discovery, validation, graph, and inspection behavior below; W-002 implements
 creation and allocation per [D-003](../grove/decisions/D-003-allocator-mechanism.md).
-Updates and other mutations remain design to implement and verify. This section
-owns the schema; the brief owns direction.
+[W-003](../grove/work/W-003-update-records.md) implements field updates with
+content revisions and a shared write lock; renames, moves, deletes, and body
+edits remain unimplemented. This section owns the schema; the brief owns direction.
 
 ### Configuration and discovery
 
@@ -188,7 +189,9 @@ tracked project record; no daemon is required. A Grove-owned directory under
 the Git common directory is the intended home. [D-003](../grove/decisions/D-003-allocator-mechanism.md)
 owns the accepted state encoding, lock primitive, and recovery protocol for
 [W-002](../grove/work/W-002-create-records.md) to test with the creation command. `grove new` initializes and maintains `grove/next-ids` under `grove/lock` in
-that common directory; the read-only inspection commands never create them.
+that common directory, and `new` and `update` serialize publication through
+`grove/write.lock` beside them; the read-only inspection commands never create
+any of these files, and none is ever unlinked.
 
 Separate clones do not share reservations. Directly authored IDs also bypass
 allocation. Imported records and independently allocated clone histories require
@@ -212,16 +215,17 @@ general ID-renaming feature. Schema 1 is still the unshipped starter contract.
 
 Keep `created` and `updated` optional on every type. When present, require quoted
 UTC timestamps in `YYYY-MM-DDTHH:MM:SSZ` form, and require `updated >= created`
-when both exist. A future create command writes both with the same current time;
-a mutation preserves `created` and sets `updated` when record content changes.
+when both exist. `new` writes both with the same current time; `update`
+preserves `created` and sets `updated` when record content changes.
 Do not invent a missing creation date for an existing file or refresh dates on
 a read or no-op mutation.
 
 Direct editors should update `updated` when changing content, but that is an
 authoring convention rather than a provable freshness guarantee. Readers never
 repair dates or infer them from filenames, filesystem modification time, or Git.
-Revision checks for future safe writes must compare actual content, not trust
-these timestamps.
+Revision checks for safe writes compare actual content, not these timestamps:
+`show --json` reports `sha256:` plus the hex digest of the exact file bytes,
+and `update --expect` refuses any other current content.
 
 ### Initial planning values
 
@@ -256,6 +260,12 @@ is clear. Those commands change no records, dates, configuration, or Git state.
 writes `<id>-<slug>.md` with a body skeleton and equal `created`/`updated`
 timestamps, prints the root-relative path, and fails without deleting the file
 if the project no longer validates. It requires Git and never overwrites.
+`show <id> --json` prints one object with `id`, `path`, `revision`, and
+`source`. `update <id> --expect REVISION` with `--set FIELD=VALUE` and
+`--unset FIELD` changes `title`, `status`, `relates_to`, work planning fields,
+or question `blocks` by editing only those frontmatter entries plus `updated`;
+[W-003](../grove/work/W-003-update-records.md) owns its request, preservation,
+locking, and failure-reporting contract, and prints `{id, path, revision, changed}`.
 
 - `list`: show ID, type, status, and title, ordered by `created` ascending with
   undated records last, then ID prefix and numeric suffix as the tie-breaker.
@@ -345,8 +355,9 @@ different branches are versions to reconcile, not automatically ID collisions.
 ## First dogfooding boundary
 
 The CLI now lists, shows, and validates the records tracking its own development
-in one checkout, and creates records with shared IDs. Updates follow. Branch aggregation and
-workspace navigation build on that foundation.
+in one checkout, creates records with shared IDs, and updates their fields
+while refusing stale writes. Branch aggregation and workspace navigation build
+on that foundation.
 
 Structured attachments, review/report records, artifact ingestion, and agent
 attempts are deferred. Ordinary Markdown links and prose can carry supporting

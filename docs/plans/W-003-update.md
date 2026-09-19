@@ -73,14 +73,74 @@ bounded span scanner over yaml.v3 node positions.
 
 ## Steps and verification
 
-- [ ] `repo` helpers and `create` write-lock participation; existing tests green.
-- [ ] `Revision`, `show --json`, exported parsing; JSON tests.
-- [ ] Editor with byte-exact fixtures.
-- [ ] `Apply` with lock, validation, publication, fault injection, races.
-- [ ] CLI `update`, workflow fixture, docs; `go test ./...`,
+- [x] `repo` helpers and `create` write-lock participation; existing tests green.
+- [x] `Revision`, `show --json`, exported parsing; JSON tests.
+- [x] Editor with byte-exact fixtures.
+- [x] `Apply` with lock, validation, publication, fault injection, races.
+- [x] CLI `update`, workflow fixture, docs; `go test ./...`,
   `go test -race ./...`, `go vet ./...`, `gofmt -l .`, `go run ./cmd/grove check`.
 - [ ] Independent review; address blocking findings; reconcile records.
 
 ## Progress and evidence
 
-Prepared against `8b23636`; W-003 set active on 2026-09-19.
+Prepared against `8b23636`; W-003 set active on 2026-09-19. Implemented on
+`worktree-W-003`: `56df181` (shared lock helpers, `new` takes the write lock),
+`a0cf898` (`show --json`, exported parsing), `c4a906c` (`update`).
+
+- `go build`, `go vet ./...`, `gofmt -l .` (clean), `go test ./...`, and
+  `go test -race ./...` pass for `internal/cli`, `internal/create`,
+  `internal/project`, `internal/repo`, and `internal/update`.
+- Editor fixtures (`edit_test.go`) assert exact output bytes for: same-line
+  plain values with a tab after the colon and a retained inline comment; a
+  double-quoted key with a single-quoted `''`-escaped Unicode value; a block
+  sequence at the key's indentation and an indented one, replaced from the
+  colon with the last item's inline comment retained; a multi-line flow list
+  with a trailing comment; a literal block scalar whose content contains `#`;
+  a folded scalar followed by a blank line; a multi-line plain scalar; unset
+  removing whole lines and inline comments while standalone comments remain;
+  appends before the closing delimiter with `updated` last; several changes in
+  one pass; BOM plus CRLF with an indented mapping and a body without a final
+  newline; a flow mapping with a Unicode key, a `]` inside a quoted item,
+  first/last entry removal, and appends after the last value; refusals for
+  tagged or anchored edited entries, a mapping value, and a missing closing
+  delimiter, while an unrelated tagged entry still serves as a bound.
+- `Apply` tests: every accepted field on work, question, and decision records
+  with a title holding leading/trailing spaces, quotes, a colon, `#`, and CJK;
+  optional removal and explicit empty lists; all lifecycle values including
+  reopening without file or `created` changes; no-op requests preserving
+  bytes, mtime, and a `0600` mode with a clock behind the record; stale no-ops
+  refused with the current revision; absent versus empty list; twenty-four
+  invalid requests refused without writes, including forbidden and wrong-type
+  fields, malformed priorities and lists, duplicates, self-links, unresolved
+  and non-work targets, and a status carrying a newline; dependency and
+  membership cycles; an invalid neighbor; clock before `created` refused,
+  equal-second changes sharing a stamp with distinct revisions; a missing
+  `created` staying absent; a body-only edit invalidating the revision;
+  neighbor, inventory, configuration, permission, and same-inode changes
+  injected between validation and rename all refused with no temp file left;
+  injected write, sync, close, compare, and rename failures leaving the
+  original bytes; injected directory-sync and final-validation failures
+  returning `*Failure` with the applied path and revision, permissions kept;
+  a same-revision race with exactly one changed success; reciprocal
+  dependency additions with exactly one success and a valid project; `new`
+  and an `update` from a linked worktree both blocked while the write lock is
+  held by another descriptor and proceeding after release, with the lock file
+  retained; a non-Git directory refused.
+- CLI tests: nineteen usage errors exit 2 without output; help works without a
+  project; operation errors exit 1 with `grove:` diagnostics and unchanged
+  record files; an output failure after publication reports the applied path
+  and revision, and after a no-op reports that no change was needed; the
+  workflow fixture creates W-002 with `new`, sets five fields at once, applies
+  a no-op, marks it done while unsetting priority, reopens it, and passes
+  `check` and `list` with the body skeleton and `created` intact; `show
+  --json` hash/source pairs agree for BOM, CRLF, Unicode, and a missing final
+  newline, with no Git state created.
+- Real use in this worktree: `show W-003 --json`, a no-op `update` returned
+  `changed: false` with the same revision, a status/priority change and its
+  reversal left only `updated` different, a stale `--expect` was refused, and
+  `check` reported 9 records. Dogfooding found the untouched-field guard
+  comparing the `priority` pointer address, which refused every update of a
+  record carrying a priority; fixed with a regression test before commit.
+- Not verified: Windows (no `flock`), separate clones, and a direct editor
+  writing after the final comparison, which the specification states as an
+  honest limit.

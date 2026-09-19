@@ -2,7 +2,7 @@
 
 Captured: 2026-09-18.
 Status: product direction and starter file defaults selected; the Go CLI
-reads, validates, and creates the operational records. This document is the restart's
+reads, validates, creates, and updates the operational records. This document is the restart's
 current source of intent.
 
 ## Intent and authority
@@ -288,8 +288,8 @@ Related details to resolve at the appropriate boundary:
 2. Walk one work record through creation, implementation on a branch, review,
    integration, and reopening. Keep work, an execution attempt, and review
    evidence distinct. Resolve identity, version selection, and completion meaning.
-3. The Go CLI now lists, shows, validates, and creates the agreed records.
-   Follow with status and field updates. Use actual Grove development records for dogfooding;
+3. The Go CLI now lists, shows, validates, creates, and updates the agreed
+   records. Use actual Grove development records for dogfooding;
    keep the restart brief as the
    direction owner until an explicit migration avoids duplicate ownership.
 4. Add the combined board and Open workspace interaction over those operations.
@@ -300,14 +300,14 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** owner review of the concrete specification in
-[W-003](../grove/work/W-003-update-records.md), then prepare its Claude Fable
-implementation plan. W-003 now specifies command/revision syntax, preservation,
-coordination with creation, and write-failure behavior; it is awaiting review,
-not dispatched. Recommend W-003 alone for the first Fable implementation,
-followed by review and integration. W-004 and W-005 remain later assignments;
-their shared source selector is still being shaped. Keep implementation serial
-while CLI and project-loader ownership overlaps.
+**Next action:** integrate branch `worktree-W-003` into main.
+[W-003](../grove/work/W-003-update-records.md) is done in its branch context:
+`show --json` content revisions, `update` with source-preserving frontmatter
+edits, and a write lock shared with `new`, implemented, reviewed, and verified
+on 2026-09-19. Integration is a separate step; the owner performs it. W-004
+and W-005 remain later assignments; their shared source selector is still being
+shaped. Keep implementation serial while CLI and project-loader ownership
+overlaps.
 The owner selected cross-branch coordination as the following experience.
 With [Q-001](../grove/questions/Q-001-branch-versions.md) resolved, finalize the
 source/selector contract for [W-004](../grove/work/W-004-record-versions.md),
@@ -336,5 +336,6 @@ does not alter any external service, database, credential, remote repository,
 or installed CLI. The sibling skills and nullsec projects remain unchanged.
 No runner has been launched and no TUI framework has been selected. The new
 Markdown/frontmatter format and file defaults are selected; `grove.yaml` and
-operational records exist, and the inspection and creation CLI is implemented
-and verified locally. It has not replaced the installed sibling executable.
+operational records exist, and the inspection, creation, and update CLI is
+implemented and verified locally. It has not replaced the installed sibling
+executable.

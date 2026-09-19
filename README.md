@@ -2,7 +2,7 @@
 
 A local project workspace for humans and agents, built around a CLI and durable files.
 
-**Status: the first Go CLI lists, shows, validates, and creates local project records.**
+**Status: the first Go CLI lists, shows, validates, creates, and updates local project records.**
 
 Start with [the restart brief](docs/restart-brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
@@ -22,13 +22,20 @@ go run ./cmd/grove list
 go run ./cmd/grove show W-001
 go run ./cmd/grove check
 go run ./cmd/grove new work "Title of the work" --slug short-name
+go run ./cmd/grove show W-001 --json
+go run ./cmd/grove update W-001 --expect sha256:HEX --set status=active --unset size
 go run ./cmd/grove --project /path/to/project check
 ```
 
 The first three commands read live files without modifying them; `new` adds
 one file and prints its path. `list` shows ID, type,
-status, and title; `show` prints the exact Markdown source; `check` validates
-metadata and relationships. Project/file context and errors go to stderr, so
+status, and title; `show` prints the exact Markdown source, or with `--json`
+one object holding the path, a `sha256:` content revision, and the source;
+`check` validates metadata and relationships. `update` changes frontmatter
+fields of one record when its file still hashes to `--expect`, keeps every
+other byte of the file, sets `updated`, and prints the resulting revision.
+Lists are JSON arrays such as `'["W-001"]'`; `--unset` removes an optional
+field. Project/file context and errors go to stderr, so
 stdout can be redirected. Exit codes are 0 for success, 1 for inspection/output
 errors, and 2 for invalid command usage.
 
@@ -36,14 +43,16 @@ Without `--project`, discovery searches upward for `grove.yaml` and stops at
 the current Git checkout boundary. Plain directories also work. Any invalid
 record makes the command fail; no partial list or record is printed.
 
-`new` requires a Git checkout: it takes the next `W-`, `Q-`, or `D-` number
-from a counter under the repository's common Git directory, shared by every
-linked worktree, and floors it by the highest ID on any local ref or worktree.
-Never number new records by hand.
+`new` and `update` require a Git checkout. `new` takes the next `W-`, `Q-`,
+or `D-` number from a counter under the repository's common Git directory,
+shared by every linked worktree, and floors it by the highest ID on any local
+ref or worktree. Never number new records by hand. Both commands serialize
+through a write lock in that same directory; `update` refuses a stale
+`--expect`, an invalid project, or any change it observes while preparing the
+write, and reports when a failure happened after the file was replaced.
 
 Use `go test ./...`, `go test -race ./...`, and `go vet ./...` for verification.
-Status and field updates from the CLI are next;
-cross-branch views, TUI, and agent execution remain future work.
+Cross-branch views, TUI, and agent execution remain future work.
 
 The intended experience combines linked work, questions, research, project
 knowledge, and evidence. A CLI serves agents and humans; a TUI can make the
@@ -69,9 +78,9 @@ Give a new agent this prompt:
 
 > Read AGENTS.md, docs/restart-brief.md, and docs/record-model.md. Continue the file-backed
 > Grove CLI and interactive workspace described there. The old application was
-> archived. The Go list/show/check CLI and starter records now work locally;
-> W-001 records verification. Follow the brief's next action to prepare safe
-> creation and shared ID allocation. Treat the brief's
+> archived. The Go list/show/check/new/update CLI and its records now work
+> locally; W-001, W-002, and W-003 record verification. Follow the brief's
+> next action. Treat the brief's
 > remaining proposals as proposals. Inspect
 > the sibling skills and nullsec projects through their Grove CLI when evidence
 > is needed. Preserve this direction and update the brief as choices settle.
