@@ -59,6 +59,11 @@ Selected direction:
   provided Grove makes reaching that context low-friction. Opening the existing
   worktree as the editing/execution context is accepted interaction direction;
   precise routing and aggregation behavior remain to be designed.
+- Next experience selected on 2026-09-19: coordinate work across local branches
+  by seeing record versions and opening the right workspace. This guides work
+  after safe record updates; version-selection policy and implementation scope
+  still need design. A checkout-local board and agent launching are later
+  investments.
 - Eventual agent execution from that workspace, with `claude -p` as the concrete
   first-provider idea. Exact invocation and lifecycle behavior need validation.
 - A clean implementation start, informed by the working skills and nullsec
@@ -290,9 +295,17 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** shape [W-003](../grove/work/W-003-update-records.md), status
-and field updates with a content-based revision check, then decide whether the
-combined board or one interactive view follows. Creation is complete in
+**Next action:** review the shaping proposal in
+[W-003](../grove/work/W-003-update-records.md), then settle its command, revision,
+preservation, and write-failure contract for a Claude Fable implementation
+handoff. The proposal is not yet an accepted implementation specification.
+The owner selected cross-branch coordination as the following experience.
+Resolve [Q-001](../grove/questions/Q-001-branch-versions.md) to prepare
+[W-004](../grove/work/W-004-record-versions.md), version inspection, followed by
+[W-005](../grove/work/W-005-record-workspace.md), locating an existing workspace.
+These are proposed CLI foundations for Open workspace; automatic worktree
+creation and its interactive presentation remain to be shaped. Read-only
+version inspection does not technically depend on W-003. Creation is complete in
 [W-002](../grove/work/W-002-create-records.md): use `go run ./cmd/grove new`
 for every new record; the allocator per [D-003](../grove/decisions/D-003-allocator-mechanism.md)
 shares one counter across linked worktrees, and separate-clone and import
