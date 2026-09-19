@@ -2,6 +2,7 @@ package versions
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/fs"
 	"os/exec"
@@ -24,13 +25,13 @@ type tree struct {
 
 func (t *tree) valid() bool { return t.err == nil && t.present && len(t.ds) == 0 }
 
-func loadTree(root, commit string, cache map[string]*tree) *tree {
+func loadTree(ctx context.Context, root, commit string, cache map[string]*tree) *tree {
 	if t, ok := cache[commit]; ok {
 		return t
 	}
 	t := &tree{}
 	cache[commit] = t
-	fsys, present, err := treeFS(root, commit)
+	fsys, present, err := treeFS(ctx, root, commit)
 	if err != nil {
 		t.err = err
 		return t
@@ -49,8 +50,8 @@ func loadTree(root, commit string, cache map[string]*tree) *tree {
 // ponytail: reads every .md blob under the prefix, not only the record root;
 // restrict to the configured folder if projects with large doc trees make
 // versions slow.
-func treeFS(root, commit string) (fstest.MapFS, bool, error) {
-	out, err := repo.Git(root, "ls-tree", "-r", "-t", "-z", commit)
+func treeFS(ctx context.Context, root, commit string) (fstest.MapFS, bool, error) {
+	out, err := repo.GitContext(ctx, root, "ls-tree", "-r", "-t", "-z", commit)
 	if err != nil {
 		return nil, false, err
 	}
@@ -89,7 +90,7 @@ func treeFS(root, commit string) (fstest.MapFS, bool, error) {
 	if _, ok := fsys["grove.yaml"]; !ok {
 		return fsys, false, nil
 	}
-	contents, err := catFile(root, shas)
+	contents, err := catFile(ctx, root, shas)
 	if err != nil {
 		return nil, false, err
 	}
@@ -100,15 +101,19 @@ func treeFS(root, commit string) (fstest.MapFS, bool, error) {
 }
 
 // catFile fetches blobs in one git process and returns them in request order.
-func catFile(root string, shas []string) ([][]byte, error) {
+func catFile(ctx context.Context, root string, shas []string) ([][]byte, error) {
 	if len(shas) == 0 {
 		return nil, nil
 	}
-	cmd := exec.Command("git", "-C", root, "cat-file", "--batch")
+	cmd := exec.CommandContext(ctx, "git", "-C", root, "cat-file", "--batch")
+	cmd.WaitDelay = repo.GitWaitDelay
 	cmd.Stdin = strings.NewReader(strings.Join(shas, "\n") + "\n")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	if err != nil {
 		return nil, fmt.Errorf("git cat-file: %s", strings.TrimSpace(stderr.String()))
 	}

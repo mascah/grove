@@ -5,6 +5,7 @@ package versions
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -70,42 +71,62 @@ type Result struct {
 // Inspect reads every local branch tip and registered worktree of root's
 // repository at root's prefix. id restricts Groups to one record; an empty
 // Groups with an id means the record is in no valid source.
-func Inspect(root, id string) (*Result, error) { return inspect(root, id, nil) }
+func Inspect(root, id string) (*Result, error) {
+	return InspectContext(context.Background(), root, id)
+}
+
+// InspectContext is Inspect with cancellation: once ctx is done, running Git
+// processes are killed and the error is ctx.Err() with no Result. A blocked
+// filesystem call is not interrupted.
+func InspectContext(ctx context.Context, root, id string) (*Result, error) {
+	return inspect(ctx, root, id, nil)
+}
 
 // inspect is Inspect with a hook that runs after the reads and before the
 // worktree inventory is compared, so tests can change identities meanwhile.
-func inspect(root, id string, between func()) (*Result, error) {
-	common, prefix, err := repo.Locate(root)
+func inspect(ctx context.Context, root, id string, between func()) (*Result, error) {
+	common, prefix, err := repo.LocateContext(ctx, root)
 	if err != nil {
 		return nil, err
 	}
 	result := &Result{Project: root, Repository: common, Prefix: prefix}
-	branches, err := listBranches(root)
+	branches, err := listBranches(ctx, root)
 	if err != nil {
 		return nil, err
 	}
-	first, err := repo.Worktrees(root)
+	first, err := repo.WorktreesContext(ctx, root)
 	if err != nil {
 		return nil, err
 	}
 	trees := map[string]*tree{}
+	// A cancelled read fails its source like any other Git error; the checks
+	// of ctx from here on keep such diagnostics out of a Result.
 	for _, b := range branches {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		s := &Source{Kind: "committed", Ref: b.ref, Commit: b.commit}
-		s.admit(loadTree(root, b.commit, trees))
+		s.admit(loadTree(ctx, root, b.commit, trees))
 		result.Sources = append(result.Sources, s)
 	}
 	for _, w := range first {
 		if w.Bare {
 			continue
 		}
-		s := enterWorktree(w, common)
-		s.load(root, prefix, trees)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		s := enterWorktree(ctx, w, common)
+		s.load(ctx, root, prefix, trees)
 		result.Sources = append(result.Sources, s)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 	if between != nil {
 		between()
 	}
-	second, err := repo.Worktrees(root)
+	second, err := repo.WorktreesContext(ctx, root)
 	if err != nil {
 		return nil, err
 	}
@@ -123,8 +144,11 @@ func inspect(root, id string, between func()) (*Result, error) {
 		} else if s.Locator != "" {
 			// The registration can stay put while the checkout is deleted
 			// (newly prunable), replaced, or its project location swapped.
-			again := enterWorktree(w, common)
-			dir, located := again.locate(prefix)
+			again := enterWorktree(ctx, w, common)
+			dir, located := again.locate(ctx, prefix)
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
 			var current []byte
 			if located {
 				current, _ = os.ReadFile(filepath.Join(dir, "grove.yaml"))
@@ -189,6 +213,9 @@ func inspect(root, id string, between func()) (*Result, error) {
 		result.Groups = append(result.Groups, *g)
 	}
 	slices.SortFunc(result.Groups, func(a, b Group) int { return compareIDs(a.ID, b.ID) })
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
@@ -290,8 +317,8 @@ func compareIDs(a, b string) int {
 
 type branch struct{ ref, commit string }
 
-func listBranches(root string) ([]branch, error) {
-	out, err := repo.Git(root, "for-each-ref", "--format=%(refname)%00%(objectname)", "refs/heads/")
+func listBranches(ctx context.Context, root string) ([]branch, error) {
+	out, err := repo.GitContext(ctx, root, "for-each-ref", "--format=%(refname)%00%(objectname)", "refs/heads/")
 	if err != nil {
 		return nil, err
 	}

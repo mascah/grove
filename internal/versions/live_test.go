@@ -144,7 +144,7 @@ func TestInspectWorktreeReplacedByPlainDirectory(t *testing.T) {
 func TestInspectPrunableDuringRead(t *testing.T) {
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
-	res, err := inspect(root, "W-001", func() {
+	res, err := inspect(t.Context(), root, "W-001", func() {
 		must(t, os.RemoveAll(wt))
 	})
 	if err != nil {
@@ -163,7 +163,7 @@ func TestInspectPrunableDuringRead(t *testing.T) {
 func TestInspectForeignDuringRead(t *testing.T) {
 	root, wt := deepFixture(t)
 	project := filepath.Join(root, "outer/sub")
-	res, err := inspect(project, "W-001", func() {
+	res, err := inspect(t.Context(), project, "W-001", func() {
 		must(t, os.Rename(filepath.Join(wt, "outer/sub"), filepath.Join(wt, "elsewhere")))
 		must(t, os.Symlink("../elsewhere", filepath.Join(wt, "outer/sub")))
 	})
@@ -234,7 +234,7 @@ func TestOddGitPathsRoundTrip(t *testing.T) {
 func TestInspectConfigurationRemovedDuringRead(t *testing.T) {
 	root, wt := deepFixture(t)
 	project := filepath.Join(root, "outer/sub")
-	res, err := inspect(project, "W-001", func() {
+	res, err := inspect(t.Context(), project, "W-001", func() {
 		must(t, os.Remove(filepath.Join(wt, "outer/sub/grove.yaml")))
 	})
 	must(t, err)

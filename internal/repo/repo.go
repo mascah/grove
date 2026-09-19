@@ -4,6 +4,7 @@ package repo
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 )
 
 // CommonDir returns the repository's common Git directory for root, plus the
@@ -31,11 +33,19 @@ func CommonDir(root string) (common, prefix string, err error) {
 // creating anything. It is derived from Git rather than a worktree's .git file
 // because linked worktrees have private metadata.
 func Locate(root string) (common, prefix string, err error) {
+	return LocateContext(context.Background(), root)
+}
+
+// LocateContext is Locate with cancellation, reported as ctx.Err().
+func LocateContext(ctx context.Context, root string) (common, prefix string, err error) {
 	if _, err := exec.LookPath("git"); err != nil {
 		return "", "", errors.New("this command requires Git on PATH; coordination state lives in the repository's common directory")
 	}
-	if common, err = GitPath(root, "--git-common-dir"); err == nil {
-		prefix, err = GitPath(root, "--show-prefix")
+	if common, err = GitPathContext(ctx, root, "--git-common-dir"); err == nil {
+		prefix, err = GitPathContext(ctx, root, "--show-prefix")
+	}
+	if ctx.Err() != nil {
+		return "", "", ctx.Err()
 	}
 	if err != nil {
 		return "", "", fmt.Errorf("this command requires a Git repository; coordination state lives in its common directory (%w)", err)
@@ -48,7 +58,12 @@ func Locate(root string) (common, prefix string, err error) {
 // newlines and trailing blanks, so each path is asked for on its own and only
 // the one terminator Git appends is removed.
 func GitPath(dir, option string) (string, error) {
-	out, err := Git(dir, "rev-parse", "--path-format=absolute", option)
+	return GitPathContext(context.Background(), dir, option)
+}
+
+// GitPathContext is GitPath with cancellation.
+func GitPathContext(ctx context.Context, dir, option string) (string, error) {
+	out, err := GitContext(ctx, dir, "rev-parse", "--path-format=absolute", option)
 	if err != nil {
 		return "", err
 	}
@@ -60,10 +75,24 @@ func GitPath(dir, option string) (string, error) {
 
 // Git runs one git command in dir and returns its stdout.
 func Git(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+	return GitContext(context.Background(), dir, args...)
+}
+
+// GitWaitDelay bounds the wait for a killed git's output pipes, which a
+// descendant process may still hold open.
+const GitWaitDelay = 2 * time.Second
+
+// GitContext is Git with cancellation: once ctx is done the process is killed
+// and collected, and the error is ctx.Err() instead of a Git diagnostic.
+func GitContext(ctx context.Context, dir string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...)
+	cmd.WaitDelay = GitWaitDelay
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	}
 	if err != nil {
 		return "", fmt.Errorf("git %s: %s", args[0], strings.TrimSpace(stderr.String()))
 	}

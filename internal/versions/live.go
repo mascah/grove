@@ -1,6 +1,7 @@
 package versions
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -21,9 +22,9 @@ import (
 // inventory's re-entry) where it used to cost one: for main plus three
 // worktrees, 10 Git processes became 39, or 55 with a nested prefix. Batch
 // them if inspecting many worktrees becomes slow.
-func identity(dir string) (gitDir, prefix string, err error) {
-	if gitDir, err = repo.GitPath(dir, "--git-dir"); err == nil {
-		prefix, err = repo.GitPath(dir, "--show-prefix")
+func identity(ctx context.Context, dir string) (gitDir, prefix string, err error) {
+	if gitDir, err = repo.GitPathContext(ctx, dir, "--git-dir"); err == nil {
+		prefix, err = repo.GitPathContext(ctx, dir, "--show-prefix")
 	}
 	return gitDir, prefix, err
 }
@@ -32,7 +33,7 @@ func identity(dir string) (gitDir, prefix string, err error) {
 // gets a Git directory and locator only when the path is an enterable checkout
 // of the repository at common, judged from the path itself and not from its
 // registration alone.
-func enterWorktree(w repo.Worktree, common string) *Source {
+func enterWorktree(ctx context.Context, w repo.Worktree, common string) *Source {
 	s := &Source{Kind: "live", Ref: w.Branch, Commit: w.Head, Worktree: w.Path}
 	if w.Prunable != "" {
 		s.fail("worktree is prunable: " + w.Prunable)
@@ -45,10 +46,10 @@ func enterWorktree(w repo.Worktree, common string) *Source {
 		s.fail("worktree path is a symlink or not a directory")
 		return s
 	}
-	gitDir, itsPrefix, err := identity(w.Path)
+	gitDir, itsPrefix, err := identity(ctx, w.Path)
 	var itsCommon string
 	if err == nil {
-		itsCommon, err = repo.GitPath(w.Path, "--git-common-dir")
+		itsCommon, err = repo.GitPathContext(ctx, w.Path, "--git-common-dir")
 	}
 	if err != nil {
 		s.fail("cannot enter worktree: " + err.Error())
@@ -78,7 +79,7 @@ func enterWorktree(w repo.Worktree, common string) *Source {
 // not a directory, cannot be read, or belongs to another repository or
 // worktree. Components are checked one by one without following symlinks, so
 // a link cannot lead out of the checkout or stand in for the project.
-func (s *Source) locate(prefix string) (dir string, ok bool) {
+func (s *Source) locate(ctx context.Context, prefix string) (dir string, ok bool) {
 	dir = s.Worktree
 	if prefix == "" {
 		return dir, true
@@ -100,7 +101,7 @@ func (s *Source) locate(prefix string) (dir string, ok bool) {
 			return "", false
 		}
 	}
-	if err := s.owns(dir, prefix); err != nil {
+	if err := s.owns(ctx, dir, prefix); err != nil {
 		s.fail(err.Error())
 		return "", false
 	}
@@ -108,8 +109,8 @@ func (s *Source) locate(prefix string) (dir string, ok bool) {
 }
 
 // owns checks that Git places dir in this source's worktree at prefix.
-func (s *Source) owns(dir, prefix string) error {
-	gitDir, itsPrefix, err := identity(dir)
+func (s *Source) owns(ctx context.Context, dir, prefix string) error {
+	gitDir, itsPrefix, err := identity(ctx, dir)
 	if err != nil {
 		return fmt.Errorf("cannot identify %s: %w", dir, err)
 	}
@@ -121,12 +122,13 @@ func (s *Source) owns(dir, prefix string) error {
 
 // load reads and validates the project of an entered checkout, and its HEAD
 // baseline. An absent project leaves the source not present and undiagnosed.
-func (s *Source) load(root, prefix string, trees map[string]*tree) {
+// A source loaded under a cancelled ctx means nothing; callers check ctx.
+func (s *Source) load(ctx context.Context, root, prefix string, trees map[string]*tree) {
 	if s.Locator == "" {
 		return
 	}
-	dir, ok := s.locate(prefix)
-	if !ok {
+	dir, ok := s.locate(ctx, prefix)
+	if !ok || ctx.Err() != nil {
 		return
 	}
 	if _, err := os.Lstat(filepath.Join(dir, "grove.yaml")); errors.Is(err, fs.ErrNotExist) {
@@ -145,7 +147,7 @@ func (s *Source) load(root, prefix string, trees map[string]*tree) {
 	}
 	// The loader already refuses symlinks in the record folder's path; a nested
 	// repository there would be foreign in the same way as one at the prefix.
-	if err := s.owns(filepath.Join(dir, filepath.FromSlash(p.RecordDir)), prefix+strings.Trim(filepath.ToSlash(filepath.Clean(p.RecordDir)), "/")+"/"); err != nil {
+	if err := s.owns(ctx, filepath.Join(dir, filepath.FromSlash(p.RecordDir)), prefix+strings.Trim(filepath.ToSlash(filepath.Clean(p.RecordDir)), "/")+"/"); err != nil {
 		s.fail(err.Error())
 		return
 	}
@@ -153,7 +155,7 @@ func (s *Source) load(root, prefix string, trees map[string]*tree) {
 	if strings.Trim(s.Commit, "0") == "" { // unborn branch: nothing is committed yet
 		s.baseline = &tree{}
 	} else {
-		s.baseline = loadTree(root, s.Commit, trees)
+		s.baseline = loadTree(ctx, root, s.Commit, trees)
 	}
 	if s.baseline.err != nil {
 		s.fail("cannot read HEAD " + s.Commit + ": " + s.baseline.err.Error())

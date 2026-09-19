@@ -1,6 +1,9 @@
 package repo
 
-import "strings"
+import (
+	"context"
+	"strings"
+)
 
 // Worktree is one entry of the repository's worktree inventory, with the raw
 // path and fields Git reports.
@@ -14,7 +17,12 @@ type Worktree struct {
 // NUL-delimited porcelain format, the only one that keeps paths Git would
 // otherwise quote for display (newlines, tabs, quotes) exact.
 func Worktrees(root string) ([]Worktree, error) {
-	out, err := Git(root, "worktree", "list", "--porcelain", "-z")
+	return WorktreesContext(context.Background(), root)
+}
+
+// WorktreesContext is Worktrees with cancellation.
+func WorktreesContext(ctx context.Context, root string) ([]Worktree, error) {
+	out, err := GitContext(ctx, root, "worktree", "list", "--porcelain", "-z")
 	if err != nil {
 		return nil, err
 	}

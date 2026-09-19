@@ -472,7 +472,7 @@ func TestInspectUnstable(t *testing.T) {
 	moving := addWorktree(t, root, "moving", "", "-b", "moving")
 	leaving := addWorktree(t, root, "leaving", "", "-b", "leaving")
 	detaching := addWorktree(t, root, "detaching", "", "-b", "detaching")
-	res, err := inspect(root, "", func() {
+	res, err := inspect(t.Context(), root, "", func() {
 		write(t, moving, "grove/work/W-002-second.md", record("W-002", "work", "proposed", "x\n"))
 		commit(t, moving, "moved")
 		git(t, root, "worktree", "remove", "--force", leaving)
