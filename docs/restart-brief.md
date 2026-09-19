@@ -68,9 +68,10 @@ Selected direction:
   that answer. W-004 and W-005 implemented the CLI foundations on
   2026-09-19: `versions` and `workspace`, with the selector contract in
   their shared [coordination plan](plans/W-004-W-005-coordination.md). The
-  owner subsequently selected a terminal version picker for existing workspaces
-  after reliability repairs, then asked to see a Kanban board sooner.
-  [W-009](../grove/work/W-009-terminal-picker.md) now proposes a board-first TUI:
+  owner subsequently selected the Kanban board as the first terminal experience
+  after reliability repairs, with version choices inside each card rather than
+  a separate picker as the starting screen.
+  [W-009](../grove/work/W-009-terminal-picker.md) designs that board-first TUI:
   one checkout supplies column statuses, while each card exposes explicit
   cross-branch versions. Worktree creation and agent launching remain later
   investments; the detailed board interaction remains proposed.
@@ -335,9 +336,11 @@ the existing contracts, not completed work or new product decisions. Preserve
 the retained W-004/W-005 worktree; it has no commits missing from main. Review
 and integration of the repairs remain separate steps.
 
-After the repairs, the recommended next user outcome is a terminal Kanban board
-with explicit version selection inside each card. The owner selected the terminal
-experience on 2026-09-19, then asked for Kanban sooner. Proposed policy: columns
+After the repairs, the selected next user outcome is a terminal Kanban board
+with explicit version selection inside each card. On 2026-09-19 the owner
+preferred the board over a standalone version picker. Version selection supports
+choosing the correct workspace when branches differ; the board supplies the
+everyday overview. Proposed policy: columns
 show one labelled live checkout's statuses, card details group all versions by ID,
 and an Other sources shelf exposes work absent from that checkout. Workspace
 selection remains explicit, incomplete results visible, and stale selections

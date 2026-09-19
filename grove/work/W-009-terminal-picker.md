@@ -16,10 +16,10 @@ relates_to: ["Q-001", "W-004", "W-005"]
 
 See work in a terminal Kanban board, inspect differing committed/live versions
 inside a card, and explicitly select an existing workspace without copying an
-opaque selector. On 2026-09-19 the owner selected a terminal experience after
-reliability fixes, then emphasized wanting a Kanban board sooner. The board-first
-layout below is the recommendation responding to that priority; its detailed
-context policy and framework choice remain proposed design, not shipped behavior.
+opaque selector. On 2026-09-19 the owner preferred the board over a standalone
+version picker as the first terminal experience after reliability fixes.
+Board-first is selected direction; the detailed layout, context policy and
+framework choice below remain proposed design, not shipped behavior.
 [Implementation plan](../../docs/plans/W-009-terminal-picker.md).
 
 ## What the TUI means here
@@ -30,6 +30,11 @@ card's versions and source details. Leaving restores the ordinary shell screen.
 Grove still reads local files without a server, and the board stores no duplicate
 state. The first workspace action resolves and returns a location; it does not
 change the parent shell's directory or launch an editor.
+
+Version selection serves a specific purpose inside a card: main may still say
+proposed while Fable's checkout says done. Showing both lets the person inspect
+the difference and choose the intended workspace. It is supporting navigation;
+the board is the starting screen and everyday overview.
 
 Proposed board (illustrative data, not current project status):
 

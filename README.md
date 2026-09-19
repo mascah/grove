@@ -89,9 +89,9 @@ TUI and agent execution remain future work. The
 [integrated CLI review](docs/reviews/2026-09-19-integrated-cli.md) records known
 workspace-provenance, update-preservation, and Git-path defects; W-006 through
 W-008 are proposed repairs before interactive actions depend on these commands.
-The owner selected a terminal experience and requested early Kanban value;
-[W-009](grove/work/W-009-terminal-picker.md) proposes a checkout-scoped board
-with explicit version details and workspace selection.
+The owner selected a Kanban board as the first terminal experience;
+[W-009](grove/work/W-009-terminal-picker.md) proposes its checkout-scoped layout
+with version details and explicit workspace selection inside each card.
 
 The intended experience combines linked work, questions, research, project
 knowledge, and evidence. A CLI serves agents and humans; a TUI can make the
