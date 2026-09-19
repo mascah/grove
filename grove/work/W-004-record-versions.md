@@ -2,14 +2,14 @@
 id: "W-004"
 type: work
 title: "Inspect record versions across local branches"
-status: proposed
+status: done
 kind: feature
 priority: 2
 size: medium
 depends_on: []
 relates_to: ["Q-001", "W-003"]
 created: "2026-09-19T17:49:58Z"
-updated: "2026-09-19T17:54:10Z"
+updated: "2026-09-19T19:49:48Z"
 ---
 
 ## Outcome
@@ -113,8 +113,39 @@ Agree on revision representation and inspect the integration base before
 dispatch. Required verification: relevant fixtures, full Go suite, race suite,
 vet, and independent review of source identity and incomplete-result handling.
 
+## Evidence
+
+Done 2026-09-19 on branch `worktree-W-004-W-005` at `ca420f5`, base
+`b20d2b0`. The [coordination plan](../../docs/plans/W-004-W-005-coordination.md)
+records the finalized JSON, ordering, incomplete-result, and selector
+contract, the commits, the fixture list per acceptance item, the suite, race,
+vet, gofmt, and `check` results, real use against this repository's two
+worktrees, and the independent review. `versions [ID] [--json]` reads every
+local branch tip through Git objects and every registered worktree's live
+files at this project's prefix, validates each source alone with the
+checkout's loader, groups by ID with each source's own status, compares live
+records with their HEAD, and prints a selector per version binding repository,
+prefix, source, commit, configuration, path, and content revision.
+
+Every acceptance bullet has fixtures: differing statuses and bodies with
+committed and live labels; a branch without a checkout; detached, dirty,
+untracked, deleted, renamed, and byte-identical records; source-specific
+configuration and a project below the repository root; a dependency missing
+in one source; invalid YAML, duplicate IDs, an inaccessible worktree, and a
+changing HEAD or branch as attributable incomplete results; BOM and CRLF
+bytes agreeing with revisions; paths with spaces, tabs, and newlines; repeated
+reads ordering identically; and hashed Git metadata, records, and dirty files
+unchanged with no coordination state created.
+
+Review disposition: no blocking findings; three should-fix items (unborn
+HEAD, undocumented invalid-HEAD comparison, missing Git-state test) were fixed
+and covered. A HEAD whose project does not validate keeps the live source
+valid with `change: unknown` and a note, a revision of this record's original
+proposal. Limits: no fetch, remotes, tags, or history; separate clones are
+outside scope; reads are not a simultaneous snapshot, which selectors expose
+at resolution time.
+
 ## Next
 
-Finalize the JSON/selector contract and ordered implementation plan using
-Q-001's accepted policy. W-005 consumes this source identity. Do not dispatch
-this draft as an already approved specification.
+W-005 consumes the selector in the same branch. Integration of this branch
+into main is a separate step for the owner.
