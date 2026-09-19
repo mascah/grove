@@ -40,9 +40,6 @@ func Locate(root string) (common, prefix string, err error) {
 	if err != nil {
 		return "", "", fmt.Errorf("this command requires a Git repository; coordination state lives in its common directory (%w)", err)
 	}
-	if !filepath.IsAbs(common) {
-		return "", "", fmt.Errorf("git reported the common directory %q, which is not an absolute path", common)
-	}
 	return common, prefix, nil
 }
 

@@ -232,7 +232,7 @@ func recheck(root string, res *Result, sel Selection, tip string, lv Version) er
 		case w.Bare:
 		case w.Path == lv.Source.Worktree:
 			target = enterWorktree(w, res.Repository)
-			target.load(root, res.Repository, res.Prefix, map[string]*tree{})
+			target.load(root, res.Prefix, map[string]*tree{})
 		case sel.Kind == "committed" && w.Branch == sel.Ref:
 			if other := enterWorktree(w, res.Repository); other.Locator != "" {
 				return fmt.Errorf("worktree %s also checked out %s while its workspace was being resolved%s", other.Locator, sel.Ref, reselect)

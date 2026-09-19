@@ -99,7 +99,7 @@ func inspect(root, id string, between func()) (*Result, error) {
 			continue
 		}
 		s := enterWorktree(w, common)
-		s.load(root, common, prefix, trees)
+		s.load(root, prefix, trees)
 		result.Sources = append(result.Sources, s)
 	}
 	if between != nil {
@@ -124,7 +124,7 @@ func inspect(root, id string, between func()) (*Result, error) {
 			// The registration can stay put while the checkout is deleted
 			// (newly prunable), replaced, or its project location swapped.
 			again := enterWorktree(w, common)
-			dir, located := again.locate(common, prefix)
+			dir, located := again.locate(prefix)
 			var current []byte
 			if located {
 				current, _ = os.ReadFile(filepath.Join(dir, "grove.yaml"))

@@ -242,3 +242,37 @@ func TestInspectConfigurationRemovedDuringRead(t *testing.T) {
 		t.Fatalf("a project whose configuration vanished during the read: %+v", s)
 	}
 }
+
+// A separate repository can keep its Git directory below this repository's
+// <common>/worktrees and register itself there. Its Git directory then has
+// the shape of a linked worktree's; only its common directory differs.
+func TestInspectForeignRepositoryRegisteredAsWorktree(t *testing.T) {
+	root := repoFixture(t)
+	evil := filepath.Join(filepath.Dir(root), "evil")
+	admin := filepath.Join(root, ".git", "worktrees", "evil")
+	must(t, os.MkdirAll(filepath.Dir(admin), 0o755))
+	git(t, filepath.Dir(root), "init", "-q", "-b", "foreign", "--separate-git-dir", admin, evil)
+	git(t, evil, "fetch", "-q", root, "main")
+	git(t, evil, "reset", "-q", "--hard", "FETCH_HEAD")
+	write(t, evil, "grove/work/W-001-first.md", record("W-001", "work", "done", "Foreign.\n"))
+	write(t, admin, "gitdir", filepath.Join(evil, ".git")+"\n")
+
+	res := mustInspect(t, root, "W-001")
+	var found bool
+	for _, s := range res.Sources {
+		if s.Worktree == evil {
+			found = true
+			if s.Valid || s.Locator != "" || !strings.Contains(strings.Join(s.Diagnostics, "\n"), "no longer belongs to this repository") {
+				t.Fatalf("foreign repository admitted: %+v", s)
+			}
+		}
+	}
+	if !found || res.Complete {
+		t.Fatalf("the registration must be listed and refused: %s", dump(res))
+	}
+	for _, v := range group(t, res, "W-001").Versions {
+		if v.Source.Worktree == evil {
+			t.Fatalf("the foreign record must not be a version: %+v", v)
+		}
+	}
+}

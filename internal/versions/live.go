@@ -15,11 +15,12 @@ import (
 // identity asks Git where dir is: its Git directory and its path inside the
 // worktree. The Git directory is unique to one worktree of one repository.
 // ponytail: one git process per path, because rev-parse cannot delimit paths
-// that contain newlines. A live checkout costs six to eight rev-parse
-// processes per inspection (entering, the prefix, the record folder, and the
-// second inventory's re-entry) where it used to cost one: measured 10 to 31
-// Git processes for main plus three worktrees. Batch them if inspecting many
-// worktrees becomes slow.
+// that contain newlines. A live checkout costs about eight rev-parse
+// processes per inspection for a project at the repository root and twelve
+// for a nested one (entering, the prefix, the record folder, and the second
+// inventory's re-entry) where it used to cost one: for main plus three
+// worktrees, 10 Git processes became 39, or 55 with a nested prefix. Batch
+// them if inspecting many worktrees becomes slow.
 func identity(dir string) (gitDir, prefix string, err error) {
 	if gitDir, err = repo.GitPath(dir, "--git-dir"); err == nil {
 		prefix, err = repo.GitPath(dir, "--show-prefix")
@@ -45,23 +46,28 @@ func enterWorktree(w repo.Worktree, common string) *Source {
 		return s
 	}
 	gitDir, itsPrefix, err := identity(w.Path)
+	var itsCommon string
+	if err == nil {
+		itsCommon, err = repo.GitPath(w.Path, "--git-common-dir")
+	}
 	if err != nil {
 		s.fail("cannot enter worktree: " + err.Error())
 		return s
 	}
-	// The Git directory of one of this repository's worktrees is its common
-	// directory or directly below <common>/worktrees, so it identifies the
-	// repository too. A plain directory inside another checkout answers with
-	// that checkout's identity and a prefix; a worktree's own root has none.
+	// The shape of the Git directory is not enough: a separate repository can
+	// keep its Git directory below <common>/worktrees, and only its common
+	// directory gives it away. A plain directory inside another checkout
+	// answers with that checkout's identity and a prefix; a worktree's own
+	// root has none.
 	switch rest, linked := strings.CutPrefix(gitDir, filepath.Join(common, "worktrees")+string(filepath.Separator)); {
-	case itsPrefix != "":
+	case itsCommon != common || itsPrefix != "":
 		s.fail("worktree path no longer belongs to this repository")
 	case gitDir == common:
 		s.GitDir, s.Locator = gitDir, "."
 	case linked && rest != "" && !strings.ContainsRune(rest, filepath.Separator):
 		s.GitDir, s.Locator = gitDir, rest
 	default:
-		s.fail("worktree path no longer belongs to this repository")
+		s.fail("unrecognized worktree Git directory " + gitDir)
 	}
 	return s
 }
@@ -72,7 +78,7 @@ func enterWorktree(w repo.Worktree, common string) *Source {
 // not a directory, cannot be read, or belongs to another repository or
 // worktree. Components are checked one by one without following symlinks, so
 // a link cannot lead out of the checkout or stand in for the project.
-func (s *Source) locate(common, prefix string) (dir string, ok bool) {
+func (s *Source) locate(prefix string) (dir string, ok bool) {
 	dir = s.Worktree
 	if prefix == "" {
 		return dir, true
@@ -115,11 +121,11 @@ func (s *Source) owns(dir, prefix string) error {
 
 // load reads and validates the project of an entered checkout, and its HEAD
 // baseline. An absent project leaves the source not present and undiagnosed.
-func (s *Source) load(root, common, prefix string, trees map[string]*tree) {
+func (s *Source) load(root, prefix string, trees map[string]*tree) {
 	if s.Locator == "" {
 		return
 	}
-	dir, ok := s.locate(common, prefix)
+	dir, ok := s.locate(prefix)
 	if !ok {
 		return
 	}
