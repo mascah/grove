@@ -50,6 +50,10 @@ Selected direction:
 - An interactive workspace that can expose work, questions, research, and
   related project knowledge. A TUI is the currently exciting direction; a local
   web UI is also possible, without committing to two initial interfaces.
+- Working direction: branch-local project records with a combined cross-branch
+  view. The owner accepts editing a record in its branch context for now,
+  provided Grove makes reaching that context low-friction. Exact routing and
+  aggregation behavior remain to be designed.
 - Eventual agent execution from that workspace, with `claude -p` as the concrete
   first-provider idea. Exact invocation and lifecycle behavior need validation.
 - A clean implementation start, informed by the working skills and nullsec
@@ -161,40 +165,57 @@ feature list. Tracking and inspection should remain useful without running AI.
 
 ## Consequential design questions
 
-### Project view preference and feasibility, 2026-09-18
+### Cross-branch view and branch-context editing, 2026-09-18
 
-The owner prefers one project view across code branches, with branch-specific
-implementation and evidence visible within it, provided this is feasible.
-This selects a desired experience conditionally, not a storage implementation.
+The owner wants a project-wide view and, after discussing Backlog.md's
+branch-local storage and combined board, accepts its branch-context editing
+restriction for now. The condition is low user effort: Grove should fit context
+selection into the workflow. This establishes the working direction without
+adopting Backlog.md's schema, version-selection rules, or exact interaction.
 
-A temporary-repository probe using Git 2.50.1 verified one possible mechanism:
-an independent `grove-project` branch with a dedicated linked working tree at
-the common Git directory's `grove/project/` path. Main and two feature worktrees
-resolved the same Markdown record using
-`git rev-parse --path-format=absolute --git-common-dir`. Two board commits
-produced independent project history; switching a feature worktree to another
-code branch preserved the board view. Main's HEAD and all code working trees
-remained unchanged and clean. No daemon was used; the fixture was removed.
-Git documents the underlying facilities in [git-worktree](https://git-scm.com/docs/git-worktree)
-and [git-rev-parse](https://git-scm.com/docs/git-rev-parse).
+The owner correctly identified a checkout conflict: a branch already checked out
+in a linked worktree cannot normally also be checked out in main's working
+directory. [Git switch](https://git-scm.com/docs/git-switch) documents this guard.
 
-This establishes basic local feasibility only. Concurrent writes, interrupted
-mutations, remote synchronization, and migration were not tested. A shared
-working tree would need serialized CLI mutations and stale-edit detection;
-Git's own index lock does not coordinate an entire Grove operation. Project
-changes and code changes would have separate histories, requiring explicit
-revision links and input snapshots for execution/review. The exact storage
-location and mechanism remain proposals.
+Proposed interaction: a card offers Open workspace. Grove identifies the selected
+record's branch and locates its existing checkout with
+`git worktree list --porcelain -z`. The UI's editing context and commands target
+that checkout explicitly; this does not require switching main. If no checkout
+exists, a workspace-opening action could prepare a linked worktree. Ambiguous,
+missing, or changed branch/worktree identities need explicit handling, without
+forcing a second checkout or guessing which version of a work item to edit.
+
+Proposed safeguards: revalidate the target branch and record revision before a
+mutation, preserve dirty files/index state, and coordinate writes with an active
+agent. A worktree's existence does not imply exclusive ownership or permission
+to change an agent's assignment. Show whether a card reflects committed branch
+data or live working files. Keep the selected version's source visible; exact
+aggregation precedence and claim/handoff semantics remain open.
+
+A temporary Git 2.50.1 probe reproduced the duplicate-checkout refusal, located
+the existing feature worktree through porcelain output, and edited its record.
+Main's current branch, copy of the record, and unrelated staged changes remained
+unchanged. The fixture was removed. This proves basic routing feasibility only;
+concurrent writers, branch-change races, workspace provisioning, and recovery
+were not tested. No product implementation exists yet.
+
+Earlier alternative retained for reconsideration: a separate `grove-project`
+branch with a shared working directory was also proven locally feasible in a
+temporary repo. Main and two worktrees could resolve it through Git's common
+directory and see board changes with independent history. The current working
+direction instead explores branch-local records and cross-branch visibility.
+Reconsider shared storage if navigating/editing branch-specific records proves
+too disruptive. [Git worktree facilities](https://git-scm.com/docs/git-worktree).
 
 ### Remaining questions
 
-1. **Where does each kind of state live?** Shared project records, candidate-
-   specific specifications/evidence, local claims, and run records need explicit
-   ownership and lifetime rules consistent with the preferred project view.
+1. **How does the combined view resolve and edit records?** Branch-local records,
+   candidate-specific evidence, local claims, and run records need explicit
+   ownership and lifetime rules. Define version selection, source labels, live
+   worktree visibility, and routing to the selected checkout.
    The existing skills proposal uses Git's common metadata directory for local
    ownership; it is evidence to evaluate, not an automatically adopted design.
-   Evaluate independent project storage before fixing directory layout or board
-   semantics; the probe above demonstrates one mechanism, not a complete design.
+   Settle these behaviors before fixing directory layout or board semantics.
 2. **What does one run promise?** Define its input, actor/attempt identity,
    working directory, output, failure/wait state, cancellation, interruption
    recovery, and reconciliation. Establish what happens when the TUI exits.
@@ -233,10 +254,12 @@ Related details to resolve at the appropriate boundary:
 5. Migrate or retire skill responsibilities incrementally after the replacement
    demonstrates the same useful behavior.
 
-**Next conversation:** walk through opening the workspace, selecting work,
-launching an agent, closing/reopening the UI, and inspecting its result. Use
-that walkthrough to settle the first two design questions. Do not begin by
-recreating the old application's full feature set.
+**Next conversation:** walk through a real work record appearing on main and a
+feature branch, opening its existing worktree from the combined board, and
+editing or resuming it while preserving an agent's work. Settle record identity,
+version selection, and mutation ownership before implementing the board. Use
+these records to start dogfooding, then extend the walkthrough to launching and
+recovering an agent. Do not recreate the old application's full feature set.
 
 ## Reset and scope record
 
