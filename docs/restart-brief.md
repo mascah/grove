@@ -52,8 +52,9 @@ Selected direction:
   web UI is also possible, without committing to two initial interfaces.
 - Working direction: branch-local project records with a combined cross-branch
   view. The owner accepts editing a record in its branch context for now,
-  provided Grove makes reaching that context low-friction. Exact routing and
-  aggregation behavior remain to be designed.
+  provided Grove makes reaching that context low-friction. Opening the existing
+  worktree as the editing/execution context is accepted interaction direction;
+  precise routing and aggregation behavior remain to be designed.
 - Eventual agent execution from that workspace, with `claude -p` as the concrete
   first-provider idea. Exact invocation and lifecycle behavior need validation.
 - A clean implementation start, informed by the working skills and nullsec
@@ -177,7 +178,8 @@ The owner correctly identified a checkout conflict: a branch already checked out
 in a linked worktree cannot normally also be checked out in main's working
 directory. [Git switch](https://git-scm.com/docs/git-switch) documents this guard.
 
-Proposed interaction: a card offers Open workspace. Grove identifies the selected
+Accepted interaction direction (owner follow-up: "that feels acceptable"):
+a card offers Open workspace. Grove identifies the selected
 record's branch and locates its existing checkout with
 `git worktree list --porcelain -z`. The UI's editing context and commands target
 that checkout explicitly; this does not require switching main. If no checkout
@@ -242,24 +244,31 @@ Related details to resolve at the appropriate boundary:
 
 ## Suggested sequence and current next action
 
-1. Shape the first user journey above into a small executable contract: record
-   ownership, a single agent attempt, and the evidence returned to the project.
-   Inspect the existing CLI at that boundary and record reuse/migration options.
-2. Settle the storage/branch relationship and choose the implementation stack
-   against the demonstrated needs. Write one bounded implementation plan.
-3. Build and exercise the smallest CLI-backed interactive slice, then test
-   interruption and concurrent ownership with real local worktrees.
-4. Evaluate it against a real nullsec scenario in a fixture/copy before changing
-   that project's workflow. Expand based on what this exposes.
-5. Migrate or retire skill responsibilities incrementally after the replacement
-   demonstrates the same useful behavior.
+1. Draft a minimal record model using Grove's own next work. Example subjects:
+   the accepted branch-context decision, the open question of conflicting
+   versions of one work item, and proposed work to inspect Grove records through
+   the new CLI. Explain each field and relationship before adopting templates.
+   Keep these as design examples until their schema and lifecycle are settled.
+2. Walk one work record through creation, implementation on a branch, review,
+   integration, and reopening. Keep work, an execution attempt, and review
+   evidence distinct. Resolve identity, version selection, and completion meaning.
+3. Select the implementation stack and build a small CLI that lists, shows, and
+   validates the agreed records, then supports safe mutations. Use actual Grove
+   development records for the first dogfooding; keep the restart brief as the
+   direction owner until an explicit migration avoids duplicate ownership.
+4. Add the combined board and Open workspace interaction over those operations.
+   Exercise concurrent edits and worktree changes. Extend to one agent run and
+   interruption recovery after the record workflow is useful on its own.
+5. Evaluate against a real nullsec scenario in a fixture/copy. Migrate skill
+   responsibilities incrementally after the replacement demonstrates useful
+   behavior. The existing skills may assist development without dictating the
+   new product schema.
 
-**Next conversation:** walk through a real work record appearing on main and a
-feature branch, opening its existing worktree from the combined board, and
-editing or resuming it while preserving an agent's work. Settle record identity,
-version selection, and mutation ownership before implementing the board. Use
-these records to start dogfooding, then extend the walkthrough to launching and
-recovering an agent. Do not recreate the old application's full feature set.
+**Next conversation:** draft and review the minimal record examples in step 1,
+starting with what a work item means and what software must interpret from it.
+Names, required fields, statuses, and storage syntax remain proposals. This
+sequence is the current recommendation, not authorization to implement an
+unreviewed schema or initialize the predecessor's templates.
 
 ## Reset and scope record
 
