@@ -16,11 +16,13 @@ import (
 	"github.com/mascah/grove/internal/create"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/update"
+	"github.com/mascah/grove/internal/versions"
 )
 
 const usage = "Usage: grove [--project DIR] list | show ID [--json] | check | new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n" +
-	"       grove [--project DIR] versions [ID] [--json]\n\n" +
+	"       grove [--project DIR] versions [ID] [--json]\n" +
+	"       grove [--project DIR] workspace --source SELECTOR [--json]\n\n" +
 	"  list       List records in the selected checkout\n" +
 	"  show ID    Print the complete Markdown source for a record;\n" +
 	"             --json prints {id, path, revision, source} instead\n" +
@@ -32,7 +34,11 @@ const usage = "Usage: grove [--project DIR] list | show ID [--json] | check | ne
 	"             Lists are JSON arrays such as '[\"W-001\"]'; priority is 1-5.\n" +
 	"  versions   Show each record's committed version on every local branch and live\n" +
 	"             version in every worktree, with a selector per version; exit 1 if any\n" +
-	"             source could not be inspected. Reads only; nothing is created.\n\n" +
+	"             source could not be inspected. Reads only; nothing is created.\n" +
+	"  workspace  Print the project directory of the existing checkout holding the\n" +
+	"             version selected by --source (a selector from versions), after\n" +
+	"             checking it is still that version; --json adds checkout, record,\n" +
+	"             branch, HEAD, and revision. Creates, switches, and edits nothing.\n\n" +
 	"--project DIR selects a directory containing grove.yaml.\n" +
 	"Without it, search upward from the current directory, stopping at Git boundaries.\n" +
 	"Project/file context is written to stderr; results are written to stdout.\n"
@@ -54,9 +60,10 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 			return 1
 		}
 	}
-	// versions reports this checkout as one live source among others, so an
-	// invalid current project is attributed there rather than ending the command.
-	if len(ds) != 0 && (p == nil || a.command != "versions") {
+	// versions and workspace report this checkout as one live source among
+	// others, so an invalid current project is attributed there rather than
+	// ending the command.
+	if len(ds) != 0 && (p == nil || (a.command != "versions" && a.command != "workspace")) {
 		for _, d := range ds {
 			fmt.Fprintln(errOut, visible(d.String()))
 		}
@@ -65,6 +72,8 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 	switch a.command {
 	case "versions":
 		return runVersions(p.Root, a, out, errOut)
+	case "workspace":
+		return runWorkspace(p.Root, a, out, errOut)
 	case "update":
 		res, err := update.Apply(p.Root, a.request, time.Now(), nil)
 		if err != nil {
@@ -121,9 +130,9 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 }
 
 type invocation struct {
-	project, command, id, kind, title, slug string
-	help, json                              bool
-	request                                 update.Request
+	project, command, id, kind, title, slug, source string
+	help, json                                      bool
+	request                                         update.Request
 }
 
 var revisionPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
@@ -174,6 +183,7 @@ func parseArgs(args []string) (a invocation, err error) {
 	}{
 		{"--project", "directory", once(&a.project)},
 		{"--slug", "slug", once(&a.slug)},
+		{"--source", "selector", once(&a.source)},
 		{"--expect", "revision", once(&a.request.Expect)},
 		{"--set", "FIELD=VALUE", func(value string) error {
 			name, val, ok := strings.Cut(value, "=")
@@ -258,8 +268,11 @@ func parseArgs(args []string) (a invocation, err error) {
 	if a.slug != "" && a.command != "new" {
 		return a, fmt.Errorf("--slug applies only to new")
 	}
-	if a.json && a.command != "show" && a.command != "versions" {
-		return a, fmt.Errorf("--json applies only to show and versions")
+	if a.json && a.command != "show" && a.command != "versions" && a.command != "workspace" {
+		return a, fmt.Errorf("--json applies only to show, versions, and workspace")
+	}
+	if a.source != "" && a.command != "workspace" {
+		return a, fmt.Errorf("--source applies only to workspace")
 	}
 	if (a.request.Expect != "" || len(fields) != 0) && a.command != "update" {
 		return a, fmt.Errorf("--expect, --set, and --unset apply only to update")
@@ -280,6 +293,15 @@ func parseArgs(args []string) (a invocation, err error) {
 			err = fmt.Errorf("versions takes at most one record ID")
 		} else if len(positional) == 2 {
 			a.id = positional[1]
+		}
+	case "workspace":
+		switch {
+		case len(positional) != 1:
+			err = fmt.Errorf("workspace takes no positional arguments")
+		case a.source == "":
+			err = fmt.Errorf("workspace requires --source SELECTOR from versions")
+		default:
+			_, err = versions.Parse(a.source)
 		}
 	case "new":
 		if len(positional) != 3 {

@@ -2,14 +2,14 @@
 id: "W-005"
 type: work
 title: "Locate the workspace for a selected record version"
-status: proposed
+status: active
 kind: feature
 priority: 2
 size: medium
 depends_on: ["W-004"]
 relates_to: ["Q-001", "W-003"]
 created: "2026-09-19T17:50:01Z"
-updated: "2026-09-19T19:28:19Z"
+updated: "2026-09-19T19:50:26Z"
 ---
 
 ## Outcome
