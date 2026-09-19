@@ -121,13 +121,36 @@ func TestEditFlowMapping(t *testing.T) {
 	}
 }
 
+func TestEditTaggedAndAnchoredEntries(t *testing.T) {
+	// The reader accepts explicit standard tags and unreferenced anchors; a
+	// replaced value drops them, and an unrelated one stays untouched.
+	for _, tc := range []struct{ name, src, key, value, want string }{
+		{"tagged value", "---\nid: !!str W-001\ntitle: !!str hello # c\n---\n", "title", `"t"`, "---\nid: !!str W-001\ntitle: \"t\" # c\n---\n"},
+		{"anchored value", "---\ntitle: &t hello\nstatus: open\n---\n", "title", "t", "---\ntitle: t\nstatus: open\n---\n"},
+		{"tagged quoted value", "---\ntitle: !!str \"he\\\"llo\"\nstatus: open\n---\n", "status", "resolved", "---\ntitle: !!str \"he\\\"llo\"\nstatus: resolved\n---\n"},
+		{"tagged key with later-line value", "---\n!!str members:\n- a\nstatus: open\n---\n", "members", "[]", "---\n!!str members: []\nstatus: open\n---\n"},
+		{"anchored flow list", "---\nmembers: &m [a, b] # c\nstatus: open\n---\n", "members", `["c"]`, "---\nmembers: [\"c\"] # c\nstatus: open\n---\n"},
+		{"unset tagged", "---\nid: W-001\nsize: !!str small\nstatus: open\n---\n", "size", "", "---\nid: W-001\nstatus: open\n---\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := set(tc.key, tc.value)
+			if tc.value == "" {
+				c = unset(tc.key)
+			}
+			got, err := Edit([]byte(tc.src), []change{c})
+			if err != nil || string(got) != tc.want {
+				t.Fatalf("got %q, %v\nwant %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
 func TestEditRefusesUnsupportedSpans(t *testing.T) {
 	for _, tc := range []struct{ name, src, key string }{
-		{"tagged value", "---\nid: !!str W-001\nstatus: open\n---\n", "id"},
-		{"anchored value", "---\nid: &a W-001\nstatus: open\n---\n", "id"},
-		{"tagged key", "---\n!!str id: W-001\nstatus: open\n---\n", "id"},
+		{"explicit key", "---\n? title\n: hello\nstatus: open\n---\n", "title"},
 		{"mapping value", "---\nid: {a: 1}\nstatus: open\n---\n", "id"},
 		{"no closing delimiter", "---\nid: W-001\n", "id"},
+		{"no opening delimiter", "id: W-001\n---\n", "id"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if _, err := Edit([]byte(tc.src), []change{set(tc.key, "x")}); err == nil {
@@ -135,9 +158,16 @@ func TestEditRefusesUnsupportedSpans(t *testing.T) {
 			}
 		})
 	}
-	// Unrelated tagged entries only serve as bounds and do not block edits.
-	got, err := Edit([]byte("---\nid: !!str W-001\nstatus: open\n---\n"), []change{set("status", "resolved")})
-	if err != nil || string(got) != "---\nid: !!str W-001\nstatus: resolved\n---\n" {
+	// A comment line inside a removed list goes with the list; one after it stays.
+	src := "---\nmembers:\n# why these members\n- W-002\n# after the list\nstatus: open\n---\n"
+	got, err := Edit([]byte(src), []change{unset("members")})
+	if err != nil || string(got) != "---\n# after the list\nstatus: open\n---\n" {
+		t.Fatalf("got %q, %v", got, err)
+	}
+	// A brace in a trailing comment does not extend a flow mapping's bound.
+	src = "---\n{id: W-001, status: open}\n# a } brace\n---\n"
+	got, err = Edit([]byte(src), []change{set("status", "resolved"), set("size", "small")})
+	if err != nil || string(got) != "---\n{id: W-001, status: resolved, size: small}\n# a } brace\n---\n" {
 		t.Fatalf("got %q, %v", got, err)
 	}
 }

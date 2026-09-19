@@ -562,3 +562,21 @@ func TestUpdateRequiresGit(t *testing.T) {
 		t.Fatalf("expected a Git requirement without writes: %v", err)
 	}
 }
+
+func TestUnchangedGuardCatchesEditorDrift(t *testing.T) {
+	before, _ := project.ParseRecord("w.md", "work", []byte(work))
+	after, _ := project.ParseRecord("w.md", "work", []byte(strings.Replace(work, "title: First", "title: Other", 1)))
+	if err := unchanged(before, after, []change{set("status", "active")}); err == nil || !strings.Contains(err.Error(), "title") {
+		t.Fatalf("an untouched field that differs must be refused: %v", err)
+	}
+	if err := unchanged(before, after, []change{set("title", `"Other"`)}); err != nil {
+		t.Fatal(err)
+	}
+	priority := 2
+	before.Priority, after.Priority = &priority, new(int)
+	*after.Priority = 2
+	after.Title = before.Title
+	if err := unchanged(before, after, nil); err != nil {
+		t.Fatalf("equal priorities behind different pointers must compare equal: %v", err)
+	}
+}

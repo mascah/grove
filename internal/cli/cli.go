@@ -155,7 +155,7 @@ func parseArgs(args []string) (a invocation, err error) {
 	}
 	field := func(name string) error {
 		if fields[name] {
-			return fmt.Errorf("field %s is mentioned more than once", visible(name))
+			return fmt.Errorf("mentions field %s more than once", visible(name))
 		}
 		fields[name] = true
 		return nil

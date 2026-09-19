@@ -49,6 +49,17 @@ func Edit(source []byte, changes []change) ([]byte, error) {
 	mapping := doc.Content[0]
 	e.flow = mapping.Style&yaml.FlowStyle != 0
 	e.indent = mapping.Column - 1
+	e.end = len(e.fm)
+	if e.flow {
+		off, err := e.offset(mapping.Line, mapping.Column)
+		if err != nil {
+			return nil, err
+		}
+		if e.end, err = e.scanFlow(off); err != nil {
+			return nil, fmt.Errorf("frontmatter: %w", err)
+		}
+		e.end-- // the closing brace
+	}
 	for i := 0; i < len(mapping.Content); i += 2 {
 		k, v := mapping.Content[i], mapping.Content[i+1]
 		keyOff, err := e.offset(k.Line, k.Column)
@@ -121,7 +132,8 @@ type entry struct {
 type editor struct {
 	fm      []byte
 	flow    bool
-	indent  int
+	indent  int // the mapping's indentation
+	end     int // where the mapping's entries end
 	entries []entry
 }
 
@@ -186,9 +198,23 @@ func (e *editor) keyStartsAt(k *yaml.Node, off int) bool {
 	case yaml.SingleQuotedStyle:
 		return len(rest) > 0 && rest[0] == '\''
 	default:
-		// Tagged or anchored keys position at their indicator; edit refuses them.
-		return k.Style&yaml.TaggedStyle != 0 || k.Anchor != "" || bytes.HasPrefix(rest, []byte(k.Value))
+		return k.Style&yaml.TaggedStyle == 0 && k.Anchor == "" && bytes.HasPrefix(rest, []byte(k.Value)) ||
+			bytes.HasPrefix(rest, []byte(k.Value[:0]+string(e.fm[off:e.skipProperties(off)])))
 	}
+}
+
+// skipProperties steps over explicit tag and anchor tokens, which yaml.v3
+// positions a node at, to the value or key text itself.
+func (e *editor) skipProperties(off int) int {
+	for off < len(e.fm) && (e.fm[off] == '!' || e.fm[off] == '&') {
+		for off < len(e.fm) && !isSpace(e.fm[off]) {
+			off++
+		}
+		for off < len(e.fm) && (e.fm[off] == ' ' || e.fm[off] == '\t') {
+			off++
+		}
+	}
+	return off
 }
 
 // bound is the first offset an entry's value may not reach: the next key, or
@@ -197,17 +223,11 @@ func (e *editor) bound(idx int) int {
 	if idx+1 < len(e.entries) {
 		return e.entries[idx+1].keyOff
 	}
-	if e.flow {
-		return bytes.LastIndexByte(e.fm, '}')
-	}
-	return len(e.fm)
+	return e.end
 }
 
 func (e *editor) edit(idx int, c change) (span, error) {
 	en := e.entries[idx]
-	if en.key.Style&yaml.TaggedStyle != 0 || en.key.Anchor != "" {
-		return span{}, fmt.Errorf("frontmatter: %s: tagged or anchored keys are not supported", c.key)
-	}
 	end, err := e.valueEnd(en.value, en.valOff, e.flow, e.indent)
 	if err != nil {
 		return span{}, fmt.Errorf("frontmatter: %s: %w", c.key, err)
@@ -259,15 +279,15 @@ func (e *editor) edit(idx int, c change) (span, error) {
 // afterColon returns the offset just past the key's colon, for values that
 // start on a later line than their key.
 func (e *editor) afterColon(en entry) (int, error) {
-	var end int
 	var err error
-	switch en.key.Style {
+	end := e.skipProperties(en.keyOff)
+	switch en.key.Style &^ yaml.TaggedStyle {
 	case yaml.DoubleQuotedStyle:
-		end, err = e.scanDoubleQuoted(en.keyOff)
+		end, err = e.scanDoubleQuoted(end)
 	case yaml.SingleQuotedStyle:
-		end, err = e.scanSingleQuoted(en.keyOff)
+		end, err = e.scanSingleQuoted(end)
 	default:
-		end = en.keyOff + len(en.key.Value)
+		end += len(en.key.Value)
 	}
 	if err != nil {
 		return 0, err
@@ -306,15 +326,15 @@ func (e *editor) append(appends []change) (span, error) {
 // valueEnd returns the offset just past a value's syntax, excluding trailing
 // whitespace and any comment. indent is the enclosing block's indentation.
 func (e *editor) valueEnd(v *yaml.Node, start int, flow bool, indent int) (int, error) {
-	if v.Style&yaml.TaggedStyle != 0 || v.Anchor != "" {
-		return 0, errors.New("tagged or anchored values are not supported")
-	}
+	// A replaced value drops its explicit tag or anchor along with the old
+	// text; the reader accepts no aliases, so nothing can refer to the anchor.
+	start = e.skipProperties(start)
 	if start >= len(e.fm) {
 		return 0, errors.New("value beyond end")
 	}
 	switch v.Kind {
 	case yaml.ScalarNode:
-		switch v.Style {
+		switch v.Style &^ yaml.TaggedStyle {
 		case yaml.DoubleQuotedStyle:
 			return e.scanDoubleQuoted(start)
 		case yaml.SingleQuotedStyle:
