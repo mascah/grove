@@ -20,12 +20,57 @@ CLI interprets and a freeform Markdown body for explanation.
 | `title` | A readable label for lists, search, and the eventual board |
 | `status` | Explicit lifecycle state for that record type |
 
-Three optional relationship fields are sufficient for the initial examples:
+The accepted relationship fields cover the initial examples:
 
 - Work `depends_on`: prerequisite work IDs. Missing means no declared prerequisites.
 - Question `blocks`: work IDs whose outcome needs the answer. An unresolved
   question may be relevant without blocking work.
 - Any record `relates_to`: related record IDs, with no implied ordering or gate.
+
+## Proposed work metadata extension
+
+On 2026-09-18, the owner proposed richer work metadata after comparing nullsec's
+W-032 release, specifically members, dependencies, priority, size, and a work
+sub-kind, to support useful UI behavior. The recommendation below extends the
+accepted core; its exact fields and semantics have not yet been approved.
+
+| Field | Proposed meaning and use |
+| --- | --- |
+| `kind` | What sort of work this is; filters and distinct presentation for feature, fix, refactor, investigation, tooling, or release |
+| `priority` | Importance for selection; propose 1 highest through 5 lowest, independent of dependencies |
+| `size` | Coarse scope/effort estimate; propose small, medium, or large, without automatic time estimates or execution policy |
+| `members` | Child work included in this outcome; expandable groups and member completion counts |
+| `depends_on` | Existing accepted field: prerequisite work that must be delivered before this work can proceed |
+| `created`, `updated` | Creation and modification timestamps for chronology; potentially common to all record types |
+
+Keep these optional so quick capture remains useful. An absent size or priority
+means unspecified; do not silently turn it into an estimate or urgency decision.
+Dates should be written by CLI mutations when those exist. Editing files directly
+still needs an explicit timestamp policy; precise format is not settled here.
+
+Preserve these distinctions when implementing the extension:
+
+- Membership describes decomposition. Member order can express presentation or
+  preferred sequence, but only dependencies impose prerequisite ordering.
+- Allow grouped work to retain its own outcome and acceptance. Completed children
+  do not automatically establish parent completion or integration.
+- Incomplete members can prevent declaring a parent done without blocking work
+  on that parent. Do not conflate an unfinished group with an execution blocker.
+- Derive member counts and blocker explanations from relationships and the
+  selected branch context. Do not store parallel progress percentages or an
+  independently editable `blocked` flag.
+- A spike/investigation is a kind, not a size. The predecessor's size vocabulary
+  partly chooses preparation depth; do not inherit those execution rules merely
+  by accepting a size field.
+- Validate member targets and membership cycles as well as dependency cycles.
+  Exact nesting, shared membership, and cross-branch resolution still need rules.
+
+Evidence: `grove context --work W-032 --phase shape` in nullsec returned
+`kind: release`, `size: large`, `priority: 2`, `depends_on: []`, eight ordered
+members, creation/update dates, and parent-level acceptance. That context call
+also reported unrelated supporting sources omitted by its token budget; the
+owning work record itself was present and inspected. Its `scope` points to
+capability records, a type outside the current three-type starter model.
 
 The illustrative IDs below are readable placeholders. The owner accepts starting
 with random IDs as a trial, while preferring some chronological ordering of files.
@@ -146,6 +191,7 @@ updates. Branch aggregation and workspace navigation build on that foundation.
 
 Structured attachments, review/report records, artifact ingestion, and agent
 attempts are deferred. Ordinary Markdown links and prose can carry supporting
-material in the meantime. Assignees, dates, priorities, and richer record types
-are future additions when the first workflow needs them; their absence here
-does not remove them from the broader product direction.
+material in the meantime. The work metadata extension above is now under
+discussion for the starting schema; attachment deferral does not require
+deferring useful planning fields. Assignees and richer record types remain
+future additions when the first workflow needs them.

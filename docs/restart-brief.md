@@ -74,6 +74,12 @@ and file layout/configuration remain to be settled. A flat folder and nesting
 under `docs/` were assistant proposals, not requirements. Go is selected for
 implementation. The examples are not yet operational project records.
 
+The owner then proposed carrying richer work metadata from nullsec W-032 into
+the starter model: members, dependencies, priority, size, and kind, to support
+the UI and project functionality. The [record model](record-model.md) now holds
+a proposed optional extension and its semantic distinctions. This is a direction
+under discussion, not approval of exact enums or inherited execution rules.
+
 “Stateless CLI” means commands need no resident application process. Project
 records and recoverable coordination necessarily have state. File-backed,
 local-first, and no required daemon express the intended properties more
@@ -277,8 +283,9 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** settle the random-ID format and file layout/configuration for the
-accepted [record model](record-model.md). Go is selected for the first CLI. Prepare
+**Next action:** settle the optional work metadata extension in the
+[record model](record-model.md), then the random-ID format and file
+layout/configuration. Go is selected for the first CLI. Prepare
 the first inspection commands against Grove's own records. Do not initialize
 the predecessor's templates implicitly.
 
