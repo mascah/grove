@@ -7,11 +7,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -100,58 +96,9 @@ func inspect(root, id string, between func()) (*Result, error) {
 		if w.bare {
 			continue
 		}
-		s := &Source{Kind: "live", Ref: w.branch, Commit: w.head, Worktree: w.path}
+		s := enterWorktree(w, common)
+		s.load(root, common, prefix, trees)
 		result.Sources = append(result.Sources, s)
-		if w.prunable != "" {
-			s.fail("worktree is prunable: " + w.prunable)
-			continue
-		}
-		out, err := repo.Git(w.path, "rev-parse", "--path-format=absolute", "--git-dir", "--git-common-dir")
-		if err != nil {
-			s.fail("cannot enter worktree: " + err.Error())
-			continue
-		}
-		dirs := strings.Split(strings.TrimRight(out, "\n"), "\n")
-		if len(dirs) != 2 || dirs[1] != common {
-			s.fail("worktree path no longer belongs to this repository")
-			continue
-		}
-		s.GitDir = dirs[0]
-		switch rest, linked := strings.CutPrefix(s.GitDir, filepath.Join(common, "worktrees")+string(filepath.Separator)); {
-		case s.GitDir == common:
-			s.Locator = "."
-		case linked && rest != "" && !strings.ContainsRune(rest, filepath.Separator):
-			s.Locator = rest
-		default:
-			s.fail("unrecognized worktree Git directory " + s.GitDir)
-			continue
-		}
-		dir := filepath.Join(w.path, filepath.FromSlash(prefix))
-		if _, err := os.Lstat(filepath.Join(dir, "grove.yaml")); errors.Is(err, fs.ErrNotExist) {
-			continue
-		} else if err != nil {
-			s.fail(err.Error())
-			continue
-		}
-		s.Present = true
-		p, ds := project.Load(dir, dir)
-		if len(ds) != 0 {
-			for _, d := range ds {
-				s.fail(d.String())
-			}
-			continue
-		}
-		s.project, s.Valid, s.ConfigRevision = p, true, project.Revision(p.Config)
-		if strings.Trim(w.head, "0") == "" { // unborn branch: nothing is committed yet
-			s.baseline = &tree{}
-		} else {
-			s.baseline = loadTree(root, w.head, trees)
-		}
-		if s.baseline.err != nil {
-			s.fail("cannot read HEAD " + w.head + ": " + s.baseline.err.Error())
-		} else if s.baseline.present && !s.baseline.valid() {
-			s.Note = "HEAD " + w.head + " does not validate, so changes against it are unknown"
-		}
 	}
 	if between != nil {
 		between()
@@ -171,6 +118,19 @@ func inspect(root, id string, between func()) (*Result, error) {
 			s.fail("worktree was removed while being read")
 		} else if w := second[i]; w.head != s.Commit || w.branch != s.Ref {
 			s.fail(fmt.Sprintf("worktree changed while being read: %s to %s", describe(s.Ref, s.Commit), describe(w.branch, w.head)))
+		} else if s.Locator != "" {
+			// The registration can stay put while the checkout is deleted
+			// (newly prunable), replaced, or its project location swapped.
+			again := enterWorktree(w, common)
+			_, located := again.locate(common, prefix)
+			switch {
+			case len(again.Diagnostics) != 0:
+				s.fail("worktree stopped being enterable while being read: " + strings.Join(again.Diagnostics, "; "))
+			case again.GitDir != s.GitDir:
+				s.fail("worktree was replaced while being read")
+			case s.Present && !located:
+				s.fail("the project location disappeared while being read")
+			}
 		}
 	}
 	for _, w := range second {
