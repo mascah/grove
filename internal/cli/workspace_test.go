@@ -3,7 +3,10 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -163,5 +166,39 @@ func TestJointWorkflow(t *testing.T) {
 	}
 	if data, err := os.ReadFile(filepath.Join(root, "docs/records/work/renamed.md")); err != nil || string(data) != work || gitIn(t, root, "rev-parse", "--abbrev-ref", "HEAD") != "main" {
 		t.Fatal("main's copy and branch are untouched")
+	}
+}
+
+// A checkout deleted between the inspection's two worktree inventories keeps
+// its registration, HEAD, and branch. A Git wrapper makes that deterministic:
+// it deletes the fixture's feature checkout just before the second inventory.
+func TestWorkspaceCheckoutDeletedDuringInspection(t *testing.T) {
+	root, wt := featureFixture(t)
+	live := versionSelector(t, root, "W-001", "live feature-wt refs/heads/feature")
+	real, err := exec.LookPath("git")
+	if err != nil {
+		t.Fatal(err)
+	}
+	bin := t.TempDir()
+	script := "#!/bin/sh\ncase \"$*\" in *'worktree list'*)\n  n=$(($(cat \"$GROVE_TEST_COUNT\") + 1)); echo $n > \"$GROVE_TEST_COUNT\"\n  [ $n -eq 2 ] && rm -rf \"$GROVE_TEST_VICTIM\";;\nesac\nexec \"$GROVE_TEST_GIT\" \"$@\"\n"
+	if err := os.WriteFile(filepath.Join(bin, "git"), []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	count := filepath.Join(bin, "count")
+	if err := os.WriteFile(count, []byte("0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GROVE_TEST_COUNT", count)
+	t.Setenv("GROVE_TEST_VICTIM", wt)
+	t.Setenv("GROVE_TEST_GIT", real)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	var out, errOut bytes.Buffer
+	code := Run([]string{"workspace", "--source", live, "--json"}, root, &out, &errOut)
+	if _, err := os.Stat(wt); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("the wrapper must have deleted the checkout: %v", err)
+	}
+	if code != 1 || out.Len() != 0 || !strings.Contains(errOut.String(), "grove: worktree feature-wt is not a valid source") || !strings.Contains(errOut.String(), "prunable") {
+		t.Fatalf("code=%d stdout=%q stderr=%s", code, out.String(), errOut.String())
 	}
 }

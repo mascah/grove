@@ -6,6 +6,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/mascah/grove/internal/project"
+	"github.com/mascah/grove/internal/repo"
 )
 
 // Selection is a parsed selector: which source and record version a caller
@@ -76,7 +79,11 @@ type Workspace struct {
 // ponytail: re-runs the whole inspection (one ls-tree and one cat-file per
 // branch) to answer one selector; inspect only the selected source if
 // repositories with many branches make this slow.
-func Resolve(root, selector string) (*Workspace, error) {
+func Resolve(root, selector string) (*Workspace, error) { return resolveWith(root, selector, nil) }
+
+// resolveWith is Resolve with a hook that runs before the final check of the
+// selected target, so tests can change it meanwhile.
+func resolveWith(root, selector string, before func()) (*Workspace, error) {
 	sel, err := Parse(selector)
 	if err != nil {
 		return nil, err
@@ -105,8 +112,17 @@ func Resolve(root, selector string) (*Workspace, error) {
 	if v.Selector != selector {
 		return nil, attribute(sel, v)
 	}
+	final := func(lv Version) (*Workspace, error) {
+		if before != nil {
+			before()
+		}
+		if err := recheck(root, res, sel, s.Commit, lv); err != nil {
+			return nil, err
+		}
+		return workspace(res, lv), nil
+	}
 	if sel.Kind == "live" {
-		return workspace(res, v), nil
+		return final(v)
 	}
 	var checkouts []*Source
 	for _, candidate := range res.Sources {
@@ -141,7 +157,7 @@ func Resolve(root, selector string) (*Workspace, error) {
 	if lv.Path != v.Path || lv.Revision != v.Revision {
 		return nil, fmt.Errorf("the live %s in worktree %s differs from the committed version selected (%s at %s); run versions and select the live observation instead", sel.ID, live.Locator, lv.Change, lv.Path)
 	}
-	return workspace(res, lv), nil
+	return final(lv)
 }
 
 // observation returns the selected record's current version in s.
@@ -196,4 +212,57 @@ func workspace(res *Result, v Version) *Workspace {
 		Checkout: v.Source.Worktree, Project: project, Record: filepath.Join(project, filepath.FromSlash(v.Path)),
 		Ref: v.Source.Ref, Head: v.Source.Commit, Revision: v.Revision, Selector: v.Selector,
 	}
+}
+
+// recheck confirms, from a fresh inventory and fresh reads, that the workspace
+// about to be returned is still the observation lv: its registration,
+// ownership, configuration, record path and bytes, and branch or detached
+// HEAD. A committed route also needs its branch tip unmoved and no second
+// enterable checkout of that branch. Nothing here substitutes a new selection,
+// and changes after this check remain possible.
+func recheck(root string, res *Result, sel Selection, tip string, lv Version) error {
+	const reselect = "; run versions and reselect"
+	worktrees, err := listWorktrees(root)
+	if err != nil {
+		return err
+	}
+	var target *Source
+	for _, w := range worktrees {
+		switch {
+		case w.bare:
+		case w.path == lv.Source.Worktree:
+			target = enterWorktree(w, res.Repository)
+			target.load(root, res.Repository, res.Prefix, map[string]*tree{})
+		case sel.Kind == "committed" && w.branch == sel.Ref:
+			if other := enterWorktree(w, res.Repository); other.Locator != "" {
+				return fmt.Errorf("worktree %s also checked out %s while its workspace was being resolved%s", other.Locator, sel.Ref, reselect)
+			}
+		}
+	}
+	where := "worktree " + lv.Source.Locator
+	if target == nil {
+		return fmt.Errorf("%s was removed or moved while its workspace was being resolved%s", where, reselect)
+	}
+	if !target.Valid {
+		if len(target.Diagnostics) == 0 {
+			return fmt.Errorf("%s lost its project while its workspace was being resolved%s", where, reselect)
+		}
+		return fmt.Errorf("%s stopped being a valid source while its workspace was being resolved:\n%s", where, strings.Join(target.Diagnostics, "\n"))
+	}
+	current := ""
+	for _, r := range target.project.Records {
+		if r.ID == sel.ID {
+			current = selector(res.Repository, res.Prefix, target, r.ID, r.Path, project.Revision(r.Source))
+		}
+	}
+	if current != lv.Selector {
+		return fmt.Errorf("%s or its %s changed while its workspace was being resolved%s", where, sel.ID, reselect)
+	}
+	if sel.Kind == "committed" {
+		out, err := repo.Git(root, "rev-parse", "--verify", "--quiet", sel.Ref+"^{commit}")
+		if err != nil || strings.TrimSpace(out) != tip {
+			return fmt.Errorf("branch %s moved while its workspace was being resolved%s", sel.Ref, reselect)
+		}
+	}
+	return nil
 }
