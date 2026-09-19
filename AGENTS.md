@@ -1,14 +1,18 @@
 # Working on Grove
 
 Read `docs/restart-brief.md` first. This repository is a fresh product restart,
-currently containing documentation only. The brief distinguishes selected
+with a Go CLI for read-only inspection, configuration, and operational records.
+The brief distinguishes selected
 direction, observed evidence, and proposed design; preserve those distinctions.
 
 - Keep the product useful through ordinary local files and a CLI without a
   required running service. The core record model in `docs/record-model.md`
   is accepted: Markdown with YAML frontmatter. Use Go for the first CLI.
-  Random IDs are accepted as a trial; their exact format, storage layout/versioning,
-  UI framework, and runner contract remain open.
+  The starter file defaults use short sequential IDs, replacing the random-ID
+  trial. Future allocation coordinates across local worktrees through Git's
+  common metadata directory; reading records requires no allocator state.
+  W-001 implements the first reader contract. Safe mutations, the UI framework,
+  and runner contract remain to be resolved.
 - Keep deterministic validation and state changes in software where useful;
   do not assume software can replace judgment instructions or prove acceptance.
 - Record settled choices and the concrete next action in the brief while it
@@ -18,12 +22,13 @@ direction, observed evidence, and proposed design; preserve those distinctions.
   instructions; retrieve their Grove knowledge through `grove status`,
   `grove find`, and `grove context` from the relevant repository.
 - The installed `grove` command currently belongs to the sibling skills project.
-  No new Grove executable or configuration exists here yet.
+  Use `go run ./cmd/grove` for this restart's `grove.yaml` and `grove/` records.
+  Do not use the predecessor's initialization or validation commands here.
 - The archived application's service authority, architecture, credentials,
   deployment procedures, and backlog are historical. Do not revive them as
   requirements for this project or copy private local data into this repository.
 - Use focused Conventional Commits. Preserve unrelated work and isolate
   concurrent implementation in separate worktrees.
 - Verify claims against actual results. Documentation-only changes need link
-  and consistency checks; do not invent an application test suite before code
-  exists.
+  and consistency checks. For Go changes run the relevant tests, the full suite
+  (`go test ./...`), and `go vet ./...`; use race tests for relevant changes.

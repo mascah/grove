@@ -2,12 +2,41 @@
 
 A local project workspace for humans and agents, built around a CLI and durable files.
 
-**Status: restart brief captured; new implementation has not started.**
+**Status: the first Go CLI lists, shows, and validates local project records.**
 
 Start with [the restart brief](docs/restart-brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
 direction, the reasoning from the existing Grove skills and nullsec workflow,
-open design questions, and the next useful experiment.
+open design questions, and the next useful experiment. [grove.yaml](grove.yaml)
+configures the record tree. The completed first implementation is
+[CLI inspection](grove/work/W-001-inspect-records.md).
+The installed `grove` still belongs to the sibling skills project; it does not
+read this new format.
+
+## Use the CLI
+
+Requires Go 1.26 or later. Run from this repository:
+
+```sh
+go run ./cmd/grove list
+go run ./cmd/grove show W-001
+go run ./cmd/grove check
+go run ./cmd/grove --project /path/to/project check
+```
+
+These commands read live files without modifying them. `list` shows ID, type,
+status, and title; `show` prints the exact Markdown source; `check` validates
+metadata and relationships. Project/file context and errors go to stderr, so
+stdout can be redirected. Exit codes are 0 for success, 1 for inspection/output
+errors, and 2 for invalid command usage.
+
+Without `--project`, discovery searches upward for `grove.yaml` and stops at
+the current Git checkout boundary. Plain directories also work. Any invalid
+record makes the command fail; no partial list or record is printed.
+
+Use `go test ./...`, `go test -race ./...`, and `go vet ./...` for verification.
+Creation/update commands and the shared sequential-ID allocator are next;
+cross-branch views, TUI, and agent execution remain future work.
 
 The intended experience combines linked work, questions, research, project
 knowledge, and evidence. A CLI serves agents and humans; a TUI can make the
@@ -33,9 +62,9 @@ Give a new agent this prompt:
 
 > Read AGENTS.md, docs/restart-brief.md, and docs/record-model.md. Continue the file-backed
 > Grove CLI and interactive workspace described there. The old application was
-> archived, and the new implementation has not started. Go is selected. Settle
-> ID generation and file layout/configuration for the accepted core model,
-> then prepare the first CLI inspection commands. Treat the brief's
+> archived. The Go list/show/check CLI and starter records now work locally;
+> W-001 records verification. Follow the brief's next action to prepare safe
+> creation and shared ID allocation. Treat the brief's
 > remaining proposals as proposals. Inspect
 > the sibling skills and nullsec projects through their Grove CLI when evidence
 > is needed. Preserve this direction and update the brief as choices settle.

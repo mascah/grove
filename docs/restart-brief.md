@@ -1,8 +1,9 @@
 # Grove restart brief
 
 Captured: 2026-09-18.
-Status: selected product direction; architecture and first implementation scope
-are still being shaped. This document is the restart's current source of intent.
+Status: product direction and starter file defaults selected; the Go inspection
+CLI reads and validates the operational records. This document is the restart's
+current source of intent.
 
 ## Intent and authority
 
@@ -48,7 +49,8 @@ Selected direction:
 - Core use without a required hosted server or persistent daemon.
 - Human and agent access to the same underlying project state.
 - Linked work, dependencies, assignees, and attached evidence/artifacts.
-- Project configuration; YAML is a candidate, not a selected schema.
+- Project configuration in `grove.yaml`; the [record model](record-model.md)
+  owns the accepted starter defaults.
 - An interactive workspace that can expose work, questions, research, and
   related project knowledge. A TUI is the currently exciting direction; a local
   web UI is also possible, without committing to two initial interfaces.
@@ -68,17 +70,23 @@ reviews and reports; ordinary prose and links can support early development.
 The owner subsequently accepted the [starter record model](record-model.md):
 Markdown with YAML frontmatter, the four required fields, optional typed
 relationships, explicit lifecycles, and the initial validation boundary.
-Random IDs are accepted as a starting trial; the owner prefers chronological
-file ordering and wants to revisit if randomness proves awkward. Exact ID format
-and file layout/configuration remain to be settled. A flat folder and nesting
-under `docs/` were assistant proposals, not requirements. Go is selected for
-implementation. The examples are not yet operational project records.
+On 2026-09-19, the owner selected configurable root-level `grove/` storage and
+accepted the starter file defaults. Actual browsing then exposed excessively
+long filenames. The owner accepted replacing the random-ID/timestamp naming
+trial with short type-prefixed sequential IDs, allocated under a shared lock in
+Git's common metadata directory across local branches and worktrees. Separate
+clones remain outside that coordination guarantee. [D-002](../grove/decisions/D-002-sequential-ids.md)
+records the revision; the [record model](record-model.md#on-disk-contract) owns
+the current schema and allocation requirements. Operational records now use
+names such as `W-001-inspect-records.md`, with dates retained in frontmatter.
+Go is selected for implementation; no allocator exists yet.
 
 The owner then proposed carrying richer work metadata from nullsec W-032 into
 the starter model: members, dependencies, priority, size, and kind, to support
-the UI and project functionality. The [record model](record-model.md) now holds
-a proposed optional extension and its semantic distinctions. This is a direction
-under discussion, not approval of exact enums or inherited execution rules.
+the UI and project functionality, then accepted the optional fields and their
+semantic distinctions. The [record model](record-model.md) owns those meanings.
+The initial allowed values were accepted with the file defaults on 2026-09-19;
+this does not adopt the predecessor's preparation or execution policies.
 
 “Stateless CLI” means commands need no resident application process. Project
 records and recoverable coordination necessarily have state. File-backed,
@@ -231,27 +239,25 @@ too disruptive. [Git worktree facilities](https://git-scm.com/docs/git-worktree)
 
 ### Remaining questions
 
-1. **How does the combined view resolve and edit records?** Branch-local records,
-   candidate-specific evidence, local claims, and run records need explicit
-   ownership and lifetime rules. Define version selection, source labels, live
-   worktree visibility, and routing to the selected checkout.
-   The existing skills proposal uses Git's common metadata directory for local
-   ownership; it is evidence to evaluate, not an automatically adopted design.
-   Settle these behaviors before fixing directory layout or board semantics.
+1. **How does the combined view resolve and edit records?** The operational
+   [branch-version question](../grove/questions/Q-001-branch-versions.md)
+   owns this uncertainty. Resolve it before the combined board; it does not block
+   local file inspection. Claims and run-record lifetimes remain future design.
 2. **What does one run promise?** Define its input, actor/attempt identity,
    working directory, output, failure/wait state, cancellation, interruption
    recovery, and reconciliation. Establish what happens when the TUI exits.
    Reuse existing export/run/reconcile ideas only after inspecting their fit.
-3. **What is the smallest useful first interface?** A read-only view of real
-   Grove data could validate navigation; one executable action would test the
-   harness boundary. Pick a language and TUI stack against that bounded slice.
+3. **What is the next useful interactive interface?** Go inspection commands now
+   read real Grove data. An interactive view could validate navigation; one
+   executable action would test the harness boundary. Choose a TUI stack against
+   that bounded slice when it becomes the next investment.
 
 Related details to resolve at the appropriate boundary:
 
 - Safe concurrent Markdown/frontmatter edits, schema versions, direct-editor
   behavior, and rebuildable indexes.
-- Stable IDs across independently edited branches; dependency and membership
-  semantics; stale writes and conflict handling.
+- Shared-counter initialization/recovery, clone/import collision handling,
+  dependency and membership semantics, stale writes and conflict handling.
 - Responsibility/assignee versus the particular session holding a claim.
 - Attachments and review provenance: author, reviewed revision, result, and
   what makes a previous review stale.
@@ -264,16 +270,16 @@ Related details to resolve at the appropriate boundary:
 
 ## Suggested sequence and current next action
 
-1. Core record model accepted: [the model](record-model.md) uses Grove's own
-   branch-context decision, branch-version question, and proposed inspection
-   work as examples. Settle identity allocation and storage layout/versioning
-   before creating operational records; then maintain each fact in its owner.
+1. Core record model and file defaults accepted: [the model](record-model.md)
+   defines the schema and links to Grove's operational records. Keep work and
+   question details in those records, schema details in the model, and direction
+   in this brief.
 2. Walk one work record through creation, implementation on a branch, review,
    integration, and reopening. Keep work, an execution attempt, and review
    evidence distinct. Resolve identity, version selection, and completion meaning.
-3. Use Go to build a small CLI that lists, shows, and
-   validates the agreed records, then supports safe mutations. Use actual Grove
-   development records for the first dogfooding; keep the restart brief as the
+3. The Go CLI now lists, shows, and validates the agreed records. Follow with
+   safe mutations. Use actual Grove development records for dogfooding;
+   keep the restart brief as the
    direction owner until an explicit migration avoids duplicate ownership.
 4. Add the combined board and Open workspace interaction over those operations.
    Exercise concurrent edits and worktree changes. Extend to one agent run and
@@ -283,21 +289,29 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** settle the optional work metadata extension in the
-[record model](record-model.md), then the random-ID format and file
-layout/configuration. Go is selected for the first CLI. Prepare
-the first inspection commands against Grove's own records. Do not initialize
-the predecessor's templates implicitly.
+**Next action:** shape safe record creation and shared ID allocation against the
+[allocation requirements](record-model.md#identity-and-dates). Specify locking,
+durable reservations, initialization from existing branch/worktree records,
+crash recovery, and non-overwriting file creation before implementing mutations.
+Keep separate-clone/import conflicts explicit. Inspection is complete in
+[W-001](../grove/work/W-001-inspect-records.md): use `go run ./cmd/grove list`,
+`show W-001`, or `check` to inspect this project. Its evidence covers fixture
+tests, a real linked-worktree experiment, and unchanged-file checks. The reader
+neither requires nor initializes allocator state. Keep the installed sibling
+CLI untouched; cross-branch aggregation, TUI, and execution remain later work.
 
 ## Reset and scope record
 
 The old local application was archived intact as `../grove-archive-2026-09-18/`,
 including Git history and ignored local data, from clean main at `be40e46`.
-The fresh `../grove/` begins with this brief, README, agent guidance, and a
-minimal ignore file. There is no new application implementation yet.
+The fresh `../grove/` began with this brief, README, agent guidance, and a
+minimal ignore file. Its first implementation is now the local Go inspection CLI.
 
 The old application's PostgreSQL/API architecture, deployed Mini service,
 planning-authority cutover, and old roadmap are historical. This local reset
 does not alter any external service, database, credential, remote repository,
 or installed CLI. The sibling skills and nullsec projects remain unchanged.
-No runner has been launched and no new TUI or storage format has been selected.
+No runner has been launched and no TUI framework has been selected. The new
+Markdown/frontmatter format and file defaults are selected; `grove.yaml` and
+operational records exist, and the inspection CLI is implemented and verified
+locally. It has not replaced the installed sibling executable.
