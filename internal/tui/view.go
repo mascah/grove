@@ -104,7 +104,8 @@ func fit(rows []string, n, w int) []string {
 // so every item stays reachable.
 func window(rows []string, at, per, unit, n, w int) []string {
 	per = max(per, 1)
-	start := max(at, 0) / per * per
+	at = min(max(at, 0), max(len(rows)/unit-1, 0)) // a refresh may have shortened the list
+	start := at / per * per
 	end := min(start+per, len(rows)/unit)
 	var out []string
 	if start > 0 {
@@ -190,13 +191,8 @@ func (m *Model) header() string {
 // banner is always on screen: what is being read, and whether the result is
 // incomplete, whatever else is showing.
 func (m *Model) banner() string {
+	// The incomplete warning leads: a narrow terminal clips the row's end.
 	var parts []string
-	switch m.pending {
-	case "inspect":
-		parts = append(parts, "Reading sources…")
-	case "resolve":
-		parts = append(parts, "Resolving the selected workspace…")
-	}
 	if m.res != nil && !m.res.Complete {
 		bad := 0
 		for _, s := range m.res.Sources {
@@ -205,6 +201,12 @@ func (m *Model) banner() string {
 			}
 		}
 		parts = append(parts, fmt.Sprintf("INCOMPLETE: %d of %d sources could not be inspected (s shows why)", bad, len(m.res.Sources)))
+	}
+	switch m.pending {
+	case "inspect":
+		parts = append(parts, "Reading sources…")
+	case "resolve":
+		parts = append(parts, "Resolving the selected workspace…")
 	}
 	if m.notice != "" {
 		parts = append(parts, m.notice)

@@ -307,6 +307,15 @@ func TestStaleAndCancelledReplies(t *testing.T) {
 	if len(m.res.Groups) == 0 || m.Workspace != nil {
 		t.Fatal("a late or unrequested reply changed state")
 	}
+	// Even a current, pending resolve accepts only the selector it asked for.
+	press(m, "enter", "down") // still on W-001's column
+	press(m, "enter")
+	if m.pending != "resolve" || m.resolving == "" {
+		t.Fatal("expected a pending resolve")
+	}
+	if _, cmd := m.Update(resolveMsg{gen: m.gen, selector: "another row", ws: f.ws}); cmd != nil || m.Workspace != nil || m.pending != "resolve" {
+		t.Fatal("a reply for a different selector was accepted")
+	}
 }
 
 func TestQuitAndInterruptCancelTheRead(t *testing.T) {
@@ -621,7 +630,7 @@ func TestEverythingStaysReachable(t *testing.T) {
 		if !strings.Contains(plain(m), "THE LAST LINE") {
 			t.Fatalf("%v: the end of a large body is unreachable:\n%s", size, plain(m))
 		}
-		if press(m, "pgup"); strings.Contains(plain(m), "THE LAST LINE") && size[1] < 30 {
+		if press(m, "pgup"); strings.Contains(plain(m), "THE LAST LINE") {
 			t.Fatalf("%v: scrolling back should move", size)
 		}
 		press(m, "s")
@@ -712,5 +721,51 @@ func TestHostileTextIsInert(t *testing.T) {
 	}
 	if got := line("e\u0301e\u0301e\u0301", 3); got != "e\u0301e\u0301e\u0301" {
 		t.Fatalf("combining marks take no cells: %q", got)
+	}
+}
+
+// Review regressions: a refresh under an open chooser or sources screen.
+func TestRefreshUnderOverlays(t *testing.T) {
+	live := func(n int) *versions.Result {
+		var sources []*versions.Source
+		var vs []versions.Version
+		for i := range n {
+			s := source("live", fmt.Sprintf("wt%d", i), fmt.Sprintf("b%d", i))
+			sources, vs = append(sources, s), append(vs, version(s, "W-001", "Card", "proposed"))
+		}
+		return result(sources[0], sources, vs...)
+	}
+	for _, left := range []int{4, 2, 1} {
+		f := &fake{res: live(6)}
+		m := open(t, f, 40, 10)
+		press(m, "b", "down", "down", "down", "down", "down")
+		f.res = live(left)
+		deliver(m, press(m, "r"))
+		if s := plain(m); m.choice != left-1 || !strings.Contains(s, fmt.Sprintf("> live wt%d", left-1)) {
+			t.Fatalf("%d checkouts left: choice %d:\n%s", left, m.choice, s)
+		}
+	}
+
+	// The open card vanishes while the sources screen covers its versions.
+	fx := newFixture()
+	f := &fake{res: fx.twoBranches()}
+	m := open(t, f, 120, 30)
+	press(m, "right", "enter", "down", "s")
+	f.res = result(fx.main, fx.sources(), version(fx.main, "W-003", "Newcomer", "active"))
+	deliver(m, press(m, "r"))
+	if !strings.Contains(plain(m), "W-001 is no longer in any valid source") {
+		t.Fatalf("the reason was lost:\n%s", plain(m))
+	}
+	if press(m, "esc"); m.screen != boardScreen || m.cardID != "W-003" {
+		t.Fatalf("Esc should return to the board, not another card's versions: screen %d", m.screen)
+	}
+
+	// The incomplete warning survives a pending read at the narrowest size.
+	bad := newFixture()
+	bad.cFeat.Valid, bad.cFeat.Diagnostics = false, []string{"broken"}
+	m = open(t, &fake{res: result(bad.main, bad.sources(), version(bad.main, "W-001", "Card", "active"))}, 40, 10)
+	press(m, "right", "enter", "down")
+	if press(m, "enter"); !strings.Contains(plain(m), "INCOMPLETE: 1 of 4") {
+		t.Fatalf("the warning was clipped by the pending read:\n%s", plain(m))
 	}
 }

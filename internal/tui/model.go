@@ -173,6 +173,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.res, m.failure = msg.res, ""
+		m.choice = min(m.choice, max(len(m.live())-1, 0))
 		m.settleBoard()
 		m.settleFocus()
 	case resolveMsg:
@@ -406,8 +407,12 @@ func (m *Model) settleFocus() {
 			m.onShelf = true
 			return
 		}
-		if m.screen == versionsScreen {
-			m.screen, m.notice = boardScreen, m.cardID+" is no longer in any valid source"
+		// The versions may be open beneath the sources screen.
+		if m.screen == versionsScreen || m.back == versionsScreen {
+			m.notice = m.cardID + " is no longer in any valid source"
+			if m.back = boardScreen; m.screen == versionsScreen {
+				m.screen = boardScreen
+			}
 		}
 	}
 	m.cardID, m.onShelf = "", m.onShelf && len(shelf) != 0
