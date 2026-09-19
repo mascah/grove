@@ -333,7 +333,7 @@ func same(root string, snapshot *project.Project) error {
 	if len(ds) != 0 {
 		return fmt.Errorf("the project changed and no longer validates:\n%s", diagnostics(ds))
 	}
-	changed := p.RecordDir != snapshot.RecordDir || len(p.Records) != len(snapshot.Records)
+	changed := !bytes.Equal(p.Config, snapshot.Config) || p.RecordDir != snapshot.RecordDir || len(p.Records) != len(snapshot.Records)
 	for i := 0; !changed && i < len(p.Records); i++ {
 		changed = p.Records[i].Path != snapshot.Records[i].Path || !bytes.Equal(p.Records[i].Source, snapshot.Records[i].Source)
 	}

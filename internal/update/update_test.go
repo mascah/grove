@@ -357,6 +357,9 @@ func TestUpdateDetectsChangesDuringPreparation(t *testing.T) {
 			os.Rename(filepath.Join(root, "grove"), filepath.Join(root, "records"))
 			write(t, root, "grove.yaml", "schema_version: 1\nrecords: records\n")
 		}},
+		{"configuration comment only", func(t *testing.T, root string) {
+			write(t, root, "grove.yaml", "# concurrent edit\nschema_version: 1\nrecords: grove\n")
+		}},
 		{"target permissions", func(t *testing.T, root string) { os.Chmod(filepath.Join(root, "grove/work/W-001-first.md"), 0o600) }},
 		{"target replaced", func(t *testing.T, root string) {
 			os.Remove(filepath.Join(root, "grove/work/W-001-first.md"))

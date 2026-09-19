@@ -83,6 +83,9 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 	if current.RecordDir != p.RecordDir {
 		return "", fmt.Errorf("%s reserved but not created: the record root changed from %s to %s during allocation", id, p.RecordDir, current.RecordDir)
 	}
+	if !bytes.Equal(current.Config, p.Config) {
+		return "", fmt.Errorf("%s reserved but not created: grove.yaml changed during allocation; inspect it and retry", id)
+	}
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		return "", fmt.Errorf("%s reserved but not created: %w", id, err)
 	}

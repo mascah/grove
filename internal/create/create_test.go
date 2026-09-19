@@ -304,3 +304,21 @@ func TestNewRefusesWhenRecordRootChangedAfterLoad(t *testing.T) {
 		t.Fatalf("the refused reservation must stay consumed: got %q, %v", path, err)
 	}
 }
+
+// A configuration edit that keeps the parsed meaning is still an observed
+// change between the loaded allocation input and publication.
+func TestNewRefusesWhenConfigurationBytesChangedAfterLoad(t *testing.T) {
+	root := gitProject(t)
+	p := load(t, root)
+	write(t, root, "grove.yaml", "# concurrent edit\n"+config)
+	_, err := New(p, "work", "Late", "late", time.Now(), &bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), "reserved but not created: grove.yaml changed") {
+		t.Fatalf("expected a configuration-change refusal, got %v", err)
+	}
+	if entries, _ := os.ReadDir(filepath.Join(root, "grove/work")); len(entries) != 1 {
+		t.Fatalf("nothing may be created: %v", entries)
+	}
+	if path, err := New(load(t, root), "work", "Next", "next", time.Now(), &bytes.Buffer{}); err != nil || path != "grove/work/W-003-next.md" {
+		t.Fatalf("the refused reservation must stay consumed: got %q, %v", path, err)
+	}
+}
