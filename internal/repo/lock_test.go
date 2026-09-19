@@ -1,4 +1,4 @@
-package create
+package repo
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ import (
 // killed; the parent must then acquire the lock without any cleanup step.
 func TestLockReleasedWhenHolderIsKilled(t *testing.T) {
 	if path := os.Getenv("GROVE_LOCK_HELPER"); path != "" {
-		if _, err := lock(path); err != nil {
+		if _, err := Lock(path); err != nil {
 			os.Exit(2)
 		}
 		fmt.Println("locked")
@@ -36,7 +36,7 @@ func TestLockReleasedWhenHolderIsKilled(t *testing.T) {
 	}
 	done := make(chan error, 1)
 	go func() {
-		unlock, err := lock(path)
+		unlock, err := Lock(path)
 		if err == nil {
 			unlock()
 		}

@@ -1,0 +1,582 @@
+package update
+
+import (
+	"bytes"
+	"errors"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"slices"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/mascah/grove/internal/create"
+	"github.com/mascah/grove/internal/project"
+	"github.com/mascah/grove/internal/repo"
+)
+
+const (
+	work     = "---\nid: \"W-001\"\ntype: work\ntitle: First\nstatus: proposed\nrelates_to: [\"Q-001\"]\ncreated: \"2026-09-19T12:00:00Z\"\nupdated: \"2026-09-19T12:00:00Z\"\n---\n\n## Outcome\n\nBody --- stays.\n"
+	second   = "---\nid: \"W-002\"\ntype: work\ntitle: Second\nstatus: proposed\n---\nBody.\n"
+	question = "---\nid: \"Q-001\"\ntype: question\ntitle: Which?\nstatus: open\n---\nBody.\n"
+	decision = "---\nid: \"D-001\"\ntype: decision\ntitle: Choose\nstatus: proposed\n---\nBody.\n"
+)
+
+var now = time.Date(2026, 9, 19, 18, 30, 0, 500, time.UTC)
+
+func git(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-C", dir}, args...)
+	out, err := exec.Command("git", full...).CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func write(t *testing.T, root, path, source string) {
+	t.Helper()
+	path = filepath.Join(root, path)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func read(t *testing.T, root, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(root, path))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+// gitProject returns a committed Git project with W-001, W-002, Q-001, D-001.
+func gitProject(t *testing.T) string {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	git(t, root, "init", "-q", "-b", "main")
+	write(t, root, "grove.yaml", "schema_version: 1\nrecords: grove\n")
+	write(t, root, "grove/work/W-001-first.md", work)
+	write(t, root, "grove/work/W-002-second.md", second)
+	write(t, root, "grove/questions/Q-001-which.md", question)
+	write(t, root, "grove/decisions/D-001-choose.md", decision)
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "init")
+	return root
+}
+
+func revision(t *testing.T, root, path string) string {
+	t.Helper()
+	return project.Revision([]byte(read(t, root, path)))
+}
+
+func record(t *testing.T, root, id string) *project.Record {
+	t.Helper()
+	p, ds := project.Load(root, root)
+	if len(ds) != 0 {
+		t.Fatalf("project invalid: %v", ds)
+	}
+	i := slices.IndexFunc(p.Records, func(r *project.Record) bool { return r.ID == id })
+	if i < 0 {
+		t.Fatalf("%s missing", id)
+	}
+	return p.Records[i]
+}
+
+func apply(t *testing.T, root, id string, sets []Field, unsets ...string) Result {
+	t.Helper()
+	r := record(t, root, id)
+	res, err := Apply(root, Request{ID: id, Expect: project.Revision(r.Source), Set: sets, Unset: unsets}, now, nil)
+	if err != nil {
+		t.Fatalf("update %s: %v", id, err)
+	}
+	if res.ID != id || res.Path != r.Path || res.Revision != revision(t, root, r.Path) {
+		t.Fatalf("result %+v does not describe the file", res)
+	}
+	return res
+}
+
+func tempFiles(t *testing.T, root string) []string {
+	t.Helper()
+	var found []string
+	filepath.WalkDir(filepath.Join(root, "grove"), func(path string, entry os.DirEntry, err error) error {
+		if err == nil && !entry.IsDir() && filepath.Ext(path) != ".md" {
+			found = append(found, path)
+		}
+		return nil
+	})
+	return found
+}
+
+func TestUpdateEveryFieldOnItsTypes(t *testing.T) {
+	root := gitProject(t)
+	res := apply(t, root, "W-001", []Field{
+		{"title", ` "Quoted": ünïcode — 版本 #1 `}, {"status", "active"}, {"kind", "tooling"}, {"priority", "1"},
+		{"size", "large"}, {"members", `["W-002"]`}, {"depends_on", `["W-002"]`}, {"relates_to", `["Q-001", "D-001"]`},
+	})
+	if !res.Changed {
+		t.Fatal("expected a change")
+	}
+	r := record(t, root, "W-001")
+	if r.Title != ` "Quoted": ünïcode — 版本 #1 ` || r.Status != "active" || r.Kind != "tooling" || *r.Priority != 1 || r.Size != "large" ||
+		!slices.Equal(r.Members, []string{"W-002"}) || !slices.Equal(r.DependsOn, []string{"W-002"}) || !slices.Equal(r.RelatesTo, []string{"Q-001", "D-001"}) {
+		t.Fatalf("fields not applied: %+v", r)
+	}
+	if r.Created.Format(time.RFC3339) != "2026-09-19T12:00:00Z" || r.Updated.Format(time.RFC3339) != "2026-09-19T18:30:00Z" {
+		t.Fatalf("dates: created %v updated %v", r.Created, r.Updated)
+	}
+	source := string(r.Source)
+	if !strings.HasSuffix(source, "---\n\n## Outcome\n\nBody --- stays.\n") || !strings.HasPrefix(source, "---\nid: \"W-001\"\ntype: work\ntitle: \" \\\"Quoted\\\": ünïcode — 版本 #1 \"\nstatus: active\nrelates_to: [\"Q-001\", \"D-001\"]\ncreated: \"2026-09-19T12:00:00Z\"\nupdated: \"2026-09-19T18:30:00Z\"\nkind: tooling\npriority: 1\nsize: large\nmembers: [\"W-002\"]\ndepends_on: [\"W-002\"]\n---") {
+		t.Fatalf("unexpected source:\n%s", source)
+	}
+	apply(t, root, "Q-001", []Field{{"blocks", `["W-001"]`}, {"status", "resolved"}, {"title", "Resolved?"}, {"relates_to", "[]"}})
+	q := record(t, root, "Q-001")
+	if !slices.Equal(q.Blocks, []string{"W-001"}) || q.Status != "resolved" || q.RelatesTo == nil || len(q.RelatesTo) != 0 || q.Created != nil || q.Updated == nil {
+		t.Fatalf("question: %+v", q)
+	}
+	apply(t, root, "D-001", []Field{{"status", "accepted"}, {"relates_to", `["W-001"]`}})
+	if d := record(t, root, "D-001"); d.Status != "accepted" || d.Created != nil {
+		t.Fatalf("decision: %+v", d)
+	}
+	// Optional removal and explicit empty lists.
+	apply(t, root, "W-001", []Field{{"members", "[]"}}, "kind", "priority", "size", "depends_on")
+	r = record(t, root, "W-001")
+	if r.Kind != "" || r.Priority != nil || r.Size != "" || r.DependsOn != nil || r.Members == nil || len(r.Members) != 0 {
+		t.Fatalf("removal: %+v", r)
+	}
+	if strings.Contains(string(r.Source), "kind") || !strings.Contains(string(r.Source), "members: []\n") {
+		t.Fatalf("source after removal:\n%s", r.Source)
+	}
+	if files := tempFiles(t, root); len(files) != 0 {
+		t.Fatalf("temporary files left behind: %v", files)
+	}
+}
+
+func TestUpdateLifecycleAndReopening(t *testing.T) {
+	root := gitProject(t)
+	// Untouched optional fields, including the pointer-valued priority, must
+	// compare equal between the original and the candidate.
+	apply(t, root, "W-001", []Field{{"priority", "2"}, {"size", "small"}, {"members", `["W-002"]`}})
+	for _, status := range []string{"active", "done", "proposed", "abandoned", "done"} {
+		apply(t, root, "W-001", []Field{{"status", status}})
+		r := record(t, root, "W-001")
+		if r.Status != status || *r.Priority != 2 || r.Size != "small" || r.Created.Format(time.RFC3339) != "2026-09-19T12:00:00Z" || !strings.HasSuffix(string(r.Source), "\n---\n\n## Outcome\n\nBody --- stays.\n") {
+			t.Fatalf("%s: %+v", status, r)
+		}
+	}
+	for _, status := range []string{"resolved", "open"} {
+		apply(t, root, "Q-001", []Field{{"status", status}})
+	}
+	for _, status := range []string{"accepted", "rejected", "proposed"} {
+		apply(t, root, "D-001", []Field{{"status", status}})
+	}
+	if entries, _ := os.ReadDir(filepath.Join(root, "grove/work")); len(entries) != 2 {
+		t.Fatalf("status changes must not rename or add files: %v", entries)
+	}
+}
+
+func TestUpdateNoOpPreservesBytesAndRefusesStale(t *testing.T) {
+	root := gitProject(t)
+	path := filepath.Join(root, "grove/work/W-001-first.md")
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	past := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	os.Chtimes(path, past, past)
+	before, _ := os.Stat(path)
+	expect := revision(t, root, "grove/work/W-001-first.md")
+	for _, req := range []Request{
+		{Set: []Field{{"title", "First"}, {"status", "proposed"}, {"relates_to", `["Q-001"]`}}},
+		{Unset: []string{"kind", "priority", "members"}},
+		{Set: []Field{{"relates_to", `["Q-001"]`}}, Unset: []string{"size"}},
+	} {
+		req.ID, req.Expect = "W-001", expect
+		// The clock is behind the record's dates; a no-op needs no clock.
+		res, err := Apply(root, req, past, nil)
+		if err != nil || res.Changed || res.Revision != expect {
+			t.Fatalf("%+v: %+v %v", req, res, err)
+		}
+	}
+	after, _ := os.Stat(path)
+	if read(t, root, "grove/work/W-001-first.md") != work || !after.ModTime().Equal(before.ModTime()) || after.Mode() != before.Mode() {
+		t.Fatal("no-op changed bytes, mtime, or permissions")
+	}
+	_, err := Apply(root, Request{ID: "W-001", Expect: "sha256:" + strings.Repeat("0", 64), Set: []Field{{"status", "proposed"}}}, now, nil)
+	if err == nil || !strings.Contains(err.Error(), "changed since the expected revision") || !strings.Contains(err.Error(), expect) {
+		t.Fatalf("a stale no-op must be refused and report the current revision: %v", err)
+	}
+	// Absent versus explicitly empty are different states.
+	if res := apply(t, root, "W-001", []Field{{"members", "[]"}}); !res.Changed {
+		t.Fatal("adding an empty list to an absent field is a change")
+	}
+	if res := apply(t, root, "W-001", []Field{{"members", "[]"}}); res.Changed {
+		t.Fatal("an explicit empty list already present is a no-op")
+	}
+	if res := apply(t, root, "W-001", nil, "members"); !res.Changed {
+		t.Fatal("removing a present empty list is a change")
+	}
+	if res := apply(t, root, "W-001", []Field{{"relates_to", `["Q-001"]`}, {"members", "[]"}}, "kind"); !res.Changed {
+		t.Fatal("one effective change among no-ops still applies")
+	}
+}
+
+func TestUpdateRejectsInvalidRequestsWithoutWriting(t *testing.T) {
+	root := gitProject(t)
+	expect := revision(t, root, "grove/work/W-001-first.md")
+	for _, tc := range []struct {
+		name string
+		id   string
+		set  []Field
+		un   []string
+		want string
+	}{
+		{"unknown field", "W-001", []Field{{"foo", "x"}}, nil, "foo"},
+		{"id", "W-001", []Field{{"id", "W-009"}}, nil, "id cannot"},
+		{"type", "W-001", []Field{{"type", "question"}}, nil, "type cannot"},
+		{"created", "W-001", []Field{{"created", "\"2026-01-01T00:00:00Z\""}}, nil, "created cannot"},
+		{"updated", "W-001", nil, []string{"updated"}, "updated cannot"},
+		{"unset id", "W-001", nil, []string{"id"}, "id cannot"},
+		{"unset required", "W-001", nil, []string{"title"}, "required"},
+		{"wrong type field", "W-001", []Field{{"blocks", "[]"}}, nil, "blocks"},
+		{"empty title", "W-001", []Field{{"title", "  "}}, nil, "title"},
+		{"status value", "W-001", []Field{{"status", "resolved"}}, nil, "status"},
+		{"status injection", "W-001", []Field{{"status", "active\nkind: fix"}}, nil, "invalid"},
+		{"kind value", "W-001", []Field{{"kind", "magic"}}, nil, "kind"},
+		{"size value", "W-001", []Field{{"size", "huge"}}, nil, "size"},
+		{"priority letters", "W-001", []Field{{"priority", "high"}}, nil, "priority"},
+		{"priority negative", "W-001", []Field{{"priority", "-1"}}, nil, "priority"},
+		{"priority range", "W-001", []Field{{"priority", "6"}}, nil, "priority"},
+		{"list null", "W-001", []Field{{"members", "null"}}, nil, "members"},
+		{"list not json", "W-001", []Field{{"members", "W-002"}}, nil, "members"},
+		{"list numbers", "W-001", []Field{{"members", "[1]"}}, nil, "members"},
+		{"list duplicate", "W-001", []Field{{"members", `["W-002", "W-002"]`}}, nil, "duplicate"},
+		{"self link", "W-001", []Field{{"depends_on", `["W-001"]`}}, nil, "self"},
+		{"unresolved", "W-001", []Field{{"depends_on", `["W-404"]`}}, nil, "unresolved"},
+		{"non-work target", "W-001", []Field{{"members", `["Q-001"]`}}, nil, "must be work"},
+		{"missing record", "W-404", []Field{{"status", "active"}}, nil, "not found"},
+		{"invalid utf8", "W-001", []Field{{"title", "bad\xff"}}, nil, "UTF-8"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Apply(root, Request{ID: tc.id, Expect: expect, Set: tc.set, Unset: tc.un}, now, nil)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("wanted %q, got %v", tc.want, err)
+			}
+			if read(t, root, "grove/work/W-001-first.md") != work {
+				t.Fatal("a rejected request changed the file")
+			}
+		})
+	}
+	if files := tempFiles(t, root); len(files) != 0 {
+		t.Fatalf("temporary files left behind: %v", files)
+	}
+}
+
+func TestUpdateRejectsCyclesAndInvalidProjects(t *testing.T) {
+	root := gitProject(t)
+	apply(t, root, "W-001", []Field{{"depends_on", `["W-002"]`}, {"members", `["W-002"]`}})
+	expect := revision(t, root, "grove/work/W-002-second.md")
+	for _, field := range []string{"depends_on", "members"} {
+		_, err := Apply(root, Request{ID: "W-002", Expect: expect, Set: []Field{{field, `["W-001"]`}}}, now, nil)
+		if err == nil || !strings.Contains(err.Error(), "cycle") {
+			t.Fatalf("%s: wanted a cycle refusal, got %v", field, err)
+		}
+	}
+	// A group may depend on its own members; that is not a cycle.
+	apply(t, root, "W-002", []Field{{"relates_to", `["W-001"]`}})
+	write(t, root, "grove/work/broken.md", "---\nid: \"W-003\"\ntype: work\ntitle: Broken\nstatus: imaginary\n---\n")
+	_, err := Apply(root, Request{ID: "W-001", Expect: revision(t, root, "grove/work/W-001-first.md"), Set: []Field{{"status", "active"}}}, now, nil)
+	if err == nil || !strings.Contains(err.Error(), "not valid") || !strings.Contains(err.Error(), "broken.md") {
+		t.Fatalf("an invalid project must be refused: %v", err)
+	}
+	if strings.Contains(read(t, root, "grove/work/W-001-first.md"), "status: active") {
+		t.Fatal("refused update was written")
+	}
+}
+
+func TestUpdateClockContract(t *testing.T) {
+	root := gitProject(t)
+	expect := revision(t, root, "grove/work/W-001-first.md")
+	early := time.Date(2026, 9, 19, 11, 59, 59, 0, time.UTC)
+	_, err := Apply(root, Request{ID: "W-001", Expect: expect, Set: []Field{{"status", "active"}}}, early, nil)
+	if err == nil || !strings.Contains(err.Error(), "clock") || read(t, root, "grove/work/W-001-first.md") != work {
+		t.Fatalf("a clock behind the record must be refused without writing: %v", err)
+	}
+	// Equal to created is acceptable; two changes within one second share a stamp.
+	same := time.Date(2026, 9, 19, 12, 0, 0, 999_999_999, time.UTC)
+	first, err := Apply(root, Request{ID: "W-001", Expect: expect, Set: []Field{{"status", "active"}}}, same, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondRes, err := Apply(root, Request{ID: "W-001", Expect: first.Revision, Set: []Field{{"status", "done"}}}, same, nil)
+	if err != nil || secondRes.Revision == first.Revision {
+		t.Fatalf("same-second change: %+v %v", secondRes, err)
+	}
+	r := record(t, root, "W-001")
+	if r.Updated.Format(time.RFC3339) != "2026-09-19T12:00:00Z" || r.Created.Format(time.RFC3339) != "2026-09-19T12:00:00Z" {
+		t.Fatalf("stamp must truncate to seconds and preserve created: %+v", r)
+	}
+	// A record without created stays without one.
+	apply(t, root, "W-002", []Field{{"status", "active"}})
+	if r := record(t, root, "W-002"); r.Created != nil || r.Updated == nil || !strings.HasSuffix(string(r.Source), "status: active\nupdated: \"2026-09-19T18:30:00Z\"\n---\nBody.\n") {
+		t.Fatalf("missing created must stay absent: %s", r.Source)
+	}
+}
+
+func TestUpdateStaleAfterBodyOnlyEdit(t *testing.T) {
+	root := gitProject(t)
+	expect := revision(t, root, "grove/work/W-001-first.md")
+	write(t, root, "grove/work/W-001-first.md", work+"An appended paragraph with unchanged timestamps.\n")
+	_, err := Apply(root, Request{ID: "W-001", Expect: expect, Set: []Field{{"status", "active"}}}, now, nil)
+	if err == nil || !strings.Contains(err.Error(), "changed since") {
+		t.Fatalf("body edits must invalidate the revision: %v", err)
+	}
+}
+
+func TestUpdateDetectsChangesDuringPreparation(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		change func(t *testing.T, root string)
+	}{
+		{"neighbor body", func(t *testing.T, root string) { write(t, root, "grove/work/W-002-second.md", second+"more\n") }},
+		{"inventory", func(t *testing.T, root string) {
+			write(t, root, "grove/work/W-003-new.md", strings.Replace(second, "W-002", "W-003", 1))
+		}},
+		{"configuration", func(t *testing.T, root string) {
+			os.Rename(filepath.Join(root, "grove"), filepath.Join(root, "records"))
+			write(t, root, "grove.yaml", "schema_version: 1\nrecords: records\n")
+		}},
+		{"target permissions", func(t *testing.T, root string) { os.Chmod(filepath.Join(root, "grove/work/W-001-first.md"), 0o600) }},
+		{"target replaced", func(t *testing.T, root string) {
+			os.Remove(filepath.Join(root, "grove/work/W-001-first.md"))
+			write(t, root, "grove/work/W-001-first.md", work)
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := gitProject(t)
+			expect := revision(t, root, "grove/work/W-001-first.md")
+			fault := func(step string) error {
+				if step == "compare" {
+					tc.change(t, root)
+				}
+				return nil
+			}
+			_, err := Apply(root, Request{ID: "W-001", Expect: expect, Set: []Field{{"status", "active"}}}, now, fault)
+			if err == nil || errors.As(err, new(*Failure)) {
+				t.Fatalf("expected a refusal before publication, got %v", err)
+			}
+			for _, dir := range []string{"grove", "records"} {
+				if data, err := os.ReadFile(filepath.Join(root, dir, "work/W-001-first.md")); err == nil && string(data) != work {
+					t.Fatal("refused update was written")
+				}
+			}
+			if files := tempFiles(t, root); len(files) != 0 {
+				t.Fatalf("temporary files left behind: %v", files)
+			}
+		})
+	}
+}
+
+func TestUpdateInjectedFailures(t *testing.T) {
+	root := gitProject(t)
+	path := filepath.Join(root, "grove/work/W-001-first.md")
+	if err := os.Chmod(path, 0o640); err != nil {
+		t.Fatal(err)
+	}
+	expect := revision(t, root, "grove/work/W-001-first.md")
+	req := Request{ID: "W-001", Expect: expect, Set: []Field{{"status", "active"}}}
+	for _, step := range []string{"write", "sync", "close", "compare", "rename"} {
+		_, err := Apply(root, req, now, func(s string) error {
+			if s == step {
+				return errors.New("injected " + step)
+			}
+			return nil
+		})
+		if err == nil || !strings.Contains(err.Error(), "injected "+step) || !strings.Contains(err.Error(), "unchanged") || errors.As(err, new(*Failure)) {
+			t.Fatalf("%s: %v", step, err)
+		}
+		if read(t, root, "grove/work/W-001-first.md") != work {
+			t.Fatalf("%s: original bytes lost", step)
+		}
+		if files := tempFiles(t, root); len(files) != 0 {
+			t.Fatalf("%s: temporary files left behind: %v", step, files)
+		}
+	}
+	for _, step := range []string{"dirsync", "validate"} {
+		root := gitProject(t)
+		if err := os.Chmod(filepath.Join(root, "grove/work/W-001-first.md"), 0o640); err != nil {
+			t.Fatal(err)
+		}
+		_, err := Apply(root, req, now, func(s string) error {
+			if s == step {
+				return errors.New("injected " + step)
+			}
+			return nil
+		})
+		var failure *Failure
+		if !errors.As(err, &failure) || !strings.Contains(err.Error(), "applied") || failure.Path != "grove/work/W-001-first.md" {
+			t.Fatalf("%s: expected an applied-state failure, got %v", step, err)
+		}
+		got := read(t, root, "grove/work/W-001-first.md")
+		if !strings.Contains(got, "status: active") || failure.Revision != project.Revision([]byte(got)) {
+			t.Fatalf("%s: applied state must describe the published bytes", step)
+		}
+		if info, _ := os.Stat(filepath.Join(root, "grove/work/W-001-first.md")); info.Mode().Perm() != 0o640 {
+			t.Fatalf("%s: permissions not preserved: %v", step, info.Mode())
+		}
+		if step == "dirsync" && !strings.Contains(err.Error(), "durability") {
+			t.Fatalf("directory sync failure must report uncertain durability: %v", err)
+		}
+	}
+}
+
+func TestUpdateSameRevisionRace(t *testing.T) {
+	root := gitProject(t)
+	expect := revision(t, root, "grove/work/W-001-first.md")
+	results := make(chan error, 2)
+	var wg sync.WaitGroup
+	for _, status := range []string{"active", "abandoned"} {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			res, err := Apply(root, Request{ID: "W-001", Expect: expect, Set: []Field{{"status", status}}}, now, nil)
+			if err == nil && !res.Changed {
+				err = errors.New("unexpected no-op")
+			}
+			results <- err
+		}()
+	}
+	wg.Wait()
+	close(results)
+	var failures int
+	for err := range results {
+		if err != nil {
+			failures++
+			if !strings.Contains(err.Error(), "changed since") {
+				t.Fatal(err)
+			}
+		}
+	}
+	if failures != 1 {
+		t.Fatalf("exactly one writer must win, got %d refusals", failures)
+	}
+	if r := record(t, root, "W-001"); r.Status != "active" && r.Status != "abandoned" {
+		t.Fatalf("winning change lost: %+v", r)
+	}
+}
+
+func TestUpdateReciprocalDependenciesCannotFormACycle(t *testing.T) {
+	root := gitProject(t)
+	pairs := [][2]string{{"W-001", "W-002"}, {"W-002", "W-001"}}
+	errs := make([]error, 2)
+	var wg sync.WaitGroup
+	for i, pair := range pairs {
+		wg.Add(1)
+		expect := revision(t, root, "grove/work/"+strings.ToLower(pair[0])+"-"+map[string]string{"W-001": "first", "W-002": "second"}[pair[0]]+".md")
+		go func() {
+			defer wg.Done()
+			_, errs[i] = Apply(root, Request{ID: pair[0], Expect: expect, Set: []Field{{"depends_on", `["` + pair[1] + `"]`}}}, now, nil)
+		}()
+	}
+	wg.Wait()
+	if (errs[0] == nil) == (errs[1] == nil) {
+		t.Fatalf("exactly one must succeed: %v / %v", errs[0], errs[1])
+	}
+	if _, ds := project.Load(root, root); len(ds) != 0 {
+		t.Fatalf("project invalid after concurrent updates: %v", ds)
+	}
+}
+
+func TestNewAndUpdateShareTheWriteLockAcrossWorktrees(t *testing.T) {
+	root := gitProject(t)
+	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
+	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
+	common, _, err := repo.CommonDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unlock, err := repo.WriteLock(common)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := make(chan string, 2)
+	go func() {
+		_, err := Apply(wt, Request{ID: "W-001", Expect: revision(t, wt, "grove/work/W-001-first.md"), Set: []Field{{"status", "active"}}}, now, nil)
+		if err != nil {
+			t.Error(err)
+		}
+		done <- "update"
+	}()
+	go func() {
+		p, ds := project.Load(root, root)
+		if len(ds) != 0 {
+			t.Error(ds)
+		}
+		if _, err := create.New(p, "work", "Third", "third", now, &bytes.Buffer{}); err != nil {
+			t.Error(err)
+		}
+		done <- "new"
+	}()
+	select {
+	case who := <-done:
+		t.Fatalf("%s completed while the write lock was held", who)
+	case <-time.After(300 * time.Millisecond):
+	}
+	unlock()
+	for range 2 {
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Fatal("commands did not proceed after the lock was released")
+		}
+	}
+	if r := record(t, wt, "W-001"); r.Status != "active" {
+		t.Fatal("worktree update lost")
+	}
+	if p, ds := project.Load(root, root); len(ds) != 0 || len(p.Records) != 5 {
+		t.Fatalf("main checkout: %v", ds)
+	}
+	if _, err := os.Stat(filepath.Join(common, "grove", "write.lock")); err != nil {
+		t.Fatal("write lock file must remain")
+	}
+}
+
+func TestUpdateRequiresGit(t *testing.T) {
+	root := t.TempDir()
+	write(t, root, "grove.yaml", "schema_version: 1\nrecords: grove\n")
+	write(t, root, "grove/work/W-001-first.md", work)
+	write(t, root, "grove/questions/Q-001-which.md", question)
+	_, err := Apply(root, Request{ID: "W-001", Expect: revision(t, root, "grove/work/W-001-first.md"), Set: []Field{{"status", "active"}}}, now, nil)
+	if err == nil || !strings.Contains(err.Error(), "Git") || read(t, root, "grove/work/W-001-first.md") != work {
+		t.Fatalf("expected a Git requirement without writes: %v", err)
+	}
+}
+
+func TestUnchangedGuardCatchesEditorDrift(t *testing.T) {
+	before, _ := project.ParseRecord("w.md", "work", []byte(work))
+	after, _ := project.ParseRecord("w.md", "work", []byte(strings.Replace(work, "title: First", "title: Other", 1)))
+	if err := unchanged(before, after, []change{set("status", "active")}); err == nil || !strings.Contains(err.Error(), "title") {
+		t.Fatalf("an untouched field that differs must be refused: %v", err)
+	}
+	if err := unchanged(before, after, []change{set("title", `"Other"`)}); err != nil {
+		t.Fatal(err)
+	}
+	priority := 2
+	before.Priority, after.Priority = &priority, new(int)
+	*after.Priority = 2
+	after.Title = before.Title
+	if err := unchanged(before, after, nil); err != nil {
+		t.Fatalf("equal priorities behind different pointers must compare equal: %v", err)
+	}
+}

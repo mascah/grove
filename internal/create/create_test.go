@@ -41,8 +41,8 @@ func write(t *testing.T, root, path, source string) {
 	}
 }
 
-// repo returns a committed Git project containing W-001.
-func repo(t *testing.T) string {
+// gitProject returns a committed Git project containing W-001.
+func gitProject(t *testing.T) string {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
@@ -74,7 +74,7 @@ func stateDir(t *testing.T, root string) string {
 }
 
 func TestAllocateFloorsFromRefsAndWorktrees(t *testing.T) {
-	root := repo(t)
+	root := gitProject(t)
 	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
 	// W-007 exists only in the feature branch's history, so the ref scan alone
@@ -109,7 +109,7 @@ func TestAllocateFloorsFromRefsAndWorktrees(t *testing.T) {
 }
 
 func TestAllocateCorrectsCounterBelowFloor(t *testing.T) {
-	root := repo(t)
+	root := gitProject(t)
 	write(t, root, "grove/work/W-004-later.md", record("W-004", "work", "proposed"))
 	dir := stateDir(t, root)
 	write(t, dir, "next-ids", "W 2\n")
@@ -128,7 +128,7 @@ func TestAllocateCorrectsCounterBelowFloor(t *testing.T) {
 }
 
 func TestAllocateConcurrentAcrossWorktrees(t *testing.T) {
-	root := repo(t)
+	root := gitProject(t)
 	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
 	roots := []string{root, wt}
@@ -162,7 +162,7 @@ func TestAllocateRefusesWhenAWorktreeCannotBeScanned(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("permission checks do not apply to root")
 	}
-	root := repo(t)
+	root := gitProject(t)
 	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
 	hidden := filepath.Join(wt, "grove/work/W-030-unreadable.md")
@@ -183,7 +183,7 @@ func TestPersistenceFailureIssuesNoIDAndCreatesNoFile(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("permission checks do not apply to root")
 	}
-	root := repo(t)
+	root := gitProject(t)
 	dir := stateDir(t, root)
 	write(t, dir, "lock", "")
 	if err := os.Chmod(dir, 0o500); err != nil { // lock opens, counter temp file cannot be created
@@ -212,7 +212,7 @@ func TestAllocateRequiresGit(t *testing.T) {
 }
 
 func TestNewCreatesValidRecords(t *testing.T) {
-	root := repo(t)
+	root := gitProject(t)
 	now := time.Date(2026, 9, 19, 16, 0, 0, 0, time.UTC)
 	var report bytes.Buffer
 	path, err := New(load(t, root), "work", `Title: with "quotes" & more`, "", now, &report)
@@ -241,7 +241,7 @@ func TestNewCreatesValidRecords(t *testing.T) {
 }
 
 func TestNewNeverOverwritesAndConsumesReservation(t *testing.T) {
-	root := repo(t)
+	root := gitProject(t)
 	// A directory at the target name makes O_EXCL creation fail while the
 	// reader (which skips directories) still sees a valid project.
 	if err := os.MkdirAll(filepath.Join(root, "grove/work/W-002-x.md"), 0o755); err != nil {
@@ -259,7 +259,7 @@ func TestNewNeverOverwritesAndConsumesReservation(t *testing.T) {
 }
 
 func TestNewRejectsBadSlugAndKind(t *testing.T) {
-	root := repo(t)
+	root := gitProject(t)
 	p := load(t, root)
 	for _, c := range [][2]string{{"work", "Bad Slug"}, {"work", "UPPER"}, {"release", "ok"}} {
 		if _, err := New(p, c[0], "T", c[1], time.Now(), &bytes.Buffer{}); err == nil {
@@ -282,5 +282,25 @@ func TestSlug(t *testing.T) {
 		if got := Slug(in); got != want {
 			t.Errorf("Slug(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestNewRefusesWhenRecordRootChangedAfterLoad(t *testing.T) {
+	root := gitProject(t)
+	p := load(t, root)
+	write(t, root, "other/work/W-001-first.md", record("W-001", "work", "done"))
+	write(t, root, "grove.yaml", "schema_version: 1\nrecords: other\n")
+	_, err := New(p, "work", "Moved", "moved", time.Now(), &bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), "record root changed") {
+		t.Fatalf("expected a configuration-change refusal, got %v", err)
+	}
+	for _, dir := range []string{"grove/work", "other/work"} {
+		if entries, _ := os.ReadDir(filepath.Join(root, dir)); len(entries) != 1 {
+			t.Fatalf("%s: nothing may be created: %v", dir, entries)
+		}
+	}
+	write(t, root, "grove.yaml", config)
+	if path, err := New(load(t, root), "work", "Next", "next", time.Now(), &bytes.Buffer{}); err != nil || path != "grove/work/W-003-next.md" {
+		t.Fatalf("the refused reservation must stay consumed: got %q, %v", path, err)
 	}
 }

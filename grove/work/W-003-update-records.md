@@ -2,7 +2,7 @@
 id: "W-003"
 type: work
 title: "Update record status and fields from the CLI"
-status: proposed
+status: done
 kind: feature
 priority: 3
 size: medium
@@ -10,15 +10,17 @@ members: []
 depends_on: []
 relates_to: ["W-002", "D-003"]
 created: "2026-09-19T15:36:19Z"
-updated: "2026-09-19T17:59:55Z"
+updated: "2026-09-19T19:15:05Z"
 ---
 
 ## Outcome
 
 Change one record's status and fields from the CLI, preserving human-authored
 Markdown and refusing stale updates. Grove's own records are the first data.
-This specification is ready for owner review; it is not yet approved for
-implementation. It replaces the earlier open-ended shaping proposal.
+The owner approved this specification on 2026-09-19 and authorized
+implementation; the [implementation plan](../../docs/plans/W-003-update.md)
+maps acceptance to checks and records evidence. Achieved on branch
+`worktree-W-003` the same day; see Evidence.
 
 ## Why now
 
@@ -42,7 +44,7 @@ frontmatter edits and concurrency checks within one bounded command.
 
 ### Command and revision interface
 
-Proposed commands (not implemented yet):
+Commands, implemented in `internal/cli` and `internal/update`:
 
 ```sh
 grove show W-003 --json
@@ -217,6 +219,31 @@ uncertain durability, not a successful durable write.
     reopens it, and checks the project. This proves the command workflow rather
     than the truth of the record's prose acceptance.
 
+## Evidence
+
+Closed 2026-09-19 on branch `worktree-W-003` at `14ed115`, base `8b23636`.
+The [implementation plan](../../docs/plans/W-003-update.md) records the
+commits, the fixture list per acceptance item, `go test ./...`,
+`go test -race ./...`, `go vet ./...`, and gofmt results, real use against
+this record, and the independent review. Every acceptance item has tests;
+item 1's field and invalid-request coverage is in `internal/update` with a
+CLI subset, and item 10's workflow fixture runs through the CLI. This record's
+own status was set active and done, and `updated` maintained, through
+`go run ./cmd/grove update`; dogfooding caught the untouched-field guard
+comparing a pointer address before commit.
+
+Review disposition: no blocking findings. The one should-fix, refusing tagged
+and anchored entries the reader accepts, was fixed and covered. Explicit-key
+(`? key`) frontmatter remains refused without writing; no accepted fixture
+uses it, and supporting it would need the reader to state it as an accepted
+form first. Comments on lines inside a removed multi-line list are removed
+with the list, as the design allows; a comment after the list stays.
+
+Limits stated by the design and left as such: a direct editor can write after
+the final comparison; Windows has no `flock`; separate clones share nothing.
+Structural validity of updated records is proven; the truth of any status is
+the owner's assertion.
+
 ## Handoff boundary
 
 Code inspected at `bea8e92` (product code unchanged from `ee69c42`). Expected
@@ -241,8 +268,8 @@ separate step. Do not start W-004/W-005 as part of this assignment.
 
 ## Next
 
-Owner review of this concrete specification, then preparation of Fable's W-003
-implementation plan. While Fable implements W-003, finish W-004's output/source
+Integrate `worktree-W-003` into main. Then finish W-004's output/source
+selector contract and W-005's consuming contract. While Fable implements W-003, finish W-004's output/source
 selector contract and W-005's consuming contract. Implement those sequentially
 after reviewing the actual shared interfaces; W-004's read-only behavior has no
 hard dependency on updates, while W-005 requires W-004.
