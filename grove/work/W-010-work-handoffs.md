@@ -62,8 +62,11 @@ entrypoint for the chosen agent harness, backed by a read-only CLI prompt/contex
 operation accepting one or several explicit work IDs in one selected checkout.
 The CLI assembles facts; the instructions supply implementation/review judgment.
 Keep one owner for the guide: an adapter should reference it, not fork its rules.
-A command name and adapter location should be selected during preparation against
-the actual harness; no unsupported command is claimed here.
+The [shared implementation plan](../../docs/plans/W-010-W-011-agent-handoffs.md)
+now proposes `grove context` plus repository-local `grove-work` adapters for
+Claude and Codex. The command assembles facts; adapters explicitly load the
+shared guide and required project instructions. These interfaces are prepared
+design, not implemented commands or verified harness behavior.
 
 Use the review's responsibility mapping to select the supported execution path:
 plan preparation, implementation/review ownership, bounded retry/stop conditions,
@@ -157,11 +160,12 @@ implementation concurrency with the repair branch.
 
 ## Next
 
-Shape this small dogfooding capability soon after the reliability repairs, before
-expanding into supervised agent launching; it may be used for W-009 if ready,
-but must not delay the requested board. Inspect the predecessor's execution
-responsibility mapping in the completed review, select the supported execution
-path, thin adapter, and deterministic context interface, and link an
-implementation plan here. Resolve harness mechanics through inspection; ask the
-owner only for consequential preferences or scope changes. Use the shared guide
-and saved prompts for current assignments meanwhile.
+Implement with W-011 using the linked shared plan and
+[Fable handoff](../../docs/prompts/W-010-W-011-implementation.txt). The owner agreed
+to this bounded dogfooding investment on 2026-09-19. Verify repair integration
+and coordinate shared CLI/docs ownership with W-009; prefer following its current
+handoff without making it a semantic dependency. The prepared path is native
+serial execution with independent review, explicit headless waits, and prose
+checkpoints; the old controller/runtime machinery remains deferred. Dogfood the
+entrypoint before shaping a manually launched supervised run. Use existing saved
+prompts until the new interfaces are actually implemented and verified.

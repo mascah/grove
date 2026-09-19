@@ -36,9 +36,11 @@ concurrent implementation worktrees. Follow this repository's authority and
 record model, not predecessor storage or close/archive commands.
 
 Common guidance owns behavior; any Claude/Codex entrypoints are thin references.
-Inspect harness discovery locally before choosing locations. A read-only context
-command from W-010 can be reused when available, but is not a prerequisite for
-an initial guide that uses existing list/show/check/new/update commands.
+The [shared implementation plan](../../docs/plans/W-010-W-011-agent-handoffs.md)
+specifies repository-local `grove-shape` adapters for Claude/Codex and a shared
+`docs/work-shaping.md` guide. These remain unimplemented. A read-only context
+command from W-010 is used when work is selected; open-ended exploration still
+uses existing list/show/check/new/update commands without inventing an ID.
 
 ## Proposed behavior
 
@@ -94,9 +96,11 @@ an initial guide that uses existing list/show/check/new/update commands.
 
 ## Next
 
-Prepare a small implementation plan linked from this body: select repository
-entrypoint locations, write the shared authoring instructions from the reviewed
-responsibilities, and dogfood on the next requirements conversation. Reuse W-010's
-context interface if implemented; do not block on it or expand into a runner.
-Carry the selected publication policy into the guide and handoff fixtures;
-keep automated launching and selective-integration tooling in separately shaped work.
+Implement the shared plan with W-010 using the
+[Fable handoff](../../docs/prompts/W-010-W-011-implementation.txt). The owner agreed
+to the combined dogfooding investment on 2026-09-19. Verify adapter discovery in
+each available harness and use the guide on an actual requirements conversation;
+retain unexercised trials explicitly. Carry the selected publication policy into
+headless handoff fixtures without implementing automated launching or selective-
+integration tooling. Keep this unit's evidence and acceptance attributable even
+though implementation shares a worktree and plan with W-010.

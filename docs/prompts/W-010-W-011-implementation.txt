@@ -1,0 +1,60 @@
+Implement Grove W-010 and W-011 together: reusable work/shaping entrypoints and
+read-only context assembly. Complete implementation, verification, independent
+review, and committed evidence in one isolated worktree; do not merge or push.
+
+Read docs/restart-brief.md first, then AGENTS.md, docs/record-model.md, and
+docs/work-execution.md. Retrieve W-010 and W-011 with go run ./cmd/grove show.
+Read docs/plans/W-010-W-011-agent-handoffs.md and both linked predecessor reviews.
+The shared plan carries the prepared technical design; the work records own
+outcomes and acceptance. Do not invoke the predecessor grove:work/close workflows.
+
+Inspect Git status, branches/worktrees, current implementation and review evidence.
+Verify W-006/W-007/W-008 repair commits are integrated before Go implementation;
+done statuses alone are insufficient. Preserve their worktree and all concurrent
+work. The owner has W-009 scheduled after repairs: prefer starting this combined
+implementation after that handoff to avoid shared CLI/docs edits. W-009 is not a
+semantic prerequisite. If its implementation is still running, coordinate file
+ownership rather than editing the same interfaces concurrently or delaying it.
+Do not merge prerequisites yourself. If W-010/W-011 already have implementation,
+inspect and resume/verify it instead of starting a duplicate.
+
+Report selected branch, worktree, base and work IDs. Execute the plan serially:
+- Assemble explicit selected-work facts, dependency order and source provenance.
+- Include bounded local documents with exact revisions, safe path handling,
+  visible inclusion limits, and refusal of missing or changed required inputs.
+- Expose grove context, preserving existing commands and the default TUI if present.
+- Add thin grove-work/grove-shape adapters for Claude and Codex backed by shared
+  guides. Keep generic context assembly separate from repository-specific guides.
+- Exercise the real shaping/work handoff and interruption/missing-decision cases.
+
+The supported initial work path is native serial execution plus independent
+review, with bounded fix rounds and durable Next/Evidence checkpoints. Do not
+silently import fixed models, the old size-triggered controller, claims, or a
+runtime ledger and call it predecessor parity. Document deferred responsibilities.
+Provider/harness limitations must be reported honestly.
+
+Keep source facts, requested action, human authority, acceptance, and integration
+distinct. A missing plan can be prepared; missing required context must not be
+silently skipped. Headless instructions persist a question and return a concrete
+wait for a missing human choice. They do not launch a provider, retry an unchanged
+wait, or invent the answer. Unattended research's future publication contract is
+a separate reviewable branch with selected proposals integrated afterward.
+
+No agent runner, schedules, tmux integration, board edits, worktree-provisioning
+command, new record schema, global skill installation, or sibling-repository edits.
+Use go run ./cmd/grove new for any necessary new record and revision-checked
+update for supported fields; edit bodies and plans as ordinary files.
+
+Run targeted tests, full and race suites, vet, formatting, Grove check and links.
+Review context/path/provenance boundaries and the combined result independently.
+Test skill discovery and behavior in each available fresh harness session; a
+SKILL.md file's existence is not proof of support. Retain actual invocation,
+source revisions, commands/results, review findings and the observed dogfooding
+handoff. If a necessary fresh-session/user trial cannot run, finish all available
+work and leave that specific acceptance open; do not manufacture approval or
+launch paid nested sessions to obtain it.
+
+Proceed autonomously on routine technical details inside the documented outcome.
+Ask only for consequential product/scope conflicts or actual missing authority.
+Finish with commits, verification/review evidence per unit, supported short
+invocations, unverified limits, and the concrete integration or trial next action.

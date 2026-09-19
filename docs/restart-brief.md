@@ -389,6 +389,17 @@ branch publication policy to unattended research handoffs; identify the proposal
 and supporting questions/decisions needed for selective integration. W-009's
 existing source-scoped columns and Other sources shelf remain unchanged.
 
+The owner agreed to W-010/W-011 as the next bounded dogfooding investment:
+shape records, assign selected work through short entrypoints, and recover the
+next action from repository evidence. The
+[shared plan](plans/W-010-W-011-agent-handoffs.md) and
+[Fable handoff](prompts/W-010-W-011-implementation.txt) specify context assembly
+and thin Claude/Codex adapters. Their interface details are prepared design,
+not implemented capabilities. Prefer following the owner's W-009 handoff to
+avoid shared CLI/docs edits; W-009 is not a semantic dependency. After proving
+this loop, shape one manually launched supervised headless attempt before
+schedules or board launch controls.
+
 After the repairs, the selected next user outcome is a terminal Kanban board
 with explicit version selection inside each card. On 2026-09-19 the owner
 preferred the board over a standalone version picker. Version selection supports
