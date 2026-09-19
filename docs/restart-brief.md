@@ -161,12 +161,40 @@ feature list. Tracking and inspection should remain useful without running AI.
 
 ## Consequential design questions
 
-1. **Where does each kind of state live?** Branch-local specifications and
-   evidence must be distinguished from shared local claims and run records.
+### Project view preference and feasibility, 2026-09-18
+
+The owner prefers one project view across code branches, with branch-specific
+implementation and evidence visible within it, provided this is feasible.
+This selects a desired experience conditionally, not a storage implementation.
+
+A temporary-repository probe using Git 2.50.1 verified one possible mechanism:
+an independent `grove-project` branch with a dedicated linked working tree at
+the common Git directory's `grove/project/` path. Main and two feature worktrees
+resolved the same Markdown record using
+`git rev-parse --path-format=absolute --git-common-dir`. Two board commits
+produced independent project history; switching a feature worktree to another
+code branch preserved the board view. Main's HEAD and all code working trees
+remained unchanged and clean. No daemon was used; the fixture was removed.
+Git documents the underlying facilities in [git-worktree](https://git-scm.com/docs/git-worktree)
+and [git-rev-parse](https://git-scm.com/docs/git-rev-parse).
+
+This establishes basic local feasibility only. Concurrent writes, interrupted
+mutations, remote synchronization, and migration were not tested. A shared
+working tree would need serialized CLI mutations and stale-edit detection;
+Git's own index lock does not coordinate an entire Grove operation. Project
+changes and code changes would have separate histories, requiring explicit
+revision links and input snapshots for execution/review. The exact storage
+location and mechanism remain proposals.
+
+### Remaining questions
+
+1. **Where does each kind of state live?** Shared project records, candidate-
+   specific specifications/evidence, local claims, and run records need explicit
+   ownership and lifetime rules consistent with the preferred project view.
    The existing skills proposal uses Git's common metadata directory for local
    ownership; it is evidence to evaluate, not an automatically adopted design.
-   Decide whether project records follow code branches or have independent
-   storage before fixing directory layout or board semantics.
+   Evaluate independent project storage before fixing directory layout or board
+   semantics; the probe above demonstrates one mechanism, not a complete design.
 2. **What does one run promise?** Define its input, actor/attempt identity,
    working directory, output, failure/wait state, cancellation, interruption
    recovery, and reconciliation. Establish what happens when the TUI exits.
