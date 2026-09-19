@@ -4,6 +4,8 @@ Captured: 2026-09-18.
 Status: product direction and starter file defaults selected; the Go CLI
 reads, validates, creates, and updates the operational records, shows their
 versions across local branches, and locates a selected version's checkout.
+A read-only terminal board over those operations is implemented on branch
+`worktree-W-009`, awaiting the owner's judgment in use and integration.
 This document is the restart's current source of intent.
 
 ## Intent and authority
@@ -46,7 +48,7 @@ Selected direction:
 
 - A standalone Grove CLI project, with durable local project records.
 - Go for the first CLI implementation, explicitly selected by the owner on
-  2026-09-18. A TUI framework has not been selected.
+  2026-09-18. The W-009 branch uses Bubble Tea v2 for the terminal board.
 - Core use without a required hosted server or persistent daemon.
 - Human and agent access to the same underlying project state.
 - Linked work, dependencies, assignees, and attached evidence/artifacts.
@@ -76,7 +78,9 @@ Selected direction:
   cross-branch versions. The owner selected bare `grove` (no arguments) to open
   the TUI, with the board as its first screen; there will be no `grove board`
   subcommand. Worktree creation and agent launching remain later
-  investments; the detailed board interaction remains proposed.
+  investments. The board interaction is implemented as proposed on branch
+  `worktree-W-009` ([evidence](reviews/2026-09-19-board-W-009.md)); it has
+  passed automated acceptance and independent review, not yet the owner's use.
 - Eventual agent execution from that workspace, with `claude -p` as the concrete
   first-provider idea. Exact invocation and lifecycle behavior need validation.
 - Lifecycle choice settled on 2026-09-19: running agent sessions continue when
@@ -309,9 +313,10 @@ too disruptive. [Git worktree facilities](https://git-scm.com/docs/git-worktree)
    Reuse existing export/run/reconcile ideas only after inspecting their fit.
 3. **How should the first TUI feel in use?** The owner selected the terminal
    experience and requested early Kanban value. W-009 proposes the checkout
-   board and explicit version view; validate that interaction in an owner demo
-   after the CLI repairs. Its Bubble Tea recommendation is still a technical
-   proposal, and agent execution is outside the first interaction.
+   board and explicit version view, now implemented on its branch with Bubble
+   Tea v2.0.9; validate that interaction in an owner demo
+   (`go run ./cmd/grove` in `.claude/worktrees/W-009`). The owner's answer is
+   still open. Agent execution is outside the first interaction.
 
 Related details to resolve at the appropriate boundary:
 
@@ -350,8 +355,14 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** integrate the completed CLI repairs, then build the board.
-The [2026-09-19 review](reviews/2026-09-19-integrated-cli.md) verified W-003
+**Next action:** the owner tries the board and records what it is like to use
+in [W-009](../grove/work/W-009-terminal-picker.md); then integrate branch
+`worktree-W-009` as a separate, explicit step. The CLI repairs below are
+integrated (main `acfc905`, established by Git ancestry), and the board is
+built on them: `cd .claude/worktrees/W-009 && go run ./cmd/grove`. Its
+[evidence](reviews/2026-09-19-board-W-009.md) separates what automated checks
+and two independent reviews established from the usability judgment they
+cannot supply. The [2026-09-19 review](reviews/2026-09-19-integrated-cli.md) verified W-003
 integration at `b20d2b0` and W-004/W-005 integration at `5041ae1`, and
 demonstrated wrong-repository routing through a symlinked project prefix,
 success for a checkout deleted during inspection, comment loss and
@@ -374,8 +385,8 @@ completion on that branch: establish integration by Git ancestry, not by
 status, and keep it a separate, explicit step. Preserve the retained
 W-004/W-005 worktree; it has no commits missing from main.
 
-After integration, use the [W-009 handoff](prompts/W-009-implementation.txt);
-the [W-006–W-008 handoff](prompts/W-006-W-008-implementation.txt) is spent.
+The [W-009 handoff](prompts/W-009-implementation.txt) and the
+[W-006–W-008 handoff](prompts/W-006-W-008-implementation.txt) are both spent.
 Both reference the shared execution guide; the work records and plans remain
 the specifications. W-010/W-011 below make future assignments need only work
 IDs; they are not a prerequisite that delays the board.
@@ -410,8 +421,8 @@ selection remains explicit, incomplete results visible, and stale selections
 require refresh. This brings board value into the first TUI; it does not select
 one authoritative status across branches. [W-009](../grove/work/W-009-terminal-picker.md) owns
 the proposed screen, keyboard/output contract, acceptance, and linked plan.
-Bubble Tea v2 is the documented technical recommendation; no framework has
-been installed or adopted as implemented architecture. Keep worktree creation
+Bubble Tea v2.0.9 is what the branch uses, for the board only; adopting it
+more widely follows the owner's judgment of the board. Keep worktree creation
 as a separate design with
 explicit destination and failure policies; agent launches, claims, and mutation
 through an interactive view come later. Q-001's accepted policy stays unchanged.
@@ -433,7 +444,8 @@ The old application's PostgreSQL/API architecture, deployed Mini service,
 planning-authority cutover, and old roadmap are historical. This local reset
 does not alter any external service, database, credential, remote repository,
 or installed CLI. The sibling skills and nullsec projects remain unchanged.
-No runner has been launched and no TUI framework has been selected. The new
+No runner has been launched. The W-009 branch uses Bubble Tea v2 for the
+board; main has no TUI framework until that branch is integrated. The new
 Markdown/frontmatter format and file defaults are selected; `grove.yaml` and
 operational records exist, and the inspection, creation, update, versions,
 and workspace CLI is implemented and verified locally. It has not replaced

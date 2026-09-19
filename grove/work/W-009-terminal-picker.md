@@ -20,9 +20,11 @@ opaque selector. On 2026-09-19 the owner preferred the board over a standalone
 version picker as the first terminal experience after reliability fixes.
 The owner then selected bare `grove` as the TUI entrypoint, with the board as its
 first screen; do not add a `grove board` subcommand. Board-first and this
-entrypoint are selected direction; the detailed layout, context policy and
-framework choice below remain proposed design, not shipped behavior.
-[Implementation plan](../../docs/plans/W-009-terminal-picker.md).
+entrypoint are selected direction. The layout, context policy and framework
+below were proposed design; they are now implemented on branch
+`worktree-W-009` as described, and remain the owner's to judge in use.
+[Implementation plan](../../docs/plans/W-009-terminal-picker.md);
+[evidence](../../docs/reviews/2026-09-19-board-W-009.md).
 
 ## What the TUI means here
 
@@ -204,14 +206,45 @@ current command-required usage error.
    a project without a TTY. Nonterminal default use refuses promptly and existing
    explicit subcommands retain their contracts. No `board` subcommand is added.
 
+## Evidence, 2026-09-19
+
+Implemented on branch `worktree-W-009` from `acfc905`, after the W-006 to W-008
+repairs were confirmed in main by Git ancestry. Final code revision `184b8c3`.
+The [evidence](../../docs/reviews/2026-09-19-board-W-009.md) maps each
+acceptance item to its tests, and holds the suite results, both independent
+reviews with dispositions, and the remaining limits; the
+[plan](../../docs/plans/W-009-terminal-picker.md#adjustments-made-while-implementing-2026-09-19)
+records what changed from this proposal and why. The changes that matter to
+this record's text:
+
+- The framework reads its debug-log switches from the process environment, so
+  the board unsets `TEA_DEBUG`, `TEA_TRACE`, and `UV_DEBUG` rather than
+  passing a filtered environment.
+- The framework ignores screen write errors; the board ends the session with
+  exit 1 at the first one instead of staying open unseen.
+- The board starts on the live source whose Git directory is the invocation's
+  own, which holds through symlinked paths, `--project`, and nested prefixes.
+- A hangup cancels the session like an interrupt.
+
+Automated acceptance (items 1 to 5, 7, and the suites, dependency check, and
+independent review of item 6) is met on the branch. **Owner usability feedback
+on a real demo, the other half of item 6, has not happened**, so this record
+stays active. No screenshot or test stands in for it.
+
 ## Next
 
-After the three repair candidates are reviewed and integrated, Fable should
-verify this design against those interfaces, implement the linked plan in an
-isolated worktree, and return a runnable demo plus test/review evidence. The
-owner has selected the terminal experience and requested earlier Kanban value.
-The board-first recommendation and its checkout-scoped status policy should be
-kept explicit in the handoff; do not silently invent a cross-branch card status.
-Use the [board implementation handoff](../../docs/prompts/W-009-implementation.txt)
-when assigning execution. Worktree creation and agent execution remain separate
-later work. W-010 proposes reusable work preparation and does not block this board.
+The owner runs the demo and says what the board is like to use:
+
+```sh
+cd .claude/worktrees/W-009 && go run ./cmd/grove
+```
+
+Things only that judgment can settle: whether one checkout's columns with
+versions inside the card is the right everyday view; whether Other sources is
+discoverable enough; the key choices (`b`, `s`, `r`, Tab) and wording; the
+two-line cards; and whether returning a path, rather than opening something,
+is a useful first workspace action. Record that feedback here as its own
+evidence, then either adjust the board or mark this done with
+`go run ./cmd/grove update`. Integrating `worktree-W-009` into main is a
+separate, explicit step. Worktree creation, record edits from the board, and
+agent execution remain separate later work; W-010 does not depend on this.

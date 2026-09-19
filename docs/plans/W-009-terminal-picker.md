@@ -194,3 +194,51 @@ result formatting into a private CLI helper shared by workspace and the TUI.
   owner demo. Record human feedback separately from automated evidence. Reconcile
   the work record and brief via current CLI/body edits; no branch merge or
   worktree provisioning is part of this unit.
+
+## Adjustments made while implementing, 2026-09-19
+
+Implemented on branch `worktree-W-009` from `acfc905`, after confirming by Git
+ancestry that the W-006 to W-008 repair and review-fix commits are in main.
+The [evidence](../reviews/2026-09-19-board-W-009.md) holds commits and results.
+Each adjustment below stays inside W-009's outcome; the reason is what was
+found when the proposal met the code and the pinned framework.
+
+- **Debug switches are process-wide.** Bubble Tea v2.0.9 reads `TEA_DEBUG`
+  (panic log file) and `TEA_TRACE` (trace file) with `os.Getenv`, not from the
+  environment passed to a program; its renderer reads `UV_DEBUG` from the
+  passed environment. A filtered `tea.WithEnvironment` would therefore not
+  have stopped log files. `tui.Run` unsets all three in the process instead,
+  and the terminal harness runs with all three set and asserts no file appears.
+- **The framework discards screen write errors** (`_ = p.flush()` in its
+  render loop), so a dead screen left a live session in which Enter could
+  still select a workspace unseen. `tui.Run` wraps the screen in a writer that
+  records the first failed write and cancels the session: exit 1, no result.
+- **The invocation's checkout is identified by Git, not by path.**
+  `versions.Result.GitDir` (one more `rev-parse --git-dir`) names root's own
+  worktree; the board starts on the live source with that Git directory. It is
+  not part of `versions --json`, which is built field by field.
+- **Tasks 2 and 3 are one commit.** The model calls the view for scroll
+  limits, so a model-only commit would not compile. `Backend` lives in
+  `model.go`; there is no `backend.go`.
+- **Discovery is shared, loading is not.** `project.Discover` is `Load`'s own
+  first step, exported; the board is dispatched before `project.Load`.
+- **The connected-workflow fixture is a Go test** (`internal/cli/tui_test.go`)
+  that drives the real model against real Git and asserts on rendered screens,
+  because a cell-diffing renderer's byte stream is not a dependable screen to
+  assert against. The pseudo-terminal harness covers what only a terminal can
+  show: mode restoration, stream separation, select-to-`show` through the
+  built binary, resize, refusal without a terminal, and killing a blocked Git
+  child after a started-handshake.
+- **Exact values are hard-wrapped.** Word wrapping split selectors and paths
+  at hyphens and spaces on real data; field values and source lines in the
+  sources view break only at the pane edge. Prose wraps between words.
+- **Essential state comes before long paths** in the header (board label
+  first) and the checkout chooser (valid/unavailable first): real temporary
+  paths clipped both off screen in the first version.
+- **macOS sets `PENDIN`** in a terminal's local flags when raw mode ends with
+  input queued. The harness compares every termios field but masks that one
+  kernel-owned bit.
+- Direct dependencies as pinned by the record: `charm.land/bubbletea/v2
+  v2.0.9`, `github.com/charmbracelet/x/ansi v0.11.7` (display width, clipping,
+  wrapping), `github.com/charmbracelet/x/term v0.2.2` (terminal check). All
+  built and tested under Go 1.26.2; no Bubbles or Lip Gloss.

@@ -370,7 +370,9 @@ branches and worktrees, and locates the existing checkout holding a selected
 version. The [integrated CLI review](reviews/2026-09-19-integrated-cli.md) found
 contract defects that W-006/W-007/W-008 repair; their
 [evidence](reviews/2026-09-19-repairs-W-006-W-008.md) lists the remaining limits.
-An interactive workspace and automatic checkout creation are future investments.
+[W-009](../grove/work/W-009-terminal-picker.md) adds a read-only terminal board over
+these operations; it changes no schema and writes no record. Editing from an
+interactive view and automatic checkout creation are future investments.
 
 Structured attachments, review/report records, artifact ingestion, and agent
 attempts are deferred. Ordinary Markdown links and prose can carry supporting
