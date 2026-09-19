@@ -15,9 +15,22 @@ import (
 
 // CommonDir returns the repository's common Git directory for root, plus the
 // path of root inside the worktree (git's --show-prefix), creating the
-// Grove-owned coordination folder under it. It is derived from Git rather than
-// a worktree's .git file because linked worktrees have private metadata.
+// Grove-owned coordination folder under it. Read-only commands use Locate.
 func CommonDir(root string) (common, prefix string, err error) {
+	common, prefix, err = Locate(root)
+	if err != nil {
+		return "", "", err
+	}
+	if err := os.MkdirAll(filepath.Join(common, "grove"), 0o755); err != nil {
+		return "", "", err
+	}
+	return common, prefix, nil
+}
+
+// Locate returns the common Git directory and worktree prefix for root without
+// creating anything. It is derived from Git rather than a worktree's .git file
+// because linked worktrees have private metadata.
+func Locate(root string) (common, prefix string, err error) {
 	if _, err := exec.LookPath("git"); err != nil {
 		return "", "", errors.New("this command requires Git on PATH; coordination state lives in the repository's common directory")
 	}
@@ -29,9 +42,6 @@ func CommonDir(root string) (common, prefix string, err error) {
 	common = lines[0]
 	if len(lines) == 2 {
 		prefix = lines[1]
-	}
-	if err := os.MkdirAll(filepath.Join(common, "grove"), 0o755); err != nil {
-		return "", "", err
 	}
 	return common, prefix, nil
 }

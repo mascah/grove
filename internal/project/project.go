@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -14,6 +15,7 @@ import (
 type Project struct {
 	Root      string
 	RecordDir string // configured record folder, relative to Root
+	Config    []byte // exact grove.yaml bytes
 	Records   []*Record
 }
 
@@ -24,12 +26,21 @@ func Load(cwd, explicit string) (*Project, []Diagnostic) {
 	if err != nil {
 		return nil, []Diagnostic{{Path: cwd, Field: "grove.yaml", Message: err.Error()}}
 	}
-	p := &Project{Root: root}
-	configPath := filepath.Join(root, "grove.yaml")
-	source, err := readRegular(configPath)
+	p, ds := LoadFS(os.DirFS(root))
+	p.Root = root
+	return p, ds
+}
+
+// LoadFS validates the project at the root of fsys, which must implement
+// fs.ReadLinkFS so symlinks are seen rather than followed. A live checkout and
+// a committed Git tree go through this one path, so both obey the same rules.
+func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
+	p := &Project{}
+	source, err := readRegular(fsys, "grove.yaml")
 	if err != nil {
 		return p, []Diagnostic{{Path: "grove.yaml", Message: err.Error()}}
 	}
+	p.Config = source
 	config := parseMapping("grove.yaml", source, 0)
 	version, ok := config.integerField("schema_version", true)
 	if ok && version != 1 {
@@ -42,9 +53,9 @@ func Load(cwd, explicit string) (*Project, []Diagnostic) {
 		}
 	}
 	if recordDir != "" {
-		if filepath.IsAbs(recordDir) || filepath.Clean(recordDir) == "." || slices.Contains(strings.Split(filepath.ToSlash(recordDir), "/"), "..") {
+		if filepath.IsAbs(recordDir) || path.Clean(recordDir) == "." || !fs.ValidPath(path.Clean(recordDir)) || slices.Contains(strings.Split(filepath.ToSlash(recordDir), "/"), "..") {
 			config.problem("records", "must name a dedicated relative subdirectory without .. components")
-		} else if err := checkRecordRoot(root, recordDir); err != nil {
+		} else if err := checkRecordRoot(fsys, recordDir); err != nil {
 			config.problem("records", err.Error())
 		}
 	}
@@ -52,12 +63,10 @@ func Load(cwd, explicit string) (*Project, []Diagnostic) {
 		return p, sortedDiagnostics(config.errors)
 	}
 	p.RecordDir = recordDir
-	recordRoot := filepath.Join(root, recordDir)
+	recordRoot := path.Clean(filepath.ToSlash(recordDir))
 	var ds []Diagnostic
 	folders := map[string]string{"work": "work", "questions": "question", "decisions": "decision"}
-	err = filepath.WalkDir(recordRoot, func(path string, entry fs.DirEntry, walkErr error) error {
-		relative, _ := filepath.Rel(root, path)
-		relative = filepath.ToSlash(relative)
+	err = fs.WalkDir(fsys, recordRoot, func(relative string, entry fs.DirEntry, walkErr error) error {
 		problem := func(message string) {
 			ds = append(ds, Diagnostic{Path: relative, Message: message})
 		}
@@ -65,7 +74,7 @@ func Load(cwd, explicit string) (*Project, []Diagnostic) {
 			problem(walkErr.Error())
 			return nil
 		}
-		if entry.Type()&os.ModeSymlink != 0 {
+		if entry.Type()&fs.ModeSymlink != 0 {
 			problem("symlink entries are not supported")
 			return nil
 		}
@@ -76,13 +85,13 @@ func Load(cwd, explicit string) (*Project, []Diagnostic) {
 			problem("expected a regular file or directory")
 			return nil
 		}
-		inside, _ := filepath.Rel(recordRoot, path)
-		parts := strings.Split(filepath.ToSlash(inside), "/")
+		inside := strings.TrimPrefix(relative, recordRoot+"/")
+		parts := strings.Split(inside, "/")
 		if len(parts) == 1 && folders[parts[0]] != "" {
 			problem("type folder must be a directory")
 			return nil
 		}
-		if filepath.Ext(path) != ".md" {
+		if path.Ext(relative) != ".md" {
 			return nil
 		}
 		kind := folders[parts[0]]
@@ -90,7 +99,7 @@ func Load(cwd, explicit string) (*Project, []Diagnostic) {
 			problem("Markdown record must be inside a work, questions, or decisions type folder")
 			return nil
 		}
-		source, err := readRegular(path)
+		source, err := readRegular(fsys, relative)
 		if err != nil {
 			problem(err.Error())
 			return nil
@@ -101,7 +110,7 @@ func Load(cwd, explicit string) (*Project, []Diagnostic) {
 		return nil
 	})
 	if err != nil {
-		ds = append(ds, Diagnostic{Path: filepath.ToSlash(recordDir), Message: err.Error()})
+		ds = append(ds, Diagnostic{Path: recordRoot, Message: err.Error()})
 	}
 	slices.SortFunc(p.Records, compareRecords)
 	ds = append(ds, Validate(p.Records)...)
@@ -154,15 +163,15 @@ func discover(cwd, explicit string) (string, error) {
 	}
 }
 
-func checkRecordRoot(root, relative string) error {
-	current := root
-	for _, part := range strings.Split(filepath.Clean(relative), string(filepath.Separator)) {
-		current = filepath.Join(current, part)
-		info, err := os.Lstat(current)
+func checkRecordRoot(fsys fs.FS, relative string) error {
+	current := ""
+	for _, part := range strings.Split(path.Clean(filepath.ToSlash(relative)), "/") {
+		current = path.Join(current, part)
+		info, err := fs.Lstat(fsys, current)
 		if err != nil {
 			return err
 		}
-		if info.Mode()&os.ModeSymlink != 0 {
+		if info.Mode()&fs.ModeSymlink != 0 {
 			return fmt.Errorf("%s is a symlink", relative)
 		}
 		if !info.IsDir() {
@@ -172,18 +181,18 @@ func checkRecordRoot(root, relative string) error {
 	return nil
 }
 
-func readRegular(path string) ([]byte, error) {
-	info, err := os.Lstat(path)
+func readRegular(fsys fs.FS, name string) ([]byte, error) {
+	info, err := fs.Lstat(fsys, name)
 	if err != nil {
 		return nil, err
 	}
-	if info.Mode()&os.ModeSymlink != 0 {
+	if info.Mode()&fs.ModeSymlink != 0 {
 		return nil, fmt.Errorf("symlink files are not supported")
 	}
 	if !info.Mode().IsRegular() {
 		return nil, fmt.Errorf("expected a regular file")
 	}
-	return os.ReadFile(path)
+	return fs.ReadFile(fsys, name)
 }
 
 func compareRecords(a, b *Record) int {
