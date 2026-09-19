@@ -19,10 +19,15 @@ import (
 	"github.com/mascah/grove/internal/versions"
 )
 
-const usage = "Usage: grove [--project DIR] list | show ID [--json] | check | new TYPE TITLE [--slug SLUG]\n" +
+const usage = "Usage: grove [--project DIR] [--json]\n" +
+	"       grove [--project DIR] list | show ID [--json] | check | new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
 	"       grove [--project DIR] workspace --source SELECTOR [--json]\n\n" +
+	"  (none)     Open the terminal board: one checkout's work by status, each card's\n" +
+	"             versions across branches and worktrees, and explicit selection of a\n" +
+	"             version's existing workspace, printed like workspace (--json likewise).\n" +
+	"             Needs a terminal on stdin and stderr; stdout may be redirected. Reads only.\n" +
 	"  list       List records in the selected checkout\n" +
 	"  show ID    Print the complete Markdown source for a record;\n" +
 	"             --json prints {id, path, revision, source} instead\n" +
@@ -53,6 +58,9 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 	}
 	if a.help {
 		return writeResult(out, errOut, []byte(usage))
+	}
+	if a.command == "" {
+		return runBoard(a, cwd, out, errOut)
 	}
 	p, ds := project.Load(cwd, a.project)
 	if p != nil {
@@ -261,15 +269,14 @@ func parseArgs(args []string) (a invocation, err error) {
 		a.help = true
 		return a, nil
 	}
-	if len(positional) == 0 {
-		return a, fmt.Errorf("a command is required")
+	if len(positional) != 0 { // no command selects the board, under the same option rules
+		a.command = positional[0]
 	}
-	a.command = positional[0]
 	if a.slug != "" && a.command != "new" {
 		return a, fmt.Errorf("--slug applies only to new")
 	}
-	if a.json && a.command != "show" && a.command != "versions" && a.command != "workspace" {
-		return a, fmt.Errorf("--json applies only to show, versions, and workspace")
+	if a.json && a.command != "" && a.command != "show" && a.command != "versions" && a.command != "workspace" {
+		return a, fmt.Errorf("--json applies only to the board, show, versions, and workspace")
 	}
 	if a.source != "" && a.command != "workspace" {
 		return a, fmt.Errorf("--source applies only to workspace")
@@ -278,6 +285,7 @@ func parseArgs(args []string) (a invocation, err error) {
 		return a, fmt.Errorf("--expect, --set, and --unset apply only to update")
 	}
 	switch a.command {
+	case "":
 	case "list", "check":
 		if len(positional) != 1 {
 			err = fmt.Errorf("%s takes no positional arguments", a.command)

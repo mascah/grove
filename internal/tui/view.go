@@ -51,9 +51,19 @@ func line(s string, w int) string {
 }
 
 // wrap escapes one logical line and breaks it into rows of at most w cells,
-// between words where it can.
-func wrap(s string, w int) []string {
-	rows := strings.Split(ansi.Wrap(safe(strings.ReplaceAll(s, "\t", "    ")), max(w, 1), ""), "\n")
+// between words where it can. exact breaks only at the edge instead, for
+// values such as paths and selectors whose every character matters.
+func wrap(s string, w int) []string  { return wrapped(s, w, false) }
+func exact(s string, w int) []string { return wrapped(s, w, true) }
+
+func wrapped(s string, w int, hard bool) []string {
+	s, w = safe(strings.ReplaceAll(s, "\t", "    ")), max(w, 1)
+	if hard {
+		s = ansi.Hardwrap(s, w, true)
+	} else {
+		s = ansi.Wrap(s, w, "")
+	}
+	rows := strings.Split(s, "\n")
 	for i := range rows {
 		rows[i] += strings.Repeat(" ", max(w-ansi.StringWidth(rows[i]), 0))
 	}
@@ -396,7 +406,7 @@ func (m *Model) detailRows(w int) []string {
 	add("Note", s.Note)
 	var rows []string
 	for _, f := range fields {
-		rows = append(rows, wrap(fmt.Sprintf("%-10s%s", f[0]+":", f[1]), w)...)
+		rows = append(rows, exact(fmt.Sprintf("%-10s%s", f[0]+":", f[1]), w)...)
 	}
 	if v.Record != nil {
 		rows = append(rows, line(strings.Repeat("─", w), w))
@@ -412,7 +422,8 @@ func (m *Model) chooserBody(w, n int) []string {
 		if !s.Valid {
 			state = "UNAVAILABLE: " + sourceProblem(s)
 		}
-		rows = append(rows, mark(i == m.choice, fmt.Sprintf("%s   %s   %s", label(s), s.Worktree, state), w))
+		// The path comes last: clipping a long one must not hide the state.
+		rows = append(rows, mark(i == m.choice, fmt.Sprintf("%s   %s   %s", label(s), state, s.Worktree), w))
 	}
 	head := wrapAll("Choose the checkout whose live work fills the columns. No branch or directory is switched.", w)
 	for i := range head {
@@ -433,7 +444,7 @@ func (m *Model) sourceRows(w int) []string {
 		if s.Kind == "live" {
 			text += "  " + s.Worktree
 		}
-		rows = append(rows, wrap(text+"  ("+state+")", w)...)
+		rows = append(rows, exact(text+"  ("+state+")", w)...)
 		if s.Note != "" {
 			rows = append(rows, wrapAll("    note: "+s.Note, w)...)
 		}

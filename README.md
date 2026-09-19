@@ -4,7 +4,8 @@ A local project workspace for humans and agents, built around a CLI and durable 
 
 **Status: the first Go CLI lists, shows, validates, creates, and updates local
 project records, shows each record's versions across local branches, and
-locates the checkout holding a selected version.**
+locates the checkout holding a selected version. Run without a command, it
+opens a read-only terminal Kanban board over the same operations.**
 
 Start with [the restart brief](docs/restart-brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
@@ -20,6 +21,7 @@ read this new format.
 Requires Go 1.26 or later. Run from this repository:
 
 ```sh
+go run ./cmd/grove                 # the terminal board; needs a terminal
 go run ./cmd/grove list
 go run ./cmd/grove show W-001
 go run ./cmd/grove check
@@ -84,19 +86,59 @@ path, or content) refuses with the reason, and the selected checkout is
 re-read once more just before its path is returned. The command never creates a
 worktree, switches a branch, launches anything, claims ownership, or edits a
 record; the directory it prints is a location, not write authority, and a
-later `update` performs its own revision check. These two commands are the
-CLI foundation for a future interactive Open workspace action; creating a
-worktree for a branch without one remains future work.
+later `update` performs its own revision check. The board below uses these
+two operations in process; creating a worktree for a branch without one
+remains future work.
 
-Use `go test ./...`, `go test -race ./...`, and `go vet ./...` for verification.
-TUI and agent execution remain future work. The
+### The terminal board
+
+`grove [--project DIR] [--json]`, with no command, opens the board. In this
+checkout that is `go run ./cmd/grove`. There is no `board` subcommand and no
+work-ID argument; every command above stays noninteractive, and `--help`,
+`-h`, and `help` need neither a project nor a terminal.
+
+The columns (Proposed, Active, Done, Abandoned) show the live work records of
+one checkout, named in the header: at first the checkout the command ran in.
+`b` chooses another checkout's live files as the board; this changes what is
+displayed and switches no branch or directory. Work with no live record in
+that checkout is listed under Other sources without a status. Questions and
+decisions are not on the board. No status is combined across branches.
+
+Enter on a card opens every observed version of that record, committed and
+live, each with its own title, status, and source. Opening a card selects
+nothing. Moving to one version and pressing Enter asks `workspace`'s resolver
+about exactly that version's selector; on success the board closes and prints
+what `workspace` prints (the project path on stdout, or its JSON with
+`--json`; checkout, branch, record, and revision on stderr). A refusal (the
+version changed, its checkout is missing or ambiguous, the record was deleted
+there) stays on screen with its reason until `r` refreshes, after which a
+version must be selected again. The board never creates a worktree, edits a
+record, or starts an editor, shell, or agent.
+
+Keys: arrows or `h` `j` `k` `l` move; Tab switches between the columns and
+Other sources, or between versions and details; PgUp/PgDn scroll details; `s`
+lists every source with its diagnostics, which stay reachable while a banner
+marks an incomplete result; `r` re-reads; Esc goes back, and quits from the
+board; `q` quits. Below 100 columns one status column shows at a time; below
+40x10 the board asks for more room. Leaving without a selection prints nothing
+and exits 0; Ctrl-C exits 1; a usage error exits 2.
+
+The board draws on stderr and reads stdin, so both must be terminals, while
+stdout may be redirected: `cd "$(go run ./cmd/grove)"`. Without a terminal it
+refuses at once with exit 1 and names the noninteractive commands. Text from
+records, paths, and Git is shown with control characters escaped. It writes no
+files, including the framework's debug logs.
+
+Use `go test ./...`, `go test -race ./...`, and `go vet ./...` for verification;
+`internal/tui` also drives the built binary through a pseudo-terminal with
+`python3 internal/tui/testdata/terminal.py BINARY` (Unix; skipped without
+`python3`). Agent execution remains future work. The
 [integrated CLI review](docs/reviews/2026-09-19-integrated-cli.md) found
 workspace-provenance, update-preservation, and Git-path defects; W-006 through
 W-008 repair them, with [evidence and remaining limits](docs/reviews/2026-09-19-repairs-W-006-W-008.md).
-The owner selected bare `grove` to open the TUI, initially showing a Kanban board;
-this default startup remains unimplemented and adds no `board` subcommand.
-[W-009](grove/work/W-009-terminal-picker.md) proposes its checkout-scoped layout
-with version details and explicit workspace selection inside each card.
+[W-009](grove/work/W-009-terminal-picker.md) owns the board's contract and its
+[evidence](docs/reviews/2026-09-19-board-W-009.md). Whether the board is pleasant
+to use is the owner's judgment from a demo, which automated checks do not supply.
 
 The intended experience combines linked work, questions, research, project
 knowledge, and evidence. A CLI serves agents and humans; a TUI can make the

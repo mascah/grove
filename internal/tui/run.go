@@ -2,7 +2,9 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"sync"
 
 	tea "charm.land/bubbletea/v2"
 
@@ -23,15 +25,36 @@ func Run(ctx context.Context, root string, input, screen *os.File) (*versions.Wo
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	m := New(ctx, root, Backend{Inspect: versions.InspectContext, Resolve: versions.ResolveContext})
-	_, err := tea.NewProgram(m, tea.WithContext(ctx), tea.WithInput(input), tea.WithOutput(screen)).Run()
+	out := &watched{File: screen, stop: cancel}
+	_, err := tea.NewProgram(m, tea.WithContext(ctx), tea.WithInput(input), tea.WithOutput(out)).Run()
 	// Quitting does not stop a command that is still reading.
 	cancel()
 	m.reads.close()
 	switch {
+	case out.err != nil:
+		return nil, fmt.Errorf("the terminal stopped accepting output, so nothing was selected: %w", out.err)
 	case interrupted(err):
 		return nil, context.Canceled
 	case err != nil:
 		return nil, err
 	}
 	return m.Workspace, nil
+}
+
+// watched ends the session at the first failed write to the screen. The
+// framework discards those errors, which would leave a person selecting a
+// workspace on a screen they can no longer see.
+type watched struct {
+	*os.File
+	stop func()
+	once sync.Once
+	err  error
+}
+
+func (w *watched) Write(p []byte) (int, error) {
+	n, err := w.File.Write(p)
+	if err != nil {
+		w.once.Do(func() { w.err = err; w.stop() })
+	}
+	return n, err
 }

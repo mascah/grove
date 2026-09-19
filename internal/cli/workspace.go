@@ -16,12 +16,18 @@ func runWorkspace(root string, a invocation, out, errOut io.Writer) int {
 		report(errOut, err)
 		return 1
 	}
+	return writeWorkspace(w, a.json, out, errOut)
+}
+
+// writeWorkspace is the one result contract for a resolved workspace, shared
+// by the workspace command and the board.
+func writeWorkspace(w *versions.Workspace, asJSON bool, out, errOut io.Writer) int {
 	branch := "Branch: " + w.Ref
 	if w.Ref == "" {
 		branch = "Detached: HEAD"
 	}
 	fmt.Fprintf(errOut, "Checkout: %s\n%s at %s\nRecord: %s\nRevision: %s\n", visible(w.Checkout), visible(branch), w.Head, visible(w.Record), w.Revision)
-	if a.json {
+	if asJSON {
 		var ref any
 		if w.Ref != "" {
 			ref = w.Ref

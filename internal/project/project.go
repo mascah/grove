@@ -22,9 +22,9 @@ type Project struct {
 // Load reads a whole project. Any diagnostics make the project unsuitable for
 // presentation as valid; the returned records are for inspection by validators.
 func Load(cwd, explicit string) (*Project, []Diagnostic) {
-	root, err := discover(cwd, explicit)
-	if err != nil {
-		return nil, []Diagnostic{{Path: cwd, Field: "grove.yaml", Message: err.Error()}}
+	root, d := Discover(cwd, explicit)
+	if d != nil {
+		return nil, []Diagnostic{*d}
 	}
 	p, ds := LoadFS(os.DirFS(root))
 	p.Root = root
@@ -115,6 +115,15 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 	slices.SortFunc(p.Records, compareRecords)
 	ds = append(ds, Validate(p.Records)...)
 	return p, sortedDiagnostics(ds)
+}
+
+// Discover finds the project root as Load does, without reading the project.
+func Discover(cwd, explicit string) (string, *Diagnostic) {
+	root, err := discover(cwd, explicit)
+	if err != nil {
+		return "", &Diagnostic{Path: cwd, Field: "grove.yaml", Message: err.Error()}
+	}
+	return root, nil
 }
 
 func discover(cwd, explicit string) (string, error) {
