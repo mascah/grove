@@ -10,147 +10,239 @@ members: []
 depends_on: []
 relates_to: ["W-002", "D-003"]
 created: "2026-09-19T15:36:19Z"
-updated: "2026-09-19T17:50:16Z"
+updated: "2026-09-19T17:59:55Z"
 ---
 
 ## Outcome
 
-Change a record's status and planning fields from the CLI so agents and the
-future workspace can move work without hand-editing frontmatter. Grove's own
-records are the first data.
+Change one record's status and fields from the CLI, preserving human-authored
+Markdown and refusing stale updates. Grove's own records are the first data.
+This specification is ready for owner review; it is not yet approved for
+implementation. It replaces the earlier open-ended shaping proposal.
 
 ## Why now
 
-Created by `grove new` as W-002's first real record. Priority 3: creation and
-inspection are enough to dogfood; this becomes urgent when a UI or run needs
-to change state. Medium reflects revision checks and frontmatter rewriting
-that preserve the human-authored body byte for byte.
+Finish the local record workflow before cross-branch coordination. W-002's
+creation command is implemented; updating supplies the mutation boundary a
+future UI can reuse. Priority 3 is unchanged. Medium reflects source-preserving
+frontmatter edits and concurrency checks within one bounded command.
 
 ## Constraints
 
-- Preserve `created`; set `updated` only when content changes. Compare actual
-  content, not timestamps, before writing; refuse when the file changed
-  underneath the command.
-- Rewrite only the changed frontmatter fields; leave the body and unrelated
-  fields untouched. Validate the whole project after the write.
-- Respect the lifecycle values and planning vocabulary in the record model.
-  Defer renames, moves, deletes, and cross-branch edits.
+- Follow the accepted [record model](../../docs/record-model.md). Preserve ID,
+  type, path, creation date, body bytes, and unrelated frontmatter bytes.
+- Require Git for updates in this first version, as for creation. Plain-directory
+  inspection remains supported. Do not change configuration, refs, or index.
+- Apply one request to one record. No body editing, rename, move, delete,
+  cross-branch routing, workflow enforcement, or generated reason/history prose.
+- A valid status is an explicit assertion, including when reopening. The command
+  does not establish acceptance, review, or integration.
+
+## Design
+
+### Command and revision interface
+
+Proposed commands (not implemented yet):
+
+```sh
+grove show W-003 --json
+grove update W-003 --expect sha256:HEX --set status=active --set priority=2
+grove update W-003 --expect sha256:HEX --set 'depends_on=["W-002"]' --unset size
+```
+
+`show ID --json` returns one JSON object with exactly `id`, `path`, `revision`,
+and `source`. Path is project-relative; source decodes to the exact UTF-8 file
+bytes. Revision is `sha256:` followed by 64 lowercase hexadecimal digits of the
+SHA-256 hash of those bytes, including BOM and line endings. Compute source and
+revision from the same read buffer. Existing plain `show` stdout stays exact;
+project/file context stays on stderr. Reads create no coordination state. W-004
+will use this content-revision convention without needing update behavior.
+
+`update ID` requires exactly one `--expect REVISION` and at least one `--set
+FIELD=VALUE` or `--unset FIELD`. Accept repeated set/unset flags for different
+fields. Reject any field mentioned twice, including set plus unset. Split a set
+argument at the first `=`; preserve the rest as its value. Support both separate
+option arguments and `--option=value`, existing `--project` placement, and help
+without a project. Missing arguments, malformed revision syntax, or duplicate
+options are usage errors (exit 2). Invalid field names, forbidden fields,
+wrong-type fields, invalid values, missing IDs, and stale revisions are
+operation errors (exit 1). No force/ignore-revision option.
+
+Fields accepted by the update command:
+
+| Records | Fields |
+| --- | --- |
+| All | `title`, `status`, `relates_to` |
+| Work | `kind`, `priority`, `size`, `members`, `depends_on` |
+| Questions | `blocks` |
+
+String values are literal nonempty strings subject to the model's validation;
+do not trim meaningful title whitespace. Priority uses decimal digits for an
+integer 1 through 5. Relationship values are JSON arrays of strings; reject null,
+wrong types, duplicate entries, invalid targets, self-links, and cycles through
+existing schema/graph validation. Lists replace the whole ordered list. `[]`
+sets an explicit empty list; `--unset` removes an optional field. Removing an
+absent optional field is a no-op. Setting an absent field to an empty list adds
+that field. Required fields cannot be unset. ID, type, created, and updated
+cannot be set or unset through this command.
+
+On success, stdout is one JSON object with exactly `id`, `path`, `revision`, and
+`changed` (boolean), followed by a newline. The revision describes the resulting
+bytes; a no-op returns the original revision. Diagnostics use stderr. This
+result lets callers continue without hashing a later observation. Success
+returns 0; failures return 1 except usage errors described above.
+
+### Preservation and time
+
+Compare requested values by parsed meaning and list order, while distinguishing
+an absent optional field from a present one. If all changes are no-ops, preserve
+all file bytes, permissions, and dates; still enforce the expected revision.
+
+Apply byte-range edits to changed frontmatter entries and `updated`. Preserve
+all unrelated entries, comments, ordering, delimiters, BOM, existing line
+endings, and the complete body after the closing delimiter. Support the forms
+already accepted by the reader, including block/flow mappings and lists,
+quoted keys/strings, multiline scalar values, and CRLF. Whole-mapping YAML
+serialization does not meet preservation acceptance.
+
+The changed value may use canonical YAML encoding. Preserve comments outside
+that value's syntax span; comments inside a replaced list or multiline value
+may be removed with that value. On unset, remove the entry's key/value and
+syntactically required separator, plus its inline comment; retain standalone
+comment lines and neighboring entries. In a flow mapping, adjust only the
+separator/adjacent spacing needed to remove or append that entry. Append new
+fields in request order at the mapping's end, with newly inserted `updated`
+last. Use the opening delimiter's newline style for inserted lines. Editing
+valid syntax must never fall back to rewriting unrelated entries; fail without
+writing if the implementation cannot safely identify a span, and treat any
+such refusal for an accepted fixture as an implementation gap.
+
+For a changed record, preserve `created`, including its absence, and set
+`updated` to current UTC time truncated to seconds. If that time precedes an
+existing `created` or `updated`, refuse without writing and report clock/date
+inconsistency. Do not invent a future timestamp to make validation pass. Multiple
+changes within one second may share an updated timestamp; revisions remain
+content-based. A no-op does not need a clock adjustment and succeeds even when
+existing dates are ahead of the clock.
+
+### Cooperating writers and publication
+
+Introduce a shared advisory `flock` at `<git-common-dir>/grove/write.lock` for
+record mutations across local worktrees. Keep D-003's allocator `grove/lock`
+and `grove/next-ids` reservation contract unchanged. Never unlink a lock file;
+process exit releases the held lock. A missing write lock is created on first
+mutation; read commands never create it. Update does not initialize or advance
+ID counters. The coarse repository-wide write lock is sufficient for this
+first local-worktree audience.
+
+Both `new` and `update` participate. `new` first reserves its ID under the
+existing allocator lock and releases that lock, then takes the write lock,
+reloads and validates the selected project, creates exclusively, and performs
+its existing final validation. No code holds both locks at once. If the
+configuration changed since the allocation input, or subsequent creation
+fails, retain the consumed reservation and report the failure. Keep existing
+creation output and no-overwrite behavior. Calls using an older Grove binary
+or a direct editor do not participate in the new write-lock guarantee.
+
+For update, acquire the write lock before loading the authoritative project
+snapshot. Validate the whole selected project, find the unique target, check
+`--expect`, and build the candidate in memory. Validate the project with that
+candidate substituted before touching the target; this operation cannot repair
+an already invalid project. Expose a shared validation path rather than copying
+schema or graph rules into the writer.
+
+For a change, prepare a temporary regular file beside the target with a name
+that does not end in `.md`, write and sync its bytes, and preserve the target's
+permission bits. Close it before publication. Immediately before replacement,
+re-read configuration and the record inventory/content and compare them with
+the snapshot used to validate the candidate; refuse a detected change. Verify
+the destination still names the same regular file with the same permissions.
+Replace through same-directory atomic rename and sync the parent directory.
+Reload and validate the project while still holding the write lock, then return
+the result. Clean temporary files on handled failures; an abrupt process kill
+may leave a non-record temporary file but must release the lock.
+
+A direct editor can still write after the last comparison. This is an honest
+limit: cooperating current Grove commands are serialized, and observed external
+changes are refused, but there is no atomic transaction against arbitrary file
+or Git writers. No filesystem rollback can safely promise otherwise.
+
+Before rename succeeds, invalid requests, stale input, and preparation failures
+leave record bytes unchanged. Once rename succeeds, a directory-sync, final
+validation, or output error returns failure and explicitly reports that the
+update was applied (or was a no-op for output failure). Include the target path;
+include the resulting revision when available. Never blindly restore old bytes
+over a possible later edit. An internal result/error must retain publication
+state so CLI output failure cannot erase this distinction. Diagnostics are
+best-effort if stderr itself is unavailable. A failed directory sync reports
+uncertain durability, not a successful durable write.
 
 ## Acceptance
 
-- Set status and each optional work field, including clearing one, with the
-  file otherwise identical.
-- A concurrent edit between read and write is detected and refused.
-- Fixture tests cover valid transitions, invalid values, unchanged no-ops that
-  leave `updated` alone, and unchanged file hashes on failure.
+1. CLI fixtures exercise setting every allowed field on its permitted types,
+   multiple changes together, optional removal, explicit empty lists, literal
+   title punctuation/Unicode, and all invalid requests described above.
+2. Status updates support all valid lifecycle values and reopening without body
+   entries, renaming, or creation-date changes. No acceptance/review policy is
+   inferred from status, relationships, headings, or prose.
+3. Same-value updates, same ordered lists, and removing absent fields preserve
+   full-file hashes and dates. Absent versus explicit empty is tested. Stale
+   expectations still refuse a request that otherwise would be a no-op.
+4. Hash/source pairs agree exactly for plain and JSON inspection, including BOM,
+   CRLF, Unicode, and a body without its final newline. Existing inspection
+   behavior and its zero allocator/lock side effects remain intact.
+5. Byte-preservation fixtures cover accepted block/flow forms, quoted keys,
+   multiline strings, inline and standalone comments, changed-list comments,
+   unrelated field formatting, insertion, and clearing. Semantic validity alone
+   is insufficient; assert unchanged byte ranges as well as final values.
+6. Invalid candidate relationships, duplicate/self links, membership cycles,
+   dependency cycles, and already invalid projects fail without record changes.
+   Missing creation dates stay absent; clock rollback and same-second changes
+   obey the stated time contract.
+7. Detect stale callers after body-only changes with unchanged timestamps, and
+   detected file/configuration/inventory/permission changes during preparation.
+   Two processes updating one record with the same revision produce exactly one
+   changed success; the other refuses without losing the winning change.
+8. Concurrent updates to different records serialize full-project validation:
+   reciprocal dependency additions cannot both succeed and create a cycle.
+   Concurrent new/update operations participate in the same publication lock.
+   Include linked-worktree lock serialization and killing a lock holder; W-002's
+   allocation, gaps, recovery, and no-overwrite tests continue to pass.
+9. Inject temporary-write, sync, close, rename, directory-sync, final-validation,
+   and output failures. Verify original bytes before publication, applied-state
+   reporting after publication, permissions, handled-error cleanup, and no
+   destructive rollback. Do not claim rejection for an undetectable external
+   edit after the final comparison.
+10. A CLI fixture creates a record, updates multiple fields, marks it done,
+    reopens it, and checks the project. This proves the command workflow rather
+    than the truth of the record's prose acceptance.
 
-## Design proposal for handoff
+## Handoff boundary
 
-Shaping inspected main at `ee69c42`, where W-002 is already present. This
-section is a proposal for review, not an accepted extension of the record
-model or an instruction to begin implementation.
+Code inspected at `bea8e92` (product code unchanged from `ee69c42`). Expected
+interfaces are `internal/cli`, shared parsing/graph validation in
+`internal/project`, a new update package, and publication coordination reused
+by `internal/create`. Keep source-editing logic separate from filesystem writes
+so preservation checks do not need concurrency fixtures.
 
-### Smallest useful outcome
+Execution recommendation: one Fable agent in an isolated worktree, W-003 only.
+It owns these overlapping interfaces through verification and review. Runtime
+is a user-started Fable session; no Grove agent runner is assumed. Reassess scope
+if preserving accepted YAML forms requires a substantially larger parser.
 
-One command changes one record in the explicitly selected checkout. It can
-apply several field changes together, allowing an agent to set status and
-planning metadata without intermediate partially applied requests. Keep the
-existing file path and identity. Cross-branch selection belongs to
-[Q-001](../questions/Q-001-branch-versions.md).
-
-Recommended field boundary: `title` and `status` on every record;
-`kind`, `priority`, `size`, `members`, and `depends_on` on work;
-`blocks` on questions; `relates_to` on every type. Optional fields can be
-removed. Relationship updates replace an ordered list; incremental add/remove
-operations can follow if actual usage warrants them. `id`, `type`, `created`,
-and `updated` are not user-settable through this command.
-
-Allow any status value valid for the record type, including reopening. Do not
-require a reason or generate body entries. The accepted model gives status its
-meaning; software validates its value without asserting that acceptance,
-review, or integration happened. A mandatory reason would introduce workflow
-policy and body editing into this first field-update operation.
-
-### Revision and write boundary
-
-Recommend both a caller-supplied content revision and a fresh comparison at
-write time. They address separate cases: an agent acting on an old observation,
-and a file changing while the command prepares an update. Derive the revision
-from all original file bytes, including frontmatter, body, BOM, and line endings;
-do not derive it from `updated`. Expose the revision with the exact source it
-describes through the read interface. Keep existing `show` stdout byte-exact.
-The final command syntax and revision transport still need to be specified.
-
-Serialize cooperating Grove writers across validation and publication. Re-read
-the project after acquiring the write lock and validate the proposed replacement
-against the complete record set before changing the target. Check relationships
-and cycles against the candidate, rather than writing invalid input and relying
-on rollback. Creation and updates need an explicit coordination contract;
-the existing allocator lock only covers ID reservation.
-
-Preserve body bytes and unrelated frontmatter bytes, including comments and
-formatting. Replacing the entire YAML mapping through a serializer does not
-satisfy that requirement. Inspect source spans and fixture coverage for block
-and flow mappings, multiline values, comments, BOM, and CRLF before choosing
-the editing technique. Define how comments attached to a changed or removed
-field behave. Do not silently narrow the reader's accepted YAML forms.
-
-A semantic no-op leaves all bytes and timestamps unchanged. A changed record
-preserves `created` and updates `updated`; the implementation contract must
-also specify behavior when the clock is earlier than an existing date.
-
-Publish a prepared replacement atomically, preserving file permissions. Reject
-invalid input, stale revisions, and preparation failures without changing record
-bytes. Distinguish these from errors after publication: a failed final project
-check or output write must report that the update took effect. Do not blindly
-restore an old file over a later edit. The original acceptance statement about
-unchanged hashes on failure needs this explicit boundary before implementation.
-
-An advisory lock coordinates participating commands; it does not exclude a
-direct editor. Define detected-change refusal and the remaining final
-comparison/publication race honestly. Do not promise a transactional project
-snapshot against arbitrary external writers.
-
-### Acceptance cases to make executable
-
-Alongside the existing acceptance, the final specification should cover:
-
-- Updating several fields together; clearing optional fields; wrong-type fields;
-  invalid lifecycle values; missing targets; self-links; and both cycle types.
-- Reopening each record type without adding generated narrative or changing its
-  identity, path, or creation date.
-- No-op comparisons by field meaning, including an already absent optional
-  field, with unchanged full-file hashes.
-- A stale caller revision caused only by a body edit or unchanged timestamp;
-  an edit during preparation; and two cooperating writers using one revision.
-- Byte preservation across the accepted YAML forms, comments, Unicode, BOM,
-  CRLF, and a body without a final newline.
-- Write, replacement, and post-publication failures, with assertions appropriate
-  to which side of publication failed; preserved permissions and temporary-file
-  cleanup.
-- A CLI fixture that creates a record, updates it, marks it done, reopens it,
-  and validates the resulting project. This proves the command workflow, not
-  fulfillment of the record's prose acceptance.
-
-### Handoff readiness
-
-Recommend one Fable implementation session in an isolated worktree after this
-contract is settled. CLI parsing, project validation, preservation, and write
-coordination share interfaces and should be prepared together. W-002 is present
-in the inspected base; Q-001 does not block this checkout-local operation.
-
-Before handing off, settle command/revision syntax, supported non-Git mutation
-behavior, coordination with `new`, changed-field comment handling, and the exact
-failure guarantees above. Then prepare ordered implementation steps against the
-actual code and map checks to acceptance. Use the repository's full Go suite,
-race suite, and vet, plus independent review of preservation and concurrency.
-No Fable runtime or adapter has been invoked or demonstrated in this shaping.
+After owner review of this specification, prepare the implementation plan with
+acceptance-to-check mapping, then implement in the selected worktree. Required
+checks are relevant fixtures, `go test ./...`, `go test -race ./...`,
+`go vet ./...`, and gofmt. Obtain independent review focused on source
+preservation, concurrent writers, and publication failure reporting. Reconcile
+README, model, brief, and this work record with actual evidence on closure.
+Implementation completion is in its branch context; integration remains a
+separate step. Do not start W-004/W-005 as part of this assignment.
 
 ## Next
 
-Review the proposed update boundary, then finish the command and write contract
-and prepare W-003 for Fable. The owner selected cross-branch coordination as
-the following experience: [W-004](W-004-record-versions.md) proposes version
-inspection and [W-005](W-005-record-workspace.md) workspace location. Their
-read-only behavior does not depend on updates; coordinate shared CLI and
-project-loader interfaces when preparing execution.
+Owner review of this concrete specification, then preparation of Fable's W-003
+implementation plan. While Fable implements W-003, finish W-004's output/source
+selector contract and W-005's consuming contract. Implement those sequentially
+after reviewing the actual shared interfaces; W-004's read-only behavior has no
+hard dependency on updates, while W-005 requires W-004.

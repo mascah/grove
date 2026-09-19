@@ -300,10 +300,14 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** review the shaping proposal in
-[W-003](../grove/work/W-003-update-records.md), then settle its command, revision,
-preservation, and write-failure contract for a Claude Fable implementation
-handoff. The proposal is not yet an accepted implementation specification.
+**Next action:** owner review of the concrete specification in
+[W-003](../grove/work/W-003-update-records.md), then prepare its Claude Fable
+implementation plan. W-003 now specifies command/revision syntax, preservation,
+coordination with creation, and write-failure behavior; it is awaiting review,
+not dispatched. Recommend W-003 alone for the first Fable implementation,
+followed by review and integration. W-004 and W-005 remain later assignments;
+their shared source selector is still being shaped. Keep implementation serial
+while CLI and project-loader ownership overlaps.
 The owner selected cross-branch coordination as the following experience.
 With [Q-001](../grove/questions/Q-001-branch-versions.md) resolved, finalize the
 source/selector contract for [W-004](../grove/work/W-004-record-versions.md),
