@@ -1,14 +1,15 @@
 # Starter record model
 
-Status: proposal for review, 2026-09-18. The owner accepted starting with work,
-questions, and decisions and deferring structured attachments, reviews, and
-reports. The specific fields and lifecycles below are proposed, not yet an
-implemented or approved schema. [The restart brief](restart-brief.md) owns
-product direction; these examples are not an additional operational backlog.
+Status: core model accepted, 2026-09-18, on the owner's response "yup this looks
+good" to the draft. This covers the representation, fields, relationships,
+lifecycles, and initial validation boundary below. Identity allocation and
+storage layout/versioning remain open. No implementation exists yet.
+[The restart brief](restart-brief.md) owns product direction; these examples
+are not an additional operational backlog.
 
 ## Minimum representation
 
-Propose one Markdown file per record, with YAML frontmatter for facts that the
+Use one Markdown file per record, with YAML frontmatter for facts that the
 CLI interprets and a freeform Markdown body for explanation.
 
 | Field | Purpose |
@@ -31,11 +32,24 @@ before implementing record creation. Links resolve by stable ID, not filename.
 The first implementation also needs a schema-version marker; its location and
 project configuration remain to be settled with storage layout.
 
+Proposed defaults for those remaining choices:
+
+- Generate type-prefixed random IDs independently in each checkout, preserving
+  them through renames and branch creation. Avoid a shared sequential counter.
+  The encoding/length and abbreviated lookup behavior still need specification.
+- Use root `grove.yaml` for the schema version and a configurable record folder,
+  defaulting to `docs/grove/records/`. Keep all three types in that folder; type
+  is metadata rather than inferred from the directory name.
+- Use `<id>-<readable-slug>.md` filenames for navigation. Relationships use the
+  stored ID, so a filename change does not invalidate them.
+
+These defaults are recommendations, not part of the earlier core-model approval.
+
 ## Three examples
 
 These use real topics from Grove's development to test the model. The decision
 example represents direction already recorded in the brief; the work describes
-a proposed outcome. Exact filenames and metadata syntax remain proposals.
+a proposed outcome. Example IDs and filenames are illustrative.
 
 ### Work: an intended outcome
 
@@ -95,7 +109,7 @@ The owner accepted the branch-context restriction provided normal navigation
 requires little thought. Revisit if this makes project management cumbersome.
 ```
 
-## Proposed lifecycle and validation boundary
+## Lifecycle and validation boundary
 
 - Work: `proposed`, `active`, `done`, `abandoned`.
 - Question: `open`, `resolved`; retain the answer in its body or link to the
@@ -117,7 +131,7 @@ different branches are versions to reconcile, not automatically ID collisions.
 
 ## First dogfooding boundary
 
-Review these examples, settle identity allocation and storage layout/versioning,
+Settle identity allocation and storage layout/versioning,
 then use the agreed records to track the new CLI's own development. Begin with
 listing, showing, and validating one checkout, followed by safe creation and
 updates. Branch aggregation and workspace navigation build on that foundation.

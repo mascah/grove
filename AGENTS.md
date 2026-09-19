@@ -5,8 +5,10 @@ currently containing documentation only. The brief distinguishes selected
 direction, observed evidence, and proposed design; preserve those distinctions.
 
 - Keep the product useful through ordinary local files and a CLI without a
-  required running service. Storage format, language, UI framework, and runner
-  contract remain open until explicitly settled.
+  required running service. The core record model in `docs/record-model.md`
+  is accepted: Markdown with YAML frontmatter. Use Go for the first CLI.
+  Identity allocation, storage layout/versioning, UI framework, and runner
+  contract remain open.
 - Keep deterministic validation and state changes in software where useful;
   do not assume software can replace judgment instructions or prove acceptance.
 - Record settled choices and the concrete next action in the brief while it
@@ -25,4 +27,3 @@ direction, observed evidence, and proposed design; preserve those distinctions.
 - Verify claims against actual results. Documentation-only changes need link
   and consistency checks; do not invent an application test suite before code
   exists.
-

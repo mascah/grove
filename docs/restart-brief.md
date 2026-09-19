@@ -43,6 +43,8 @@ possibilities, not established first-release requirements.
 Selected direction:
 
 - A standalone Grove CLI project, with durable local project records.
+- Go for the first CLI implementation, explicitly selected by the owner on
+  2026-09-18. A TUI framework has not been selected.
 - Core use without a required hosted server or persistent daemon.
 - Human and agent access to the same underlying project state.
 - Linked work, dependencies, assignees, and attached evidence/artifacts.
@@ -63,9 +65,11 @@ Selected direction:
 Starting scope accepted on 2026-09-18: use work, questions, and decisions as the
 minimum to begin dogfooding. Defer implementing structured attachments such as
 reviews and reports; ordinary prose and links can support early development.
-The [starter record model](record-model-draft.md) contains concrete examples and
-proposed field/lifecycle semantics for review. Acceptance of the starting scope
-does not automatically approve those detailed schema choices.
+The owner subsequently accepted the [starter record model](record-model.md):
+Markdown with YAML frontmatter, the four required fields, optional typed
+relationships, explicit lifecycles, and the initial validation boundary.
+Identity allocation and file layout/configuration remain to be settled. Go is
+selected for implementation. The examples are not yet operational project records.
 
 “Stateless CLI” means commands need no resident application process. Project
 records and recoverable coordination necessarily have state. File-backed,
@@ -235,8 +239,8 @@ too disruptive. [Git worktree facilities](https://git-scm.com/docs/git-worktree)
 
 Related details to resolve at the appropriate boundary:
 
-- Markdown plus frontmatter versus another canonical format; safe concurrent
-  edits, schema versions, direct-editor behavior, and rebuildable indexes.
+- Safe concurrent Markdown/frontmatter edits, schema versions, direct-editor
+  behavior, and rebuildable indexes.
 - Stable IDs across independently edited branches; dependency and membership
   semantics; stale writes and conflict handling.
 - Responsibility/assignee versus the particular session holding a claim.
@@ -251,15 +255,14 @@ Related details to resolve at the appropriate boundary:
 
 ## Suggested sequence and current next action
 
-1. Draft a minimal record model using Grove's own next work. Example subjects:
-   the accepted branch-context decision, the open question of conflicting
-   versions of one work item, and proposed work to inspect Grove records through
-   the new CLI. Explain each field and relationship before adopting templates.
-   Keep these as design examples until their schema and lifecycle are settled.
+1. Core record model accepted: [the model](record-model.md) uses Grove's own
+   branch-context decision, branch-version question, and proposed inspection
+   work as examples. Settle identity allocation and storage layout/versioning
+   before creating operational records; then maintain each fact in its owner.
 2. Walk one work record through creation, implementation on a branch, review,
    integration, and reopening. Keep work, an execution attempt, and review
    evidence distinct. Resolve identity, version selection, and completion meaning.
-3. Select the implementation stack and build a small CLI that lists, shows, and
+3. Use Go to build a small CLI that lists, shows, and
    validates the agreed records, then supports safe mutations. Use actual Grove
    development records for the first dogfooding; keep the restart brief as the
    direction owner until an explicit migration avoids duplicate ownership.
@@ -271,12 +274,10 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next conversation:** review the [minimal record examples](record-model-draft.md),
-starting with what a work item means and what software must interpret from it.
-The starting scope is accepted; required fields, statuses, identity allocation,
-and storage syntax remain proposals. Settle that small contract and choose the
-implementation stack, then build the first inspection commands against Grove's
-own records. Do not initialize the predecessor's templates implicitly.
+**Next action:** settle ID generation and file layout/configuration for the
+accepted [record model](record-model.md). Go is selected for the first CLI. Prepare
+the first inspection commands against Grove's own records. Do not initialize
+the predecessor's templates implicitly.
 
 ## Reset and scope record
 

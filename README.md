@@ -4,7 +4,8 @@ A local project workspace for humans and agents, built around a CLI and durable 
 
 **Status: restart brief captured; new implementation has not started.**
 
-Start with [the restart brief](docs/restart-brief.md). It records the selected
+Start with [the restart brief](docs/restart-brief.md) and
+[the accepted record model](docs/record-model.md). The brief records the selected
 direction, the reasoning from the existing Grove skills and nullsec workflow,
 open design questions, and the next useful experiment.
 
@@ -30,11 +31,11 @@ the real project providing workflow evidence. Neither is migrated by this reset.
 
 Give a new agent this prompt:
 
-> Read AGENTS.md and docs/restart-brief.md. Continue shaping the file-backed
+> Read AGENTS.md, docs/restart-brief.md, and docs/record-model.md. Continue the file-backed
 > Grove CLI and interactive workspace described there. The old application was
-> archived, and the new implementation has not started. Begin with the first
-> end-to-end experience and resolve where project records, worktree ownership,
-> and agent run results live. Treat the brief's proposals as proposals. Inspect
+> archived, and the new implementation has not started. Go is selected. Settle
+> ID generation and file layout/configuration for the accepted core model,
+> then prepare the first CLI inspection commands. Treat the brief's
+> remaining proposals as proposals. Inspect
 > the sibling skills and nullsec projects through their Grove CLI when evidence
 > is needed. Preserve this direction and update the brief as choices settle.
-
