@@ -2,11 +2,11 @@
 id: "Q-001"
 type: question
 title: How should the board present differing versions of one record?
-status: open
+status: resolved
 blocks: ["W-004", "W-005"]
 relates_to: ["W-001", "W-003"]
 created: "2026-09-19T14:08:40Z"
-updated: "2026-09-19T17:50:16Z"
+updated: "2026-09-19T17:54:10Z"
 ---
 
 ## Question
@@ -19,58 +19,47 @@ each version without silently editing the wrong checkout?
 
 The [restart brief](../../docs/restart-brief.md#cross-branch-view-and-branch-context-editing-2026-09-18)
 owns the accepted branch-context direction and the earlier routing experiment.
-Resolve version selection, visible source labels, live versus committed data,
-and routing to the selected checkout before implementing a combined board.
+The answer below settles presentation and explicit version selection. Detailed
+source and routing contracts belong to the proposed W-004 and W-005 designs.
 
-This blocks the proposed version inspection and workspace-location contracts
-in W-004 and W-005. It does not block W-003 or existing single-checkout
-inspection. Claims and run lifetimes need their own design when execution
+This question previously blocked W-004 and W-005. Its resolved status removes
+that policy blocker; it does not establish implementation readiness or completed
+verification. Claims and run lifetimes need their own design when execution
 enters scope.
 
-## Proposed answer for review
+## Answer
 
-The owner selected cross-branch coordination as the next experience on
-2026-09-19. The following policy remains proposed; selection of the experience
-does not itself approve these rules.
+On 2026-09-19 the owner selected: "Group under W-003, show both branch statuses,
+and require a version selection to open a workspace."
 
 Group observations by record ID and retain each source explicitly. When main
 says `proposed` and a feature checkout says `done`, show both statuses. Do not
 invent one authoritative status or infer integration from the feature's state.
-Identical bytes may be summarized together, but every source remains selectable.
-Grouping is a navigation aid, not proof that independently imported matching
-IDs share an origin. Do not merge records automatically.
+Require explicit version selection before opening its workspace. Grouping is a
+navigation aid, not proof that independently imported matching IDs share an
+origin, and does not authorize merging records automatically.
 
-Three alternatives:
+## Alternatives considered
 
-- Explicit versions (recommended): exposes divergence and makes the editing
+- Explicit versions (selected): exposes divergence and makes the editing
   destination deliberate. Costs an extra selection when sources differ.
 - Main as headline: gives a familiar baseline, but hides branch progress in the
   default summary and assumes a branch should govern all work.
 - Latest `updated` as headline: reduces selection, but direct editors need not
   maintain dates and a recent edit does not establish authority or integration.
 
-Start with local branch tips and registered live worktrees in the same Git
-repository. Branch snapshots and live files are separate observations. Read each
-source's own configuration at the selected project's repository-relative path.
-Do not combine relationships across sources or let a missing dependency on one
-branch resolve from another. Remote-tracking refs, tags, historical timelines,
-cross-clone reconciliation, and ownership claims are outside this first view.
-
-Keep committed observations visible when live records differ or disappear;
-report the live difference or absence. Invalid or inaccessible sources remain
-visible as diagnostics, with the combined result marked incomplete. Never
-silently substitute committed bytes for invalid live data. Existing local
-inspection commands keep their current strict validation behavior.
-
-Opening an existing workspace requires explicit source identity and freshness
-checks. If the selected committed record differs from the live file, show that
-difference and require selection of the live observation before returning it
-as the editing context. A missing checkout is a distinct outcome; it does not
-authorize switching another directory or creating one implicitly.
-
 Reconsider the display policy if real usage makes explicit version selection
 too noisy. A default view may summarize identical content while preserving
 source selection; timestamps alone must not establish authority.
+
+## Remaining design ownership
+
+[W-004](../work/W-004-record-versions.md) owns the proposed source scope,
+committed/live representation, validation, output, and selector contract.
+[W-005](../work/W-005-record-workspace.md) owns proposed workspace lookup,
+freshness checks, and missing/ambiguous-checkout outcomes. The owner's answer
+does not approve every technical proposal in those work records. Finalize those
+contracts during shaping without reopening this settled presentation choice.
 
 ## Inspected evidence
 
@@ -92,7 +81,6 @@ brief establishes only basic routing feasibility.
 
 ## Next
 
-Review the explicit-version policy with the owner, then reconcile this answer
-with the W-004/W-005 specifications and retain this question as resolved.
-Implementation fixtures must exercise conflicting edits, dirty and missing live
-records, branch changes after selection, and a branch without a checkout.
+Retain this answer as the policy reference for W-004 and W-005. Prepare their
+remaining contracts and acceptance fixtures, including differing branch statuses
+and explicit workspace selection. No combined view has been implemented yet.

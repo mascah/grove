@@ -9,7 +9,7 @@ size: medium
 depends_on: []
 relates_to: ["Q-001", "W-003"]
 created: "2026-09-19T17:49:58Z"
-updated: "2026-09-19T17:50:16Z"
+updated: "2026-09-19T17:54:10Z"
 ---
 
 ## Outcome
@@ -17,7 +17,8 @@ updated: "2026-09-19T17:50:16Z"
 From one checkout, inspect the records on local branch tips and in registered
 worktrees, with enough source information to choose which version to act on.
 Main can show Fable's branch progress without switching branches or merging
-records. This is a proposed specification pending Q-001's policy review.
+records. Q-001's grouping and explicit-selection policy is accepted; the
+implementation contract below remains proposed.
 
 ## Why now
 
@@ -34,6 +35,9 @@ alongside this feature but is not a read-only inspection prerequisite.
   and source-local relationship validation. No schema migration or new records.
 - Q-001 owns version policy. No automatic status reconciliation, integration
   inference, timestamp precedence, or inferred execution ownership.
+- Group by record ID and show each branch's status. Preserve explicit source
+  choices for opening a workspace; no group-level default grants an editing
+  destination, even when observations contain identical bytes.
 - First scope: local branch tips and registered live worktrees in the same
   repository. No fetch, remote refs, tags, historical search, or persistent index.
 
@@ -58,7 +62,8 @@ NUL-delimited path formats and full refs; do not parse display-oriented paths.
 
 Each observation needs record ID, source kind (committed/live), full branch ref
 when attached, observed commit, worktree identity/path for live data, relative
-project and record paths, content revision, and validated metadata. JSON also
+project and record paths, configuration revision, content revision, and validated
+metadata. JSON also
 provides exact source text and source diagnostics. The record content revision
 must use the same byte-hash convention as W-003; a version selector additionally
 binds source identity and cannot be just the record hash or a transient row
@@ -110,6 +115,6 @@ vet, and independent review of source identity and incomplete-result handling.
 
 ## Next
 
-Resolve Q-001's display policy; finalize the JSON/selector contract and ordered
-implementation plan. W-005 consumes this source identity. Do not dispatch this
-draft as an already approved specification.
+Finalize the JSON/selector contract and ordered implementation plan using
+Q-001's accepted policy. W-005 consumes this source identity. Do not dispatch
+this draft as an already approved specification.

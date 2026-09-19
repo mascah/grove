@@ -58,12 +58,14 @@ Selected direction:
   view. The owner accepts editing a record in its branch context for now,
   provided Grove makes reaching that context low-friction. Opening the existing
   worktree as the editing/execution context is accepted interaction direction;
-  precise routing and aggregation behavior remain to be designed.
+  detailed source and routing contracts remain to be designed.
 - Next experience selected on 2026-09-19: coordinate work across local branches
   by seeing record versions and opening the right workspace. This guides work
-  after safe record updates; version-selection policy and implementation scope
-  still need design. A checkout-local board and agent launching are later
-  investments.
+  after safe record updates. The owner also selected grouping by record ID,
+  showing each branch's status, and requiring explicit version selection before
+  opening a workspace; [Q-001](../grove/questions/Q-001-branch-versions.md) retains
+  that answer. Implementation contracts still need design. A checkout-local
+  board and agent launching are later investments.
 - Eventual agent execution from that workspace, with `claude -p` as the concrete
   first-provider idea. Exact invocation and lifecycle behavior need validation.
 - A clean implementation start, informed by the working skills and nullsec
@@ -225,8 +227,10 @@ Proposed safeguards: revalidate the target branch and record revision before a
 mutation, preserve dirty files/index state, and coordinate writes with an active
 agent. A worktree's existence does not imply exclusive ownership or permission
 to change an agent's assignment. Show whether a card reflects committed branch
-data or live working files. Keep the selected version's source visible; exact
-aggregation precedence and claim/handoff semantics remain open.
+data or live working files. Keep the selected version's source visible. The
+owner subsequently selected explicit versions with no authoritative aggregate
+status; Q-001 retains that answer. Source-discovery details and claim/handoff
+semantics remain open.
 
 A temporary Git 2.50.1 probe reproduced the duplicate-checkout refusal, located
 the existing feature worktree through porcelain output, and edited its record.
@@ -245,10 +249,11 @@ too disruptive. [Git worktree facilities](https://git-scm.com/docs/git-worktree)
 
 ### Remaining questions
 
-1. **How does the combined view resolve and edit records?** The operational
-   [branch-version question](../grove/questions/Q-001-branch-versions.md)
-   owns this uncertainty. Resolve it before the combined board; it does not block
-   local file inspection. Claims and run-record lifetimes remain future design.
+1. **How does a selected version reach its workspace?**
+   [Q-001](../grove/questions/Q-001-branch-versions.md) resolves presentation:
+   group by ID, show each branch's status, and select a version explicitly.
+   W-004 and W-005 own the remaining source/selector and routing contracts.
+   Claims and run-record lifetimes remain future design.
 2. **What does one run promise?** Define its input, actor/attempt identity,
    working directory, output, failure/wait state, cancellation, interruption
    recovery, and reconciliation. Establish what happens when the TUI exits.
@@ -300,8 +305,9 @@ Related details to resolve at the appropriate boundary:
 preservation, and write-failure contract for a Claude Fable implementation
 handoff. The proposal is not yet an accepted implementation specification.
 The owner selected cross-branch coordination as the following experience.
-Resolve [Q-001](../grove/questions/Q-001-branch-versions.md) to prepare
-[W-004](../grove/work/W-004-record-versions.md), version inspection, followed by
+With [Q-001](../grove/questions/Q-001-branch-versions.md) resolved, finalize the
+source/selector contract for [W-004](../grove/work/W-004-record-versions.md),
+version inspection, followed by
 [W-005](../grove/work/W-005-record-workspace.md), locating an existing workspace.
 These are proposed CLI foundations for Open workspace; automatic worktree
 creation and its interactive presentation remain to be shaped. Read-only

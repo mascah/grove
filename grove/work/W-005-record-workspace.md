@@ -9,7 +9,7 @@ size: medium
 depends_on: ["W-004"]
 relates_to: ["Q-001", "W-003"]
 created: "2026-09-19T17:50:01Z"
-updated: "2026-09-19T17:50:16Z"
+updated: "2026-09-19T17:54:10Z"
 ---
 
 ## Outcome
@@ -30,7 +30,8 @@ prerequisite because this operation consumes its source identity contract.
 
 - Keep current branch, working directory, refs, records, and staged/dirty files
   unchanged. Do not acquire an agent claim or infer that a checkout is idle.
-- Use explicit version identity. Never guess from record ID, newest timestamp,
+- Q-001 requires explicit version selection before opening a workspace. Use
+  that version's source identity. Never guess from record ID, newest timestamp,
   a branch-name-derived directory, or content equality alone.
 - No worktree creation/deletion, forced checkout, editor configuration, child
   shell, agent launch, or cross-branch mutation in this unit.
@@ -89,7 +90,8 @@ and independent review of stale selections and unintended Git writes.
 
 ## Next
 
-Resolve Q-001 and finish W-004's selector specification, then prepare this unit's
-implementation steps. After these CLI foundations, shape the interactive Open
-workspace action and explicit creation for branches without a checkout. Do not
+Finish W-004's selector specification under Q-001's accepted policy, then
+prepare this unit's implementation steps. After these CLI foundations, shape
+the interactive Open workspace action and explicit creation for branches
+without a checkout. Do not
 treat path resolution as completion of that entire user experience.

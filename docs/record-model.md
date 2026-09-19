@@ -311,7 +311,8 @@ The earlier illustrative examples have been replaced by real records:
 - [Work: inspect project records](../grove/work/W-001-inspect-records.md)
   owns the first CLI's completed outcome and verification evidence.
 - [Question: branch versions](../grove/questions/Q-001-branch-versions.md)
-  owns the unresolved version-selection question; it does not block local inspection.
+  retains the accepted grouping and explicit-version-selection policy; source
+  and routing implementation contracts remain in W-004 and W-005.
 - [Decision: starter defaults](../grove/decisions/D-001-starter-defaults.md)
   records acceptance and points here for the schema rather than copying it.
 - [Work: create records](../grove/work/W-002-create-records.md) owns the
