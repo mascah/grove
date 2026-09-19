@@ -3,7 +3,8 @@
 A local project workspace for humans and agents, built around a CLI and durable files.
 
 **Status: the first Go CLI lists, shows, validates, creates, and updates local
-project records, and shows each record's versions across local branches.**
+project records, shows each record's versions across local branches, and
+locates the checkout holding a selected version.**
 
 Start with [the restart brief](docs/restart-brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
@@ -26,7 +27,8 @@ go run ./cmd/grove new work "Title of the work" --slug short-name
 go run ./cmd/grove show W-001 --json
 go run ./cmd/grove update W-001 --expect sha256:HEX --set status=active --unset size
 go run ./cmd/grove versions W-001 --json
-go run ./cmd/grove --project /path/to/project check
+go run ./cmd/grove workspace --source SELECTOR --json
+go run ./cmd/grove --project "$(go run ./cmd/grove workspace --source SELECTOR)" show W-001
 ```
 
 The first three commands read live files without modifying them; `new` adds
@@ -66,9 +68,24 @@ the exit code 1 while valid sources still print. `--json` adds each version's
 exact source text. No status is chosen as authoritative, and the command
 writes nothing: no refs, index, worktrees, records, or coordination state.
 
+`workspace --source SELECTOR` takes one selector from `versions`, checks that
+the version is still exactly what was selected, and prints the absolute
+project directory of the existing checkout holding it, ready for `--project`.
+A live selection resolves to its worktree. A committed selection resolves to
+the one worktree that has that branch checked out, provided its live copy of
+the record still has the committed bytes; otherwise, or when no or several
+worktrees hold the branch, it refuses and says to run `versions` again and
+select a live version. Any change since selection (branch or HEAD moved,
+worktree moved or removed, attached or detached state, configuration, record
+path, or content) refuses with the reason. The command never creates a
+worktree, switches a branch, launches anything, claims ownership, or edits a
+record; the directory it prints is a location, not write authority, and a
+later `update` performs its own revision check. These two commands are the
+CLI foundation for a future interactive Open workspace action; creating a
+worktree for a branch without one remains future work.
+
 Use `go test ./...`, `go test -race ./...`, and `go vet ./...` for verification.
-Locating a selected version's workspace, TUI, and agent execution remain
-future work.
+TUI and agent execution remain future work.
 
 The intended experience combines linked work, questions, research, project
 knowledge, and evidence. A CLI serves agents and humans; a TUI can make the
@@ -95,7 +112,8 @@ Give a new agent this prompt:
 > Read AGENTS.md, docs/restart-brief.md, and docs/record-model.md. Continue the file-backed
 > Grove CLI and interactive workspace described there. The old application was
 > archived. The Go list/show/check/new/update CLI and its records now work
-> locally; W-001, W-002, and W-003 record verification. Follow the brief's
+> locally, as do versions and workspace; W-001 through W-005 record
+> verification. Follow the brief's
 > next action. Treat the brief's
 > remaining proposals as proposals. Inspect
 > the sibling skills and nullsec projects through their Grove CLI when evidence

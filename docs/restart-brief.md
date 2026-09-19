@@ -2,8 +2,9 @@
 
 Captured: 2026-09-18.
 Status: product direction and starter file defaults selected; the Go CLI
-reads, validates, creates, and updates the operational records. This document is the restart's
-current source of intent.
+reads, validates, creates, and updates the operational records, shows their
+versions across local branches, and locates a selected version's checkout.
+This document is the restart's current source of intent.
 
 ## Intent and authority
 
@@ -64,8 +65,12 @@ Selected direction:
   after safe record updates. The owner also selected grouping by record ID,
   showing each branch's status, and requiring explicit version selection before
   opening a workspace; [Q-001](../grove/questions/Q-001-branch-versions.md) retains
-  that answer. Implementation contracts still need design. A checkout-local
-  board and agent launching are later investments.
+  that answer. W-004 and W-005 implemented the CLI foundations on
+  2026-09-19: `versions` and `workspace`, with the selector contract in
+  their shared [coordination plan](plans/W-004-W-005-coordination.md). The
+  interactive Open workspace action, creating a worktree for a branch
+  without one, a checkout-local board, and agent launching are later
+  investments.
 - Eventual agent execution from that workspace, with `claude -p` as the concrete
   first-provider idea. Exact invocation and lifecycle behavior need validation.
 - A clean implementation start, informed by the working skills and nullsec
@@ -252,8 +257,11 @@ too disruptive. [Git worktree facilities](https://git-scm.com/docs/git-worktree)
 1. **How does a selected version reach its workspace?**
    [Q-001](../grove/questions/Q-001-branch-versions.md) resolves presentation:
    group by ID, show each branch's status, and select a version explicitly.
-   W-004 and W-005 own the remaining source/selector and routing contracts.
-   Claims and run-record lifetimes remain future design.
+   W-004 and W-005 deliver the CLI contracts: a selector per observed
+   version and a `workspace` command that resolves it to an existing
+   checkout or refuses with the reason. How an interactive view presents
+   those rows, when a missing checkout is created, and claims and run-record
+   lifetimes remain future design.
 2. **What does one run promise?** Define its input, actor/attempt identity,
    working directory, output, failure/wait state, cancellation, interruption
    recovery, and reconciliation. Establish what happens when the TUI exits.
@@ -300,28 +308,26 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** integrate branch `worktree-W-003` into main.
-[W-003](../grove/work/W-003-update-records.md) is done in its branch context:
-`show --json` content revisions, `update` with source-preserving frontmatter
-edits, and a write lock shared with `new`, implemented, reviewed, and verified
-on 2026-09-19. Integration is a separate step; the owner performs it. W-004
-and W-005 remain later assignments; their shared source selector is still being
-shaped. Keep implementation serial while CLI and project-loader ownership
-overlaps.
-The owner selected cross-branch coordination as the following experience.
-With [Q-001](../grove/questions/Q-001-branch-versions.md) resolved, finalize the
-source/selector contract for [W-004](../grove/work/W-004-record-versions.md),
-version inspection, followed by
-[W-005](../grove/work/W-005-record-workspace.md), locating an existing workspace.
-These are proposed CLI foundations for Open workspace; automatic worktree
-creation and its interactive presentation remain to be shaped. Read-only
-version inspection does not technically depend on W-003. Creation is complete in
+**Next action:** integrate branch `worktree-W-004-W-005` into main.
+[W-004](../grove/work/W-004-record-versions.md) and
+[W-005](../grove/work/W-005-record-workspace.md) are done in that branch
+context: `versions` shows each record's committed version on every local
+branch and live version in every worktree with a selector per version, and
+`workspace --source` resolves a selected version to its existing checkout or
+refuses with the reason, both implemented, reviewed, and verified on
+2026-09-19 per the [coordination plan](plans/W-004-W-005-coordination.md).
+Integration is a separate step; the owner performs it. W-003 was integrated
+at `b20d2b0`. After integration, the next investment is the interactive Open
+workspace experience over these commands: presenting version rows, explicit
+selection, and creating a linked worktree for a branch that has no checkout,
+which the CLI deliberately refuses today. Keep implementation serial while
+CLI and project-loader ownership overlaps. Creation is complete in
 [W-002](../grove/work/W-002-create-records.md): use `go run ./cmd/grove new`
 for every new record; the allocator per [D-003](../grove/decisions/D-003-allocator-mechanism.md)
 shares one counter across linked worktrees, and separate-clone and import
 conflicts stay out of scope. Inspection is complete in
 [W-001](../grove/work/W-001-inspect-records.md): use `list`, `show ID`, or `check`. Keep the installed sibling CLI untouched;
-cross-branch aggregation, TUI, and execution remain later work.
+TUI and execution remain later work.
 
 ## Reset and scope record
 
@@ -336,6 +342,6 @@ does not alter any external service, database, credential, remote repository,
 or installed CLI. The sibling skills and nullsec projects remain unchanged.
 No runner has been launched and no TUI framework has been selected. The new
 Markdown/frontmatter format and file defaults are selected; `grove.yaml` and
-operational records exist, and the inspection, creation, and update CLI is
-implemented and verified locally. It has not replaced the installed sibling
-executable.
+operational records exist, and the inspection, creation, update, versions,
+and workspace CLI is implemented and verified locally. It has not replaced
+the installed sibling executable.

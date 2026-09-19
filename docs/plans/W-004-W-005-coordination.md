@@ -100,8 +100,10 @@ preserved in JSON.
 selector's record immediately before answering. A live selector succeeds only
 when the current live observation reproduces the selector exactly. A
 committed selector succeeds only when the branch still points at the observed
-commit, exactly one registered worktree has that branch checked out, and that
-checkout's live record has the committed bytes at the committed path. Success
+commit, exactly one enterable registered worktree has that branch checked
+out (a prunable or foreign entry is not a checkout), that checkout's live
+`grove.yaml` has the committed configuration bytes, and its live record has
+the committed bytes at the committed path. Success
 prints the absolute project directory inside the checkout; JSON carries
 `checkout, project, record, ref, head, revision, selector`. Distinct
 refusals: malformed selector (exit 2); worktree or branch no longer present;
@@ -121,9 +123,11 @@ creates nothing and never calls `repo.CommonDir`.
 3. [x] CLI `versions [ID] [--json]`, usage, stderr context, exit codes.
 4. [x] W-004 fixtures (table below), suites, race, vet, gofmt, `check`,
    Git-state hashes, independent review, fixes, evidence, W-004 done.
-5. [ ] `internal/workspace`: selector parsing, resolution, attribution.
-6. [ ] CLI `workspace --source SELECTOR [--json]`.
-7. [ ] W-005 fixtures, joint fixture, suites, combined review, fixes,
+5. [x] `internal/versions/workspace.go` (kept in the versions package to
+   share fixtures and the inspection): selector parsing, resolution,
+   attribution.
+6. [x] CLI `workspace --source SELECTOR [--json]`.
+7. [x] W-005 fixtures, joint fixture, suites, combined review, fixes,
    evidence, W-005 done; README, model, brief reconciled.
 
 ## Acceptance to checks
@@ -213,3 +217,73 @@ Commits on `worktree-W-004-W-005`: `5c08930` (plan, W-004 active),
 - Limits: no fetch, remotes, tags, or history; separate clones are separate
   repositories; a source can change after it was read, which selectors
   expose at resolution time rather than prevent.
+
+### W-005
+
+Commits: `77cb1ce` (`workspace`, W-005 active), `d232aa2` (review
+fixes). Prepared against W-004's closed interface at `a465d88`.
+
+- `gofmt -l .` clean, `go vet ./...`, `go test ./...`, and
+  `go test -race ./...` pass for every package; `check` reports 9 records.
+- `internal/versions` fixtures (`workspace_test.go`): selector grammar
+  accepts every form `versions` prints, including a branch name containing
+  `@` and the `.` locator, and rejects fourteen malformed forms; from main
+  with the project below the repository root, a live feature selection
+  returns the exact checkout, project, record path, branch, HEAD, and
+  revision while both checkouts, their staged and unstaged files, and Git
+  state hash identically afterwards; main's own live and committed versions
+  resolve to main; a matching committed selection resolves to its checkout
+  and reports the live selector; an edited live record refuses the committed
+  selection with "select the live observation" and the old live selection
+  with "changed since it was selected", the fresh live selection resolves,
+  and a deleted record refuses both; a HEAD move refuses live and committed
+  selections with distinct attribution; detaching, re-attaching, renaming
+  the record, changing `grove.yaml`, moving the worktree, removing it, and
+  deleting the branch each refuse with their own reason, and restoring the
+  state resolves again; an invalid current checkout is reported as an
+  invalid source; a branch without any checkout refuses without creating
+  one, two forced checkouts of one branch refuse as ambiguous naming both,
+  and either live selection resolves.
+- `internal/cli` fixtures (`workspace_test.go`): nine usage errors exit 2;
+  help works without a project; stdout is exactly the project directory
+  with checkout, branch or detached HEAD, record, and revision on stderr;
+  JSON fields for a detached worktree whose path contains a newline, with
+  the path preserved in JSON and escaped on stderr; all three checkouts hash
+  identically afterwards; three refusals exit 1 with nothing on stdout; an
+  invalid current checkout still resolves a selection elsewhere; a plain
+  directory is refused. `TestJointWorkflow`: `versions --json` lists W-001,
+  the live feature version is chosen explicitly, `workspace --json` returns
+  its project and revision, and `show --project` there returns the exact
+  selected bytes while main's copy and branch are untouched.
+- Real use in this worktree: `versions W-005` printed four rows; the live
+  selector of this worktree resolved to it, `show --project` with that path
+  read W-005 here, and main's committed selection routed to the main
+  checkout with its own revision and the main live selector in JSON.
+- Combined independent review (reviewer agent, `main..77cb1ce`, read-only
+  with scratch repositories): no blocking findings. Should-fix, all
+  addressed in the review-fix commit: an absent project at the prefix
+  produced "not a valid source:" with no reason; a prunable duplicate
+  checkout counted as ambiguous and was named by an empty string; the
+  committed route did not compare the checkout's configuration bytes
+  (W-005 acceptance said changed configuration refuses; the plan's
+  committed condition now says so too). Nits taken: the hand-rolled hex
+  encoder is gone; `Resolve` carries a `ponytail:` note on re-running the
+  whole inspection. Nit recorded, not verified: no fixture resolves a
+  selector from a second Grove project at another prefix in the same
+  repository; the prefix is in the binding and would refuse. The reviewer
+  confirmed the binding is recomputed at resolution time, attribution
+  order, exact `<worktree>/<prefix>` routing, control-character paths,
+  only read-only Git subcommands with byte-identical `.git` and checkouts
+  across `versions` and `workspace` runs, and every W-005 acceptance
+  bullet exercised by a failing-if-broken test.
+
+### Joint verification
+
+`TestJointWorkflow` runs the connected workflow through the CLI: list
+versions of W-001, choose the live feature version explicitly, resolve its
+workspace, and read the exact selected bytes there with `show --project`,
+with main's copy and branch untouched. The same sequence was run by hand in
+this repository against W-005 (see W-005 real use). Final checks on the
+closing commit: `gofmt -l .` clean, `go vet ./...`, `go test ./...`,
+`go test -race ./...`, `check` (9 records), and a documentation link check
+over README, model, brief, plan, Q-001, W-004, and W-005.

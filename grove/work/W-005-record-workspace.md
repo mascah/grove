@@ -2,14 +2,14 @@
 id: "W-005"
 type: work
 title: "Locate the workspace for a selected record version"
-status: active
+status: done
 kind: feature
 priority: 2
 size: medium
 depends_on: ["W-004"]
 relates_to: ["Q-001", "W-003"]
 created: "2026-09-19T17:50:01Z"
-updated: "2026-09-19T19:50:26Z"
+updated: "2026-09-19T19:58:30Z"
 ---
 
 ## Outcome
@@ -88,12 +88,47 @@ is its Git-source package and `internal/cli`; reuse discovery and validation.
 Recommend a single Fable agent after W-004, with full suite, race suite, vet,
 and independent review of stale selections and unintended Git writes.
 
+## Evidence
+
+Done 2026-09-19 on branch `worktree-W-004-W-005` at `d232aa2`, after W-004
+closed at `a465d88` in the same branch. The
+[coordination plan](../../docs/plans/W-004-W-005-coordination.md) records
+the consumed selector, this command's resolution and refusal contract, the
+commits, the fixture list per acceptance item, suite, race, vet, gofmt, and
+`check` results, real use in this repository, the joint verification, and
+the combined review. `workspace --source SELECTOR [--json]` re-runs the
+W-004 inspection for the selected record and prints the absolute project
+directory of the existing checkout that still holds exactly that version;
+JSON adds checkout, record, branch or detached HEAD, and current revision.
+
+Every acceptance bullet has fixtures: a live feature selection from main with
+the project below the repository root, returning the exact path with both
+checkouts and Git state hashed unchanged; a matching committed selection
+resolving to its checkout while differing live content, path, or
+configuration refuses with a refresh-and-reselect diagnostic; branch and
+HEAD moves, detaching and re-attaching, moved and removed worktrees, changed
+configuration, and changed, renamed, or deleted records each refusing with
+their own reason; missing and ambiguous checkouts as distinct errors that
+create nothing, with an explicit live selection disambiguating; staged and
+unstaged unrelated files surviving; a worktree path with a newline preserved
+in JSON and escaped on stderr; and the joint fixture listing versions,
+selecting one, resolving its workspace, and reading the selected bytes
+there with `show --project`.
+
+Review disposition: no blocking findings; three should-fix items (absent
+project wording, prunable duplicates, committed-route configuration check)
+were fixed and covered. This is the CLI foundation for Open workspace: it
+locates, it does not create worktrees, switch branches, launch editors,
+agents, or shells, claim ownership, or edit records, and the printed path is
+a location rather than write authority. A later `update` performs its own
+revision check because the workspace can change after resolution.
+
 ## Next
 
-The [coordination plan](../../docs/plans/W-004-W-005-coordination.md) fixes
-the consumed selector and this command's resolution contract, with ordered
-steps and acceptance-to-check mapping; implement after W-004 closes in the
-same branch. After these CLI foundations, shape
+Integrate `worktree-W-004-W-005` into main. Then shape the interactive Open
+workspace action over `versions` and `workspace`, including explicit
+creation of a linked worktree for a branch without a checkout, which this
+command refuses today. After these CLI foundations, shape
 the interactive Open workspace action and explicit creation for branches
 without a checkout. Do not
 treat path resolution as completion of that entire user experience.
