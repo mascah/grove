@@ -259,16 +259,12 @@ func highestUsed(root, recordDir, showPrefix, prefix string) (int, error) {
 			note(line)
 		}
 	}
-	worktrees, err := repo.Git(root, "worktree", "list", "--porcelain")
+	worktrees, err := repo.Worktrees(root)
 	if err != nil {
 		return 0, err
 	}
-	for _, line := range strings.Split(worktrees, "\n") {
-		wt, ok := strings.CutPrefix(line, "worktree ")
-		if !ok {
-			continue
-		}
-		tree := filepath.Join(wt, filepath.FromSlash(showPrefix), recordDir)
+	for _, w := range worktrees {
+		tree := filepath.Join(w.Path, filepath.FromSlash(showPrefix), recordDir)
 		err := filepath.WalkDir(tree, func(p string, entry fs.DirEntry, err error) error {
 			if err != nil {
 				return err

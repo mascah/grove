@@ -322,3 +322,46 @@ func TestNewRefusesWhenConfigurationBytesChangedAfterLoad(t *testing.T) {
 		t.Fatalf("the refused reservation must stay consumed: got %q, %v", path, err)
 	}
 }
+
+// W-008: a live ID in a checkout whose path Git would quote for display still
+// raises the floor, with no counter file, at the root and at a nested prefix.
+func TestAllocateScansOddlyNamedWorktrees(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	for _, prefix := range []string{"", "sub\nproject"} {
+		parent, err := filepath.EvalSymlinks(t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		root := filepath.Join(parent, "new\nline")
+		write(t, filepath.Join(root, prefix), "grove.yaml", config)
+		write(t, filepath.Join(root, prefix), "grove/work/W-001-first.md", record("W-001", "work", "done"))
+		git(t, root, "init", "-q", "-b", "main")
+		git(t, root, "add", "-A")
+		git(t, root, "commit", "-q", "-m", "init")
+		odd := filepath.Join(parent, "odd \"quoted\"\n\twt ")
+		git(t, root, "worktree", "add", "-q", "-b", "odd", odd)
+		write(t, filepath.Join(odd, prefix), "grove/work/W-090-live-only.md", record("W-090", "work", "proposed"))
+		write(t, odd, "elsewhere/grove/work/W-500-unrelated.md", record("W-500", "work", "proposed"))
+		// A checkout without the record folder is normal, not a scan error.
+		absent := filepath.Join(parent, "absent\nwt")
+		git(t, root, "worktree", "add", "-q", "--detach", absent)
+		if err := os.RemoveAll(filepath.Join(absent, prefix, "grove")); err != nil {
+			t.Fatal(err)
+		}
+
+		if n, err := Allocate(filepath.Join(root, prefix), "grove", "W", &bytes.Buffer{}); err != nil || n != 91 {
+			t.Fatalf("prefix %q: got %d, %v; want 91 from the live W-090", prefix, n, err)
+		}
+		if n, err := Allocate(filepath.Join(odd, prefix), "grove", "W", &bytes.Buffer{}); err != nil || n != 92 {
+			t.Fatalf("prefix %q: got %d, %v; want 92 from the shared counter", prefix, n, err)
+		}
+		if _, err := os.Stat(filepath.Join(root, ".git", "grove", "next-ids")); err != nil {
+			t.Fatalf("the counter belongs under the real common directory: %v", err)
+		}
+		if entries, _ := os.ReadDir(parent); len(entries) != 3 {
+			t.Fatalf("nothing may appear beside the checkouts: %q", entries)
+		}
+	}
+}
