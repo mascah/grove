@@ -143,3 +143,29 @@ This requires no new exported failure hook or timing-sensitive test.
   `go run ./cmd/grove update`; keep evidence in the record/plan bodies.
 - [ ] Return focused Conventional Commits, tested candidate revision, review
   disposition, and remaining limits. Do not merge or remove old worktrees.
+
+## Implementation notes, 2026-09-19
+
+Implemented on branch `worktree-W-006-W-008`; the
+[work record](../../grove/work/W-007-preserve-updates.md) owns the evidence.
+Bounded adjustments to this plan, and why:
+
+- Tasks 1 and 2 share one commit (`2cc7814`). Both rewrite the same functions
+  of `edit.go` (`edit`, the entry offsets, and the flow planner that replaces
+  the flow half of `append`), so separate commits would not each build.
+- A later-line value with no comment between its colon and itself keeps the
+  W-003 behaviour and collapses onto the key's line; existing fixtures depend
+  on it. Only when a comment is present is the value replaced in place. A
+  block sequence at its key's indentation is the one value that may start
+  there, so its replacement is indented two further columns to stay valid.
+- Flow separators: an entry takes the comma that follows it; the run of
+  removed entries ending the mapping takes the comma before it when only
+  whitespace separates them. A comma hidden behind a comment is left as a
+  trailing comma, which YAML accepts, rather than deleting the comment. An
+  append placed after such a run reuses the surviving comma.
+- A removed flow entry's same-line comment goes with it, including one that
+  follows a trailing comma after the last entry; standalone comment lines stay.
+- Refused safely, as a truly ambiguous span: a flow separator on a later line
+  than its entry's value (`{a: 1\n, b: 2}`, removing `a`).
+- Review found `keyStartsAt`'s plain-key branch always true (from W-003).
+  `dedac73` makes the guard compare the source with the parsed key.
