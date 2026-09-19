@@ -1,5 +1,5 @@
 // Package create allocates shared sequential IDs and writes new records.
-// It is the only package that runs Git; the reader stays Git-free.
+// The reader stays Git-free; Git access goes through internal/repo.
 package create
 
 import (
@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/mascah/grove/internal/project"
+	"github.com/mascah/grove/internal/repo"
 )
 
 type kind struct{ prefix, folder, status, body string }
@@ -52,7 +53,11 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 	} else if !slugPattern.MatchString(slug) {
 		return "", fmt.Errorf("slug must contain only lowercase ASCII letters, digits, and hyphens")
 	}
-	n, err := Allocate(p.Root, p.RecordDir, k.prefix, report)
+	common, showPrefix, err := repo.CommonDir(p.Root)
+	if err != nil {
+		return "", err
+	}
+	n, err := allocate(common, p.Root, p.RecordDir, showPrefix, k.prefix, report)
 	if err != nil {
 		return "", err
 	}
@@ -63,6 +68,21 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 	content := fmt.Sprintf("---\nid: %q\ntype: %s\ntitle: %q\nstatus: %s\ncreated: %q\nupdated: %q\n---\n\n%s",
 		id, kindName, title, k.status, stamp, stamp, k.body)
 	full := filepath.Join(p.Root, filepath.FromSlash(relative))
+	// The reservation is already durable, so a failure from here on consumes
+	// it. Publication is serialized with update through the shared write lock,
+	// which is only taken after the allocator lock was released.
+	unlock, err := repo.WriteLock(common)
+	if err != nil {
+		return "", fmt.Errorf("%s reserved but not created: %w", id, err)
+	}
+	defer unlock()
+	current, ds := project.Load(p.Root, p.Root)
+	if len(ds) != 0 {
+		return "", fmt.Errorf("%s reserved but not created: the project no longer validates:\n%s", id, diagnostics(ds))
+	}
+	if current.RecordDir != p.RecordDir {
+		return "", fmt.Errorf("%s reserved but not created: the record root changed from %s to %s during allocation", id, p.RecordDir, current.RecordDir)
+	}
 	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
 		return "", fmt.Errorf("%s reserved but not created: %w", id, err)
 	}
@@ -78,13 +98,17 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 		return "", fmt.Errorf("%s: %w", relative, err)
 	}
 	if _, ds := project.Load(p.Root, p.Root); len(ds) != 0 {
-		lines := make([]string, len(ds))
-		for i, d := range ds {
-			lines[i] = d.String()
-		}
-		return "", fmt.Errorf("created %s but the project no longer validates:\n%s", relative, strings.Join(lines, "\n"))
+		return "", fmt.Errorf("created %s but the project no longer validates:\n%s", relative, diagnostics(ds))
 	}
 	return relative, nil
+}
+
+func diagnostics(ds []project.Diagnostic) string {
+	lines := make([]string, len(ds))
+	for i, d := range ds {
+		lines[i] = d.String()
+	}
+	return strings.Join(lines, "\n")
 }
 
 // Slug derives a short filename fragment from a title per the record model.
@@ -114,28 +138,20 @@ func Slug(title string) string {
 // under the Git common directory; the issued number is never at or below an ID
 // found in any local ref or worktree's live records.
 func Allocate(root, recordDir, prefix string, report io.Writer) (int, error) {
-	if _, err := exec.LookPath("git"); err != nil {
-		return 0, errors.New("creating records requires Git on PATH; allocation state lives in the repository's common directory")
-	}
-	out, err := gitOutput(root, "rev-parse", "--path-format=absolute", "--git-common-dir", "--show-prefix")
+	common, showPrefix, err := repo.CommonDir(root)
 	if err != nil {
-		return 0, fmt.Errorf("creating records requires a Git repository; allocation state lives in its common directory (%w)", err)
-	}
-	lines := strings.SplitN(strings.TrimRight(out, "\n"), "\n", 2)
-	common, showPrefix := lines[0], ""
-	if len(lines) == 2 {
-		showPrefix = lines[1]
-	}
-	dir := filepath.Join(common, "grove")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return 0, err
 	}
-	unlock, err := lock(filepath.Join(dir, "lock"))
+	return allocate(common, root, recordDir, showPrefix, prefix, report)
+}
+
+func allocate(common, root, recordDir, showPrefix, prefix string, report io.Writer) (int, error) {
+	unlock, err := repo.AllocatorLock(common)
 	if err != nil {
 		return 0, err
 	}
 	defer unlock()
-	counterPath := filepath.Join(dir, "next-ids")
+	counterPath := filepath.Join(common, "grove", "next-ids")
 	counters, err := readCounters(counterPath)
 	if err != nil {
 		return 0, err
@@ -159,17 +175,6 @@ func Allocate(root, recordDir, prefix string, report io.Writer) (int, error) {
 		return 0, fmt.Errorf("no ID issued: %w", err)
 	}
 	return next, nil
-}
-
-func gitOutput(dir string, args ...string) (string, error) {
-	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		return "", fmt.Errorf("git %s: %s", args[0], strings.TrimSpace(stderr.String()))
-	}
-	return string(out), nil
 }
 
 func readCounters(path string) (map[string]int, error) {
@@ -232,7 +237,7 @@ func highestUsed(root, recordDir, showPrefix, prefix string) (int, error) {
 			highest = n
 		}
 	}
-	refs, err := gitOutput(root, "for-each-ref", "--format=%(objectname)", "refs/heads", "refs/remotes", "refs/tags")
+	refs, err := repo.Git(root, "for-each-ref", "--format=%(objectname)", "refs/heads", "refs/remotes", "refs/tags")
 	if err != nil {
 		return 0, err
 	}
@@ -251,7 +256,7 @@ func highestUsed(root, recordDir, showPrefix, prefix string) (int, error) {
 			note(line)
 		}
 	}
-	worktrees, err := gitOutput(root, "worktree", "list", "--porcelain")
+	worktrees, err := repo.Git(root, "worktree", "list", "--porcelain")
 	if err != nil {
 		return 0, err
 	}
