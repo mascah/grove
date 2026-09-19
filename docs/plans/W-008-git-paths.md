@@ -102,3 +102,26 @@ error/absence policies. No path quoting/unquoting heuristics.
   `go run ./cmd/grove update`; keep evidence in the record/plan bodies.
 - [ ] Return focused Conventional Commits, tested candidate revision, review
   disposition, and remaining limits. Do not merge or remove old worktrees.
+
+## Implementation notes, 2026-09-19
+
+Implemented on branch `worktree-W-006-W-008`; the
+[work record](../../grove/work/W-008-git-paths.md) owns the evidence.
+Bounded adjustments to this plan, and why:
+
+- The separate Git directory fixture is named `git\tdir\nmid ` (embedded
+  newline, tab, trailing space). Git itself cannot reopen a separate Git
+  directory whose name ends in a newline: `git init --separate-git-dir
+  $'trail\n'` succeeds, but the `.git` file it writes loses that terminator
+  and every later command fails with `not a git repository: .../trail`. Grove
+  cannot be given such a repository, so there is nothing to round-trip.
+- W-006's `identity` helper had introduced a third newline-splitting
+  `rev-parse`; it now uses `repo.GitPath` per path. Comparing the Git directory
+  is enough for ownership of a location, because a Git directory belongs to
+  one worktree of one repository, so the common directory is asked for only
+  when entering a worktree.
+- `repo.Worktree` carries `Path`, `Head`, `Branch`, `Prunable`, and `Bare`.
+  `locked` is parsed past and not retained: nothing consumes it.
+- The allocator keeps its policy of scanning every inventory entry; a bare
+  entry, a prunable entry, or a checkout without the record folder is a
+  missing root and normal, while an unreadable record stays an error.
