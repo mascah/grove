@@ -79,13 +79,14 @@ bounded span scanner over yaml.v3 node positions.
 - [x] `Apply` with lock, validation, publication, fault injection, races.
 - [x] CLI `update`, workflow fixture, docs; `go test ./...`,
   `go test -race ./...`, `go vet ./...`, `gofmt -l .`, `go run ./cmd/grove check`.
-- [ ] Independent review; address blocking findings; reconcile records.
+- [x] Independent review; address blocking findings; reconcile records.
 
 ## Progress and evidence
 
 Prepared against `8b23636`; W-003 set active on 2026-09-19. Implemented on
 `worktree-W-003`: `56df181` (shared lock helpers, `new` takes the write lock),
-`a0cf898` (`show --json`, exported parsing), `c4a906c` (`update`).
+`a0cf898` (`show --json`, exported parsing), `c4a906c` (`update`), `135cd4d`
+(documentation), `14ed115` (review fixes).
 
 - `go build`, `go vet ./...`, `gofmt -l .` (clean), `go test ./...`, and
   `go test -race ./...` pass for `internal/cli`, `internal/create`,
@@ -141,6 +142,22 @@ Prepared against `8b23636`; W-003 set active on 2026-09-19. Implemented on
   `check` reported 9 records. Dogfooding found the untouched-field guard
   comparing the `priority` pointer address, which refused every update of a
   record carrying a priority; fixed with a regression test before commit.
-- Not verified: Windows (no `flock`), separate clones, and a direct editor
-  writing after the final comparison, which the specification states as an
-  honest limit.
+- Independent review (reviewer agent, `de3a37c..c4a906c`, in a throwaway copy):
+  no blocking findings. Should-fix: `Edit` refused explicit `!!str` tags,
+  unreferenced anchors, and explicit `? key` entries that the reader accepts;
+  tags and anchors are now edited (a replaced value drops them) with six
+  fixtures in `14ed115`, and explicit-key entries remain refused without
+  writing as a recorded limitation. Nits taken: the flow-mapping bound now
+  comes from scanning the mapping rather than the last `}` in the frontmatter;
+  the duplicate-field usage message reads naturally; a fixture states that a
+  standalone comment inside a removed list goes with the list while one after
+  it stays; the untouched-field guard has a direct test. Nits recorded, not
+  changed: acceptance item 1's field and invalid-request coverage lives in
+  `internal/update` tests with a CLI subset; the overlap, key-position, bound,
+  and plain-span guards have no mutation-detecting test. The reviewer also
+  ran 9.6M fuzz executions over reader-accepted sources without a rejected,
+  drifted, or body-altered result, 29 hostile titles round-tripping exactly,
+  and confirmed the write lock is load-bearing by disabling it.
+- Not verified: Windows (no `flock`), separate clones, explicit-key (`? key`)
+  frontmatter, and a direct editor writing after the final comparison, which
+  the specification states as an honest limit.
