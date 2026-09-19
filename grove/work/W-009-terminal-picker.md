@@ -2,9 +2,9 @@
 id: "W-009"
 type: work
 title: "Browse a terminal Kanban board with explicit record versions"
-status: proposed
+status: active
 created: "2026-09-19T20:23:01Z"
-updated: "2026-09-19T20:31:23Z"
+updated: "2026-09-19T22:45:52Z"
 kind: feature
 priority: 2
 size: medium
