@@ -99,8 +99,13 @@ Selected direction:
   interactive Claude/Codex sessions create and refine proposed work, questions,
   and decisions through the CLI; bounded scheduled/triggered headless research
   can also propose work. Moving proposed work to Active would offer launching a
-  headless implementation session. Detailed launch and publication policy is
-  still proposed. A status edit alone does not authorize a launch or prove that
+  headless implementation session. Detailed launch policy is still proposed.
+  Publication choice settled on 2026-09-19: unattended research publishes its
+  proposals on a separate reviewable branch; selected proposals are integrated
+  afterward. It does not write directly into the planning checkout or merge its
+  own proposals automatically. Until integration, W-009 exposes branch-only work
+  under Other sources, or in Proposed when viewing that research checkout.
+  A status edit alone does not authorize a launch or prove that
   one is running. [W-011](../grove/work/W-011-shaping-entrypoint.md) proposes the
   immediate interactive shaping guide; W-010 owns the reusable work assignment.
   Scheduling and run supervision remain later work, outside W-009. Inspect the
@@ -379,9 +384,10 @@ On 2026-09-19 the owner reported a Claude session implementing W-006–W-008,
 with W-009 planned afterward. A separate repair worktree is present; that report
 does not establish completion or integration. Keep ongoing requirements work
 outside that checkout. Refine W-010's shared interactive/headless assignment
-and W-011's authoring guide while repairs proceed. Resolve where unattended
-proposals are published before promising they appear in a particular checkout's
-Proposed column; W-009's Other sources shelf already exposes branch-only work.
+and W-011's authoring guide while repairs proceed. Apply the selected separate-
+branch publication policy to unattended research handoffs; identify the proposals
+and supporting questions/decisions needed for selective integration. W-009's
+existing source-scoped columns and Other sources shelf remain unchanged.
 
 After the repairs, the selected next user outcome is a terminal Kanban board
 with explicit version selection inside each card. On 2026-09-19 the owner

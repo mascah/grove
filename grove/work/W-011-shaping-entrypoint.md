@@ -60,9 +60,17 @@ an initial guide that uses existing list/show/check/new/update commands.
   checkout cannot be promised a card in that checkout's Proposed column.
 - Describe headless adaptation in the shared guide: explicit research mandate,
   allowed writes and bounds, evidence-backed proposals, durable questions and
-  waiting conditions. This slice does not run that mode, choose a publication
-  policy for it, or implement schedules. Never promote new proposals into
-  implementation merely because a research process completed.
+  waiting conditions. Apply the owner's publication choice recorded in the
+  [brief](../../docs/restart-brief.md): unattended research uses an isolated
+  checkout on a separate reviewable branch, then selected proposals are
+  integrated. Its handoff identifies branch/checkout, proposal IDs, evidence,
+  and supporting questions/decisions or dependencies needed for that selection.
+  It does not publish directly into the planning checkout or automatically merge.
+  Until integration, branch-only work appears under Other sources when viewing
+  another checkout, or in Proposed when viewing the research checkout itself.
+  This slice documents that behavior; it does not run headless sessions,
+  implement schedules, or add a selective-integration command. Never promote
+  new proposals into implementation merely because a research process completed.
 
 ## Acceptance
 
@@ -76,8 +84,10 @@ an initial guide that uses existing list/show/check/new/update commands.
    a stale revision, work owned on another branch, and a headless caller that
    must return a wait. No unsupported statuses/metadata or duplicate IDs appear.
 4. Records validate and links resolve; the selected checkout and cross-branch
-   visibility are reported accurately. No code, implementation status, sibling
-   repository, or concurrent checkout is changed by the planning session.
+   visibility are reported accurately. A headless handoff fixture identifies
+   reviewable proposals and their supporting records without publishing to another
+   checkout or auto-merging. No code, implementation status, sibling repository,
+   or concurrent checkout is changed by the planning session.
 5. Claude and Codex use the same responsibilities without duplicated editable
    policy. If one harness cannot be exercised, state that limit rather than
    claiming verified support.
@@ -88,4 +98,5 @@ Prepare a small implementation plan linked from this body: select repository
 entrypoint locations, write the shared authoring instructions from the reviewed
 responsibilities, and dogfood on the next requirements conversation. Reuse W-010's
 context interface if implemented; do not block on it or expand into a runner.
-Keep scheduled publication policy and launching in separately shaped work.
+Carry the selected publication policy into the guide and handoff fixtures;
+keep automated launching and selective-integration tooling in separately shaped work.
