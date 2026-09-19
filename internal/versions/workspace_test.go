@@ -2,6 +2,7 @@ package versions
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -115,7 +116,8 @@ func TestWorkspaceLive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want.Revision = "sha256:" + hexOf(sha256.Sum256(data))
+	sum := sha256.Sum256(data)
+	want.Revision = "sha256:" + hex.EncodeToString(sum[:])
 	if !reflect.DeepEqual(w, want) {
 		t.Fatalf("got %+v\nwant %+v", w, want)
 	}
@@ -128,15 +130,6 @@ func TestWorkspaceLive(t *testing.T) {
 	if git(t, wt, "status", "--porcelain") != "A  sub/staged.txt\n?? sub/unstaged.txt" {
 		t.Fatalf("staged and unstaged files must survive: %q", git(t, wt, "status", "--porcelain"))
 	}
-}
-
-func hexOf(sum [32]byte) string {
-	const digits = "0123456789abcdef"
-	out := make([]byte, 64)
-	for i, b := range sum {
-		out[i*2], out[i*2+1] = digits[b>>4], digits[b&15]
-	}
-	return string(out)
 }
 
 func TestWorkspaceCommitted(t *testing.T) {
@@ -167,6 +160,18 @@ func TestWorkspaceCommitted(t *testing.T) {
 	if got := resolve(t, project, selectorFor(t, project, "W-001", "committed", "refs/heads/main")); got.Checkout != root || got.Project != project {
 		t.Fatalf("main's committed version resolves to the main checkout: %+v", got)
 	}
+	// A valid but different live grove.yaml refuses the committed route even
+	// though the record bytes and path still match.
+	write(t, wt, "sub/grove.yaml", "schema_version: 1\nrecords: grove # local note\n")
+	refuse(t, project, committed, "the live grove.yaml in worktree feature differs from the committed configuration selected; run versions and select the live observation")
+	git(t, wt, "checkout", "-q", "--", "sub/grove.yaml")
+	// A checkout with no project at the prefix says so instead of reporting an
+	// empty list of problems.
+	if err := os.Rename(filepath.Join(wt, "sub/grove.yaml"), filepath.Join(wt, "grove.yaml.aside")); err != nil {
+		t.Fatal(err)
+	}
+	refuse(t, project, committed, "worktree feature has no grove.yaml at the selected project location; the project is absent there")
+	refuse(t, project, live, "worktree feature has no grove.yaml at the selected project location; the project is absent there")
 }
 
 func TestWorkspaceStale(t *testing.T) {
@@ -251,5 +256,14 @@ func TestWorkspaceMissingAndAmbiguous(t *testing.T) {
 	}
 	if w := resolve(t, project, selectorFor(t, project, "W-001", "live", "feature")); w.Checkout != wt {
 		t.Fatalf("the other checkout resolves too: %+v", w)
+	}
+	// A prunable duplicate is not a checkout anyone can be sent to, so the
+	// remaining checkout is unambiguous; the prunable entry still marks the
+	// inspection incomplete on its own.
+	if err := os.RemoveAll(second); err != nil {
+		t.Fatal(err)
+	}
+	if w := resolve(t, project, selectorFor(t, project, "W-001", "committed", "refs/heads/feature")); w.Checkout != wt {
+		t.Fatalf("expected the surviving checkout: %+v", w)
 	}
 }

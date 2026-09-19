@@ -73,6 +73,9 @@ type Workspace struct {
 // switching, claiming, or editing anything. A committed selection routes to
 // the one checkout of its branch whose live record still has the committed
 // bytes; otherwise the caller must refresh and select a live observation.
+// ponytail: re-runs the whole inspection (one ls-tree and one cat-file per
+// branch) to answer one selector; inspect only the selected source if
+// repositories with many branches make this slow.
 func Resolve(root, selector string) (*Workspace, error) {
 	sel, err := Parse(selector)
 	if err != nil {
@@ -107,7 +110,9 @@ func Resolve(root, selector string) (*Workspace, error) {
 	}
 	var checkouts []*Source
 	for _, candidate := range res.Sources {
-		if candidate.Kind == "live" && candidate.Ref == sel.Ref {
+		// An entry without a locator could not be entered (prunable or
+		// foreign); it is not a checkout anyone can be sent to.
+		if candidate.Kind == "live" && candidate.Ref == sel.Ref && candidate.Locator != "" {
 			checkouts = append(checkouts, candidate)
 		}
 	}
@@ -130,6 +135,9 @@ func Resolve(root, selector string) (*Workspace, error) {
 	if err != nil {
 		return nil, err
 	}
+	if live.ConfigRevision != s.ConfigRevision {
+		return nil, fmt.Errorf("the live grove.yaml in worktree %s differs from the committed configuration selected; run versions and select the live observation instead", live.Locator)
+	}
 	if lv.Path != v.Path || lv.Revision != v.Revision {
 		return nil, fmt.Errorf("the live %s in worktree %s differs from the committed version selected (%s at %s); run versions and select the live observation instead", sel.ID, live.Locator, lv.Change, lv.Path)
 	}
@@ -141,6 +149,9 @@ func observation(res *Result, s *Source, id string) (Version, error) {
 	where := "branch " + s.Ref
 	if s.Kind == "live" {
 		where = "worktree " + s.Locator
+	}
+	if !s.Present && len(s.Diagnostics) == 0 {
+		return Version{}, fmt.Errorf("%s has no grove.yaml at the selected project location; the project is absent there; run versions and reselect", where)
 	}
 	if !s.Valid {
 		return Version{}, fmt.Errorf("%s is not a valid source:\n%s", where, strings.Join(s.Diagnostics, "\n"))
