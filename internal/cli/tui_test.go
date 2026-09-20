@@ -180,30 +180,36 @@ func boardWorkflow(t *testing.T, broken bool) {
 		before := all()
 
 		s := openBoard(t, root)
-		s.want("Board: live . main", "Proposed (1)", "Active (0)", "Inspect records", "Other sources (1", "W-002 [2 versions]")
+		s.want("Board: checkout . (main)", "Proposed (1)", "Active (0)", "Inspect records", "W-001  2 versions", "Elsewhere (1", "): W-002 ")
 		s.lacks("on feature", "Only on feature", "Q-001")
 		incomplete(s)
 
 		s.press("b")
-		s.want("live . main", "live feature-wt feature")
+		s.want("checkout . (main)", "checkout feature-wt (feature)")
 		if broken { // sorted between main and feature-wt, and not choosable
-			s.want("live broken-wt broken   UNAVAILABLE: invalid:")
+			s.want("checkout broken-wt (broken)   UNAVAILABLE: invalid:")
 			s.press("down", "enter")
-			s.want("cannot be a board context", "Choose the checkout")
+			s.want("cannot fill the board", "Choose which checkout")
 		}
 		s.press("down", "enter")
-		s.want("Board: live feature-wt feature", "Proposed (1)", "Active (1)", "Inspect records, on feature", "Only on feature", "Other sources: none")
+		s.want("Board: checkout feature-wt (feature)", "Proposed (1)", "Active (1)", "Inspect records, on feature", "Only on feature", "Elsewhere: none")
 		incomplete(s)
 		s.press("b", "enter") // back to main's board
-		s.want("Board: live . main", "Active (0)")
+		s.want("Board: checkout . (main)", "Active (0)")
 
 		s.press("enter")
-		s.want("versions: select one explicitly", "proposed   committed main", "proposed   live . main  unchanged", "active     committed feature", "active     live feature-wt feature  unchanged")
+		s.want("W-001   2 versions differ", "▸ proposed   same on ", "▸ active     same on 1 branch, 1 checkout")
+		s.lacks("checkout feature-wt (feature)  unchanged")
 		incomplete(s)
 		if s.press("enter") || s.m.Workspace != nil {
 			t.Fatal("the ID header selected something")
 		}
-		s.focus("live feature-wt feature")
+		s.focus("▸ active")
+		s.want("Same on:  branch feature", "checkout feature-wt (feature)  unchanged", "Inspect records, on feature")
+		if s.press("enter") || s.m.Workspace != nil {
+			t.Fatal("a fold of identical versions selected something")
+		}
+		s.focus("checkout feature-wt (feature)")
 		s.want("Inspect records, on feature", "Status:   active", "Checkout: /", "Branch:   refs/heads/feature", "Selector: live:feature-wt:refs/heads/feature@")
 		if !s.press("enter") || s.m.Workspace == nil {
 			t.Fatalf("selecting the live feature version should resolve it:\n%s", s.screen())
@@ -226,7 +232,9 @@ func boardWorkflow(t *testing.T, broken bool) {
 		// The same walk, but the target changes after it was displayed.
 		s = openBoard(t, root)
 		s.press("enter")
-		s.focus("live feature-wt feature")
+		s.focus("▸ active")
+		s.press("enter")
+		s.focus("checkout feature-wt (feature)")
 		changed := onFeature + "Edited after the board read it.\n"
 		write(t, wt, "docs/records/work/renamed.md", changed)
 		before = all()
@@ -238,11 +246,11 @@ func boardWorkflow(t *testing.T, broken bool) {
 		s.want("REFUSED: W-001 changed since it was selected")
 		s.press("r")
 		s.lacks("REFUSED")
-		s.want("active     live feature-wt feature  modified")
+		s.want("active     checkout feature-wt (feature)  modified", "3 versions differ")
 		if s.press("enter") || s.m.Workspace != nil {
 			t.Fatal("refresh must not reselect the old row")
 		}
-		if s.focus("live feature-wt feature"); !s.press("enter") || s.m.Workspace == nil {
+		if s.focus("checkout feature-wt (feature)"); !s.press("enter") || s.m.Workspace == nil {
 			t.Fatalf("explicit reselection after refresh should resolve:\n%s", s.screen())
 		}
 		out.Reset()
@@ -252,7 +260,7 @@ func boardWorkflow(t *testing.T, broken bool) {
 		// A committed version routes only while its checkout still matches it.
 		s = openBoard(t, root)
 		s.press("enter")
-		s.focus("committed feature")
+		s.focus("branch feature")
 		if s.press("enter") || s.m.Workspace != nil {
 			t.Fatal("a committed version whose checkout differs must be refused")
 		}

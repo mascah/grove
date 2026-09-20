@@ -150,13 +150,17 @@ def select_and_show(root, wt, base):
     """board -> card -> version -> resolve -> show reads the selected bytes."""
     for flags in ([], ["--json"]):
         s = Session(root, flags)
-        s.expect("Board: live . main")
+        s.expect("Board: checkout . (main)")
         s.expect("First on main")
         s.send(ENTER)
-        mark = s.expect("select one explicitly")
+        mark = s.expect("versions differ")
         check(s.proc.poll() is None, "opening a card must not resolve or exit")
-        # Rows: committed feature, committed main, live main, live feature-wt.
-        s.send(DOWN * 4)
+        # Rows fold by content: feature's (branch, checkout), then main's.
+        # Enter on a fold only lists its places.
+        s.send(DOWN + ENTER)
+        s.expect("checkout feature-wt (feature)", mark)
+        check(s.proc.poll() is None, "opening a fold must not resolve or exit")
+        s.send(DOWN * 2)
         s.expect("First on feature", mark)
         s.expect("Selector: live:feature-wt:", mark)
         s.send(ENTER)
@@ -181,7 +185,7 @@ def leave_without_selecting(root, wt, base):
         s.expect("First on main")
         if where == "versions":
             s.send(ENTER)
-            s.expect("select one explicitly")
+            s.expect("versions differ")
             s.send(DOWN)
         s.send(keys)
         code, out = s.finish()
@@ -237,8 +241,8 @@ def blocked_git(root, wt, base):
             s.expect("First on main")
             if stage == "resolve":
                 s.send(ENTER)
-                s.expect("select one explicitly")
-                s.send(DOWN * 3)
+                s.expect("versions differ")
+                s.send(DOWN * 2 + ENTER + DOWN * 2)
                 s.expect("Selector: live:.:")
             open(flag, "w").close()
             s.send(b"r" if stage == "refresh" else ENTER)
@@ -254,7 +258,7 @@ def blocked_git(root, wt, base):
                 pass
         os.close(reader)
         pid = int(data)
-        s.expect("Reading sources" if stage != "resolve" else "Resolving the selected workspace")
+        s.expect("Reading branches and checkouts" if stage != "resolve" else "Resolving the selected workspace")
         s.send(keys)
         code, out = s.finish()
         os.remove(flag)

@@ -153,19 +153,19 @@ func (m *Model) render() string {
 		rows, hints = m.emptyBody(w), "r retry   q quit"
 	case m.screen == versionsScreen && m.group() != nil:
 		rows, hints = m.versionsBody(w, body), pick(w,
-			"↑/↓ versions   Enter select workspace   Tab details   PgUp/PgDn scroll   s sources   r refresh   Esc board   q quit",
-			"↑↓ move  Enter select workspace  Tab details  PgUp/PgDn  s  r refresh  Esc  q",
-			"↑↓  Enter select workspace  Tab details  r  Esc  q quit",
+			"↑/↓ rows   Enter list places, or select a workspace   Tab details   PgUp/PgDn scroll   s what was read   r refresh   Esc board   q quit",
+			"↑↓ move  Enter list places or select workspace  Tab details  PgUp/PgDn  s  r  Esc  q",
+			"↑↓  Enter list or select  Tab details  r  Esc  q quit",
 			"Enter select  Tab  r  Esc back  q quit")
 	case m.screen == chooserScreen:
-		rows, hints = m.chooserBody(w, body), pick(w, "↑/↓ checkouts   Enter use as board   Esc back   q quit", "Enter choose  Esc back  q quit")
+		rows, hints = m.chooserBody(w, body), pick(w, "↑/↓ checkouts   Enter show its board   Esc back   q quit", "Enter choose  Esc back  q quit")
 	case m.screen == sourcesScreen:
 		rows, hints = m.scrolled(m.sourceRows(w), body, w), pick(w, "↑/↓ PgUp/PgDn scroll   r refresh   Esc back   q quit", "↑↓ scroll  Esc back  q quit")
 	default:
 		rows, hints = m.boardBody(w, body), pick(w,
-			"←/→ columns   ↑/↓ cards   Enter versions   Tab other sources   b checkout   s sources   r refresh   q quit",
-			"←→↑↓ move  Enter versions  Tab others  b checkout  s sources  r refresh  q quit",
-			"←→↑↓  Enter versions  Tab others  b checkout  r  q quit",
+			"←/→ columns   ↑/↓ cards   Enter open card   Tab elsewhere   b view another checkout   s what was read   r refresh   q quit",
+			"←→↑↓ move  Enter open card  Tab elsewhere  b view another checkout  s  r refresh  q quit",
+			"←→↑↓  Enter open  Tab elsewhere  b other checkout  r  q quit",
 			"Enter open  Tab b s r  q quit")
 	}
 	out := append([]string{bold(line(m.header(), w)), line(m.banner(), w)}, fit(rows, body, w)...)
@@ -185,7 +185,7 @@ func (m *Model) header() string {
 	default:
 		text += label(s)
 	}
-	return fmt.Sprintf("%s    %d sources inspected    %s", text, len(m.res.Sources), m.root)
+	return fmt.Sprintf("%s    read %s    %s", text, places(m.res.Sources), m.root)
 }
 
 // banner is always on screen: what is being read, and whether the result is
@@ -200,11 +200,11 @@ func (m *Model) banner() string {
 				bad++
 			}
 		}
-		parts = append(parts, fmt.Sprintf("INCOMPLETE: %d of %d sources could not be inspected (s shows why)", bad, len(m.res.Sources)))
+		parts = append(parts, fmt.Sprintf("INCOMPLETE: %d of %d branches and checkouts could not be read (s shows why)", bad, len(m.res.Sources)))
 	}
 	switch m.pending {
 	case "inspect":
-		parts = append(parts, "Reading sources…")
+		parts = append(parts, "Reading branches and checkouts…")
 	case "resolve":
 		parts = append(parts, "Resolving the selected workspace…")
 	}
@@ -218,7 +218,7 @@ func (m *Model) emptyBody(w int) []string {
 	if m.failure == "" {
 		return nil
 	}
-	rows := []string{bold(line("The sources could not be listed, so there is nothing to select:", w))}
+	rows := []string{bold(line("The repository's branches and checkouts could not be listed, so there is nothing to select:", w))}
 	return append(rows, wrapAll(m.failure, w)...)
 }
 
@@ -231,23 +231,23 @@ func (m *Model) boardBody(w, n int) []string {
 			if c.id == m.cardID {
 				at = i
 			}
-			rows[i] = mark(c.id == m.cardID, fmt.Sprintf("%s   %s", c.id, count(c.versions)), w)
+			rows[i] = mark(c.id == m.cardID, c.id+count("   ", c.versions, ""), w)
 		}
-		head := bold(line("Other sources: work with no live record in this board's checkout, so no status here", w))
+		head := bold(line("Elsewhere: work on other branches or checkouts that this board's checkout lacks, so no status here", w))
 		return append([]string{head}, window(rows, at, n-3, 1, n-1, w)...)
 	}
-	shelfRow := "Other sources: none"
+	shelfRow := "Elsewhere: none"
 	if len(shelf) != 0 {
 		var items []string
 		for _, c := range shelf {
-			items = append(items, fmt.Sprintf("%s [%s]", c.id, count(c.versions)))
+			items = append(items, c.id+count(" [", c.versions, "]"))
 		}
-		shelfRow = fmt.Sprintf("Other sources (%d, absent from this checkout; Tab): %s", len(shelf), strings.Join(items, "  "))
+		shelfRow = fmt.Sprintf("Elsewhere (%d, not in this checkout; Tab): %s", len(shelf), strings.Join(items, "  "))
 	}
 	area := n - 2 // a heading row above, the shelf row below
 	var rows []string
 	if s := m.boardSource(); s == nil || !s.Valid {
-		rows = append([]string{bold(line("No board: "+m.contextProblem(s), w))}, wrapAll("This is not an empty board. Press b to choose a checkout, or s for every source's diagnostics.", w)...)
+		rows = append([]string{bold(line("No board: "+m.contextProblem(s), w))}, wrapAll("This is not an empty board. Press b to view another checkout, or s for what went wrong in each branch and checkout.", w)...)
 		if s != nil {
 			for _, d := range s.Diagnostics {
 				rows = append(rows, wrapAll("  "+d, w)...)
@@ -303,7 +303,7 @@ func (m *Model) column(cards []card, focused bool, w, n int) []string {
 		if on {
 			at = i
 		}
-		rows = append(rows, mark(on, fmt.Sprintf("%s  %s", c.id, count(c.versions)), w), mark(on, c.title, w), line("", w))
+		rows = append(rows, mark(on, c.id+count("  ", c.versions, ""), w), mark(on, c.title, w), line("", w))
 	}
 	return window(rows, at, (n-2)/cardRows, cardRows, n, w)
 }
@@ -312,17 +312,26 @@ func (m *Model) versionsBody(w, n int) []string {
 	g, top := m.group(), m.refusalRows(w, n)
 	n -= len(top)
 	list := func(w int) []string {
-		rows := []string{mark(m.verKey == "" && !m.detail, fmt.Sprintf("%s   %s: select one explicitly", g.ID, count(len(g.Versions))), w)}
+		rows := []string{mark(m.verKey == "" && !m.detail, g.ID+"   "+summary(g), w)}
 		at := 0
-		for i, v := range g.Versions {
-			status := "-"
-			if v.Record != nil {
-				status = v.Record.Status
+		for i, r := range m.rows() {
+			var text string
+			switch {
+			case r.fold != nil && m.unfolded == r.key:
+				text = fmt.Sprintf("▾ %-9s  same on %s", r.fold[0].Record.Status, held(r.fold))
+			case r.fold != nil:
+				text = fmt.Sprintf("▸ %-9s  same on %s", r.fold[0].Record.Status, held(r.fold))
+			case r.inFold:
+				text = fmt.Sprintf("      %s  %s", label(r.v.Source), r.v.Change)
+			case r.v.Record == nil:
+				text = fmt.Sprintf("  %-9s  %s  %s", "-", label(r.v.Source), r.v.Change)
+			default:
+				text = fmt.Sprintf("  %-9s  %s  %s", r.v.Record.Status, label(r.v.Source), r.v.Change)
 			}
-			if rowKey(v) == m.verKey {
+			if r.key == m.verKey {
 				at = i + 1
 			}
-			rows = append(rows, mark(rowKey(v) == m.verKey && !m.detail, fmt.Sprintf("%-9s  %s  %s", status, label(v.Source), v.Change), w))
+			rows = append(rows, mark(r.key == m.verKey && !m.detail, text, w))
 		}
 		return window(rows, at, n-2, 1, n, w)
 	}
@@ -360,7 +369,7 @@ func (m *Model) refusalRows(w, n int) []string {
 	}
 	top := append(wrapAll("REFUSED: "+m.refusal, w), line("Nothing was opened. Press r to refresh, then select a version again.", w))
 	if limit := max(n/2, 2); len(top) > limit {
-		top = append(top[:limit-1], line("  … (s shows every source's diagnostics)", w))
+		top = append(top[:limit-1], line("  … (s shows each branch and checkout's diagnostics)", w))
 	}
 	for i := range top {
 		top[i] = bold(top[i])
@@ -368,31 +377,73 @@ func (m *Model) refusalRows(w, n int) []string {
 	return top
 }
 
-// detailRows describes the focused version, or the group when the ID header
-// has focus. The header describes; it selects nothing.
+// detailRows describes the focused row, or the group when the ID header has
+// focus. The header and a fold describe; they select nothing.
 func (m *Model) detailRows(w int) []string {
-	g, v := m.group(), m.focused()
+	g, r := m.group(), m.focusedRow()
 	if g == nil {
 		return nil
 	}
-	if v == nil {
-		rows := wrapAll(fmt.Sprintf("%s has %s here. Each keeps its own title and status; none is authoritative, and nothing here says a branch was integrated.\n\nMove to a version and press Enter to resolve that version's existing workspace.", g.ID, count(len(g.Versions))), w)
-		return rows
-	}
-	s := v.Source
 	fields := [][2]string{}
 	add := func(name, value string) {
 		if value != "" {
 			fields = append(fields, [2]string{name, value})
 		}
 	}
+	finish := func(source []byte) []string {
+		var rows []string
+		for _, f := range fields {
+			name := f[0] + ":"
+			if f[0] == "" { // continues the field above
+				name = ""
+			}
+			rows = append(rows, exact(fmt.Sprintf("%-10s%s", name, f[1]), w)...)
+		}
+		if source != nil {
+			rows = append(rows, line(strings.Repeat("─", w), w))
+			rows = append(rows, wrapAll(string(source), w)...)
+		}
+		return rows
+	}
+	switch {
+	case r == nil:
+		text := "A version is this record's exact content. Grove read it on every local branch (its committed tip) and in every checkout (its files on disk, committed or not) and lists each differing content once."
+		if distinct(*g) > 1 {
+			text += " Each keeps its own title and status; none is authoritative, and nothing here says a branch was integrated."
+		}
+		all := make([]*versions.Version, len(g.Versions))
+		for i := range g.Versions {
+			all[i] = &g.Versions[i]
+		}
+		return wrapAll(g.ID+": "+summary(g)+" ("+held(all)+").\n\n"+text+"\n\nMove to a row. Enter on ▸ lists the branches and checkouts holding that content; Enter on one of them, or on a row naming a single place, returns the path of the existing checkout to work in.", w)
+	case r.fold != nil:
+		first := r.fold[0]
+		add("Title", first.Record.Title)
+		add("Status", first.Record.Status)
+		add("Revision", first.Revision)
+		for i, v := range r.fold {
+			name := ""
+			if i == 0 {
+				name = "Same on"
+			}
+			fields = append(fields, [2]string{name, strings.TrimSpace(label(v.Source) + "  " + v.Change)})
+		}
+		add("Note", "Enter lists these places so one can be selected.")
+		return finish(first.Record.Source)
+	}
+	v := r.v
+	s := v.Source
 	if v.Record != nil {
 		add("Title", v.Record.Title)
 		add("Status", v.Record.Status)
 	} else {
 		add("Status", "deleted from this checkout's live files; cannot be opened")
 	}
-	add("Source", s.Kind)
+	if s.Kind == "live" {
+		add("Seen in", "a checkout's files on disk")
+	} else {
+		add("Seen in", "a branch's committed tip")
+	}
 	if s.Ref != "" {
 		add("Branch", s.Ref)
 	} else {
@@ -406,15 +457,10 @@ func (m *Model) detailRows(w int) []string {
 	add("Revision", v.Revision)
 	add("Selector", v.Selector)
 	add("Note", s.Note)
-	var rows []string
-	for _, f := range fields {
-		rows = append(rows, exact(fmt.Sprintf("%-10s%s", f[0]+":", f[1]), w)...)
+	if v.Record == nil {
+		return finish(nil)
 	}
-	if v.Record != nil {
-		rows = append(rows, line(strings.Repeat("─", w), w))
-		rows = append(rows, wrapAll(string(v.Record.Source), w)...)
-	}
-	return rows
+	return finish(v.Record.Source)
 }
 
 func (m *Model) chooserBody(w, n int) []string {
@@ -427,7 +473,7 @@ func (m *Model) chooserBody(w, n int) []string {
 		// The path comes last: clipping a long one must not hide the state.
 		rows = append(rows, mark(i == m.choice, fmt.Sprintf("%s   %s   %s", label(s), state, s.Worktree), w))
 	}
-	head := wrapAll("Choose the checkout whose live work fills the columns. No branch or directory is switched.", w)
+	head := wrapAll("The board's columns show one checkout's files. Choose which checkout to look at. Only this display changes: Git switches no branch, and your shell stays where it is.", w)
 	for i := range head {
 		head[i] = bold(head[i])
 	}
@@ -436,7 +482,7 @@ func (m *Model) chooserBody(w, n int) []string {
 }
 
 func (m *Model) sourceRows(w int) []string {
-	rows := []string{bold(line("Sources inspected in "+m.res.Repository, w))}
+	rows := []string{bold(line("Branches and checkouts read in "+m.res.Repository, w))}
 	for _, s := range m.res.Sources {
 		state := "valid"
 		if !s.Valid {
@@ -485,7 +531,7 @@ func (m *Model) contextProblem(s *versions.Source) string {
 	case m.lost:
 		return "the chosen checkout changed branch, moved, or was removed"
 	}
-	return "this checkout is not an inspectable source of the repository"
+	return "this directory is not one of the repository's readable checkouts"
 }
 
 func sourceProblem(s *versions.Source) string {
@@ -498,11 +544,11 @@ func sourceProblem(s *versions.Source) string {
 	return "invalid"
 }
 
-// label names a source the way every screen shows it.
+// label names a branch tip or a checkout the way every screen shows it.
 func label(s *versions.Source) string {
 	ref := strings.TrimPrefix(s.Ref, "refs/heads/")
 	if s.Kind != "live" {
-		return "committed " + ref
+		return "branch " + ref
 	}
 	if ref == "" {
 		ref = "detached at " + short(s.Commit)
@@ -511,16 +557,55 @@ func label(s *versions.Source) string {
 	if locator == "" {
 		locator = "?"
 	}
-	return "live " + locator + " " + ref
+	return "checkout " + locator + " (" + ref + ")"
+}
+
+// places words how many branch tips and checkouts are among sources.
+func places(sources []*versions.Source) string {
+	live := 0
+	for _, s := range sources {
+		if s.Kind == "live" {
+			live++
+		}
+	}
+	var parts []string
+	for _, p := range [][3]string{{strconv.Itoa(len(sources) - live), "branch", "branches"}, {strconv.Itoa(live), "checkout", "checkouts"}} {
+		if p[0] == "1" {
+			parts = append(parts, "1 "+p[1])
+		} else if p[0] != "0" {
+			parts = append(parts, p[0]+" "+p[2])
+		}
+	}
+	return strings.Join(parts, ", ")
+}
+
+func held(vs []*versions.Version) string {
+	sources := make([]*versions.Source, len(vs))
+	for i, v := range vs {
+		sources[i] = v.Source
+	}
+	return places(sources)
+}
+
+// summary is an open card's first line, short enough for the list pane.
+func summary(g *versions.Group) string {
+	if n := distinct(*g); n > 1 {
+		return strconv.Itoa(n) + " versions differ"
+	} else if len(g.Versions) > 1 {
+		return "same everywhere"
+	}
+	return "in one place"
 }
 
 func short(commit string) string { return commit[:min(len(commit), 12)] }
 
-func count(n int) string {
-	if n == 1 {
-		return "1 version"
+// count notes differing versions between before and after; agreement needs
+// no note.
+func count(before string, n int, after string) string {
+	if n < 2 {
+		return ""
 	}
-	return strconv.Itoa(n) + " versions"
+	return before + strconv.Itoa(n) + " versions" + after
 }
 
 func title(s string) string { return strings.ToUpper(s[:1]) + s[1:] }

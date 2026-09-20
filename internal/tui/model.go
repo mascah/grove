@@ -1,6 +1,6 @@
 // Package tui is Grove's terminal interface: a Kanban board scoped to one live
-// checkout, whose cards open every observed version of a record, and explicit
-// selection of one version's existing workspace. It reads through Backend and
+// checkout, whose cards open a record's differing versions with the branches
+// and checkouts holding each, and explicit selection of one existing workspace. It reads through Backend and
 // changes nothing but the terminal: no records, refs, index, or worktrees.
 package tui
 
@@ -42,7 +42,17 @@ func keyOf(s *versions.Source) sourceKey { return sourceKey{s.Locator, s.Worktre
 
 type card struct {
 	id, title string
-	versions  int
+	versions  int // distinct contents, not the places holding them
+}
+
+// row is one line of a card's version list: a fold standing for several
+// places that hold the same bytes, or one version. A fold selects nothing;
+// Enter opens it into its members, which stay separate explicit choices.
+type row struct {
+	key    string
+	fold   []*versions.Version // more than one place holds these bytes
+	v      *versions.Version
+	inFold bool // v is a member shown beneath its open fold
 }
 
 type inspectMsg struct {
@@ -110,7 +120,8 @@ type Model struct {
 	col          int
 	onShelf      bool
 	cardID       string
-	verKey       string // "" is the ID header, which selects nothing
+	verKey       string // a row's key; "" is the ID header, which selects nothing
+	unfolded     string // the key of the one fold showing its members
 	detail       bool   // the detail pane has focus
 	scroll       int    // detail pane, or sources screen
 	choice       int    // chooser row
@@ -169,7 +180,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.pending, m.cancel = "", nil
 		if msg.err != nil {
 			m.res, m.failure = nil, msg.err.Error()
-			m.screen, m.cardID, m.verKey = boardScreen, "", ""
+			m.screen, m.cardID = boardScreen, ""
+			m.leaveVersions()
 			return m, nil
 		}
 		m.res, m.failure = msg.res, ""
@@ -210,9 +222,7 @@ func (m *Model) key(k string) tea.Cmd {
 			m.notice = "a read is already in progress"
 			return nil
 		}
-		// A refresh forgets the version focus: the next selection is made
-		// against rows the person has seen since.
-		m.verKey, m.detail, m.scroll, m.refusal = "", false, 0, ""
+		m.leaveVersions()
 		return m.read("inspect", "")
 	case "s":
 		if m.screen != sourcesScreen && m.res != nil {
@@ -228,7 +238,8 @@ func (m *Model) key(k string) tea.Cmd {
 			if m.pending == "resolve" {
 				m.stop()
 			}
-			m.screen, m.verKey, m.detail, m.scroll, m.refusal = boardScreen, "", false, 0, ""
+			m.screen = boardScreen
+			m.leaveVersions()
 		default:
 			m.screen, m.scroll = m.back, 0
 		}
@@ -288,7 +299,8 @@ func (m *Model) boardKey(k string) tea.Cmd {
 		// Opening a card shows its versions. It never resolves a workspace,
 		// even when only one version exists.
 		if at >= 0 {
-			m.screen, m.verKey, m.detail, m.scroll, m.refusal = versionsScreen, "", false, 0, ""
+			m.screen = versionsScreen
+			m.leaveVersions()
 		}
 	}
 	return nil
@@ -299,11 +311,12 @@ func (m *Model) versionsKey(k string) tea.Cmd {
 	if g == nil {
 		return nil
 	}
-	at := slices.IndexFunc(g.Versions, func(v versions.Version) bool { return rowKey(v) == m.verKey }) // -1 is the header
+	rows := m.rows()
+	at := slices.IndexFunc(rows, func(r row) bool { return r.key == m.verKey }) // -1 is the header
 	move := func(i int) {
 		m.verKey, m.scroll = "", 0
-		if i = min(i, len(g.Versions)-1); i >= 0 {
-			m.verKey = rowKey(g.Versions[i])
+		if i = min(i, len(rows)-1); i >= 0 {
+			m.verKey = rows[i].key
 		}
 	}
 	switch k {
@@ -323,14 +336,21 @@ func (m *Model) versionsKey(k string) tea.Cmd {
 	case "enter":
 		switch {
 		case at < 0 || m.detail:
-			// The header and the detail pane select no source.
+			// The header and the detail pane select nothing.
+		case rows[at].fold != nil:
+			// Nor does a fold: it shows or hides the places to choose from.
+			if m.unfolded == rows[at].key {
+				m.unfolded = ""
+			} else {
+				m.unfolded = rows[at].key
+			}
 		case m.pending != "":
 			m.notice = "a read is in progress; wait for it before selecting"
-		case g.Versions[at].Selector == "":
+		case rows[at].v.Selector == "":
 			m.refusal = "this record was deleted from that checkout's live files, so there is nothing to open there"
 		default:
 			m.refusal = ""
-			return m.read("resolve", g.Versions[at].Selector)
+			return m.read("resolve", rows[at].v.Selector)
 		}
 	}
 	return nil
@@ -354,7 +374,7 @@ func (m *Model) chooserKey(k string) {
 			m.screen, m.col, m.onShelf, m.cardID = boardScreen, 0, false, ""
 			m.settleFocus()
 		} else {
-			m.notice = "that checkout cannot be a board context: " + sourceProblem(s)
+			m.notice = "that checkout cannot fill the board: " + sourceProblem(s)
 		}
 	}
 }
@@ -409,7 +429,7 @@ func (m *Model) settleFocus() {
 		}
 		// The versions may be open beneath the sources screen.
 		if m.screen == versionsScreen || m.back == versionsScreen {
-			m.notice = m.cardID + " is no longer in any valid source"
+			m.notice = m.cardID + " is no longer on any readable branch or checkout"
 			if m.back = boardScreen; m.screen == versionsScreen {
 				m.screen = boardScreen
 			}
@@ -465,12 +485,12 @@ func (m *Model) cards() (columns [4][]card, shelf []card) {
 				continue
 			}
 			if i := slices.Index(statuses[:], v.Record.Status); i >= 0 {
-				columns[i] = append(columns[i], card{g.ID, v.Record.Title, len(g.Versions)})
+				columns[i] = append(columns[i], card{g.ID, v.Record.Title, distinct(g)})
 				placed = true
 			}
 		}
 		if !placed {
-			shelf = append(shelf, card{id: g.ID, versions: len(g.Versions)})
+			shelf = append(shelf, card{id: g.ID, versions: distinct(g)})
 		}
 	}
 	return
@@ -498,14 +518,82 @@ func (m *Model) group() *versions.Group {
 	return nil
 }
 
-// focused returns the version under the cursor, or nil on the ID header.
-func (m *Model) focused() *versions.Version {
-	if g := m.group(); g != nil && m.verKey != "" {
-		for i := range g.Versions {
-			if rowKey(g.Versions[i]) == m.verKey {
-				return &g.Versions[i]
+// leaveVersions forgets the version focus: the next selection is made against
+// rows the person has seen since.
+func (m *Model) leaveVersions() {
+	m.verKey, m.unfolded, m.detail, m.scroll, m.refusal = "", "", false, 0, ""
+}
+
+// contentKey is what rows fold on: the exact bytes. A deleted row has none
+// and never folds.
+func contentKey(v *versions.Version) string {
+	if v.Record == nil {
+		return ""
+	}
+	return v.Revision
+}
+
+// distinct counts a group's differing versions; each deleted row is its own.
+func distinct(g versions.Group) int {
+	seen := map[string]bool{}
+	n := 0
+	for i := range g.Versions {
+		if k := contentKey(&g.Versions[i]); k == "" || !seen[k] {
+			seen[k], n = true, n+1
+		}
+	}
+	return n
+}
+
+// rows lists the open card: one row per distinct content in the inspection's
+// order, a fold where several places hold it, and the open fold's members.
+func (m *Model) rows() []row {
+	g := m.group()
+	if g == nil {
+		return nil
+	}
+	same := map[string][]*versions.Version{}
+	for i := range g.Versions {
+		if v := &g.Versions[i]; contentKey(v) != "" {
+			same[contentKey(v)] = append(same[contentKey(v)], v)
+		}
+	}
+	var rows []row
+	for i := range g.Versions {
+		v := &g.Versions[i]
+		members := same[contentKey(v)]
+		switch {
+		case len(members) < 2:
+			rows = append(rows, row{key: rowKey(*v), v: v})
+		case members[0] == v:
+			fold := row{key: "fold\x00" + v.Revision, fold: members}
+			rows = append(rows, fold)
+			if m.unfolded == fold.key {
+				for _, member := range members {
+					rows = append(rows, row{key: rowKey(*member), v: member, inFold: true})
+				}
 			}
 		}
+	}
+	return rows
+}
+
+// focusedRow returns the row under the cursor, or nil on the ID header.
+func (m *Model) focusedRow() *row {
+	if m.verKey != "" {
+		for _, r := range m.rows() {
+			if r.key == m.verKey {
+				return &r
+			}
+		}
+	}
+	return nil
+}
+
+// focused returns the one version under the cursor, if the row is one.
+func (m *Model) focused() *versions.Version {
+	if r := m.focusedRow(); r != nil {
+		return r.v
 	}
 	return nil
 }

@@ -25,7 +25,7 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
 	"       grove [--project DIR] workspace --source SELECTOR [--json]\n\n" +
 	"  (none)     Open the terminal board: one checkout's work by status, each card's\n" +
-	"             versions across branches and worktrees, and explicit selection of a\n" +
+	"             differing versions across branches and checkouts, and explicit selection of a\n" +
 	"             version's existing workspace, printed like workspace (--json likewise).\n" +
 	"             Needs a terminal on stdin and stderr; stdout may be redirected. Reads only.\n" +
 	"  list       List records in the selected checkout\n" +

@@ -35,7 +35,7 @@ func version(s *versions.Source, id, title, status string) versions.Version {
 	path := "grove/" + kind + "/" + id + ".md"
 	body := fmt.Sprintf("---\nid: %s\ntitle: %s\nstatus: %s\n---\n\nBody of %s.\n", id, title, status, id)
 	v := versions.Version{
-		Source: s, Path: path, Revision: "sha256:" + strings.Repeat("b", 64),
+		Source: s, Path: path, Revision: project.Revision([]byte(body)),
 		Record:   &project.Record{ID: id, Type: kind, Title: title, Status: status, Path: path, Source: []byte(body)},
 		Selector: s.Kind + ":" + s.Locator + ":" + s.Ref + ":" + id,
 	}
@@ -204,14 +204,28 @@ func TestSelectionIsExplicit(t *testing.T) {
 		t.Fatalf("resolved %v before any version was chosen", f.resolved)
 	}
 	// Rows follow the inspection's order. Two of them hold identical bytes
-	// (committed and live main) and remain separate choices.
+	// (committed and live main): they show as one fold, which selects nothing,
+	// and opening it keeps them separate choices.
 	g := m.group()
 	if string(g.Versions[0].Record.Source) != string(g.Versions[1].Record.Source) || g.Versions[0].Selector == g.Versions[1].Selector {
 		t.Fatal("fixture should hold identical content under different selectors")
 	}
-	press(m, "down", "down")
+	if rows := m.rows(); len(rows) != 2 || len(rows[0].fold) != 2 || len(rows[1].fold) != 2 {
+		t.Fatalf("four versions of two contents should be two folds: %+v", rows)
+	}
+	press(m, "down")
+	if s := plain(m); !strings.Contains(s, "> ▸ active     same on 1 branch, 1 checkout") || strings.Contains(s, "checkout . (main)  unchanged") && !strings.Contains(s, "Same on") {
+		t.Fatalf("identical content should be one row:\n%s", s)
+	}
+	if cmd := press(m, "enter"); cmd != nil || len(f.resolved) != 0 || len(m.rows()) != 4 {
+		t.Fatalf("Enter on a fold must only list its places: %d rows, resolved %v", len(m.rows()), f.resolved)
+	}
+	if press(m, "enter"); len(m.rows()) != 2 {
+		t.Fatal("Enter on an open fold should close it")
+	}
+	press(m, "enter", "down", "down")
 	if m.verKey != g.Versions[1].Selector {
-		t.Fatalf("cursor on %q, want the second row", m.verKey)
+		t.Fatalf("cursor on %q, want the fold's second place", m.verKey)
 	}
 	cmd := press(m, "enter")
 	if cmd == nil || m.pending != "resolve" {
@@ -240,7 +254,7 @@ func TestRefusalStaysVisibleUntilRefresh(t *testing.T) {
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches(), refuse: errors.New("branch refs/heads/main moved from aaa to bbb; run versions and reselect")}
 	m := open(t, f, 120, 30)
-	press(m, "right", "enter", "down")
+	press(m, "right", "enter", "down", "enter", "down")
 	if next := deliver(m, press(m, "enter")); next != nil || m.Workspace != nil || m.screen != versionsScreen {
 		t.Fatal("a refused resolution must stay in the version view without a workspace")
 	}
@@ -284,8 +298,11 @@ func TestStaleAndCancelledReplies(t *testing.T) {
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches(), ws: &versions.Workspace{Project: "/repo/."}}
 	m := open(t, f, 120, 30)
-	press(m, "right", "enter", "down")
+	press(m, "right", "enter", "down", "enter", "down")
 	old := press(m, "enter")
+	if old == nil {
+		t.Fatal("the fixture should start a resolve")
+	}
 	press(m, "esc") // leaves the versions and abandons the resolve
 	if m.pending != "" || m.screen != boardScreen {
 		t.Fatal("Esc must cancel a pending resolve")
@@ -308,7 +325,7 @@ func TestStaleAndCancelledReplies(t *testing.T) {
 		t.Fatal("a late or unrequested reply changed state")
 	}
 	// Even a current, pending resolve accepts only the selector it asked for.
-	press(m, "enter", "down") // still on W-001's column
+	press(m, "enter", "down", "enter", "down") // still on W-001's column
 	press(m, "enter")
 	if m.pending != "resolve" || m.resolving == "" {
 		t.Fatal("expected a pending resolve")
@@ -366,12 +383,12 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 		t.Fatalf("main board:\n got %s\nwant %s", got, want)
 	}
 	screen := plain(m)
-	for _, want := range []string{"Board: live . main", "4 sources inspected", "Inspect records", "Other sources (1", "W-010 [2 versions]", "Done (0)", "(none)"} {
+	for _, want := range []string{"Board: checkout . (main)", "read 2 branches, 2 checkouts", "Inspect records", "W-001  2 versions", "Elsewhere (1", "): W-010 ", "Done (0)", "(none)"} {
 		if !strings.Contains(screen, want) {
 			t.Fatalf("board lacks %q:\n%s", want, screen)
 		}
 	}
-	for _, unwanted := range []string{"Q-001", "D-001", "Which version", "finished", "Only on feature"} {
+	for _, unwanted := range []string{"Q-001", "D-001", "Which version", "finished", "Only on feature", "W-002  2", "W-010 ["} {
 		if strings.Contains(screen, unwanted) {
 			t.Fatalf("main's board shows %q:\n%s", unwanted, screen)
 		}
@@ -381,7 +398,7 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 	if got, want := board(m), "proposed=W-002,W-010 active= done=W-001 abandoned= shelf="; got != want {
 		t.Fatalf("feature board:\n got %s\nwant %s", got, want)
 	}
-	if screen = plain(m); !strings.Contains(screen, "Board: live feat feature") || !strings.Contains(screen, "Inspect records, finished") {
+	if screen = plain(m); !strings.Contains(screen, "Board: checkout feat (feature)") || !strings.Contains(screen, "Inspect records, finished") {
 		t.Fatalf("the feature board should carry feature's label and titles:\n%s", screen)
 	}
 	if f.inspects != 1 || len(f.resolved) != 0 {
@@ -390,7 +407,7 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 	// Each version keeps its own status in the card.
 	press(m, "right", "right", "enter")
 	screen = plain(m)
-	for _, want := range []string{"W-001   4 versions: select one explicitly", "active     committed main", "done       live feat feature", "Each keeps its own title and status"} {
+	for _, want := range []string{"W-001   2 versions differ", "(2 branches, 2 checkouts)", "▸ active     same on 1 branch, 1 checkout", "▸ done       same on 1 branch, 1 checkout", "none is authoritative"} {
 		if !strings.Contains(screen, want) {
 			t.Fatalf("versions lack %q:\n%s", want, screen)
 		}
@@ -411,7 +428,7 @@ func TestContextStates(t *testing.T) {
 	res := result(bad.main, bad.sources(), version(bad.feat, "W-010", "Only on feature", "proposed"))
 	m = open(t, &fake{res: res}, 120, 30)
 	s := plain(m)
-	for _, want := range []string{"[INVALID]", "No board: live . main is not usable", "not an empty board", "expected one of proposed", "INCOMPLETE: 1 of 4", "W-010 [1 version]"} {
+	for _, want := range []string{"[INVALID]", "No board: checkout . (main) is not usable", "not an empty board", "expected one of proposed", "INCOMPLETE: 1 of 4", "): W-010"} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("invalid context lacks %q:\n%s", want, s)
 		}
@@ -421,7 +438,7 @@ func TestContextStates(t *testing.T) {
 	}
 	// The valid subset stays selectable, and the invalid source cannot be chosen.
 	press(m, "b", "enter")
-	if m.screen != chooserScreen || !strings.Contains(plain(m), "cannot be a board context") {
+	if m.screen != chooserScreen || !strings.Contains(plain(m), "cannot fill the board") {
 		t.Fatalf("an invalid checkout was accepted:\n%s", plain(m))
 	}
 	press(m, "down", "enter")
@@ -433,14 +450,14 @@ func TestContextStates(t *testing.T) {
 	det := newFixture()
 	det.main.Ref = ""
 	m = open(t, &fake{res: result(det.main, det.sources(), version(det.main, "W-001", "Detached work", "active"))}, 120, 30)
-	if s := plain(m); !strings.Contains(s, "Board: live . detached at aaaaaaaaaaaa") || !strings.Contains(s, "Detached work") {
+	if s := plain(m); !strings.Contains(s, "Board: checkout . (detached at aaaaaaaaaaaa)") || !strings.Contains(s, "Detached work") {
 		t.Fatalf("detached context:\n%s", s)
 	}
 
 	// The invocation's checkout may not be a source at all.
 	none := newFixture()
 	m = open(t, &fake{res: result(nil, none.sources(), version(none.feat, "W-010", "Only on feature", "proposed"))}, 120, 30)
-	if s := plain(m); !strings.Contains(s, "no checkout selected") || !strings.Contains(s, "not an inspectable source") {
+	if s := plain(m); !strings.Contains(s, "no checkout selected") || !strings.Contains(s, "not one of the repository's readable checkouts") {
 		t.Fatalf("missing context:\n%s", s)
 	}
 
@@ -476,7 +493,7 @@ func TestRefreshFollowsIdentityNotPosition(t *testing.T) {
 	press(m, "enter", "down")
 	f.res = result(next.main, next.sources(), version(next.main, "W-003", "Newcomer", "active"))
 	deliver(m, press(m, "r"))
-	if m.screen != boardScreen || m.verKey != "" || !strings.Contains(plain(m), "W-001 is no longer in any valid source") {
+	if m.screen != boardScreen || m.verKey != "" || !strings.Contains(plain(m), "W-001 is no longer on any readable branch or checkout") {
 		t.Fatalf("a vanished card must return to the board with a reason:\n%s", plain(m))
 	}
 	// The context switches branch: the old choice is void until b chooses again.
@@ -540,6 +557,8 @@ func TestLayoutAtEverySize(t *testing.T) {
 		check("shelf")
 		press(m, "tab", "enter", "down")
 		check("versions")
+		press(m, "enter", "down")
+		check("open fold")
 		deliver(m, press(m, "enter"))
 		check("refusal")
 		if !strings.Contains(plain(m), "REFUSED: stale") {
@@ -547,7 +566,7 @@ func TestLayoutAtEverySize(t *testing.T) {
 		}
 		press(m, "tab")
 		check("details")
-		if s := plain(m); !strings.Contains(s, "> Details") || (w < wideWidth && strings.Contains(s, "select one explicitly")) {
+		if s := plain(m); !strings.Contains(s, "> Details") || (w < wideWidth && strings.Contains(s, "same everywhere")) {
 			t.Fatalf("%dx%d: narrow terminals show only the focused pane:\n%s", w, h, s)
 		}
 		press(m, "s")
@@ -613,14 +632,18 @@ func TestEverythingStaysReachable(t *testing.T) {
 			press(m, "down")
 		}
 		press(m, "tab", "enter")
-		for i := range 26 {
+		// main's own content, then one fold of 25 branches, opened.
+		if press(m, "down"); !focusedRow("  proposed   checkout . (main)") {
+			t.Fatalf("%v: the differing version is not visible:\n%s", size, plain(m))
+		}
+		if press(m, "down"); !focusedRow("▸ done       same on 25 branches") {
+			t.Fatalf("%v: identical versions should fold into one row:\n%s", size, plain(m))
+		}
+		press(m, "enter")
+		for i := range 25 {
 			press(m, "down")
-			want := "live . main"
-			if i > 0 {
-				want = fmt.Sprintf("committed branch-%02d", i-1)
-			}
-			if !focusedRow("done") && !focusedRow("proposed") || !strings.Contains(plain(m), want) {
-				t.Fatalf("%v: version row %d (%s) not visible:\n%s", size, i, want, plain(m))
+			if want := fmt.Sprintf("      branch branch-%02d", i); !focusedRow(want) {
+				t.Fatalf("%v: place %d (%s) not focused and visible:\n%s", size, i, want, plain(m))
 			}
 		}
 		press(m, "esc", "enter", "down", "tab")
@@ -741,7 +764,7 @@ func TestRefreshUnderOverlays(t *testing.T) {
 		press(m, "b", "down", "down", "down", "down", "down")
 		f.res = live(left)
 		deliver(m, press(m, "r"))
-		if s := plain(m); m.choice != left-1 || !strings.Contains(s, fmt.Sprintf("> live wt%d", left-1)) {
+		if s := plain(m); m.choice != left-1 || !strings.Contains(s, fmt.Sprintf("> checkout wt%d", left-1)) {
 			t.Fatalf("%d checkouts left: choice %d:\n%s", left, m.choice, s)
 		}
 	}
@@ -753,7 +776,7 @@ func TestRefreshUnderOverlays(t *testing.T) {
 	press(m, "right", "enter", "down", "s")
 	f.res = result(fx.main, fx.sources(), version(fx.main, "W-003", "Newcomer", "active"))
 	deliver(m, press(m, "r"))
-	if !strings.Contains(plain(m), "W-001 is no longer in any valid source") {
+	if !strings.Contains(plain(m), "W-001 is no longer on any readable branch or checkout") {
 		t.Fatalf("the reason was lost:\n%s", plain(m))
 	}
 	if press(m, "esc"); m.screen != boardScreen || m.cardID != "W-003" {
