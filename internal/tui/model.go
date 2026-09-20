@@ -1,6 +1,7 @@
 // Package tui is Grove's terminal interface: a Kanban board scoped to one live
 // checkout, whose cards open a record's differing versions with the branches
-// and checkouts holding each, and explicit selection of one existing workspace. It reads through Backend and
+// and checkouts holding each, the focused one's history of commits, and
+// explicit selection of one existing workspace. It reads through Backend and
 // changes nothing but the terminal: no records, refs, index, or worktrees.
 package tui
 
@@ -20,6 +21,9 @@ import (
 type Backend struct {
 	Inspect func(ctx context.Context, root, id string) (*versions.Result, error)
 	Resolve func(ctx context.Context, root, selector string) (*versions.Workspace, error)
+	// History lists the commits behind an open card's focused version. It is
+	// read when a card is open, never for the board; nil leaves the section out.
+	History func(ctx context.Context, root, commit, path string) ([]versions.Commit, error)
 }
 
 type screen int
@@ -68,6 +72,19 @@ type resolveMsg struct {
 	err      error
 }
 
+type historyMsg struct {
+	gen     int
+	key     string
+	commits []versions.Commit
+	err     error
+}
+
+// lineage is one finished history read, kept until the next inspection.
+type lineage struct {
+	commits []versions.Commit
+	err     error
+}
+
 // reads tracks backend calls so Run can collect them after the program ends.
 // A command the runtime starts after close never begins.
 type reads struct {
@@ -108,9 +125,12 @@ type Model struct {
 	notice  string // one-shot message, cleared by the next key
 
 	gen       int    // the newest request; older replies are ignored
-	pending   string // "", "inspect", or "resolve": one read at a time
+	pending   string // "", "inspect", "resolve", or "history": one read at a time
 	resolving string // the exact selector a pending resolve was asked for
+	reading   string // the history key a pending history read was asked for
 	cancel    context.CancelFunc
+	hist      map[string]lineage // by commit and path, for the current result only
+	done      bool               // the session is ending: start nothing more
 
 	board    sourceKey
 	hasBoard bool
@@ -136,27 +156,100 @@ func New(ctx context.Context, root string, backend Backend) *Model {
 	return &Model{ctx: ctx, root: root, backend: backend}
 }
 
-func (m *Model) Init() tea.Cmd { return m.read("inspect", "") }
+func (m *Model) Init() tea.Cmd { return m.inspect() }
 
-// read starts the one allowed backend call under its own cancellable context.
-func (m *Model) read(kind, selector string) tea.Cmd {
+// read starts the one allowed backend call under its own cancellable context,
+// cancelling and outdating whichever came before.
+func (m *Model) read(kind string, call func(ctx context.Context, gen int) tea.Msg) tea.Cmd {
 	m.stop()
 	gen := m.gen
 	ctx, cancel := context.WithCancel(m.ctx)
-	m.pending, m.resolving, m.cancel = kind, selector, cancel
+	m.pending, m.cancel = kind, cancel
 	return func() tea.Msg {
 		defer cancel()
 		if !m.reads.begin() {
 			return nil
 		}
 		defer m.reads.wg.Done()
-		if kind == "resolve" {
-			ws, err := m.backend.Resolve(ctx, m.root, selector)
-			return resolveMsg{gen, selector, ws, err}
-		}
+		return call(ctx, gen)
+	}
+}
+
+func (m *Model) inspect() tea.Cmd {
+	return m.read("inspect", func(ctx context.Context, gen int) tea.Msg {
 		res, err := m.backend.Inspect(ctx, m.root, "")
 		return inspectMsg{gen, res, err}
+	})
+}
+
+func (m *Model) resolve(selector string) tea.Cmd {
+	cmd := m.read("resolve", func(ctx context.Context, gen int) tea.Msg {
+		ws, err := m.backend.Resolve(ctx, m.root, selector)
+		return resolveMsg{gen, selector, ws, err}
+	})
+	m.resolving = selector
+	return cmd
+}
+
+// busy reports a read that a key must wait for. A history read is not one:
+// whatever the person asks for next replaces it.
+func (m *Model) busy() bool { return m.pending == "inspect" || m.pending == "resolve" }
+
+// wantHistory starts reading the focused version's history when a card is
+// showing, no other read is pending, and that history is not already held or
+// being read. The board never asks for one.
+func (m *Model) wantHistory() tea.Cmd {
+	if m.backend.History == nil || m.done || m.screen != versionsScreen || m.busy() {
+		return nil
 	}
+	commit, path := historyAt(m.historyOf())
+	key := commit + "\x00" + path
+	if _, held := m.hist[key]; commit == "" || held || key == m.reading {
+		return nil
+	}
+	cmd := m.read("history", func(ctx context.Context, gen int) tea.Msg {
+		commits, err := m.backend.History(ctx, m.root, commit, path)
+		return historyMsg{gen, key, commits, err}
+	})
+	m.reading = key
+	return cmd
+}
+
+// historyOf returns the version whose history the details show: the focused
+// row's, a fold's first place, and under the ID header the board's checkout's
+// version, or the group's first where that checkout lacks the record.
+func (m *Model) historyOf() *versions.Version {
+	g := m.group()
+	if g == nil || len(g.Versions) == 0 {
+		return nil
+	}
+	if r := m.focusedRow(); r != nil {
+		if r.fold != nil {
+			return r.fold[0]
+		}
+		return r.v
+	}
+	if src := m.boardSource(); src != nil {
+		for i := range g.Versions {
+			if g.Versions[i].Source == src {
+				return &g.Versions[i]
+			}
+		}
+	}
+	return &g.Versions[0]
+}
+
+// historyAt names the commit and the path there that a version's history
+// starts from. A checkout's record is followed from its HEAD, under the name
+// it has there; one added since HEAD has no commit to read.
+func historyAt(v *versions.Version) (commit, path string) {
+	if v == nil || v.Change == "added" {
+		return "", ""
+	}
+	if v.HeadPath != "" {
+		return v.Source.Commit, v.HeadPath
+	}
+	return v.Source.Commit, v.Path
 }
 
 // stop cancels any read in flight and outdates its reply.
@@ -165,24 +258,32 @@ func (m *Model) stop() {
 		m.cancel()
 	}
 	m.gen++
-	m.pending, m.resolving, m.cancel = "", "", nil
+	m.pending, m.resolving, m.reading, m.cancel = "", "", "", nil
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	cmd := m.update(msg)
+	if cmd == nil {
+		cmd = m.wantHistory()
+	}
+	return m, cmd
+}
+
+func (m *Model) update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		m.clampScroll()
 	case inspectMsg:
 		if msg.gen != m.gen || m.pending != "inspect" {
-			return m, nil
+			return nil
 		}
-		m.pending, m.cancel = "", nil
+		m.pending, m.cancel, m.hist = "", nil, map[string]lineage{}
 		if msg.err != nil {
 			m.res, m.failure = nil, msg.err.Error()
 			m.screen, m.cardID = boardScreen, ""
 			m.leaveVersions()
-			return m, nil
+			return nil
 		}
 		m.res, m.failure = msg.res, ""
 		m.choice = min(m.choice, max(len(m.live())-1, 0))
@@ -190,7 +291,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.settleFocus()
 	case resolveMsg:
 		if msg.gen != m.gen || m.pending != "resolve" || msg.selector != m.resolving {
-			return m, nil
+			return nil
 		}
 		m.pending, m.resolving, m.cancel = "", "", nil
 		if msg.err != nil || msg.ws == nil {
@@ -198,14 +299,21 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if msg.err != nil {
 				m.refusal = msg.err.Error()
 			}
-			return m, nil
+			return nil
 		}
-		m.Workspace = msg.ws
-		return m, tea.Quit
+		m.Workspace, m.done = msg.ws, true
+		return tea.Quit
+	case historyMsg:
+		if msg.gen != m.gen || m.pending != "history" {
+			return nil
+		}
+		m.pending, m.reading, m.cancel = "", "", nil
+		m.hist[msg.key] = lineage{msg.commits, msg.err}
+		m.clampScroll()
 	case tea.KeyPressMsg:
-		return m, m.key(msg.String())
+		return m.key(msg.String())
 	}
-	return m, nil
+	return nil
 }
 
 func (m *Model) key(k string) tea.Cmd {
@@ -213,17 +321,19 @@ func (m *Model) key(k string) tea.Cmd {
 	switch k {
 	case "ctrl+c":
 		m.stop()
+		m.done = true
 		return tea.Interrupt
 	case "q":
 		m.stop()
+		m.done = true
 		return tea.Quit
 	case "r":
-		if m.pending != "" {
+		if m.busy() {
 			m.notice = "a read is already in progress"
 			return nil
 		}
 		m.leaveVersions()
-		return m.read("inspect", "")
+		return m.inspect()
 	case "s":
 		if m.screen != sourcesScreen && m.res != nil {
 			m.back, m.screen, m.scroll = m.screen, sourcesScreen, 0
@@ -233,9 +343,10 @@ func (m *Model) key(k string) tea.Cmd {
 		switch m.screen {
 		case boardScreen:
 			m.stop()
+			m.done = true
 			return tea.Quit
 		case versionsScreen:
-			if m.pending == "resolve" {
+			if m.pending != "inspect" {
 				m.stop()
 			}
 			m.screen = boardScreen
@@ -344,13 +455,13 @@ func (m *Model) versionsKey(k string) tea.Cmd {
 			} else {
 				m.unfolded = rows[at].key
 			}
-		case m.pending != "":
+		case m.busy():
 			m.notice = "a read is in progress; wait for it before selecting"
 		case rows[at].v.Selector == "":
 			m.refusal = "this record was deleted from that checkout's live files, so there is nothing to open there"
 		default:
 			m.refusal = ""
-			return m.read("resolve", rows[at].v.Selector)
+			return m.resolve(rows[at].v.Selector)
 		}
 	}
 	return nil

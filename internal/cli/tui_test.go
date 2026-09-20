@@ -77,7 +77,7 @@ type boardSession struct {
 
 func openBoard(t *testing.T, root string) boardSession {
 	t.Helper()
-	m := tui.New(t.Context(), root, tui.Backend{Inspect: versions.InspectContext, Resolve: versions.ResolveContext})
+	m := tui.New(t.Context(), root, tui.Backend{Inspect: versions.InspectContext, Resolve: versions.ResolveContext, History: versions.HistoryContext})
 	m.Update(tea.WindowSizeMsg{Width: 140, Height: 40})
 	s := boardSession{t, m}
 	s.run(m.Init())
@@ -201,11 +201,15 @@ func boardWorkflow(t *testing.T, broken bool) {
 		s.want("W-001   2 versions differ", "▸ proposed   same on ", "▸ active     same on 1 branch, 1 checkout")
 		s.lacks("checkout feature-wt (feature)  unchanged")
 		incomplete(s)
+		// The card opens on the lineage of the board's checkout, from real Git.
+		s.want("History on checkout . (main):", "  proposed   ", "  init")
+		s.lacks("retitle and add", "uncommitted")
 		if s.press("enter") || s.m.Workspace != nil {
 			t.Fatal("the ID header selected something")
 		}
 		s.focus("▸ active")
 		s.want("Same on:  branch feature", "checkout feature-wt (feature)  unchanged", "Inspect records, on feature")
+		s.want("History on branch feature:", "  retitle and add", "  feature", "  init")
 		if s.press("enter") || s.m.Workspace != nil {
 			t.Fatal("a fold of identical versions selected something")
 		}
@@ -250,7 +254,9 @@ func boardWorkflow(t *testing.T, broken bool) {
 		if s.press("enter") || s.m.Workspace != nil {
 			t.Fatal("refresh must not reselect the old row")
 		}
-		if s.focus("checkout feature-wt (feature)"); !s.press("enter") || s.m.Workspace == nil {
+		s.focus("checkout feature-wt (feature)")
+		s.want("History on checkout feature-wt (feature):", "uncommitted       active     modified in this checkout's files", "  retitle and add")
+		if !s.press("enter") || s.m.Workspace == nil {
 			t.Fatalf("explicit reselection after refresh should resolve:\n%s", s.screen())
 		}
 		out.Reset()

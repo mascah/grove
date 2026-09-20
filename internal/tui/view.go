@@ -377,9 +377,72 @@ func (m *Model) refusalRows(w, n int) []string {
 	return top
 }
 
-// detailRows describes the focused row, or the group when the ID header has
-// focus. The header and a fold describe; they select nothing.
+// detailRows is the details pane: the history first, then the description.
 func (m *Model) detailRows(w int) []string {
+	rows := m.historyRows(w)
+	if len(rows) != 0 {
+		rows = append(rows, line(strings.Repeat("─", w), w))
+	}
+	return append(rows, m.describeRows(w)...)
+}
+
+// historyRows lists the commits behind one version, newest first, under a
+// heading naming the branch or checkout they were read from. They say what
+// happened there, and nothing about any other branch.
+func (m *Model) historyRows(w int) []string {
+	v := m.historyOf()
+	if v == nil || m.backend.History == nil {
+		return nil
+	}
+	var rows []string
+	for _, r := range wrap("History on "+label(v.Source)+": commits that changed this record's file, newest first", w) {
+		rows = append(rows, bold(r))
+	}
+	entry := func(when, status, rest string) {
+		if status == "" {
+			status = "?"
+		}
+		// Continuation rows are indented under the first.
+		for i, r := range wrap(fmt.Sprintf("%-16s  %-9s  %s", when, status, rest), w-2) {
+			if i == 0 {
+				rows = append(rows, r+"  ")
+			} else {
+				rows = append(rows, "  "+r)
+			}
+		}
+	}
+	status := "-" // deleted from the checkout's files
+	if v.Record != nil {
+		status = v.Record.Status
+	}
+	switch v.Change {
+	case "", "unchanged":
+	case "unknown":
+		entry("uncommitted?", status, "whether these files differ from the commit is unknown")
+	default:
+		entry("uncommitted", status, v.Change+" in this checkout's files")
+	}
+	commit, path := historyAt(v)
+	read, held := m.hist[commit+"\x00"+path]
+	switch {
+	case commit == "":
+		rows = append(rows, wrap("No commit of this checkout holds the record yet.", w)...)
+	case !held:
+		rows = append(rows, line("reading…", w))
+	case read.err != nil:
+		rows = append(rows, wrapAll("The history could not be read (r retries): "+read.err.Error(), w)...)
+	case len(read.commits) == 0:
+		rows = append(rows, wrap("No commit here changed this file.", w)...)
+	}
+	for _, c := range read.commits {
+		entry(c.When.Format("2006-01-02 15:04"), c.Status, short(c.ID)[:min(len(c.ID), 7)]+"  "+c.Subject)
+	}
+	return rows
+}
+
+// describeRows describes the focused row, or the group when the ID header has
+// focus. The header and a fold describe; they select nothing.
+func (m *Model) describeRows(w int) []string {
 	g, r := m.group(), m.focusedRow()
 	if g == nil {
 		return nil
