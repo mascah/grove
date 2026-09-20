@@ -19,6 +19,12 @@ entrypoint and assemble the selected work's instructions and context from its
 actual records/plans. This is proposed work, prompted by the owner's repeated
 handoff requests on 2026-09-19; it does not authorize a runner implementation.
 
+Deliver a usable `grove-work` skill as part of Grove's agent interface. Its
+workflow teaches the agent how and when to use the CLI through preparation,
+implementation, verification, review, and evidence reconciliation. Context
+generation alone does not satisfy this outcome. Interactive and headless callers
+must consume the same workflow, with explicit handling of human availability.
+
 ## Observed need and current baseline
 
 The owner has repeatedly requested execution prompts because the predecessor's
@@ -62,6 +68,9 @@ entrypoint for the chosen agent harness, backed by a read-only CLI prompt/contex
 operation accepting one or several explicit work IDs in one selected checkout.
 The CLI assembles facts; the instructions supply implementation/review judgment.
 Keep one owner for the guide: an adapter should reference it, not fork its rules.
+Thin describes the harness adapter, not reduced workflow responsibilities. The
+shared guide owns the substantive behavior, including which CLI operations to
+use and when to stop, wait, resume, or hand off.
 The [shared implementation plan](../../docs/plans/W-010-W-011-agent-handoffs.md)
 now proposes `grove context` plus repository-local `grove-work` adapters for
 Claude and Codex. The command assembles facts; adapters explicitly load the
@@ -108,6 +117,10 @@ persist the question/affected work and return a concrete waiting condition,
 continuing only independent authorized work. Include outcome, allowed writes,
 verification/review obligations, and completion/wait/stop conditions in the
 assignment. A provider-specific session ID or launch command is not the mandate.
+Mode selection must reach the shared guide explicitly; neither a short skill
+invocation nor a headless process should fall back to interactive assumptions.
+The intended headless entrypoint invokes this same skill or explicitly loads
+its shared guide, without maintaining a second editable work prompt.
 
 The same prepared assignment can later feed a Kanban Implement control and
 `claude -p`. That action must separately define launch authorization, fresh
@@ -148,6 +161,11 @@ explicitly starting implementation.
    headless missing-decision case produces a durable question/wait handoff,
    without invented answers, automatic retries, or a provider launch. Interactive
    and headless instructions share outcome/constraints/acceptance sources.
+8. Document the interactive skill invocation and intended `claude -p` entrypoint,
+   including how interaction mode reaches the guide. Verify that both paths load
+   the same workflow and CLI guidance. Distinguish adapter/source inspection and
+   simulated behavior from an actual headless harness trial; leave any unrun
+   trial explicit. This slice does not require implementing or launching a runner.
 
 ## Constraints and dependencies
 

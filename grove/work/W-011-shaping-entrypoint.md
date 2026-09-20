@@ -19,6 +19,12 @@ CLI, without bespoke workflow instructions on every session. Supply a thin
 repository-owned entrypoint over one shared authoring guide. This is proposed
 dogfooding work, not an installed skill or an authorized scheduler.
 
+Deliver `grove-shape` as the authoring skill in Grove's agent interface. Teach
+the agent how and when to inspect, create, and update records through the CLI,
+alongside the judgment needed to shape useful work. The same shared workflow
+serves interactive discussion and bounded headless research; human availability
+and publication constraints are explicit inputs, not separate prompt policies.
+
 ## Why now and evidence
 
 On 2026-09-19 the owner described two proposal sources: interactive planning
@@ -93,6 +99,11 @@ uses existing list/show/check/new/update commands without inventing an ID.
 5. Claude and Codex use the same responsibilities without duplicated editable
    policy. If one harness cannot be exercised, state that limit rather than
    claiming verified support.
+6. The interactive skill and documented headless adaptation load the same
+   authoring workflow and CLI guidance. Fixtures exercise explicit interaction
+   mode, missing-human-input handling, and the separate-branch publication
+   constraint. Identify actual harness trials separately from simulated cases;
+   this does not add provider launching or scheduling to the work.
 
 ## Next
 
