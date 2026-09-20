@@ -68,7 +68,7 @@ uses existing list/show/check/new/update commands without inventing an ID.
   integrated. Its handoff identifies branch/checkout, proposal IDs, evidence,
   and supporting questions/decisions or dependencies needed for that selection.
   It does not publish directly into the planning checkout or automatically merge.
-  Until integration, branch-only work appears under Other sources when viewing
+  Until integration, branch-only work appears under Elsewhere when viewing
   another checkout, or in Proposed when viewing the research checkout itself.
   This slice documents that behavior; it does not run headless sessions,
   implement schedules, or add a selective-integration command. Never promote

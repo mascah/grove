@@ -108,7 +108,7 @@ Selected direction:
   proposals on a separate reviewable branch; selected proposals are integrated
   afterward. It does not write directly into the planning checkout or merge its
   own proposals automatically. Until integration, W-009 exposes branch-only work
-  under Other sources, or in Proposed when viewing that research checkout.
+  under Elsewhere (first named Other sources), or in Proposed when viewing that research checkout.
   A status edit alone does not authorize a launch or prove that
   one is running. [W-011](../grove/work/W-011-shaping-entrypoint.md) proposes the
   immediate interactive shaping guide; W-010 owns the reusable work assignment.
@@ -396,7 +396,7 @@ worktree; keep such work outside that checkout until it is integrated. Refine
 W-010's shared interactive/headless assignment and W-011's authoring guide.
 Apply the selected separate-branch publication policy to unattended research
 handoffs; identify the proposals and supporting questions/decisions needed for
-selective integration. W-009's existing source-scoped columns and Other sources
+selective integration. W-009's existing source-scoped columns and Elsewhere
 shelf remain unchanged.
 
 The owner agreed to W-010/W-011 as the next bounded dogfooding investment:
@@ -416,13 +416,18 @@ preferred the board over a standalone version picker. Version selection supports
 choosing the correct workspace when branches differ; the board supplies the
 everyday overview. Proposed policy: columns
 show one labelled live checkout's statuses, card details group all versions by ID,
-and an Other sources shelf exposes work absent from that checkout. Workspace
+and an Elsewhere shelf exposes work absent from that checkout. Workspace
 selection remains explicit, incomplete results visible, and stale selections
 require refresh. This brings board value into the first TUI; it does not select
 one authoritative status across branches. [W-009](../grove/work/W-009-terminal-picker.md) owns
 the proposed screen, keyboard/output contract, acceptance, and linked plan.
 Bubble Tea v2.0.9 is what the branch uses, for the board only; adopting it
-more widely follows the owner's judgment of the board. Keep worktree creation
+more widely follows the owner's judgment of the board. After the owner's first
+demo on 2026-09-19 the card folds identical versions into one row and the board
+says branch and checkout; the next card outcome the owner asked for is a work
+item's lineage from Git history ([W-012](../grove/work/W-012-card-lineage.md)).
+A full load was measured at 27.7 s with 300 branches and is 0.35 s on the
+branch ([W-013](../grove/work/W-013-load-scaling.md)). Keep worktree creation
 as a separate design with
 explicit destination and failure policies; agent launches, claims, and mutation
 through an interactive view come later. Q-001's accepted policy stays unchanged.

@@ -255,18 +255,34 @@ and branches, not with records. In this repository every version of W-001 has
 the same content revision, so its eight rows are one content seen from four
 branch tips and four checkouts.
 
-Proposed adjustments, not yet selected: collapse rows with the same content
-revision into one row listing where it was seen, so a card with no divergence
-shows one row; say "branch" and "checkout" in the interface instead of
-"source" and "version" where that is what is meant; make the `b` chooser say
-what changes on the board; show Git lineage for the record's file (`git log
---follow`, status at each commit) in the card. Lineage is new scope and
-belongs in its own work record if selected.
+The owner selected the first two adjustments the same day; both are implemented
+on this branch in `959def6`:
+
+- A card's list has one row per distinct content. Where several places hold
+  the same bytes the row is a fold ("▸ done  same on 4 branches, 4 checkouts")
+  whose details show the content once and name every place. A fold selects
+  nothing: Enter lists its places, and each remains a separate explicit choice
+  that Enter resolves, so acceptance item 2 and Q-001 hold. A board card notes
+  "N versions" only when versions differ. W-001 here went from eight rows to one.
+- The interface says "branch" and "checkout" for what the code and the
+  `versions` command call committed and live sources. The Other sources shelf
+  is now "Elsewhere". `b` reads "view another checkout", and its screen says
+  that only the display changes. The card's header pane explains what a version
+  is. The `versions` and `workspace` commands keep their words and their
+  selector contract; only the board changed.
+
+Lineage is [W-012](W-012-card-lineage.md). Load time is
+[W-013](W-013-load-scaling.md), measured and fixed on this branch.
 
 ## Next
 
-The owner chooses among the proposed adjustments above. The vocabulary and
-row-collapsing changes fit this record; lineage and load time are candidates
-for their own work records. Until then this stays active. Integrating `worktree-W-009` into main is a
-separate, explicit step. Worktree creation, record edits from the board, and
-agent execution remain separate later work; W-010 does not depend on this.
+The owner runs the demo again and judges the folded card and the wording:
+
+```sh
+cd .claude/worktrees/W-009 && go run ./cmd/grove
+```
+
+Then mark this done with `go run ./cmd/grove update`, or say what else to
+adjust. Integrating `worktree-W-009` into main is a separate, explicit step.
+Worktree creation, record edits from the board, and agent execution remain
+separate later work; W-010 does not depend on this.
