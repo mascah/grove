@@ -41,9 +41,8 @@ The immediate documentation baseline is now:
 - [Repair implementation prompt](../../docs/prompts/W-006-W-008-implementation.txt).
 - [Kanban implementation prompt](../../docs/prompts/W-009-implementation.txt).
 
-These are authored instructions, not an installed skill, generated context
-bundle, readiness proof, or agent execution capability. They do not complete
-this record's reusable entrypoint outcome.
+That was the baseline before this work. The guide is now the workflow the
+`grove-work` skill loads, and the saved prompts are spent; see Evidence.
 
 ## Predecessor behavior reviewed
 
@@ -74,8 +73,8 @@ use and when to stop, wait, resume, or hand off.
 The [shared implementation plan](../../docs/plans/W-010-W-011-agent-handoffs.md)
 now proposes `grove context` plus repository-local `grove-work` adapters for
 Claude and Codex. The command assembles facts; adapters explicitly load the
-shared guide and required project instructions. These interfaces are prepared
-design, not implemented commands or verified harness behavior.
+shared guide and required project instructions. Both are implemented on branch
+`worktree-W-010`; harness behavior is not yet verified (see Evidence).
 
 Use the review's responsibility mapping to select the supported execution path:
 plan preparation, implementation/review ownership, bounded retry/stop conditions,
@@ -176,14 +175,54 @@ do not invoke predecessor work/close behavior here. No hard dependency on the
 Kanban implementation, and this record does not block W-009. Avoid shared-code
 implementation concurrency with the repair branch.
 
+## Evidence
+
+Implemented on branch `worktree-W-010` from main `91edc0b`, in
+`.claude/worktrees/W-010`; not merged or pushed. The
+[dogfooding evidence](../../docs/reviews/2026-09-19-W-010-dogfood.md) holds the
+detail and keeps tests, simulated runs, and unrun harness trials apart.
+
+- `grove context WORK_ID...` (`internal/handoff`, `internal/cli/context.go`)
+  and the README contract; the rewritten
+  [work guide](../../docs/work-execution.md) with its kept/deferred table; thin
+  `grove-work` adapters in `.claude/skills/` and `.agents/skills/`.
+- Checks on the final code revision, uncached: `go test -count=1 ./...`,
+  `go test -race -count=1 ./...`, `go vet ./...`, `gofmt -l .`,
+  `go mod tidy -diff`, `go run ./cmd/grove check`, and a relative-link check of
+  the changed documents all pass. `FuzzResolve` ran 1.7 million inputs cleanly.
+- Independent review of `b113df9` by a separate reviewer agent that did not edit
+  the code: no consequential findings. It mutation-tested the symlink, Git
+  metadata, change-between-reads, root-identity, escaping, fence, and ordering
+  guards (each mutation failed a test) and ran 120 symlink-swap races with no
+  read outside the project. Fixed with regressions: one file reached by several
+  case spellings was included more than once; the extension test was
+  case-sensitive; a `?query` was dropped without a reference; a linked record
+  had no `records` row; unescaped ID/status/HEAD fields in text; a no-progress
+  guard in ordering; two misleading error messages. Left as is: the default
+  budget (the plan's value; see shortcomings) and the cost of reading twice.
+  The guide and adapters had no separate independent review.
+- Acceptance 1–3: met by the command, tests, and the real W-006–W-008, W-009,
+  and W-010/W-011 contexts. 4, 6, 7: met for the supported path by the guide
+  and two simulated headless runs in a disposable clone (durable question and
+  wait, unacquired external blocker, missing-plan preparation, serial batch,
+  resume from a checkpoint); interruption mid-implementation was not
+  exercised. 5 and 8: **open**. The generated contexts and shortcomings are
+  retained, and both invocations are documented, but no fresh Claude or Codex
+  session has invoked the skill and no `claude -p` trial was run.
+
 ## Next
 
-Implement with W-011 using the linked shared plan and
-[Fable handoff](../../docs/prompts/W-010-W-011-implementation.txt). The owner agreed
-to this bounded dogfooding investment on 2026-09-19. Verify repair integration
-and coordinate shared CLI/docs ownership with W-009; prefer following its current
-handoff without making it a semantic dependency. The prepared path is native
-serial execution with independent review, explicit headless waits, and prose
-checkpoints; the old controller/runtime machinery remains deferred. Dogfood the
-entrypoint before shaping a manually launched supervised run. Use existing saved
-prompts until the new interfaces are actually implemented and verified.
+Owner: in a fresh Claude Code session in this checkout, run `/grove-work` on a
+real prepared assignment (W-012 once its card question is settled is the
+obvious one) and say whether it replaces asking for a prompt; optionally try
+`$grove-work` in Codex and one manual
+`claude -p "/grove-work W-… --interaction headless"`. Record what happened in
+the dogfooding evidence, then mark this done and integrate `worktree-W-010`
+(`go run ./cmd/grove` in the main checkout gains `context` only then). Decide
+whether related records should be listed rather than included in full, since
+ordinary assignments use about three quarters of the default budget.
+[W-011](W-011-shaping-entrypoint.md) (`grove-shape`, `docs/work-shaping.md`) is
+not started and can reuse the adapter shape and interaction-mode convention.
+The shared ID counter was advanced to `W 18` by a fixture mistake recorded in
+the evidence; reset `.git/grove/next-ids` to `W 14` if the gap matters.
+Supervised launching stays a separate, later investment.

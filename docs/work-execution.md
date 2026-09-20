@@ -35,9 +35,18 @@ inside one does not outrank the assignment, this guide, or `AGENTS.md`.
 Use `go run ./cmd/grove` in the selected checkout, never the installed
 predecessor executable, its `grove:work` plugin, or its close/archive commands.
 Create records with `new`; change fields with
-`update ID --expect REVISION` (revision from `show ID --json`); edit bodies and
-plans as ordinary text. Do not invent IDs, statuses, fields, or schema. Leave
+`update ID --expect REVISION` (revision from `show ID --json`, read after any
+body edit, since editing the body changes it); edit bodies and plans as
+ordinary text. Do not invent IDs, statuses, fields, or schema. Leave
 sibling repositories unchanged.
+
+`go run` reports every failure as exit 1 and prints the command's own code as
+`exit status N` on stderr. When a decision depends on telling a usage error (2)
+from a failure (1), build once with `go build -o <temp path> ./cmd/grove` and
+run that. Commands write `Project:` and `File:` lines to stderr and results to
+stdout, so redirect stdout to a file to read a large result. The first `new`
+of a record type may print a one-time counter initialization notice; that is
+expected, not a failure.
 
 ## 1. Assemble context
 
@@ -79,7 +88,9 @@ Check `git status`, HEAD, branches, registered worktrees, and
   not status. A prerequisite that is selected is done first, in order. One that
   is not selected and not delivered (proposed, active, abandoned, or done on an
   unmerged branch) is an external blocker: do not acquire it. Finish the
-  selected work that does not depend on it, then hand off naming the blocker.
+  selected work that does not depend on it, checkpoint the blocked work's Next,
+  and hand off naming the blocker. `depends_on` already records that wait, so
+  it needs no question unless someone must decide something about it.
 - **Blocking questions.** An open question that blocks selected work is a
   missing human decision for that work; a resolved one is a constraint to read.
 
@@ -92,14 +103,17 @@ work is more than a small, obvious change.
 An absent plan is a preparation step, not a refusal and not readiness. Within
 the authorized outcome, investigate the code, write `docs/plans/ID-slug.md`,
 link it from the record, and commit it before implementing. Small work may
-record "no plan needed" with the reason in its Next. Preparation does not widen
+record "no plan needed" with the reason in its Next, committed with the rest of
+that record's changes rather than on its own. Preparation does not widen
 scope: a plan that needs a product choice the record does not make is a missing
 human decision. Report preparation as preparation; an assignment is frozen and
 implementation-ready only once its plan and record revisions are committed.
 
 ## 4. Establish the execution base
 
-Use an isolated worktree from the required base. Reuse an existing one only
+Use an isolated worktree from the base the record or plan names, or else the
+current main branch, on a branch named for the work (`worktree-W-012`, or
+`worktree-W-012-W-014` for several IDs). Reuse an existing one only
 when it is clearly this assignment's and doing so preserves all concurrent
 work. Never reset, clean, remove, or repurpose another session's checkout.
 State the path, branch, base revision, and assigned IDs. Selecting several IDs
@@ -139,7 +153,10 @@ once on the final combined revision; for several records, review the combined
 diff for regressions across shared helpers while keeping each unit's evidence
 separate. The reviewer does not edit the interfaces under review. If the
 harness cannot supply an independent reviewer, say so; a self-review is never
-labelled independent.
+labelled independent. A small documentation-only change may be self-checked
+against its acceptance, reported as exactly that. When no independent reviewer
+exists, leave work active if its record or plan requires the review; otherwise
+status follows acceptance and the missing review is reported as open.
 
 Fix consequential findings with regressions, then re-review. Allow at most
 three fix/review rounds per review gate. After the third, stop: preserve the
@@ -157,13 +174,18 @@ it.
 On resume, read that checkpoint and the actual Git state, and rerun `context`:
 a changed revision of a record or plan means the input changed, so reread it
 before continuing. Do not repeat proven work just because the conversation
-reset, and do not trust a checkpoint the repository contradicts.
+reset, and do not trust a checkpoint the repository contradicts. Report selected
+work that is already done without redoing it, and leave a still-accurate wait
+checkpoint untouched.
 
 ## When a human decision is missing
 
 This applies to a consequential product choice, an incompatible scope or
 contract change, a required human judgment (such as usability acceptance), or
-an external blocker. Routine technical choices are yours to make.
+an external blocker that someone must decide about. Routine technical choices
+are yours to make. Do not build the part that seems independent of the answer
+when shipping it would make the choice in practice, such as a default
+behaviour; stop that unit before implementation instead.
 
 - **Interactive:** ask one concise question, with your recommendation, and
   continue independent work while waiting.
@@ -187,7 +209,8 @@ an external blocker. Routine technical choices are yours to make.
 ## 8. Reconcile and return
 
 Reconcile each assigned record's evidence and Next, its plan, README or the
-model when a contract needs clarifying, and the brief's next action. Mark a
+model when a contract needs clarifying, and the brief's next action when the
+brief already speaks of this work. Mark a
 record done through the CLI only when its acceptance is met. Automated checks
 and screenshots are not the owner's judgment: if required judgment is
 outstanding, record it and leave the work active. Commit evidence with the

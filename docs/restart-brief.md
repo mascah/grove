@@ -3,8 +3,8 @@
 Captured: 2026-09-18.
 Status: product direction and starter file defaults selected; the Go CLI
 reads, validates, creates, and updates the operational records, shows their
-versions across local branches, and locates a selected version's checkout.
-A read-only terminal board over those operations opens from bare `grove`; the
+versions across local branches, locates a selected version's checkout, and
+assembles read-only context for selected work. A read-only terminal board over those operations opens from bare `grove`; the
 owner accepted it as a starting point on 2026-09-19 and it is integrated.
 This document is the restart's current source of intent.
 
@@ -413,6 +413,16 @@ not implemented capabilities. Prefer following the owner's W-009 handoff to
 avoid shared CLI/docs edits; W-009 is not a semantic dependency. After proving
 this loop, shape one manually launched supervised headless attempt before
 schedules or board launch controls.
+
+W-010's slice is implemented on branch `worktree-W-010` (base `91edc0b`), not
+yet integrated: `grove context` assembles selected work's records, plans,
+reviews, and revisions without writing anything; the
+[work guide](work-execution.md) is the one workflow for interactive and headless
+callers; and thin `grove-work` adapters for Claude and Codex load it. The
+[dogfooding evidence](reviews/2026-09-19-W-010-dogfood.md) separates tests, a
+simulated headless run, and the harness trials that have not been run. W-010
+stays active until the owner has invoked `/grove-work` in a fresh session.
+W-011's `grove-shape` skill and shaping guide are not started.
 
 Clarified on 2026-09-19: W-010/W-011 deliver Grove's work and shaping skills,
 including how and when agents use the CLI. Thin harness adapters load substantive
