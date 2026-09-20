@@ -136,13 +136,16 @@ files, including the framework's debug logs.
 Use `go test ./...`, `go test -race ./...`, and `go vet ./...` for verification;
 `internal/tui` also drives the built binary through a pseudo-terminal with
 `python3 internal/tui/testdata/terminal.py BINARY` (Unix; skipped without
-`python3`). Agent execution remains future work. The
+`python3`).
+Run `lefthook install` once per clone: pre-commit formats staged Go files and
+runs `go vet` and `go mod tidy -diff`; pre-push runs `go test ./...`.
+Agent execution remains future work. The
 [integrated CLI review](docs/reviews/2026-09-19-integrated-cli.md) found
 workspace-provenance, update-preservation, and Git-path defects; W-006 through
 W-008 repair them, with [evidence and remaining limits](docs/reviews/2026-09-19-repairs-W-006-W-008.md).
 [W-009](grove/work/W-009-terminal-picker.md) owns the board's contract and its
-[evidence](docs/reviews/2026-09-19-board-W-009.md). Whether the board is pleasant
-to use is the owner's judgment from a demo, which automated checks do not supply.
+[evidence](docs/reviews/2026-09-19-board-W-009.md), including the owner's judgment
+from a demo, which automated checks do not supply.
 
 The intended experience combines linked work, questions, research, project
 knowledge, and evidence. A CLI serves agents and humans; a TUI can make the
