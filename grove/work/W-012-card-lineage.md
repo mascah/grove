@@ -2,9 +2,9 @@
 id: "W-012"
 type: work
 title: "Show a work item's lineage from Git history in its card"
-status: proposed
+status: done
 created: "2026-09-20T04:36:57Z"
-updated: "2026-09-20T04:37:22Z"
+updated: "2026-09-20T16:39:26Z"
 kind: feature
 priority: 2
 size: small
@@ -57,8 +57,43 @@ record fields and no stored history.
 5. Targeted, full, and race suites, vet, and formatting pass; the owner judges
    the view in a demo.
 
+## Evidence, 2026-09-20
+
+Implemented on branch `worktree-W-012` from `a0fd23a` through
+`/grove-work W-012`, following the [plan](../../docs/plans/W-012-card-lineage.md).
+On 2026-09-20 the owner selected "beside, history first": the card screen and
+its version list stay, and History leads the details pane, following the
+focused row (the board's checkout while the ID header has focus). That
+placement is selected direction; the rest of the design remains the owner's to
+judge in use. The [evidence](../../docs/reviews/2026-09-20-card-lineage-W-012.md)
+maps each acceptance item to its tests and holds the suite results, the
+independent review with dispositions, and the limits. What differs from the
+proposal above:
+
+- The read is `git log --follow --raw`, which names the record's blob at each
+  commit, then one `cat-file --batch` for those blobs; no path is read back
+  from Git.
+- Merges are never rows, as in plain `git log --follow`: one that brought a
+  branch's commits in would repeat them and name another branch, and asking
+  Git to diff merges breaks rename following. Where the record's status is not
+  the newest listed commit's, a first `here` row gives it and says why.
+- A history read never makes a key wait: another version, refresh, a workspace
+  selection, Esc, and quitting each cancel it.
+
+Automated acceptance (items 1 to 4 and the suites of item 5) is met on the
+branch.
+
+## Owner acceptance, 2026-09-20
+
+After running the demo the owner said it is "a step in the right direction",
+that it "works as described", and that they now understand better what they
+want next, which "doesn't block this work"; they will iterate later on the
+information architecture of the TUI. That is acceptance of this outcome, the
+other half of item 5, not of the card's layout as a final design.
+
 ## Next
 
-Decide with the owner whether lineage replaces the version list as what a card
-opens to, or sits beside it. Then plan the read (`git log --follow
---format=... -- path`, then one `cat-file --batch` for the statuses).
+Nothing under this record. Implementation is on branch `worktree-W-012`
+(code `9337a44`), reviewed and accepted, and **not merged or pushed**: merging
+it into main is the owner's step. The TUI's information architecture is later
+work that the owner has not yet shaped.

@@ -104,10 +104,23 @@ type fake struct {
 	refuse   error
 	inspects int
 	resolved []string
+	// history, when set, makes the backend offer History and logs its calls.
+	history   func(ctx context.Context, commit, path string) ([]versions.Commit, error)
+	histories []string
 }
 
 func (f *fake) backend() Backend {
+	var history func(ctx context.Context, root, commit, path string) ([]versions.Commit, error)
+	if f.history != nil {
+		history = func(ctx context.Context, _, commit, path string) ([]versions.Commit, error) {
+			f.mu.Lock()
+			f.histories = append(f.histories, commit[:1]+" "+path)
+			f.mu.Unlock()
+			return f.history(ctx, commit, path)
+		}
+	}
 	return Backend{
+		History: history,
 		Inspect: func(ctx context.Context, root, id string) (*versions.Result, error) {
 			f.mu.Lock()
 			defer f.mu.Unlock()

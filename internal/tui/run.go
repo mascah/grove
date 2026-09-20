@@ -39,7 +39,7 @@ func Run(ctx context.Context, root string, input, screen *os.File) (*versions.Wo
 		case <-ctx.Done():
 		}
 	}()
-	m := New(ctx, root, Backend{Inspect: versions.InspectContext, Resolve: versions.ResolveContext})
+	m := New(ctx, root, Backend{Inspect: versions.InspectContext, Resolve: versions.ResolveContext, History: versions.HistoryContext})
 	out := &watched{File: screen, stop: cancel}
 	_, err := tea.NewProgram(m, tea.WithContext(ctx), tea.WithInput(input), tea.WithOutput(out)).Run()
 	// Quitting does not stop a command that is still reading.

@@ -44,6 +44,12 @@ def fixture(base):
     return os.path.realpath(root), os.path.realpath(wt)
 
 
+def short(cwd, rev):
+    """The seven-character commit ID a history row shows."""
+    out = subprocess.run([GIT, "-C", cwd, "rev-parse", rev], check=True, capture_output=True).stdout
+    return out.decode()[:7]
+
+
 def tree(base):
     """Every file below base, Git's included, by content."""
     found = {}
@@ -155,6 +161,9 @@ def select_and_show(root, wt, base):
         s.send(ENTER)
         mark = s.expect("versions differ")
         check(s.proc.poll() is None, "opening a card must not resolve or exit")
+        # The card opens on the history of the board's checkout, read from Git.
+        s.expect("History on checkout . (main)")
+        s.expect(f"proposed   {short(root, 'main')}  main")
         # Rows fold by content: feature's (branch, checkout), then main's.
         # Enter on a fold only lists its places.
         s.send(DOWN + ENTER)
@@ -230,7 +239,9 @@ def blocked_git(root, wt, base):
         f.write(f'#!/bin/sh\nif [ -e "{flag}" ]; then echo $$ > "{fifo}"; exec sleep 600; fi\nexec "{GIT}" "$@"\n')
     os.chmod(os.path.join(tools, "git"), 0o755)
     env = clean_env(PATH=tools + os.pathsep + os.environ["PATH"])
-    for stage, keys, want in (("refresh", b"q", 0), ("refresh", CTRL_C, 1), ("resolve", b"q", 0), ("resolve", CTRL_C, 1), ("start", b"q", 0)):
+    stages = (("refresh", b"q", 0), ("refresh", CTRL_C, 1), ("resolve", b"q", 0), ("resolve", CTRL_C, 1), ("start", b"q", 0),
+              ("history", b"q", 0), ("history", CTRL_C, 1), ("history", ESC, None))
+    for stage, keys, want in stages:
         if os.path.exists(fifo):
             os.remove(fifo)
         os.mkfifo(fifo)
@@ -240,12 +251,16 @@ def blocked_git(root, wt, base):
         if stage != "start":
             s.expect("First on main")
             if stage == "resolve":
+                # Each history is on screen before the next key, so that the
+                # only Git left to block is the resolution's.
                 s.send(ENTER)
-                s.expect("versions differ")
-                s.send(DOWN * 2 + ENTER + DOWN * 2)
+                s.expect(f"{short(root, 'main')}  main")
+                s.send(DOWN)
+                s.expect(f"{short(root, 'feature')}  feature")
+                s.send(DOWN + ENTER + DOWN * 2)
                 s.expect("Selector: live:.:")
             open(flag, "w").close()
-            s.send(b"r" if stage == "refresh" else ENTER)
+            s.send(b"r" if stage == "refresh" else ENTER)  # for history, Enter opens the card
         # The handshake: the fake git says it started before anything is cancelled.
         reader = os.open(fifo, os.O_RDONLY | os.O_NONBLOCK)
         deadline, data = time.monotonic() + TIMEOUT, b""
@@ -258,10 +273,23 @@ def blocked_git(root, wt, base):
                 pass
         os.close(reader)
         pid = int(data)
-        s.expect("Reading branches and checkouts" if stage != "resolve" else "Resolving the selected workspace")
+        s.expect({"resolve": "Resolving the selected workspace", "history": "reading…"}.get(stage, "Reading branches and checkouts"))
         s.send(keys)
+        if want is None:  # Esc leaves the card, not the session: the read dies and keys still work
+            deadline = time.monotonic() + TIMEOUT
+            while True:
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    break
+                check(time.monotonic() < deadline, f"{stage}: Esc left git child {pid} running")
+                s.pump()
+            os.remove(flag)
+            s.send(b"q")
+            want = 0
         code, out = s.finish()
-        os.remove(flag)
+        if os.path.exists(flag):
+            os.remove(flag)
         s.restored()
         check(code == want and out == b"", f"{stage} {keys!r}: exit {code}, stdout {out!r}")
         try:
