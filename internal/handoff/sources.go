@@ -27,6 +27,12 @@ type sources struct {
 	dir       *os.Root
 	remaining int
 	byPath    map[string]*Source
+	files     []readFile // by identity: a case-insensitive filesystem reaches one file by several spellings
+}
+
+type readFile struct {
+	info fs.FileInfo
+	name string
 }
 
 func (s *sources) add(name string, content []byte, reason string) error {
@@ -45,7 +51,7 @@ func (s *sources) add(name string, content []byte, reason string) error {
 }
 
 func oversize(name string, remaining int) error {
-	return fmt.Errorf("%s does not fit the %d bytes left in the source budget; nothing is truncated, so raise --max-bytes (at most %d) or select less", name, remaining, LimitMaxBytes)
+	return fmt.Errorf("the selection does not fit the source budget: %d bytes were left when %s was reached; nothing is truncated, so raise --max-bytes (at most %d) or select less", remaining, name, LimitMaxBytes)
 }
 
 func (s *sources) addInclude(name string) error {
@@ -62,13 +68,19 @@ func (s *sources) read(name, reason, referrer string) error {
 	if s.byPath[name] != nil {
 		return s.add(name, nil, reason)
 	}
-	content, err := readConfined(s.dir, name, s.remaining)
+	content, info, err := readConfined(s.dir, name, s.remaining)
 	if errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("%s names %s, which does not exist in this checkout", referrer, name)
 	}
 	if err != nil {
 		return err
 	}
+	for _, f := range s.files {
+		if os.SameFile(f.info, info) {
+			return s.add(f.name, nil, reason)
+		}
+	}
+	s.files = append(s.files, readFile{info, name})
 	return s.add(name, content, reason)
 }
 
@@ -85,10 +97,10 @@ func (s *sources) addLinked(r *project.Record) ([]Reference, error) {
 			if err := s.read(target, "linked from "+r.Path, r.Path); err != nil {
 				return nil, err
 			}
-			if !strings.Contains(destination, "#") {
+			if !strings.ContainsAny(destination, "#?") {
 				continue
 			}
-			reason = "the whole document is included; the fragment was not applied or checked"
+			reason = "the whole document is included; the fragment or query was not applied or checked"
 		}
 		if ref := (Reference{From: r.Path, Target: destination, Reason: reason}); !slices.Contains(refs, ref) {
 			refs = append(refs, ref)
@@ -141,7 +153,7 @@ func resolve(from, destination string) (target, reason string, err error) {
 		return "", "absolute path; not followed", nil
 	}
 	target = path.Join(path.Dir(from), u.Path) // url.Parse decoded the path once
-	switch ext := path.Ext(target); {
+	switch ext := strings.ToLower(path.Ext(target)); {
 	case target == ".." || strings.HasPrefix(target, "../"):
 		return "", "outside the selected project; not followed", nil
 	case gitMetadata(target):
@@ -163,7 +175,7 @@ func gitMetadata(name string) bool {
 // component checks refuse symlinks that stay inside it too, as the record
 // reader does. Opening without blocking means a file swapped for a FIFO is
 // refused by the descriptor check instead of hanging.
-func readConfined(dir *os.Root, name string, limit int) ([]byte, error) {
+func readConfined(dir *os.Root, name string, limit int) ([]byte, fs.FileInfo, error) {
 	var seen fs.FileInfo
 	for i, c := range name + "/" {
 		if c != '/' {
@@ -171,40 +183,40 @@ func readConfined(dir *os.Root, name string, limit int) ([]byte, error) {
 		}
 		info, err := dir.Lstat(name[:i])
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if info.Mode()&fs.ModeSymlink != 0 {
-			return nil, fmt.Errorf("%s: %s is a symlink; symlinked sources are not supported", name, name[:i])
+			return nil, nil, fmt.Errorf("%s: %s is a symlink; symlinked sources are not supported", name, name[:i])
 		}
 		seen = info
 	}
 	if !seen.Mode().IsRegular() {
-		return nil, fmt.Errorf("%s: expected a regular file", name)
+		return nil, nil, fmt.Errorf("%s: expected a regular file", name)
 	}
 	f, err := dir.OpenFile(name, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer f.Close()
 	opened, err := f.Stat()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if !opened.Mode().IsRegular() || !os.SameFile(seen, opened) {
-		return nil, fmt.Errorf("%s: changed while it was being read", name)
+		return nil, nil, fmt.Errorf("%s: changed while it was being read", name)
 	}
 	if opened.Size() > int64(limit) {
-		return nil, oversize(name, limit)
+		return nil, nil, oversize(name, limit)
 	}
 	content, err := io.ReadAll(io.LimitReader(f, int64(limit)+1))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if len(content) > limit {
-		return nil, oversize(name, limit)
+		return nil, nil, oversize(name, limit)
 	}
 	if !utf8.Valid(content) {
-		return nil, fmt.Errorf("%s: invalid UTF-8", name)
+		return nil, nil, fmt.Errorf("%s: invalid UTF-8", name)
 	}
-	return content, nil
+	return content, opened, nil
 }

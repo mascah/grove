@@ -26,12 +26,12 @@ func Text(b *Bundle) []byte {
 		if head == "" {
 			head = "no commit yet"
 		}
-		line("Git: %s at %s", inert(ref, false), head)
+		line("Git: %s at %s", inert(ref, false), inert(head, false))
 		line("  checkout: %s", inert(b.Git.Checkout, false))
 		line("  common directory: %s", inert(b.Git.CommonDir, false))
 	}
-	line("Selected: %s", strings.Join(b.Selected, " "))
-	line("Order: %s", strings.Join(b.Order, " "))
+	line("Selected: %s", inert(strings.Join(b.Selected, " "), false))
+	line("Order: %s", inert(strings.Join(b.Order, " "), false))
 	line("Source bytes: %d of %d", b.SourceBytes, b.MaxBytes)
 	line("\nRecords:")
 	for _, r := range b.Records {
@@ -39,7 +39,7 @@ func Text(b *Bundle) []byte {
 		if r.Selected {
 			role = "selected"
 		}
-		line("  %s  %s  %s  %s  %s", r.ID, r.Type, r.Status, role, inert(r.Path, false))
+		line("  %s", inert(strings.Join([]string{r.ID, r.Type, r.Status, role, r.Path}, "  "), false))
 	}
 	if len(b.Requirements) != 0 {
 		line("\nRequirements (status as recorded here; done is not integration):")
@@ -48,13 +48,13 @@ func Text(b *Bundle) []byte {
 			if r.Selected {
 				selected = "selected"
 			}
-			line("  %s depends on %s: %s, %s", r.Work, r.Prerequisite, r.Status, selected)
+			line("  %s", inert(fmt.Sprintf("%s depends on %s: %s, %s", r.Work, r.Prerequisite, r.Status, selected), false))
 		}
 	}
 	if len(b.Questions) != 0 {
 		line("\nBlocking questions:")
 		for _, q := range b.Questions {
-			line("  %s %s, blocks %s", q.ID, q.Status, strings.Join(q.Blocks, " "))
+			line("  %s", inert(fmt.Sprintf("%s %s, blocks %s", q.ID, q.Status, strings.Join(q.Blocks, " ")), false))
 		}
 	}
 	if len(b.References) != 0 {

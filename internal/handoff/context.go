@@ -126,7 +126,7 @@ func Build(ctx context.Context, root string, ids []string, opts Options) (*Bundl
 	betweenReads()
 	second, err := assemble(ctx, dir, root, ids, opts)
 	if err != nil {
-		return nil, fmt.Errorf("the checkout changed while its context was being read (%w); rerun to read it again", err)
+		return nil, fmt.Errorf("the context could not be read a second time to confirm it (%w); rerun to read it again", err)
 	}
 	held, err := dir.Stat(".")
 	if err != nil {
@@ -191,11 +191,7 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 
 	// scope is the selected work plus everything it transitively depends on.
 	var scope []*project.Record
-	included := map[string]bool{}
-	record := func(r *project.Record, reason string) error {
-		included[r.ID] = true
-		return s.add(r.Path, r.Source, reason)
-	}
+	record := func(r *project.Record, reason string) error { return s.add(r.Path, r.Source, reason) }
 	for _, id := range ids {
 		if err := record(byID[id], "selected work"); err != nil {
 			return nil, err
@@ -265,7 +261,7 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 	}
 
 	for _, r := range p.Records {
-		if included[r.ID] {
+		if s.byPath[r.Path] != nil { // however it was reached, including a body link
 			b.Records = append(b.Records, Record{ID: r.ID, Path: r.Path, Type: r.Type, Status: r.Status, Selected: slices.Contains(ids, r.ID)})
 		}
 	}
@@ -310,6 +306,7 @@ func selection(byID map[string]*project.Record, ids []string) (order []string, r
 	}
 	placed := map[string]bool{}
 	for len(order) < len(ids) {
+		before := len(order)
 		for _, id := range ids {
 			ready := !placed[id]
 			for _, other := range ids {
@@ -320,6 +317,9 @@ func selection(byID map[string]*project.Record, ids []string) (order []string, r
 				order = append(order, id)
 				break
 			}
+		}
+		if len(order) == before { // Load refuses cycles; never spin if one gets here
+			return nil, nil, errors.New("the selected work depends on itself in a cycle")
 		}
 	}
 	return order, reach, nil
