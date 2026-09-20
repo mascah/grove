@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -66,6 +67,43 @@ func TestHistoryFollowsOneLineOfCommits(t *testing.T) {
 	}
 	if got := lineage(t, root, main, "grove/work/W-404-absent.md"); got != "" {
 		t.Errorf("an untouched path has a lineage: %q", got)
+	}
+}
+
+// A merge is a row only when it gave the record content of its own; dates are
+// the author's.
+func TestHistoryMergesAndDates(t *testing.T) {
+	root := repoFixture(t)
+	path := "grove/work/W-001-first.md"
+	git(t, root, "branch", "feature")
+	wt := addWorktree(t, root, "feature-wt", "feature")
+	write(t, wt, path, record("W-001", "work", "active", "Main body.\n"))
+	git(t, wt, "add", "-A")
+	git(t, wt, "commit", "-q", "--date", "1700000000 +0000", "-m", "start on feature")
+	write(t, root, "unrelated.txt", "x\n")
+	commit(t, root, "main moves on")
+	git(t, root, "merge", "-q", "--no-ff", "-m", "Merge branch 'feature'", "feature")
+	merged := git(t, root, "rev-parse", "HEAD")
+	if got := lineage(t, root, merged, path); got != "active: start on feature\nproposed: init" {
+		t.Errorf("a merge that only brought in a listed commit is a row:\n%q", got)
+	}
+	commits, err := HistoryContext(context.Background(), root, merged, path)
+	if err != nil || commits[0].When.Unix() != 1700000000 {
+		t.Fatalf("the author's date: %+v %v", commits, err)
+	}
+	// Both sides change the status; the resolution is content of its own.
+	write(t, wt, path, record("W-001", "work", "done", "Main body.\n"))
+	commit(t, wt, "finish on feature")
+	write(t, root, path, record("W-001", "work", "abandoned", "Main body.\n"))
+	commit(t, root, "abandon on main")
+	if out, err := exec.Command("git", "-C", root, "merge", "-q", "feature").CombinedOutput(); err == nil {
+		t.Fatalf("expected a conflict: %s", out)
+	}
+	write(t, root, path, record("W-001", "work", "proposed", "Resolved.\n"))
+	resolved := commit(t, root, "resolve by reopening")
+	want := "proposed: resolve by reopening\nabandoned: abandon on main\ndone: finish on feature\nactive: start on feature\nproposed: init"
+	if got := lineage(t, root, resolved, path); got != want {
+		t.Errorf("a conflict resolution:\n%q\nwant\n%q", got, want)
 	}
 }
 

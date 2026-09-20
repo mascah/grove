@@ -435,7 +435,7 @@ func (m *Model) historyRows(w int) []string {
 		rows = append(rows, wrap("No commit here changed this file.", w)...)
 	}
 	for _, c := range read.commits {
-		entry(c.When.Format("2006-01-02 15:04"), c.Status, short(c.ID)[:min(len(c.ID), 7)]+"  "+c.Subject)
+		entry(c.When.Format("2006-01-02 15:04"), c.Status, c.ID[:min(len(c.ID), 7)]+"  "+c.Subject)
 	}
 	return rows
 }

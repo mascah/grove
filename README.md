@@ -198,7 +198,7 @@ whichever row has focus, named in its heading: the board's checkout while the
 card's first line has focus, otherwise that branch's tip or that checkout's
 HEAD. A checkout whose files differ from its HEAD gets a first `uncommitted`
 row. History is read from Git when a card is open, never while the board
-loads, and any key replaces a read still in progress. It says what happened on
+loads, and no key waits for a read still in progress. It says what happened on
 one branch and nothing about whether another branch contains it.
 [W-012](grove/work/W-012-card-lineage.md) owns this.
 
