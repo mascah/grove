@@ -97,9 +97,10 @@ Selected direction:
   prepared assignment; launch, cancellation, recovery, and result reconciliation
   still need their own contract. This does not add agent launching to W-009.
   The [actual predecessor `/work` review](reviews/2026-09-19-predecessor-work.md)
-  is required input to W-010: its preparation, review, recovery, and closure
-  responsibilities extend beyond prompt generation. Adapt or explicitly defer
-  them; the current guide is only a partial baseline.
+  was required input to W-010's design: its preparation, review, recovery, and
+  closure responsibilities extend beyond prompt generation. W-010's evidence
+  records which were kept, adapted, or deferred; it is not required reading for
+  carrying out an assignment.
 - Emerging authoring/execution workflow, described by the owner on 2026-09-19:
   interactive Claude/Codex sessions create and refine proposed work, questions,
   and decisions through the CLI; bounded scheduled/triggered headless research
@@ -415,14 +416,21 @@ this loop, shape one manually launched supervised headless attempt before
 schedules or board launch controls.
 
 W-010's slice is implemented on branch `worktree-W-010` (base `91edc0b`), not
-yet integrated: `grove context` assembles selected work's records, plans,
-reviews, and revisions without writing anything; the
+yet integrated, and was revised on 2026-09-20 on the owner's decisions.
+`grove context` reads the selected records in full with revisions and lists
+prerequisites, blocking questions, related records, and links for staged
+retrieval through `show` and `--include`, without writing anything. The
 [work guide](work-execution.md) is the one workflow for interactive and headless
-callers; and thin `grove-work` adapters for Claude and Codex load it. The
-[dogfooding evidence](reviews/2026-09-19-W-010-dogfood.md) separates tests, a
-simulated headless run, and the harness trials that have not been run. W-010
-stays active until the owner has invoked `/grove-work` in a fresh session.
-W-011's `grove-shape` skill and shaping guide are not started.
+callers: it stages reading, and establishes the execution checkout before its
+first write. It holds workflow only; this repository's development policy for
+it lives in `AGENTS.md`. Thin repository-local `grove-work` adapters for Claude
+and Codex load both, and stay local while the workflow is dogfooded. The
+[dogfooding evidence](reviews/2026-09-19-W-010-dogfood.md) separates tests,
+simulated runs, and real headless Claude and Codex trials on a fixture in
+disposable clones from what has not been run. W-010 stays active until the
+owner has carried a real assignment through `/grove-work` in a fresh
+interactive session. W-011's `grove-shape` skill and shaping guide are not
+started and should reuse the same boundaries.
 
 Clarified on 2026-09-19: W-010/W-011 deliver Grove's work and shaping skills,
 including how and when agents use the CLI. Thin harness adapters load substantive

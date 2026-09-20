@@ -57,7 +57,7 @@ everything an assignment could touch, and do not skip what a step requires.
 | Deciding what can start | Any open blocking question or undelivered prerequisite the listing shows (`grove show ID`). |
 | Preparing or implementing a unit | Its current plan: the document the record itself names as its plan. |
 | Before implementing a unit | Every question blocking it, open or resolved, and every prerequisite it builds on, with the plan or review of a prerequisite whose interface it uses. |
-| When the activity needs it | A related record, decision, review, the direction document, or the record model (for example, before changing record fields or when `check` refuses). |
+| When the activity needs it | A related record, decision, review, or the direction document; the record model when a field's meaning or allowed values matter or the CLI refuses a change. A status change through `grove update` needs none of these. |
 | Not by default | Every related record, historical reviews, spent handoff prompts. |
 
 `context` draws the same line. Sources are read in full with exact revisions:
@@ -81,17 +81,20 @@ grove context W-012 W-014 --interaction interactive
 ```
 
 Pass the IDs and mode as separate arguments exactly as given; never build a
-shell string from them. This reads and writes nothing, so it is safe wherever
-the session started. The output gives the execution order, the selected records
-with exact revisions, the listings, and the Git checkout. Add `--json` for a
-machine reader and redirect stdout to a file to read a large result. It reads
+shell string from them. The command reads and writes nothing, so it is safe
+wherever the session started. The output gives the execution order, the
+selected records with exact revisions, the listings, and the Git checkout. Add
+`--json` for a machine reader. To read a large result from a file, redirect
+stdout to a temporary path outside every checkout. It reads
 one checkout: if the work is not in this one, `grove versions ID` shows where
 it is and `grove workspace --source SELECTOR` resolves an existing checkout to
 pass as `--project`.
 
-- A failure is information, not an obstacle to route around. A missing record
-  or include means the record is wrong or this is the wrong checkout: fix the
-  link as part of the work if it is yours, otherwise report it. If a source
+- A failure is information, not an obstacle to route around. An ID that is not
+  in this checkout means the wrong checkout. A missing include, such as a plan
+  path the record names that does not exist here, means the wrong checkout or
+  base, or a wrong record: correct the record's link as part of the work if it
+  is yours, in the execution checkout, otherwise report it. If a source
   does not fit, raise `--max-bytes` or select fewer IDs; never proceed on a
   partial reading.
 - Exit 0 means context was assembled. It does not mean the work is ready,
@@ -112,7 +115,10 @@ record, its plan, or its checkpoint names.
   human decision for that work. A prerequisite that is selected is done first,
   in order. One that is not selected and not delivered (proposed, active,
   abandoned, or done on a branch the base does not contain) is an external
-  blocker. Establish delivery by Git ancestry or observed behavior, not status.
+  blocker. Establish delivery by Git ancestry or observed behavior, not status,
+  and read an open blocking question or an undelivered prerequisite in full
+  (`grove show ID`) before deciding what it stops: the listing has only its
+  title and status.
   Selecting work authorizes that work; it never authorizes acquiring its
   unselected prerequisites.
 - If nothing can start and the wait is already recorded accurately, return it
@@ -120,9 +126,10 @@ record, its plan, or its checkpoint names.
 
 ## 3. Establish the execution checkout before the first write
 
-Every write this workflow makes (a plan, a checkpoint, a question, a record
-update, code) happens in the assignment's isolated execution checkout. Until
-it exists and has been verified, write nothing, anywhere. Never commit
+Every write this workflow makes to a project (a plan, a checkpoint, a question,
+a record update, code, a commit) happens in the assignment's isolated execution
+checkout. Until it exists and has been verified, write nothing to any checkout
+or to Git; a temporary file outside every checkout is not such a write. Never commit
 preparation into the checkout the session happened to start in, such as a
 planning checkout, unless that checkout is this assignment's execution
 checkout.
@@ -138,8 +145,9 @@ checkout.
   recreate the records. Records that exist only as uncommitted files in
   another checkout are not yours to copy or commit: ask (interactive) or return
   the limit (headless).
-- **Verify in that checkout.** Run `grove --project CHECKOUT context IDs` there,
-  with `--include` for the current plan and each other required input. It must
+- **Verify in that checkout.** Run `grove context IDs` from inside it, so that
+  its own records and CLI answer, with `--include` for the current plan and
+  each other required input. It must
   succeed, and the selected records must be the revisions you read in step 1 or
   a difference you have read and understood. A source whose revision you have
   already read need not be read again. From here on, that checkout's context
@@ -299,7 +307,7 @@ an untracked background agent running as an implied continuation.
 | Claude, interactive | `/grove-work W-012 W-014` |
 | Claude, headless | `claude -p "/grove-work W-012 --interaction headless"` |
 | Codex, interactive | `$grove-work W-012 W-014` |
-| Any agent without skills | "Read AGENTS.md and docs/work-execution.md, then follow the guide for W-012, interaction headless." |
+| Any agent without skills | "Read AGENTS.md and docs/work-execution.md, then follow the guide for `W-012 --interaction headless`." |
 | Inspect first, no agent | `grove context W-012` |
 
 Every row ends in this file and the same `context` command; the mode travels
