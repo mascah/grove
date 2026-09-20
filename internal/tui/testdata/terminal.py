@@ -1,0 +1,375 @@
+#!/usr/bin/env python3
+"""Pseudo-terminal checks for Grove's board: the terminal's modes are restored
+however a session ends, the interface and the result use separate streams, a
+blocked Git read is killed on the way out, and nothing on disk changes.
+
+    python3 internal/tui/testdata/terminal.py /path/to/grove [scenario ...]
+
+`go test ./internal/tui` builds the binary and runs this. Unix only (stdlib
+pty, termios, fcntl); it says nothing about Windows consoles.
+"""
+import fcntl, hashlib, json, os, pty, select, shutil, signal, struct, subprocess, sys, tempfile, termios, time
+
+GROVE = os.path.abspath(sys.argv[1])
+ONLY = sys.argv[2:]
+TIMEOUT = 20  # failure detection only; nothing waits on a guessed delay
+GIT = shutil.which("git")
+ENTER, DOWN, ESC, CTRL_C = b"\r", b"\x1b[B", b"\x1b", b"\x03"
+ALT_ON, ALT_OFF = b"\x1b[?1049h", b"\x1b[?1049l"
+
+WORK = "---\nid: W-001\ntype: work\ntitle: {title}\nstatus: {status}\n---\nAn outcome.\n"
+
+
+def git(cwd, *args):
+    subprocess.run([GIT, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-C", cwd, *args],
+                   check=True, capture_output=True)
+
+
+def fixture(base):
+    """main has W-001 proposed; a linked worktree on feature has it active."""
+    root, wt = os.path.join(base, "main"), os.path.join(base, "feature-wt")
+    os.makedirs(os.path.join(root, "grove", "work"))
+    with open(os.path.join(root, "grove.yaml"), "w") as f:
+        f.write("schema_version: 1\nrecords: grove\n")
+    with open(os.path.join(root, "grove", "work", "W-001-first.md"), "w") as f:
+        f.write(WORK.format(title="First on main", status="proposed"))
+    git(root, "init", "-q", "-b", "main")
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", "main")
+    git(root, "worktree", "add", "-q", "-b", "feature", wt)
+    with open(os.path.join(wt, "grove", "work", "W-001-first.md"), "w") as f:
+        f.write(WORK.format(title="First on feature", status="active"))
+    git(wt, "add", "-A")
+    git(wt, "commit", "-q", "-m", "feature")
+    return os.path.realpath(root), os.path.realpath(wt)
+
+
+def tree(base):
+    """Every file below base, Git's included, by content."""
+    found = {}
+    for folder, _, names in os.walk(base):
+        for name in names:
+            path = os.path.join(folder, name)
+            if not os.path.islink(path) and os.path.isfile(path):
+                with open(path, "rb") as f:
+                    found[path] = hashlib.sha256(f.read()).hexdigest()
+    return found
+
+
+class Session:
+    """grove with stdin and stderr on a pty (or as given) and stdout on a pipe."""
+
+    def __init__(self, cwd, args=(), env=None, stdin="pty", stderr="pty", size=(30, 120)):
+        self.master, self.slave = pty.openpty()
+        fcntl.ioctl(self.slave, termios.TIOCSWINSZ, struct.pack("HHHH", size[0], size[1], 0, 0))
+        self.before = termios.tcgetattr(self.slave)
+        self.master2 = self.slave2 = None
+        if stderr == "pty2":  # a second terminal whose far end the test can close
+            self.master2, self.slave2 = pty.openpty()
+            fcntl.ioctl(self.slave2, termios.TIOCSWINSZ, struct.pack("HHHH", size[0], size[1], 0, 0))
+        streams = {"pty": self.slave, "pty2": self.slave2, "null": subprocess.DEVNULL, "pipe": subprocess.PIPE}
+        self.screen = b""
+        self.proc = subprocess.Popen([GROVE, *args], cwd=cwd, env=env or clean_env(), stdin=streams[stdin],
+                                     stdout=subprocess.PIPE, stderr=streams[stderr])
+
+    def pump(self, wait=0.05):
+        fds = [fd for fd in (self.master, self.master2) if fd is not None]
+        ready, _, _ = select.select(fds, [], [], wait)
+        for fd in ready:
+            try:
+                self.screen += os.read(fd, 65536)
+            except OSError:
+                pass
+
+    def expect(self, text, since=0):
+        """Wait until text has been drawn after offset since; return the new offset."""
+        deadline = time.monotonic() + TIMEOUT
+        while text.encode() not in self.screen[since:]:
+            if time.monotonic() > deadline or self.proc.poll() is not None:
+                raise AssertionError(f"never drew {text!r}; exit={self.proc.poll()} screen tail={self.screen[-600:]!r}")
+            self.pump()
+        return len(self.screen)
+
+    def send(self, data):
+        os.write(self.master, data)
+
+    def resize(self, rows, cols):
+        fcntl.ioctl(self.slave, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
+        self.proc.send_signal(signal.SIGWINCH)
+
+    def finish(self):
+        """Wait for exit, draining the screen; return (code, stdout)."""
+        deadline = time.monotonic() + TIMEOUT
+        while self.proc.poll() is None:
+            if time.monotonic() > deadline:
+                self.proc.kill()
+                raise AssertionError(f"did not exit; screen tail={self.screen[-600:]!r}")
+            self.pump()
+        for _ in range(3):
+            self.pump()
+        out = self.proc.stdout.read()
+        self.after = termios.tcgetattr(self.slave)
+        for fd in (self.master, self.slave, self.master2, self.slave2):
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+        return self.proc.returncode, out
+
+    def restored(self):
+        """Modes equal to before the run, and the alternate screen left last."""
+        assert same_modes(self.after, self.before), f"terminal modes changed:\n before {self.before}\n after  {self.after}"
+        on, off = self.screen.rfind(ALT_ON), self.screen.rfind(ALT_OFF)
+        assert on >= 0 and off > on, f"alternate screen entered at {on}, left at {off}"
+        assert self.screen.rfind(b"\x1b[?25h") > self.screen.rfind(b"\x1b[?25l"), "the cursor stayed hidden"
+
+
+def same_modes(a, b):
+    """Compare termios attributes, ignoring PENDIN: the kernel's own note that
+    typed input awaits re-reading after a raw-to-canonical switch. A program
+    does not set it and the next read clears it."""
+    pendin = getattr(termios, "PENDIN", 0)
+    return a[:3] == b[:3] and a[3] & ~pendin == b[3] & ~pendin and a[4:] == b[4:]
+
+
+def clean_env(**extra):
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("TEA_", "UV_"))}
+    env.update(TERM="xterm-256color", **extra)
+    return env
+
+
+def check(condition, message):
+    if not condition:
+        raise AssertionError(message)
+
+
+# --- scenarios ---------------------------------------------------------------
+
+def select_and_show(root, wt, base):
+    """board -> card -> version -> resolve -> show reads the selected bytes."""
+    for flags in ([], ["--json"]):
+        s = Session(root, flags)
+        s.expect("Board: checkout . (main)")
+        s.expect("First on main")
+        s.send(ENTER)
+        mark = s.expect("versions differ")
+        check(s.proc.poll() is None, "opening a card must not resolve or exit")
+        # Rows fold by content: feature's (branch, checkout), then main's.
+        # Enter on a fold only lists its places.
+        s.send(DOWN + ENTER)
+        s.expect("checkout feature-wt (feature)", mark)
+        check(s.proc.poll() is None, "opening a fold must not resolve or exit")
+        s.send(DOWN * 2)
+        s.expect("First on feature", mark)
+        s.expect("Selector: live:feature-wt:", mark)
+        s.send(ENTER)
+        code, out = s.finish()
+        s.restored()
+        check(code == 0, f"exit {code}")
+        check(b"\x1b" not in out, f"interface bytes reached stdout: {out!r}")
+        project = json.loads(out)["project"] if flags else out.decode()[:-1]
+        check(project == wt, f"stdout names {project!r}, want {wt!r}; raw {out!r}")
+        check(flags or out == (wt + "\n").encode(), f"plain result is exactly the path and a newline: {out!r}")
+        tail = s.screen[s.screen.rfind(ALT_OFF):]
+        check(b"Checkout: " + wt.encode() in tail and b"refs/heads/feature" in tail, f"context belongs on stderr after the screen: {tail!r}")
+        shown = subprocess.run([GROVE, "--project", project, "show", "W-001"], capture_output=True, cwd=base)
+        with open(os.path.join(wt, "grove", "work", "W-001-first.md"), "rb") as f:
+            check(shown.returncode == 0 and shown.stdout == f.read(), "show did not read the selected bytes")
+
+
+def leave_without_selecting(root, wt, base):
+    """q and Esc exit 0 with no output; Ctrl-C exits 1 with no output."""
+    for keys, want, where in ((b"q", 0, "board"), (ESC, 0, "board"), (CTRL_C, 1, "board"), (b"q", 0, "versions"), (CTRL_C, 1, "versions")):
+        s = Session(root)
+        s.expect("First on main")
+        if where == "versions":
+            s.send(ENTER)
+            s.expect("versions differ")
+            s.send(DOWN)
+        s.send(keys)
+        code, out = s.finish()
+        s.restored()
+        check(code == want and out == b"", f"{keys!r} on {where}: exit {code}, stdout {out!r}")
+        check((b"interrupted" in s.screen) == (want == 1), f"{keys!r}: interruption message mismatch")
+
+
+def refuses_without_terminal(root, wt, base):
+    """No terminal: prompt refusal, exit 1, no stdout, no terminal modes touched."""
+    for stdin, stderr in (("null", "pty"), ("pipe", "pty"), ("pty", "pipe"), ("null", "pipe")):
+        for flags in ([], ["--json"]):
+            s = Session(root, flags, stdin=stdin, stderr=stderr)
+            if stdin == "pipe":
+                s.proc.stdin.close()
+            piped = s.proc.stderr.read() if stderr == "pipe" else b""
+            code, out = s.finish()
+            text = piped + s.screen
+            check(code == 1 and out == b"", f"{stdin}/{stderr}: exit {code}, stdout {out!r}")
+            check(b"needs a terminal" in text and b"grove list" in text and b"--help" in text, f"no guidance: {text!r}")
+            check(b"\x1b" not in text and same_modes(s.after, s.before), "the refusal touched the terminal")
+    # Help and explicit commands stay noninteractive, with or without a terminal.
+    for args, cwd in ((["--help"], base), (["help"], base), (["list"], root), (["versions", "W-001"], root)):
+        for stdin, stderr in (("null", "pipe"), ("pty", "pty")):
+            s = Session(cwd, args, stdin=stdin, stderr=stderr)
+            code, out = s.finish()
+            check(code == 0 and out and b"\x1b" not in out + s.screen and same_modes(s.after, s.before), f"{args} {stdin}/{stderr}: exit {code} {s.screen!r}")
+    s = Session(base, ["board"])
+    code, out = s.finish()
+    check(code == 2 and out == b"" and b"unknown command board" in s.screen and ALT_ON not in s.screen, "board must not be a command")
+    s = Session(base)  # a terminal, but no project: said plainly, outside the interface
+    code, out = s.finish()
+    check(code == 1 and out == b"" and b"grove.yaml" in s.screen and ALT_ON not in s.screen, f"no project: {code} {s.screen!r}")
+
+
+def blocked_git(root, wt, base):
+    """A Git read that never returns is killed and collected when leaving."""
+    tools = os.path.join(base, "tools")
+    os.makedirs(tools, exist_ok=True)
+    flag, fifo = os.path.join(tools, "block"), os.path.join(tools, "started")
+    with open(os.path.join(tools, "git"), "w") as f:
+        f.write(f'#!/bin/sh\nif [ -e "{flag}" ]; then echo $$ > "{fifo}"; exec sleep 600; fi\nexec "{GIT}" "$@"\n')
+    os.chmod(os.path.join(tools, "git"), 0o755)
+    env = clean_env(PATH=tools + os.pathsep + os.environ["PATH"])
+    for stage, keys, want in (("refresh", b"q", 0), ("refresh", CTRL_C, 1), ("resolve", b"q", 0), ("resolve", CTRL_C, 1), ("start", b"q", 0)):
+        if os.path.exists(fifo):
+            os.remove(fifo)
+        os.mkfifo(fifo)
+        if stage == "start":
+            open(flag, "w").close()
+        s = Session(root, env=env)
+        if stage != "start":
+            s.expect("First on main")
+            if stage == "resolve":
+                s.send(ENTER)
+                s.expect("versions differ")
+                s.send(DOWN * 2 + ENTER + DOWN * 2)
+                s.expect("Selector: live:.:")
+            open(flag, "w").close()
+            s.send(b"r" if stage == "refresh" else ENTER)
+        # The handshake: the fake git says it started before anything is cancelled.
+        reader = os.open(fifo, os.O_RDONLY | os.O_NONBLOCK)
+        deadline, data = time.monotonic() + TIMEOUT, b""
+        while not data.endswith(b"\n"):
+            check(time.monotonic() < deadline, f"{stage}: the blocked git never started")
+            s.pump()
+            try:
+                data += os.read(reader, 64)
+            except BlockingIOError:
+                pass
+        os.close(reader)
+        pid = int(data)
+        s.expect("Reading branches and checkouts" if stage != "resolve" else "Resolving the selected workspace")
+        s.send(keys)
+        code, out = s.finish()
+        os.remove(flag)
+        s.restored()
+        check(code == want and out == b"", f"{stage} {keys!r}: exit {code}, stdout {out!r}")
+        try:
+            os.kill(pid, 0)
+            raise AssertionError(f"{stage} {keys!r}: git child {pid} outlived the session")
+        except ProcessLookupError:
+            pass
+
+
+def hangup(root, wt, base):
+    """SIGHUP (the window closed) still kills a blocked Git child and restores modes."""
+    tools = os.path.join(base, "tools-hup")
+    os.makedirs(tools, exist_ok=True)
+    flag, fifo = os.path.join(tools, "block"), os.path.join(tools, "started")
+    with open(os.path.join(tools, "git"), "w") as f:
+        f.write(f'#!/bin/sh\nif [ -e "{flag}" ]; then echo $$ > "{fifo}"; exec sleep 600; fi\nexec "{GIT}" "$@"\n')
+    os.chmod(os.path.join(tools, "git"), 0o755)
+    os.mkfifo(fifo)
+    s = Session(root, env=clean_env(PATH=tools + os.pathsep + os.environ["PATH"]))
+    s.expect("First on main")
+    open(flag, "w").close()
+    s.send(b"r")
+    reader = os.open(fifo, os.O_RDONLY | os.O_NONBLOCK)
+    deadline, data = time.monotonic() + TIMEOUT, b""
+    while not data.endswith(b"\n"):
+        check(time.monotonic() < deadline, "the blocked git never started")
+        s.pump()
+        try:
+            data += os.read(reader, 64)
+        except BlockingIOError:
+            pass
+    os.close(reader)
+    s.proc.send_signal(signal.SIGHUP)
+    code, out = s.finish()
+    os.remove(flag)
+    s.restored()
+    check(code == 1 and out == b"", f"exit {code}, stdout {out!r}")
+    try:
+        os.kill(int(data), 0)
+        raise AssertionError("the git child outlived a hangup")
+    except ProcessLookupError:
+        pass
+
+
+def output_failure(root, wt, base):
+    """The screen goes away mid-session: exit 1, no result, input modes restored."""
+    s = Session(root, stderr="pty2")
+    s.expect("First on main")
+    os.close(s.master2)
+    s.master2 = None
+    s.send(ENTER)  # forces a redraw onto the dead screen
+    s.send(DOWN)
+    code, out = s.finish()
+    check(code == 1 and out == b"", f"exit {code}, stdout {out!r}")
+    check(same_modes(s.after, s.before), "input terminal modes were not restored after the screen failed")
+
+
+def resize(root, wt, base):
+    s = Session(root)
+    mark = s.expect("Proposed (1)")
+    s.resize(24, 80)
+    mark = s.expect("[Proposed 1]", mark)
+    s.resize(8, 30)
+    mark = s.expect("Grove needs 40x10", mark)
+    s.resize(30, 120)
+    s.expect("Proposed (1)", mark)
+    s.send(b"q")
+    code, out = s.finish()
+    s.restored()
+    check(code == 0 and out == b"", f"exit {code}")
+
+
+def writes_no_logs(root, wt, base):
+    """The framework's log switches are in the environment and must do nothing."""
+    logs = os.path.join(base, "logs")
+    os.makedirs(logs, exist_ok=True)
+    env = clean_env(TEA_DEBUG="true", TEA_TRACE=os.path.join(logs, "trace.log"), UV_DEBUG=os.path.join(logs, "uv.log"))
+    s = Session(root, env=env)
+    s.expect("First on main")
+    s.send(ENTER + DOWN + b"q")
+    code, _ = s.finish()
+    s.restored()
+    check(code == 0 and os.listdir(logs) == [], f"log files appeared: {os.listdir(logs)}")
+
+
+SCENARIOS = [select_and_show, leave_without_selecting, refuses_without_terminal, blocked_git, hangup, output_failure, resize, writes_no_logs]
+
+
+def main():
+    base = os.path.realpath(tempfile.mkdtemp(prefix="grove-terminal-"))
+    failed = 0
+    try:
+        root, wt = fixture(os.path.join(base, "repo"))
+        before = tree(os.path.join(base, "repo"))
+        for scenario in SCENARIOS:
+            if ONLY and scenario.__name__ not in ONLY:
+                continue
+            try:
+                scenario(root, wt, base)
+                check(tree(os.path.join(base, "repo")) == before, "files in the repository changed")
+                print(f"ok    {scenario.__name__}")
+            except AssertionError as e:
+                failed += 1
+                print(f"FAIL  {scenario.__name__}: {e}")
+    finally:
+        shutil.rmtree(base, ignore_errors=True)
+    sys.exit(1 if failed else 0)
+
+
+if __name__ == "__main__":
+    main()

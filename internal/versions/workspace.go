@@ -1,6 +1,7 @@
 package versions
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -79,16 +80,26 @@ type Workspace struct {
 // ponytail: re-runs the whole inspection (one ls-tree and one cat-file per
 // branch) to answer one selector; inspect only the selected source if
 // repositories with many branches make this slow.
-func Resolve(root, selector string) (*Workspace, error) { return resolveWith(root, selector, nil) }
+func Resolve(root, selector string) (*Workspace, error) {
+	return ResolveContext(context.Background(), root, selector)
+}
+
+// ResolveContext is Resolve with cancellation, as InspectContext: a cancelled
+// call never returns a Workspace, and a Git read or final check it interrupts
+// reports ctx.Err(). A refusal already computed from a completed inspection
+// may still be returned; it was true of what was read.
+func ResolveContext(ctx context.Context, root, selector string) (*Workspace, error) {
+	return resolveWith(ctx, root, selector, nil)
+}
 
 // resolveWith is Resolve with a hook that runs before the final check of the
 // selected target, so tests can change it meanwhile.
-func resolveWith(root, selector string, before func()) (*Workspace, error) {
+func resolveWith(ctx context.Context, root, selector string, before func()) (*Workspace, error) {
 	sel, err := Parse(selector)
 	if err != nil {
 		return nil, err
 	}
-	res, err := Inspect(root, sel.ID)
+	res, err := InspectContext(ctx, root, sel.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +127,11 @@ func resolveWith(root, selector string, before func()) (*Workspace, error) {
 		if before != nil {
 			before()
 		}
-		if err := recheck(root, res, sel, s.Commit, lv); err != nil {
+		err := recheck(ctx, root, res, sel, s.Commit, lv)
+		if ctx.Err() != nil { // a cancelled check refuses for reasons that are not true
+			return nil, ctx.Err()
+		}
+		if err != nil {
 			return nil, err
 		}
 		return workspace(res, lv), nil
@@ -220,9 +235,9 @@ func workspace(res *Result, v Version) *Workspace {
 // HEAD. A committed route also needs its branch tip unmoved and no second
 // enterable checkout of that branch. Nothing here substitutes a new selection,
 // and changes after this check remain possible.
-func recheck(root string, res *Result, sel Selection, tip string, lv Version) error {
+func recheck(ctx context.Context, root string, res *Result, sel Selection, tip string, lv Version) error {
 	const reselect = "; run versions and reselect"
-	worktrees, err := repo.Worktrees(root)
+	worktrees, err := repo.WorktreesContext(ctx, root)
 	if err != nil {
 		return err
 	}
@@ -231,10 +246,12 @@ func recheck(root string, res *Result, sel Selection, tip string, lv Version) er
 		switch {
 		case w.Bare:
 		case w.Path == lv.Source.Worktree:
-			target = enterWorktree(w, res.Repository)
-			target.load(root, res.Prefix, map[string]*tree{})
+			target = enterWorktree(ctx, w, res.Repository)
+			committed := newObjects(ctx, root, res.Prefix)
+			target.load(ctx, res.Prefix, committed)
+			committed.close()
 		case sel.Kind == "committed" && w.Branch == sel.Ref:
-			if other := enterWorktree(w, res.Repository); other.Locator != "" {
+			if other := enterWorktree(ctx, w, res.Repository); other.Locator != "" {
 				return fmt.Errorf("worktree %s also checked out %s while its workspace was being resolved%s", other.Locator, sel.Ref, reselect)
 			}
 		}
@@ -259,7 +276,7 @@ func recheck(root string, res *Result, sel Selection, tip string, lv Version) er
 		return fmt.Errorf("%s or its %s changed while its workspace was being resolved%s", where, sel.ID, reselect)
 	}
 	if sel.Kind == "committed" {
-		out, err := repo.Git(root, "rev-parse", "--verify", "--quiet", sel.Ref+"^{commit}")
+		out, err := repo.GitContext(ctx, root, "rev-parse", "--verify", "--quiet", sel.Ref+"^{commit}")
 		if err != nil || strings.TrimSpace(out) != tip {
 			return fmt.Errorf("branch %s moved while its workspace was being resolved%s", sel.Ref, reselect)
 		}

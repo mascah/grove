@@ -1,6 +1,7 @@
 package repo
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -114,6 +115,22 @@ func TestWorktreesExactPaths(t *testing.T) {
 		got, err := Worktrees(root)
 		if err != nil || len(got) != 2 || got[0].Path != main || got[1].Path != linked || got[1].Branch != "refs/heads/feature" {
 			t.Fatalf("from %q: %+v %v", root, got, err)
+		}
+	}
+}
+
+// Several paths come from one process only when none holds a newline; the
+// answers are the same either way.
+func TestGitPathsMatchSingleAnswers(t *testing.T) {
+	_, main, linked, sep, _ := oddRepos(t)
+	for _, dir := range []string{main, sep, filepath.Join(main, "sub\nproject"), linked, t.TempDir()} {
+		options := []string{"--git-dir", "--show-prefix", "--git-common-dir"}
+		got, err := GitPathsContext(context.Background(), dir, options...)
+		for i, option := range options {
+			want, wantErr := GitPath(dir, option)
+			if (err == nil) != (wantErr == nil) || err == nil && got[i] != want {
+				t.Fatalf("%q %s: got %q, %v; want %q, %v", dir, option, got, err, want, wantErr)
+			}
 		}
 	}
 }

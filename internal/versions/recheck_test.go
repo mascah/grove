@@ -82,7 +82,7 @@ func TestResolveFinalCheck(t *testing.T) {
 			}
 			selected := selectorFor(t, project, "W-001", c.kind, where)
 			var after map[string][32]byte
-			w, err := resolveWith(project, selected, func() {
+			w, err := resolveWith(t.Context(), project, selected, func() {
 				c.mutate(t, root, wt)
 				after = treeHashes(t, filepath.Dir(root))
 			})
@@ -109,7 +109,7 @@ func TestResolveFinalCheckAdmits(t *testing.T) {
 	committed := selectorFor(t, project, "W-001", "committed", "refs/heads/feature")
 	before := treeHashes(t, filepath.Dir(root))
 	for _, selected := range []string{live, committed} {
-		w, err := resolveWith(project, selected, func() { write(t, wt, "sub/dirty.txt", "unrelated\n") })
+		w, err := resolveWith(t.Context(), project, selected, func() { write(t, wt, "sub/dirty.txt", "unrelated\n") })
 		if err != nil || w.Checkout != wt || w.Selector != live {
 			t.Fatalf("%s: %+v %v", selected, w, err)
 		}
@@ -117,7 +117,7 @@ func TestResolveFinalCheckAdmits(t *testing.T) {
 	if !reflect.DeepEqual(before, treeHashes(t, filepath.Dir(root))) {
 		t.Fatal("resolution must not write anything")
 	}
-	w, err := resolveWith(project, live, func() { addWorktree(t, root, "second", "feature", "-f") })
+	w, err := resolveWith(t.Context(), project, live, func() { addWorktree(t, root, "second", "feature", "-f") })
 	if err != nil || w.Checkout != wt {
 		t.Fatalf("an explicit live selection survives a new duplicate checkout: %+v %v", w, err)
 	}

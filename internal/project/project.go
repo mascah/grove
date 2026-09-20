@@ -22,9 +22,9 @@ type Project struct {
 // Load reads a whole project. Any diagnostics make the project unsuitable for
 // presentation as valid; the returned records are for inspection by validators.
 func Load(cwd, explicit string) (*Project, []Diagnostic) {
-	root, err := discover(cwd, explicit)
-	if err != nil {
-		return nil, []Diagnostic{{Path: cwd, Field: "grove.yaml", Message: err.Error()}}
+	root, d := Discover(cwd, explicit)
+	if d != nil {
+		return nil, []Diagnostic{*d}
 	}
 	p, ds := LoadFS(os.DirFS(root))
 	p.Root = root
@@ -53,7 +53,7 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 		}
 	}
 	if recordDir != "" {
-		if filepath.IsAbs(recordDir) || path.Clean(recordDir) == "." || !fs.ValidPath(path.Clean(recordDir)) || slices.Contains(strings.Split(filepath.ToSlash(recordDir), "/"), "..") {
+		if !dedicated(recordDir) {
 			config.problem("records", "must name a dedicated relative subdirectory without .. components")
 		} else if err := checkRecordRoot(fsys, recordDir); err != nil {
 			config.problem("records", err.Error())
@@ -115,6 +115,31 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 	slices.SortFunc(p.Records, compareRecords)
 	ds = append(ds, Validate(p.Records)...)
 	return p, sortedDiagnostics(ds)
+}
+
+func dedicated(recordDir string) bool {
+	return !filepath.IsAbs(recordDir) && path.Clean(recordDir) != "." && fs.ValidPath(path.Clean(recordDir)) && !slices.Contains(strings.Split(filepath.ToSlash(recordDir), "/"), "..")
+}
+
+// RecordRoot returns the record folder that LoadFS would walk for this
+// grove.yaml, or "" when it would refuse the value without reading a folder.
+// A caller that gives LoadFS part of a tree uses it to know which part: LoadFS
+// reads grove.yaml, each component of this path, and everything below it.
+func RecordRoot(config []byte) string {
+	recordDir := parseMapping("grove.yaml", config, 0).stringField("records", false)
+	if recordDir == "" || !dedicated(recordDir) {
+		return ""
+	}
+	return path.Clean(filepath.ToSlash(recordDir))
+}
+
+// Discover finds the project root as Load does, without reading the project.
+func Discover(cwd, explicit string) (string, *Diagnostic) {
+	root, err := discover(cwd, explicit)
+	if err != nil {
+		return "", &Diagnostic{Path: cwd, Field: "grove.yaml", Message: err.Error()}
+	}
+	return root, nil
 }
 
 func discover(cwd, explicit string) (string, error) {

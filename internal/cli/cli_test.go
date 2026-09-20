@@ -114,7 +114,8 @@ func TestInvalidNeighborPreventsPartialOutput(t *testing.T) {
 }
 
 func TestUsageAndMissingID(t *testing.T) {
-	for _, args := range [][]string{nil, {"unknown"}, {"show"}, {"show", "W-001", "extra"}, {"list", "extra"}, {"--project"}, {"list", "--wat"}, {"--project=", "list"}, {"--project", "a", "--project", "b", "list"}} {
+	// No command at all selects the board; see TestBoardInvocation.
+	for _, args := range [][]string{{"unknown"}, {"show"}, {"show", "W-001", "extra"}, {"list", "extra"}, {"--project"}, {"list", "--wat"}, {"--project=", "list"}, {"--project", "a", "--project", "b", "list"}} {
 		var out, errOut bytes.Buffer
 		if code := Run(args, t.TempDir(), &out, &errOut); code != 2 || out.Len() != 0 || !strings.Contains(errOut.String(), "Usage:") {
 			t.Fatalf("%v: code=%d stderr=%s", args, code, errOut.String())

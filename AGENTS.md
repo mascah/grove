@@ -12,8 +12,13 @@ direction, observed evidence, and proposed design; preserve those distinctions.
   trial. Future allocation coordinates across local worktrees through Git's
   common metadata directory; reading records requires no allocator state.
   W-001 implements the reader, W-002 record creation with shared allocation,
-  and W-003 field updates with content revisions and a shared write lock. The
-  UI framework and runner contract remain open.
+  and W-003 field updates with content revisions and a shared write lock.
+  W-009 implements the read-only terminal board that bare `grove` opens, with
+  Bubble Tea v2 in `internal/tui`; keep explicit subcommands noninteractive,
+  and the board's text escaping and explicit version selection intact. W-013
+  reads every branch through one `git cat-file` process, scoped to what the
+  project loader reads; do not add a Git process per branch. The runner
+  contract remains open.
 - Keep deterministic validation and state changes in software where useful;
   do not assume software can replace judgment instructions or prove acceptance.
 - Record settled choices and the concrete next action in the brief while it

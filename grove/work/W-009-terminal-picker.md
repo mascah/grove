@@ -2,9 +2,9 @@
 id: "W-009"
 type: work
 title: "Browse a terminal Kanban board with explicit record versions"
-status: proposed
+status: done
 created: "2026-09-19T20:23:01Z"
-updated: "2026-09-19T20:31:23Z"
+updated: "2026-09-20T05:06:02Z"
 kind: feature
 priority: 2
 size: medium
@@ -20,9 +20,11 @@ opaque selector. On 2026-09-19 the owner preferred the board over a standalone
 version picker as the first terminal experience after reliability fixes.
 The owner then selected bare `grove` as the TUI entrypoint, with the board as its
 first screen; do not add a `grove board` subcommand. Board-first and this
-entrypoint are selected direction; the detailed layout, context policy and
-framework choice below remain proposed design, not shipped behavior.
-[Implementation plan](../../docs/plans/W-009-terminal-picker.md).
+entrypoint are selected direction. The layout, context policy and framework
+below were proposed design; they are now implemented on branch
+`worktree-W-009` as described, and remain the owner's to judge in use.
+[Implementation plan](../../docs/plans/W-009-terminal-picker.md);
+[evidence](../../docs/reviews/2026-09-19-board-W-009.md).
 
 ## What the TUI means here
 
@@ -204,14 +206,86 @@ current command-required usage error.
    a project without a TTY. Nonterminal default use refuses promptly and existing
    explicit subcommands retain their contracts. No `board` subcommand is added.
 
+## Evidence, 2026-09-19
+
+Implemented on branch `worktree-W-009` from `acfc905`, after the W-006 to W-008
+repairs were confirmed in main by Git ancestry. Final code revision `184b8c3`.
+The [evidence](../../docs/reviews/2026-09-19-board-W-009.md) maps each
+acceptance item to its tests, and holds the suite results, both independent
+reviews with dispositions, and the remaining limits; the
+[plan](../../docs/plans/W-009-terminal-picker.md#adjustments-made-while-implementing-2026-09-19)
+records what changed from this proposal and why. The changes that matter to
+this record's text:
+
+- The framework reads its debug-log switches from the process environment, so
+  the board unsets `TEA_DEBUG`, `TEA_TRACE`, and `UV_DEBUG` rather than
+  passing a filtered environment.
+- The framework ignores screen write errors; the board ends the session with
+  exit 1 at the first one instead of staying open unseen.
+- The board starts on the live source whose Git directory is the invocation's
+  own, which holds through symlinked paths, `--project`, and nested prefixes.
+- A hangup cancels the session like an interrupt.
+
+Automated acceptance (items 1 to 5, 7, and the suites, dependency check, and
+independent review of item 6) is met on the branch. **Owner usability feedback
+on a real demo, the other half of item 6, has not happened**, so this record
+stays active. No screenshot or test stands in for it.
+
+## Owner feedback, 2026-09-19 (first impressions of the demo)
+
+Observed by the owner, in their terms:
+
+1. The board is an acceptable basic starting point; clearer boundaries and
+   colour can come later.
+2. The version view did not help. A done item showed six to eight rows, all
+   `done`, the live ones all `unchanged`, every detail pane the same content
+   with only header fields differing. The owner could not tell what a version
+   is or what to do from there, and asked for a refresher on "workspace". What
+   they expected to be useful instead is a work item's lineage over time: when
+   it was proposed, the commits that touched it, and its status at each.
+3. Concern that a full load takes about 0.6 s at this small scale.
+4. What `b` (checkout) does to the board is confusing.
+5. "Source" is unclear.
+
+Measured afterwards, not owner judgment: the 0.6 s is real (0.56 to 0.57 s for
+`versions` from a built binary; `list` of one checkout is under 10 ms). One
+load spawns 44 Git processes, 35 of them single-path `rev-parse` calls made per
+worktree for the W-006/W-008 provenance checks. The cost grows with worktrees
+and branches, not with records. In this repository every version of W-001 has
+the same content revision, so its eight rows are one content seen from four
+branch tips and four checkouts.
+
+The owner selected the first two adjustments the same day; both are implemented
+on this branch in `959def6`:
+
+- A card's list has one row per distinct content. Where several places hold
+  the same bytes the row is a fold ("▸ done  same on 4 branches, 4 checkouts")
+  whose details show the content once and name every place. A fold selects
+  nothing: Enter lists its places, and each remains a separate explicit choice
+  that Enter resolves, so acceptance item 2 and Q-001 hold. A board card notes
+  "N versions" only when versions differ. W-001 here went from eight rows to one.
+- The interface says "branch" and "checkout" for what the code and the
+  `versions` command call committed and live sources. The Other sources shelf
+  is now "Elsewhere". `b` reads "view another checkout", and its screen says
+  that only the display changes. The card's header pane explains what a version
+  is. The `versions` and `workspace` commands keep their words and their
+  selector contract; only the board changed.
+
+Lineage is [W-012](W-012-card-lineage.md). Load time is
+[W-013](W-013-load-scaling.md), measured and fixed on this branch.
+
+## Owner acceptance, 2026-09-19
+
+After the folded card, the wording, and the W-013 load fix, the owner said the
+board "seems good enough for the moment" and asked to close this out and merge
+it. That is acceptance of a starting point, not of the design: clearer
+boundaries and colour (feedback item 1), lineage (W-012), and whether a load
+should read every branch (W-013) remain open. The other half of acceptance
+item 6 is met.
+
 ## Next
 
-After the three repair candidates are reviewed and integrated, Fable should
-verify this design against those interfaces, implement the linked plan in an
-isolated worktree, and return a runnable demo plus test/review evidence. The
-owner has selected the terminal experience and requested earlier Kanban value.
-The board-first recommendation and its checkout-scoped status policy should be
-kept explicit in the handoff; do not silently invent a cross-branch card status.
-Use the [board implementation handoff](../../docs/prompts/W-009-implementation.txt)
-when assigning execution. Worktree creation and agent execution remain separate
-later work. W-010 proposes reusable work preparation and does not block this board.
+Nothing under this record. Integrated into main by merge on 2026-09-19.
+Continue with [W-012](W-012-card-lineage.md). Worktree creation, record edits
+from the board, and agent execution remain separate later work; W-010 does not
+depend on this.
