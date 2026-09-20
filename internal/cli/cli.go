@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/mascah/grove/internal/create"
+	"github.com/mascah/grove/internal/handoff"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/update"
 	"github.com/mascah/grove/internal/versions"
@@ -23,7 +24,9 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] list | show ID [--json] | check | new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
-	"       grove [--project DIR] workspace --source SELECTOR [--json]\n\n" +
+	"       grove [--project DIR] workspace --source SELECTOR [--json]\n" +
+	"       grove [--project DIR] context WORK_ID... [--json] [--interaction interactive|headless]\n" +
+	"                                     [--max-bytes N] [--include PATH]...\n\n" +
 	"  (none)     Open the terminal board: one checkout's work by status, each card's\n" +
 	"             differing versions across branches and checkouts, and explicit selection of a\n" +
 	"             version's existing workspace, printed like workspace (--json likewise).\n" +
@@ -43,7 +46,16 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"  workspace  Print the project directory of the existing checkout holding the\n" +
 	"             version selected by --source (a selector from versions), after\n" +
 	"             checking it is still that version; --json adds checkout, record,\n" +
-	"             branch, HEAD, and revision. Creates, switches, and edits nothing.\n\n" +
+	"             branch, HEAD, and revision. Creates, switches, and edits nothing.\n" +
+	"  context    Assemble what an agent needs for explicitly selected work in this\n" +
+	"             checkout: the IDs ordered prerequisites first, those records with their\n" +
+	"             prerequisites, blocking questions, related records, and the .md and .txt\n" +
+	"             documents their bodies link to, each with its exact revision, plus Git\n" +
+	"             identity and every --include PATH (a required project-relative file).\n" +
+	"             A missing, changed, or oversized source fails the command: nothing is\n" +
+	"             truncated to fit --max-bytes (default 262144). --interaction records\n" +
+	"             whether a person can answer (default interactive). Exit 0 means context\n" +
+	"             was assembled, not that work is ready or authorized. Reads only.\n\n" +
 	"--project DIR selects a directory containing grove.yaml.\n" +
 	"Without it, search upward from the current directory, stopping at Git boundaries.\n" +
 	"Project/file context is written to stderr; results are written to stdout.\n"
@@ -82,6 +94,8 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		return runVersions(p.Root, a, out, errOut)
 	case "workspace":
 		return runWorkspace(p.Root, a, out, errOut)
+	case "context":
+		return runContext(p.Root, a, out, errOut)
 	case "update":
 		res, err := update.Apply(p.Root, a.request, time.Now(), nil)
 		if err != nil {
@@ -141,6 +155,8 @@ type invocation struct {
 	project, command, id, kind, title, slug, source string
 	help, json                                      bool
 	request                                         update.Request
+	ids                                             []string // context
+	options                                         handoff.Options
 }
 
 var revisionPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
@@ -193,6 +209,27 @@ func parseArgs(args []string) (a invocation, err error) {
 		{"--slug", "slug", once(&a.slug)},
 		{"--source", "selector", once(&a.source)},
 		{"--expect", "revision", once(&a.request.Expect)},
+		{"--interaction", "mode", func(value string) error {
+			if value != "interactive" && value != "headless" {
+				return errors.New("must be interactive or headless")
+			}
+			return once(&a.options.Interaction)(value)
+		}},
+		{"--max-bytes", "byte count", func(value string) error {
+			if a.options.MaxBytes != 0 {
+				return errors.New("may only be supplied once")
+			}
+			n, err := strconv.Atoi(value)
+			if err != nil || n < 1 || n > handoff.LimitMaxBytes {
+				return fmt.Errorf("must be an integer from 1 through %d", handoff.LimitMaxBytes)
+			}
+			a.options.MaxBytes = n
+			return nil
+		}},
+		{"--include", "project-relative path", func(value string) error {
+			a.options.Include = append(a.options.Include, value)
+			return nil
+		}},
 		{"--set", "FIELD=VALUE", func(value string) error {
 			name, val, ok := strings.Cut(value, "=")
 			if !ok || name == "" {
@@ -275,11 +312,14 @@ func parseArgs(args []string) (a invocation, err error) {
 	if a.slug != "" && a.command != "new" {
 		return a, fmt.Errorf("--slug applies only to new")
 	}
-	if a.json && a.command != "" && a.command != "show" && a.command != "versions" && a.command != "workspace" {
-		return a, fmt.Errorf("--json applies only to the board, show, versions, and workspace")
+	if a.json && a.command != "" && a.command != "show" && a.command != "versions" && a.command != "workspace" && a.command != "context" {
+		return a, fmt.Errorf("--json applies only to the board, show, versions, workspace, and context")
 	}
 	if a.source != "" && a.command != "workspace" {
 		return a, fmt.Errorf("--source applies only to workspace")
+	}
+	if (a.options.Interaction != "" || a.options.MaxBytes != 0 || a.options.Include != nil) && a.command != "context" {
+		return a, fmt.Errorf("--interaction, --max-bytes, and --include apply only to context")
 	}
 	if (a.request.Expect != "" || len(fields) != 0) && a.command != "update" {
 		return a, fmt.Errorf("--expect, --set, and --unset apply only to update")
@@ -310,6 +350,10 @@ func parseArgs(args []string) (a invocation, err error) {
 			err = fmt.Errorf("workspace requires --source SELECTOR from versions")
 		default:
 			_, err = versions.Parse(a.source)
+		}
+	case "context":
+		if a.ids = positional[1:]; len(a.ids) == 0 {
+			err = fmt.Errorf("context requires at least one work ID")
 		}
 	case "new":
 		if len(positional) != 3 {

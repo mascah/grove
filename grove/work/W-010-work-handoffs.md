@@ -2,9 +2,9 @@
 id: "W-010"
 type: work
 title: "Prepare reusable work instructions and execution handoffs"
-status: proposed
+status: active
 created: "2026-09-19T20:44:28Z"
-updated: "2026-09-19T20:47:33Z"
+updated: "2026-09-20T05:23:53Z"
 kind: feature
 priority: 2
 size: medium
