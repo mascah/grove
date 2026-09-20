@@ -2,9 +2,9 @@
 id: "W-010"
 type: work
 title: "Prepare reusable work instructions and execution handoffs"
-status: active
+status: done
 created: "2026-09-19T20:44:28Z"
-updated: "2026-09-20T05:23:53Z"
+updated: "2026-09-20T16:41:22Z"
 kind: feature
 priority: 2
 size: medium
@@ -259,11 +259,20 @@ harness trials, and the owner's acceptance apart.
   and the two real trials; interruption mid-implementation was not exercised,
   and the wait path was not rerun against the revised guide. 8: both
   invocations are documented and both were exercised headlessly on a fixture;
-  the interactive invocations were not. 5: **open**. A fixture written by the
-  workflow's author is not a real prepared assignment, and the owner has not
-  judged it.
+  the interactive invocations were not. 5: met on 2026-09-20 by the owner's
+  interactive `/grove-work W-012` run, from the ID through the asked question,
+  plan, code, three review rounds, and a handoff that left merging to the
+  owner. Their verdict: it "appears to have worked as expected and that's
+  enough to at least start dogfooding with." The retained handoff and the one
+  shortcoming observed (a checkpoint that lagged six commits) are in the
+  [evidence](../../docs/reviews/2026-09-19-W-010-dogfood.md#owners-interactive-run-on-a-real-assignment-2026-09-20).
 
 ## Next
+
+Done on the owner's verdict, 2026-09-20. Nothing further under this record;
+what stayed unrun is listed in the evidence's Not run. The closing commits on
+`worktree-W-010` after `a0fd23a` are documentation only and are the owner's to
+merge. The instruction the run followed is kept below as history.
 
 Owner: start a fresh interactive Claude Code session in the main checkout,
 where the skill and `context` now are, and run
