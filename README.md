@@ -5,7 +5,8 @@ A local project workspace for humans and agents, built around a CLI and durable 
 **Status: the first Go CLI lists, shows, validates, creates, and updates local
 project records, shows each record's versions across local branches, and
 locates the checkout holding a selected version. Run without a command, it
-opens a read-only terminal Kanban board over the same operations.**
+opens a read-only terminal Kanban board over the same operations. `context`
+assembles selected work for an agent, and the `grove-work` skill carries it out.**
 
 Start with [the restart brief](docs/restart-brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
@@ -89,6 +90,55 @@ record; the directory it prints is a location, not write authority, and a
 later `update` performs its own revision check. The board below uses these
 two operations in process; creating a worktree for a branch without one
 remains future work.
+
+### Work context and the `grove-work` skill
+
+`grove [--project DIR] context WORK_ID... [--json] [--interaction interactive|headless] [--max-bytes N] [--include PATH]...`
+assembles what an agent needs for explicitly selected work in one checkout, so
+an assignment is a few IDs rather than a composed prompt. It prints the IDs
+ordered prerequisites first (ties keep the requested order; prerequisites are
+never added to the selection), then the sources, each once with its `sha256:`
+revision: `grove.yaml`, the selected work, its transitive `depends_on` records,
+questions blocking any of those (resolved ones too), the records the selected
+work names in `relates_to` or `members`, the in-project `.md` and `.txt`
+documents that selected and prerequisite bodies link to, and every
+`--include PATH`. Links are taken from parsed Markdown, so code, fences, images,
+and HTML are never read as links. Links to URLs, other projects, Git metadata,
+and other file types are listed with the reason they were left out. Links inside
+included documents are not followed; the output says so.
+
+It refuses rather than degrade: unknown, duplicate, or non-work IDs, a linked
+or included file that is missing, a symlink, not regular, or not UTF-8, a source
+that does not fit `--max-bytes` (default 262144, counting source bytes, at most
+8388608), or a checkout that changed while it was read. A refusal prints nothing
+to stdout. Exit 0 means context was assembled, never that work is ready,
+authorized, or integrated: a prerequisite's `done` is its recorded status.
+`--interaction` records whether a person can answer (default `interactive`);
+it is the caller's declaration, passed through for the guide to act on. The
+command writes nothing and starts nothing, and needs Git only inside a
+repository. Text output escapes terminal controls and fences each source;
+`--json` has the exact source strings:
+
+```text
+{format_version, root, interaction, selected[], order[],
+ git: null | {checkout, common_dir, ref, head},
+ records[]: {id, path, type, status, selected},
+ requirements[]: {work, prerequisite, status, selected},
+ questions[]: {id, status, blocks[]},
+ sources[]: {path, revision, reasons[], content},
+ references[]: {from, target, reason},
+ scope_notice, source_bytes, max_bytes}
+```
+
+The [work guide](docs/work-execution.md) is the workflow that uses it:
+preparation, isolated execution, review with bounded fix rounds, checkpoints,
+and what to do when a human decision is missing, interactive or headless. The
+`grove-work` skill is a thin adapter to that guide for
+[Claude](.claude/skills/grove-work/SKILL.md) (`/grove-work W-012`) and
+[Codex](.agents/skills/grove-work/SKILL.md) (`$grove-work W-012`), invoked
+explicitly and installed nowhere outside this repository. Grove launches no
+agent; [the dogfooding evidence](docs/reviews/2026-09-19-W-010-dogfood.md)
+says which invocations have actually been exercised.
 
 ### The terminal board
 

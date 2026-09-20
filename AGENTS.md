@@ -35,6 +35,10 @@ direction, observed evidence, and proposed design; preserve those distinctions.
 - The archived application's service authority, architecture, credentials,
   deployment procedures, and backlog are historical. Do not revive them as
   requirements for this project or copy private local data into this repository.
+- To carry out assigned work IDs, follow `docs/work-execution.md` (the
+  `grove-work` skill loads it); `go run ./cmd/grove context ID...` assembles
+  the records, plans, and revisions. W-010 implements both. Context is facts,
+  not authorization, and the command must stay read-only.
 - Use focused Conventional Commits. Preserve unrelated work and isolate
   concurrent implementation in separate worktrees.
 - Verify claims against actual results. Documentation-only changes need link
