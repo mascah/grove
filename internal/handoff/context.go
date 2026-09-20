@@ -185,13 +185,13 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 		ScopeNotice: scopeNotice, MaxBytes: opts.MaxBytes,
 	}
 	s := &sources{dir: dir, remaining: opts.MaxBytes, byPath: map[string]*Source{}}
-	if err := s.add("grove.yaml", p.Config, "project configuration"); err != nil {
+	if err := s.addLoaded("grove.yaml", p.Config, "project configuration"); err != nil {
 		return nil, err
 	}
 
 	// scope is the selected work plus everything it transitively depends on.
 	var scope []*project.Record
-	record := func(r *project.Record, reason string) error { return s.add(r.Path, r.Source, reason) }
+	record := func(r *project.Record, reason string) error { return s.addLoaded(r.Path, r.Source, reason) }
 	for _, id := range ids {
 		if err := record(byID[id], "selected work"); err != nil {
 			return nil, err

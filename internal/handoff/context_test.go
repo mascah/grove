@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -230,6 +231,33 @@ func TestMarkdownEscapedDestinations(t *testing.T) {
 	// The reference keeps the destination as the record wrote it.
 	if len(b.References) != 1 || b.References[0].Target != "../../docs/plan&amp;review.md#tasks" {
 		t.Fatalf("%+v", b.References)
+	}
+}
+
+// Another name for a file that is already a source costs nothing and adds no
+// second copy, whether the first copy came from the loader or from a read.
+func TestAliasesAreIncludedAndChargedOnce(t *testing.T) {
+	root := fixture(t)
+	work(t, root, "W-001", "proposed", "", "")
+	write(t, root, "docs/p.md", "plan\n")
+	for alias, file := range map[string]string{"docs/p-link.md": "docs/p.md", "docs/w-link.md": "grove/work/W-001.md", "docs/config-link.md": "grove.yaml"} {
+		if err := os.Link(filepath.Join(root, file), filepath.Join(root, alias)); err != nil {
+			t.Skip("no hard links:", err)
+		}
+	}
+	aliases := []string{"docs/p.md", "docs/p-link.md", "docs/w-link.md", "docs/config-link.md"}
+	if _, err := os.Stat(filepath.Join(root, "DOCS/P.MD")); err == nil { // a case-insensitive filesystem
+		aliases = append(aliases, "DOCS/P.MD", "GROVE.YAML", "Grove/Work/w-001.MD")
+	}
+	unique := build(t, root, Options{Include: []string{"docs/p.md"}}, "W-001").SourceBytes
+	b := build(t, root, Options{MaxBytes: unique, Include: aliases}, "W-001") // a budget that exactly covers the unique files
+	if got := paths(b); !reflect.DeepEqual(got, []string{"docs/p.md", "grove.yaml", "grove/work/W-001.md"}) || b.SourceBytes != unique {
+		t.Fatal(got, b.SourceBytes, unique)
+	}
+	for _, s := range b.Sources {
+		if !slices.Contains(s.Reasons, "included by the caller") {
+			t.Fatalf("%+v", s.Reasons)
+		}
 	}
 }
 

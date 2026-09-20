@@ -28,27 +28,54 @@ type sources struct {
 	dir       *os.Root
 	remaining int
 	byPath    map[string]*Source
-	files     []readFile // by identity: a case-insensitive filesystem reaches one file by several spellings
+	files     []sourceFile // every source, by identity: a case-insensitive filesystem or a hard link reaches one file by several names
 }
 
-type readFile struct {
-	info fs.FileInfo
-	name string
+type sourceFile struct {
+	info   fs.FileInfo
+	source *Source
 }
 
-func (s *sources) add(name string, content []byte, reason string) error {
-	if existing := s.byPath[name]; existing != nil {
-		if !slices.Contains(existing.Reasons, reason) {
-			existing.Reasons = append(existing.Reasons, reason)
+// known adds reason to the source that already holds this file, under this
+// name or any other, and reports whether there was one. Callers ask before
+// reading or charging, so another name for an included file costs nothing.
+func (s *sources) known(name string, info fs.FileInfo, reason string) bool {
+	existing := s.byPath[name]
+	for _, f := range s.files {
+		if existing == nil && info != nil && os.SameFile(f.info, info) {
+			existing = f.source
 		}
-		return nil
 	}
+	if existing != nil && !slices.Contains(existing.Reasons, reason) {
+		existing.Reasons = append(existing.Reasons, reason)
+	}
+	return existing != nil
+}
+
+func (s *sources) add(name string, info fs.FileInfo, content []byte, reason string) error {
 	if len(content) > s.remaining {
 		return oversize(name, s.remaining)
 	}
 	s.remaining -= len(content)
-	s.byPath[name] = &Source{Path: name, Revision: project.Revision(content), Reasons: []string{reason}, Content: string(content)}
+	source := &Source{Path: name, Revision: project.Revision(content), Reasons: []string{reason}, Content: string(content)}
+	s.byPath[name] = source
+	s.files = append(s.files, sourceFile{info, source})
 	return nil
+}
+
+// addLoaded includes bytes the project loader already read and checked.
+func (s *sources) addLoaded(name string, content []byte, reason string) error {
+	if s.known(name, nil, reason) {
+		return nil
+	}
+	info, err := s.dir.Lstat(name)
+	if err != nil {
+		return err
+	}
+	if s.known(name, info, reason) {
+		return nil
+	}
+	return s.add(name, info, content, reason)
 }
 
 func oversize(name string, remaining int) error {
@@ -66,23 +93,24 @@ func (s *sources) addInclude(name string) error {
 }
 
 func (s *sources) read(name, reason, referrer string) error {
-	if s.byPath[name] != nil {
-		return s.add(name, nil, reason)
+	if s.known(name, nil, reason) {
+		return nil
 	}
-	content, info, err := readConfined(s.dir, name, s.remaining)
+	info, err := statConfined(s.dir, name)
 	if errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("%s names %s, which does not exist in this checkout", referrer, name)
 	}
 	if err != nil {
 		return err
 	}
-	for _, f := range s.files {
-		if os.SameFile(f.info, info) {
-			return s.add(f.name, nil, reason)
-		}
+	if s.known(name, info, reason) {
+		return nil
 	}
-	s.files = append(s.files, readFile{info, name})
-	return s.add(name, content, reason)
+	content, err := readConfined(s.dir, name, info, s.remaining)
+	if err != nil {
+		return err
+	}
+	return s.add(name, info, content, reason)
 }
 
 // addLinked includes the .md and .txt documents that r's body links to
@@ -175,12 +203,10 @@ func gitMetadata(name string) bool {
 	return slices.ContainsFunc(strings.Split(name, "/"), func(part string) bool { return strings.EqualFold(part, ".git") })
 }
 
-// readConfined reads a regular UTF-8 file of at most limit bytes below dir.
-// os.Root keeps a concurrently swapped parent from leading outside dir; the
-// component checks refuse symlinks that stay inside it too, as the record
-// reader does. Opening without blocking means a file swapped for a FIFO is
-// refused by the descriptor check instead of hanging.
-func readConfined(dir *os.Root, name string, limit int) ([]byte, fs.FileInfo, error) {
+// statConfined returns the identity of the regular file name below dir,
+// refusing a symlink in any component, as the record reader does. os.Root
+// keeps a concurrently swapped parent from leading outside dir.
+func statConfined(dir *os.Root, name string) (fs.FileInfo, error) {
 	var seen fs.FileInfo
 	for i, c := range name + "/" {
 		if c != '/' {
@@ -188,40 +214,47 @@ func readConfined(dir *os.Root, name string, limit int) ([]byte, fs.FileInfo, er
 		}
 		info, err := dir.Lstat(name[:i])
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		if info.Mode()&fs.ModeSymlink != 0 {
-			return nil, nil, fmt.Errorf("%s: %s is a symlink; symlinked sources are not supported", name, name[:i])
+			return nil, fmt.Errorf("%s: %s is a symlink; symlinked sources are not supported", name, name[:i])
 		}
 		seen = info
 	}
 	if !seen.Mode().IsRegular() {
-		return nil, nil, fmt.Errorf("%s: expected a regular file", name)
+		return nil, fmt.Errorf("%s: expected a regular file", name)
 	}
+	return seen, nil
+}
+
+// readConfined reads the UTF-8 file that statConfined saw, of at most limit
+// bytes. Opening without blocking means a file swapped for a FIFO is refused
+// by the descriptor check instead of hanging.
+func readConfined(dir *os.Root, name string, seen fs.FileInfo, limit int) ([]byte, error) {
 	f, err := dir.OpenFile(name, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer f.Close()
 	opened, err := f.Stat()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if !opened.Mode().IsRegular() || !os.SameFile(seen, opened) {
-		return nil, nil, fmt.Errorf("%s: changed while it was being read", name)
+		return nil, fmt.Errorf("%s: changed while it was being read", name)
 	}
 	if opened.Size() > int64(limit) {
-		return nil, nil, oversize(name, limit)
+		return nil, oversize(name, limit)
 	}
 	content, err := io.ReadAll(io.LimitReader(f, int64(limit)+1))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if len(content) > limit {
-		return nil, nil, oversize(name, limit)
+		return nil, oversize(name, limit)
 	}
 	if !utf8.Valid(content) {
-		return nil, nil, fmt.Errorf("%s: invalid UTF-8", name)
+		return nil, fmt.Errorf("%s: invalid UTF-8", name)
 	}
-	return content, opened, nil
+	return content, nil
 }
