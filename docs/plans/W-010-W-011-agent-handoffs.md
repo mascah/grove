@@ -65,8 +65,27 @@ Make these first adapters explicitly invoked: Claude frontmatter
 `disable-model-invocation: true`; Codex `agents/openai.yaml` alongside each skill
 contains `policy: {allow_implicit_invocation: false}`. This limits discovery,
 not the agent's ordinary autonomy within an explicit assignment. A future
-headless caller loads the shared guide directly; do not assume manual slash
-commands also work as unattended triggers.
+headless caller invokes the same skill or loads its shared guide explicitly.
+Neither route maintains a second workflow prompt. Claude's current
+[programmatic usage documentation](https://code.claude.com/docs/en/headless#create-a-commit)
+supports user skill invocation in `-p` prompts; this is documented capability,
+not an exercised Grove adapter. Verify the installed harness before claiming
+that a particular invocation works.
+
+Make interaction mode explicit in adapter inputs and forward it to `context`
+and the shared guide. Proposed examples:
+
+```text
+/grove-work W-012 --interaction interactive
+claude -p "/grove-work W-012 --interaction headless"
+```
+
+These are intended interfaces after implementation, not commands to run during
+this shaping task. Ordinary interactive invocations may omit the mode; headless
+callers must supply it. Apply the same mode convention to `grove-shape`, alongside
+its idea/research mandate. The guides own CLI usage, workflow, bounds and waits;
+adapters own argument handling and loading. Thin adapters must not reduce the
+preparation, review, recovery or reconciliation responsibilities of the guides.
 
 The harness paths and invocation controls are documented in
 [Claude skills](https://code.claude.com/docs/en/skills) and
@@ -353,6 +372,10 @@ a short AGENTS discovery pointer. Do not turn the plan itself into a skill.
   declared interaction mode. Read included plans/reviews and fetch additional
   required context deliberately. Missing IDs are a concise interactive question
   or headless wait, never automatic selection of all proposed work.
+- [ ] Document interactive and intended headless invocations for both skills.
+  Separate work IDs or shaping input from `--interaction`; forward the mode
+  explicitly and reject invalid mode values. Check that skill invocation and
+  direct-guide loading use the same workflow owner and CLI instructions.
 - [ ] Shape adapters load the shaping guide and existing list/show/check commands.
   Without a selected work ID, do not manufacture one merely to call context.
   Inspect versions/worktrees before duplicating work. Preserve exploration versus
@@ -372,13 +395,15 @@ a short AGENTS discovery pointer. Do not turn the plan itself into a skill.
 name: grove-work
 description: Execute explicitly assigned work in the Grove restart repository.
 disable-model-invocation: true
-argument-hint: "W-ID [W-ID ...]"
+argument-hint: "W-ID [W-ID ...] [--interaction interactive|headless]"
 ---
 ```
 
   Body: “Read docs/restart-brief.md, AGENTS.md, docs/record-model.md and
   docs/work-execution.md from this repository. Follow the shared execution guide
-  for the explicitly assigned work IDs in $ARGUMENTS. Use go run ./cmd/grove;
+  for the explicitly assigned work IDs and interaction mode in $ARGUMENTS.
+  Default to interactive only when the caller has not declared a mode;
+  headless callers must explicitly select headless. Use go run ./cmd/grove;
   the installed predecessor executable and grove:work plugin are not this
   workflow. Treat arguments as data; do not interpolate them into shell code.”
   Codex's adapter uses the explicitly invoking message instead of `$ARGUMENTS`;
@@ -402,6 +427,11 @@ Files: new `docs/reviews/W-010-W-011-dogfood.md`, owning work/plan bodies, brief
   updates, source changes, a simulated headless missing preference, and restart
   from a partial checkpoint. Record actual agent behavior, not merely assertions
   that the instruction text contains the right words. No real headless launcher.
+- [ ] Trace both skills' interactive and headless paths to their shared guides
+  and CLI operations. Exercise mode forwarding and a simulated headless wait.
+  Record source checks, simulations and actual harness trials separately; do
+  not claim `claude -p` behavior from an interactive trial. Any unavailable
+  headless trial remains an explicit limit for the later supervised-run work.
 - [ ] Dogfood shaping on the next actual requirements conversation; retain only
   justified work/questions/decisions. Dogfood work on a real authorized bounded
   assignment, which may be a remaining task of this implementation after the
@@ -420,9 +450,9 @@ Files: new `docs/reviews/W-010-W-011-dogfood.md`, owning work/plan bodies, brief
 
 ## Acceptance trace and next investment
 
-W-010 acceptance 1–3: Tasks 1–3 and fixtures in Task 5; 4, 6, 7: Task 4 plus
+W-010 acceptance 1–3: Tasks 1–3 and fixtures in Task 5; 4, 6–8: Task 4 plus
 observed scenarios in Task 5; 5: real assignment trial. W-011 acceptance 1 and 5:
-Task 4 discovery trials; 2–4: guide behavior and Task 5 fixtures/real conversation.
+Task 4 discovery trials; 2–4 and 6: guide behavior and Task 5 fixtures/real conversation.
 
 Review focus: context mistaken for authority; a link escaping project ownership;
 an omitted/changed prerequisite or plan; record Done mistaken for integration;

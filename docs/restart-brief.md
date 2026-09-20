@@ -399,6 +399,13 @@ avoid shared CLI/docs edits; W-009 is not a semantic dependency. After proving
 this loop, shape one manually launched supervised headless attempt before
 schedules or board launch controls.
 
+Clarified on 2026-09-19: W-010/W-011 deliver Grove's work and shaping skills,
+including how and when agents use the CLI. Thin harness adapters load substantive
+shared workflows; interactive and headless paths share those guides and declare
+human availability explicitly. Context assembly alone does not deliver the work
+skill. Document intended `claude -p` use and distinguish simulated behavior from
+actual harness trials. Process supervision remains the subsequent investment.
+
 The selected next user outcome is a terminal Kanban board
 with explicit version selection inside each card. On 2026-09-19 the owner
 preferred the board over a standalone version picker. Version selection supports

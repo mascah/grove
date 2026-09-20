@@ -25,6 +25,9 @@ Report selected branch, worktree, base and work IDs. Execute the plan serially:
 - Expose grove context, preserving existing commands and the default TUI if present.
 - Add thin grove-work/grove-shape adapters for Claude and Codex backed by shared
   guides. Keep generic context assembly separate from repository-specific guides.
+- Make both skills teach the CLI workflow, with interactive and headless paths
+  loading the same shared guide. Forward explicit interaction mode; document
+  intended claude -p usage and distinguish simulations from real harness trials.
 - Exercise the real shaping/work handoff and interruption/missing-decision cases.
 
 The supported initial work path is native serial execution plus independent
