@@ -207,8 +207,10 @@ implementation concurrency with the repair branch.
 ## Evidence
 
 Implemented on branch `worktree-W-010` from main `91edc0b`, in
-`.claude/worktrees/W-010`, and revised there on 2026-09-20; not merged or
-pushed. The [dogfooding evidence](../../docs/reviews/2026-09-19-W-010-dogfood.md)
+`.claude/worktrees/W-010`, and revised there on 2026-09-20. On the owner's
+instruction the branch was merged into `main` on 2026-09-20 with this work
+still active: integration is not acceptance (establish it by Git ancestry, as
+always). Not pushed. The [dogfooding evidence](../../docs/reviews/2026-09-19-W-010-dogfood.md)
 holds the detail and keeps source inspection, tests, simulated runs, real
 harness trials, and the owner's acceptance apart.
 
@@ -263,34 +265,37 @@ harness trials, and the owner's acceptance apart.
 
 ## Next
 
-Owner: start a fresh interactive Claude Code session in this worktree
-(`.claude/worktrees/W-010`, where the skill exists) and run
+Owner: start a fresh interactive Claude Code session in the main checkout,
+where the skill and `context` now are, and run
 
 ```text
-/grove-work W-011
+/grove-work W-012
 ```
 
-W-011 is the candidate because it is real, prepared, and bounded, and its
-inputs (the revised shared plan and the guide it must mirror) exist only on
-`worktree-W-010`. The run should establish what no trial has: that an
-interactive session discovers the skill; that a real assignment goes from its
-ID to a handoff without a composed prompt; that the staged reads (the W-011
-record, then the shared plan the record names, then W-010 and the guide when
-the shaping guide is written against them) arrived when needed; that the
-execution worktree is based on `worktree-W-010` rather than blindly on `main`,
-and exists before the first write; and that review and handoff happen as the
-guide says. Interrupt it once midway and rerun the same invocation to exercise
-resume. Then say whether this replaces asking for a prompt. `/grove-work W-012`
-is the alternative once W-012's card question is settled; optionally try
-`$grove-work` in the Codex TUI. The 2026-09-20 revision deliberately did not
-start W-011; that invocation is the owner's to make.
+W-012 is the dogfooding target the owner chose on 2026-09-20: it is real Go
+work in the board, lists three related records to retrieve when needed, has no
+plan yet, and its Next holds an undecided owner choice (whether lineage
+replaces a card's version list or sits beside it). The run should establish
+what no trial has: that an interactive session discovers the skill; that the
+workflow asks that one question before planning instead of choosing; that a
+real assignment then goes from its ID through a prepared plan, code, the Go
+checks, and review to a handoff in its own worktree, created before the first
+write, without a composed prompt; and that the staged reads arrived when
+needed. Interrupt it once midway and rerun the same invocation to exercise
+resume. Then say whether this replaces asking for a prompt, and record what
+happened in the dogfooding evidence before marking this done. Optionally try
+`$grove-work` in the Codex TUI.
 
-Record what happened in the dogfooding evidence, then mark this done and
-integrate `worktree-W-010` (`go run ./cmd/grove` in the main checkout gains
-`context` only then).
+An earlier draft of this Next proposed `/grove-work W-011` from the W-010
+worktree, stacked on the then-unmerged branch. The owner questioned it and it
+was dropped: it would have stacked work on an unaccepted branch, was chosen
+partly because it exercised a rule this revision had just written, and is
+documentation-only work that mirrors the guide under test. The guide's rule
+for records that exist only on another branch therefore stays untested beyond
+reading.
 
 [W-011](W-011-shaping-entrypoint.md) (`grove-shape`, `docs/work-shaping.md`) is
-not started; it can reuse the adapter shape, the interaction-mode convention,
+not started; it is ordinary later work from `main` and can reuse the adapter shape, the interaction-mode convention,
 the workflow/policy split, staged reading, and isolation before the first
 write. The shared ID counter stands at `W 18` after a fixture mistake recorded
 in the evidence; the gap is historical and is not to be reset. Plugin

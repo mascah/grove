@@ -358,9 +358,11 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** decide with the owner whether a card opens to lineage or
-keeps the version list beside it, then plan
-[W-012](../grove/work/W-012-card-lineage.md). The board
+**Next action:** the owner runs `/grove-work W-012` in a fresh interactive
+session in the main checkout. That run should ask whether a card opens to
+lineage or keeps the version list beside it, then plan and implement
+[W-012](../grove/work/W-012-card-lineage.md); it is also the dogfooding run
+that W-010's acceptance is waiting for. The board
 ([W-009](../grove/work/W-009-terminal-picker.md)) and its load fix
 ([W-013](../grove/work/W-013-load-scaling.md)) are done and integrated; run
 the board with `go run ./cmd/grove`. The CLI repairs below were integrated
@@ -415,8 +417,9 @@ avoid shared CLI/docs edits; W-009 is not a semantic dependency. After proving
 this loop, shape one manually launched supervised headless attempt before
 schedules or board launch controls.
 
-W-010's slice is implemented on branch `worktree-W-010` (base `91edc0b`), not
-yet integrated, and was revised on 2026-09-20 on the owner's decisions.
+W-010's slice was implemented on branch `worktree-W-010` (base `91edc0b`),
+revised on 2026-09-20 on the owner's decisions, and merged into `main` that
+day while still active (integration is not acceptance).
 `grove context` reads the selected records in full with revisions and lists
 prerequisites, blocking questions, related records, and links for staged
 retrieval through `show` and `--include`, without writing anything. The
@@ -429,7 +432,8 @@ and Codex load both, and stay local while the workflow is dogfooded. The
 simulated runs, and real headless Claude and Codex trials on a fixture in
 disposable clones from what has not been run. W-010 stays active until the
 owner has carried a real assignment through `/grove-work` in a fresh
-interactive session. W-011's `grove-shape` skill and shaping guide are not
+interactive session; the owner chose `/grove-work W-012` from the main
+checkout for that. W-011's `grove-shape` skill and shaping guide are not
 started and should reuse the same boundaries.
 
 Clarified on 2026-09-19: W-010/W-011 deliver Grove's work and shaping skills,
