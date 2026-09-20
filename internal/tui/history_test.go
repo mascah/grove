@@ -91,6 +91,21 @@ func TestHistoryFollowsTheFocusedVersion(t *testing.T) {
 	}
 }
 
+// Merges are not listed, so a status that only a merge set is said, not hidden.
+func TestHistorySaysWhenAMergeSetTheStatus(t *testing.T) {
+	_, f := lineageFixture()
+	f.history = func(context.Context, string, string) ([]versions.Commit, error) { return featLog, nil } // newest: done
+	m := open(t, f, 120, 30)
+	screen := plain(deliverAll(m, press(m, "right", "enter"))) // W-001 is active here
+	note, newest := strings.Index(screen, "merged            active     a merge left the record this way"), strings.Index(screen, "done       4444444")
+	if note < 0 || newest < note {
+		t.Fatalf("expected a merged row above the newest commit:\n%s", screen)
+	}
+	if screen = plain(deliverAll(m, press(m, "down", "down"))); strings.Contains(screen, "a merge left") {
+		t.Fatalf("feature is done, as its newest commit says:\n%s", screen)
+	}
+}
+
 func deliverAll(m *Model, cmd tea.Cmd) *Model {
 	for cmd != nil {
 		cmd = deliver(m, cmd)

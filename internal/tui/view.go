@@ -434,6 +434,10 @@ func (m *Model) historyRows(w int) []string {
 	case len(read.commits) == 0:
 		rows = append(rows, wrap("No commit here changed this file.", w)...)
 	}
+	// Merges are not listed, so a status that a merge itself set has no row.
+	if committed := v.Change == "" || v.Change == "unchanged"; committed && len(read.commits) != 0 && read.commits[0].Status != status {
+		entry("merged", status, "a merge left the record this way; merges are not listed")
+	}
 	for _, c := range read.commits {
 		entry(c.When.Format("2006-01-02 15:04"), c.Status, c.ID[:min(len(c.ID), 7)]+"  "+c.Subject)
 	}
