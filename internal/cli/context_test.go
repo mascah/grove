@@ -64,12 +64,14 @@ func TestContextCLI(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(got.Selected, []string{"W-002", "W-001"}) || !reflect.DeepEqual(got.Order, []string{"W-001", "W-002"}) ||
-		got.Interaction != "headless" || got.Root != root || got.FormatVersion != 1 {
+		got.Interaction != "headless" || got.Root != root || got.FormatVersion != 2 {
 		t.Fatalf("%+v", got)
 	}
+	// The selected work, the configuration, and the includes are read in full. The
+	// related question and the linked plan are listed for a later, explicit read.
 	want := map[string]string{
-		"AGENTS.md": "Follow the guide.\n", "docs/plans/W-002.md": "# Plan\n", "docs/records/questions/question.md": question,
-		"docs/records/work/planned.md": plannedWork, "docs/records/work/renamed.md": work, "grove.yaml": "schema_version: 1\nrecords: docs/records\n",
+		"AGENTS.md": "Follow the guide.\n", "docs/records/work/planned.md": plannedWork,
+		"docs/records/work/renamed.md": work, "grove.yaml": "schema_version: 1\nrecords: docs/records\n",
 	}
 	for _, s := range got.Sources {
 		if want[s.Path] != s.Content || s.Revision != project.Revision([]byte(s.Content)) {
@@ -79,6 +81,23 @@ func TestContextCLI(t *testing.T) {
 	}
 	if len(want) != 0 {
 		t.Fatalf("missing sources: %v", want)
+	}
+	listed := got.Records[0]
+	if listed.ID != "Q-001" || listed.Included || listed.Revision != project.Revision([]byte(question)) || listed.Title == "" ||
+		len(got.References) != 1 || got.References[0].Path != "docs/plans/W-002.md" || !strings.Contains(got.References[0].Reason, "not opened") {
+		t.Fatalf("%+v %+v", listed, got.References)
+	}
+
+	// Naming the listed plan reads it, with its exact revision.
+	out.Reset()
+	if code := Run([]string{"context", "W-002", "--json", "--include", "docs/plans/W-002.md"}, root, &out, &errOut); code != 0 {
+		t.Fatal(errOut.String())
+	}
+	var staged handoff.Bundle
+	if err := json.Unmarshal(out.Bytes(), &staged); err != nil || staged.Sources[0].Path != "docs/plans/W-002.md" ||
+		staged.Sources[0].Content != "# Plan\n" || staged.Sources[0].Revision != project.Revision([]byte("# Plan\n")) ||
+		!strings.Contains(staged.References[0].Reason, "included in full") {
+		t.Fatalf("%v %+v", err, staged)
 	}
 
 	// A changed record changes its revision in the next context.
@@ -101,7 +120,8 @@ func TestContextCLI(t *testing.T) {
 	}
 
 	out.Reset()
-	if code := Run([]string{"context", "W-002"}, root, &out, &errOut); code != 0 || !strings.Contains(out.String(), "W-002 depends on W-001: proposed, not selected") {
+	if code := Run([]string{"context", "W-002"}, root, &out, &errOut); code != 0 || !strings.Contains(out.String(), "W-002 depends on W-001: proposed, not selected") ||
+		!strings.Contains(out.String(), "W-001  work  proposed  listed  prerequisite of W-002") || strings.Contains(out.String(), "Source: docs/records/work/renamed.md") {
 		t.Fatalf("text: %d %s", code, out.String())
 	}
 	if code := Run([]string{"context", "W-002"}, root, brokenWriter{}, &errOut); code != 1 {
@@ -114,7 +134,7 @@ func TestContextRefusalsWriteNoResult(t *testing.T) {
 	contextFixture(t, root)
 	os.Remove(filepath.Join(root, "docs/plans/W-002.md"))
 	for want, args := range map[string][]string{
-		"planned.md names docs/plans/W-002.md, which does not exist": {"context", "W-002"},
+		"--include names docs/plans/W-002.md, which does not exist": {"context", "W-002", "--include", "docs/plans/W-002.md"},
 		"does not fit":         {"context", "W-001", "--json", "--max-bytes", "64"},
 		"--include names nope": {"context", "W-001", "--include", "nope"},
 		"not in this checkout": {"context", "W-404"},

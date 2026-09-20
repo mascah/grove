@@ -33,13 +33,14 @@ func Text(b *Bundle) []byte {
 	line("Selected: %s", inert(strings.Join(b.Selected, " "), false))
 	line("Order: %s", inert(strings.Join(b.Order, " "), false))
 	line("Source bytes: %d of %d", b.SourceBytes, b.MaxBytes)
-	line("\nRecords:")
+	line("\nRecords (listed means its source is not below: show ID prints it, --include PATH adds it):")
 	for _, r := range b.Records {
-		role := "context"
-		if r.Selected {
-			role = "selected"
+		state := "listed"
+		if r.Included {
+			state = "included"
 		}
-		line("  %s", inert(strings.Join([]string{r.ID, r.Type, r.Status, role, r.Path}, "  "), false))
+		line("  %s", inert(strings.Join([]string{r.ID, r.Type, r.Status, state, strings.Join(r.Roles, "; ")}, "  "), false))
+		line("      %s", inert(strings.Join([]string{strconv.Quote(r.Title), r.Path, r.Revision}, "  "), false))
 	}
 	if len(b.Requirements) != 0 {
 		line("\nRequirements (status as recorded here; done is not integration):")
@@ -58,9 +59,13 @@ func Text(b *Bundle) []byte {
 		}
 	}
 	if len(b.References) != 0 {
-		line("\nLinks not included:")
+		line("\nLinks in the selected work (not opened unless marked included):")
 		for _, r := range b.References {
-			line("  %s -> %s: %s", inert(r.From, false), inert(r.Target, false), r.Reason)
+			target := inert(r.Target, false)
+			if r.Path != "" {
+				target += " = " + inert(r.Path, false)
+			}
+			line("  %s -> %s: %s", inert(r.From, false), target, r.Reason)
 		}
 	}
 	line("\nScope: %s", b.ScopeNotice)

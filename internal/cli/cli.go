@@ -47,15 +47,18 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             version selected by --source (a selector from versions), after\n" +
 	"             checking it is still that version; --json adds checkout, record,\n" +
 	"             branch, HEAD, and revision. Creates, switches, and edits nothing.\n" +
-	"  context    Assemble what an agent needs for explicitly selected work in this\n" +
-	"             checkout: the IDs ordered prerequisites first, those records with their\n" +
-	"             prerequisites, blocking questions, related records, and the .md and .txt\n" +
-	"             documents their bodies link to, each with its exact revision, plus Git\n" +
-	"             identity and every --include PATH (a required project-relative file).\n" +
-	"             A missing, changed, or oversized source fails the command: nothing is\n" +
-	"             truncated to fit --max-bytes (default 262144). --interaction records\n" +
-	"             whether a person can answer (default interactive). Exit 0 means context\n" +
-	"             was assembled, not that work is ready or authorized. Reads only.\n\n" +
+	"  context    Assemble context for explicitly selected work in this checkout. Read in\n" +
+	"             full, each with its exact revision: grove.yaml, the selected records, and\n" +
+	"             every --include PATH (a required project-relative file). Listed, not read:\n" +
+	"             prerequisites, blocking questions, related, member, and linked records with\n" +
+	"             title, status, path, and revision, and the selected records' links with the\n" +
+	"             path each resolves to (never opened, so not checked). Read a listed record\n" +
+	"             with show ID; add a listed file, such as the current plan, with --include.\n" +
+	"             The IDs are ordered prerequisites first, with Git identity. A missing,\n" +
+	"             changed, or oversized source fails the command: nothing is truncated to\n" +
+	"             fit --max-bytes (default 262144). --interaction records whether a person\n" +
+	"             can answer (default interactive). Exit 0 means context was assembled, not\n" +
+	"             that work is ready or authorized. Reads only.\n\n" +
 	"--project DIR selects a directory containing grove.yaml.\n" +
 	"Without it, search upward from the current directory, stopping at Git boundaries.\n" +
 	"Project/file context is written to stderr; results are written to stdout.\n"

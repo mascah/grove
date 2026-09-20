@@ -1,7 +1,9 @@
 // Package handoff assembles read-only context for explicitly selected work
-// from one checkout: the records, their prerequisites and blocking questions,
-// directly linked documents, and the revisions of all of them. It reports
-// facts. It does not authorize work, decide readiness, or start anything.
+// from one checkout. The selected records, the configuration, and the files
+// the caller names are read in full with their revisions; prerequisites,
+// blocking questions, related records, and links are listed compactly so the
+// caller can retrieve each when its activity needs it. It reports facts. It
+// does not authorize work, decide readiness, or start anything.
 package handoff
 
 import (
@@ -20,9 +22,12 @@ const (
 	DefaultMaxBytes = 262144
 	LimitMaxBytes   = 8388608
 
-	scopeNotice = "Included: grove.yaml, the selected work, its transitive depends_on records, questions blocking any of those, " +
-		"records the selected work names in relates_to or members, .md and .txt documents linked directly from selected and prerequisite work bodies, " +
-		"and caller includes. Links inside included documents and related records were not followed; read them and include what the work needs. " +
+	scopeNotice = "Read in full, with revisions: grove.yaml, the selected work, and caller includes. " +
+		"Listed only: transitive depends_on prerequisites, questions blocking the selected work or a prerequisite, " +
+		"records the selected work names in relates_to or members or links to, and every link in the selected work's bodies. " +
+		"A listed record's title, status, and revision are what this checkout held; its constraints are in its body, which show ID prints. " +
+		"A listed link was not opened or checked, not even for existence; --include PATH adds a file with its revision and fails if it is missing. " +
+		"Nothing here was summarized or truncated, and a listing is not a reading: read what the current activity depends on before acting on it. " +
 		"A status is what a record says in this checkout: done is not integration, and assembled context is not readiness, acceptance, or authorization."
 )
 
@@ -39,12 +44,18 @@ type Source struct {
 	Content  string   `json:"content"`
 }
 
+// Record is an observation of a record the loader read and validated. Its
+// full source is among the sources only when Included says so.
 type Record struct {
-	ID       string `json:"id"`
-	Path     string `json:"path"`
-	Type     string `json:"type"`
-	Status   string `json:"status"`
-	Selected bool   `json:"selected"`
+	ID       string   `json:"id"`
+	Path     string   `json:"path"`
+	Type     string   `json:"type"`
+	Title    string   `json:"title"`
+	Status   string   `json:"status"`
+	Revision string   `json:"revision"` // of the record as loaded, included or not
+	Roles    []string `json:"roles"`    // why it is listed
+	Selected bool     `json:"selected"`
+	Included bool     `json:"included"`
 }
 
 // Requirement is one depends_on edge of selected or prerequisite work, with
@@ -62,10 +73,13 @@ type Question struct {
 	Blocks []string `json:"blocks"` // the selected or prerequisite work it blocks
 }
 
-// Reference is a parsed link that was not included, and why.
+// Reference is a link in a selected record's body. Path is the project file it
+// resolves to, or "" when it is not an in-project document. Unless Reason says
+// the file is included, nothing was opened: the file may not exist.
 type Reference struct {
 	From   string `json:"from"`
-	Target string `json:"target"`
+	Target string `json:"target"` // as the record wrote it
+	Path   string `json:"path"`
 	Reason string `json:"reason"`
 }
 
@@ -180,7 +194,7 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 		return nil, err
 	}
 	b := &Bundle{
-		FormatVersion: 1, Root: root, Interaction: opts.Interaction, Selected: ids, Order: order, Git: git,
+		FormatVersion: 2, Root: root, Interaction: opts.Interaction, Selected: ids, Order: order, Git: git,
 		Requirements: []Requirement{}, Questions: []Question{}, References: []Reference{},
 		ScopeNotice: scopeNotice, MaxBytes: opts.MaxBytes,
 	}
@@ -189,14 +203,22 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 		return nil, err
 	}
 
-	// scope is the selected work plus everything it transitively depends on.
-	var scope []*project.Record
-	record := func(r *project.Record, reason string) error { return s.addLoaded(r.Path, r.Source, reason) }
+	// roles records why each record is listed. Only the selected work is read in
+	// full by default; everything else is an observation until the caller asks.
+	roles := map[string][]string{}
+	role := func(id, why string) {
+		if !slices.Contains(roles[id], why) {
+			roles[id] = append(roles[id], why)
+		}
+	}
 	for _, id := range ids {
-		if err := record(byID[id], "selected work"); err != nil {
+		role(id, "selected work")
+		if err := s.addLoaded(byID[id].Path, byID[id].Source, "selected work"); err != nil {
 			return nil, err
 		}
 	}
+	// scope is the selected work plus everything it transitively depends on.
+	var scope []*project.Record
 	for _, r := range p.Records {
 		var needs []string
 		for _, id := range ids {
@@ -205,9 +227,7 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 			}
 		}
 		if needs != nil {
-			if err := record(r, "prerequisite of "+strings.Join(needs, ", ")); err != nil {
-				return nil, err
-			}
+			role(r.ID, "prerequisite of "+strings.Join(needs, ", "))
 		}
 		if needs != nil || slices.Contains(ids, r.ID) {
 			scope = append(scope, r)
@@ -229,40 +249,46 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 		}
 		if blocks != nil {
 			b.Questions = append(b.Questions, Question{ID: r.ID, Status: r.Status, Blocks: blocks})
-			if err := record(r, "question blocking "+strings.Join(blocks, ", ")); err != nil {
-				return nil, err
-			}
+			role(r.ID, "question blocking "+strings.Join(blocks, ", "))
 		}
 	}
 	// Relationships of the selected work are context, never more selection.
 	for _, id := range ids {
 		for _, related := range byID[id].RelatesTo {
-			if err := record(byID[related], "related to "+id); err != nil {
-				return nil, err
-			}
+			role(related, "related to "+id)
 		}
 		for _, member := range byID[id].Members {
-			if err := record(byID[member], "member of "+id); err != nil {
-				return nil, err
-			}
+			role(member, "member of "+id)
 		}
-	}
-	for _, r := range scope {
-		refs, err := s.addLinked(r)
-		if err != nil {
-			return nil, err
-		}
-		b.References = append(b.References, refs...)
 	}
 	for _, name := range opts.Include {
 		if err := s.addInclude(name); err != nil {
 			return nil, err
 		}
 	}
+	atPath := map[string]*project.Record{}
+	for _, r := range p.Records {
+		atPath[r.Path] = r
+	}
+	for _, id := range ids {
+		refs, err := s.references(byID[id])
+		if err != nil {
+			return nil, err
+		}
+		for _, ref := range refs {
+			if linked := atPath[ref.Path]; linked != nil {
+				role(linked.ID, "linked from "+id)
+			}
+		}
+		b.References = append(b.References, refs...)
+	}
 
 	for _, r := range p.Records {
-		if s.byPath[r.Path] != nil { // however it was reached, including a body link
-			b.Records = append(b.Records, Record{ID: r.ID, Path: r.Path, Type: r.Type, Status: r.Status, Selected: slices.Contains(ids, r.ID)})
+		if roles[r.ID] != nil {
+			b.Records = append(b.Records, Record{
+				ID: r.ID, Path: r.Path, Type: r.Type, Title: r.Title, Status: r.Status, Revision: project.Revision(r.Source),
+				Roles: roles[r.ID], Selected: slices.Contains(ids, r.ID), Included: s.holds(r.Path),
+			})
 		}
 	}
 	for _, source := range s.byPath {

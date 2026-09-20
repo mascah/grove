@@ -36,16 +36,25 @@ type sourceFile struct {
 	source *Source
 }
 
-// known adds reason to the source that already holds this file, under this
-// name or any other, and reports whether there was one. Callers ask before
-// reading or charging, so another name for an included file costs nothing.
-func (s *sources) known(name string, info fs.FileInfo, reason string) bool {
-	existing := s.byPath[name]
+// find returns the source that already holds this file, under this name or,
+// given its identity, any other.
+func (s *sources) find(name string, info fs.FileInfo) *Source {
+	if existing := s.byPath[name]; existing != nil {
+		return existing
+	}
 	for _, f := range s.files {
-		if existing == nil && info != nil && os.SameFile(f.info, info) {
-			existing = f.source
+		if info != nil && os.SameFile(f.info, info) {
+			return f.source
 		}
 	}
+	return nil
+}
+
+// known adds reason to the source that already holds this file and reports
+// whether there was one. Callers ask before reading or charging, so another
+// name for an included file costs nothing.
+func (s *sources) known(name string, info fs.FileInfo, reason string) bool {
+	existing := s.find(name, info)
 	if existing != nil && !slices.Contains(existing.Reasons, reason) {
 		existing.Reasons = append(existing.Reasons, reason)
 	}
@@ -113,25 +122,27 @@ func (s *sources) read(name, reason, referrer string) error {
 	return s.add(name, info, content, reason)
 }
 
-// addLinked includes the .md and .txt documents that r's body links to
-// directly, and returns every other link with the reason it was left out.
-func (s *sources) addLinked(r *project.Record) ([]Reference, error) {
+// holds reports whether the file at name is a source, under any spelling.
+func (s *sources) holds(name string) bool {
+	info, _ := s.dir.Lstat(name)
+	return s.find(name, info) != nil
+}
+
+// references lists every link in r's body with what it resolves to. It opens
+// nothing: a linked document is a source only if it was included another way.
+func (s *sources) references(r *project.Record) ([]Reference, error) {
 	var refs []Reference
 	for _, destination := range links(body(r.Source)) {
 		target, reason, err := resolve(r.Path, destination)
 		if err != nil {
 			return nil, err
 		}
-		if reason == "" {
-			if err := s.read(target, "linked from "+r.Path, r.Path); err != nil {
-				return nil, err
-			}
-			if !strings.ContainsAny(destination, "#?") {
-				continue
-			}
-			reason = "the whole document is included; the fragment or query was not applied or checked"
+		if reason == "" && s.byPath[target] != nil {
+			reason = "included in full; a fragment or query was not applied or checked"
+		} else if reason == "" {
+			reason = "in-project path; not opened or checked, --include adds it"
 		}
-		if ref := (Reference{From: r.Path, Target: destination, Reason: reason}); !slices.Contains(refs, ref) {
+		if ref := (Reference{From: r.Path, Target: destination, Path: target, Reason: reason}); !slices.Contains(refs, ref) {
 			refs = append(refs, ref)
 		}
 	}
@@ -166,8 +177,8 @@ func links(markdown []byte) []string {
 	return destinations
 }
 
-// resolve turns a link written in the record at from into a project path to
-// include, or the reason it is only a reference. Nothing is read here.
+// resolve turns a link written in the record at from into the project path it
+// names, or the reason it names none. Nothing is read or checked here.
 func resolve(from, destination string) (target, reason string, err error) {
 	// Goldmark keeps the destination as written. Markdown's backslash escapes
 	// and entities come off first, as its own renderer does; url.Parse then
@@ -186,13 +197,11 @@ func resolve(from, destination string) (target, reason string, err error) {
 		return "", "absolute path; not followed", nil
 	}
 	target = path.Join(path.Dir(from), u.Path) // url.Parse decoded the path once
-	switch ext := strings.ToLower(path.Ext(target)); {
+	switch {
 	case target == ".." || strings.HasPrefix(target, "../"):
 		return "", "outside the selected project; not followed", nil
 	case gitMetadata(target):
 		return "", "Git metadata; not followed", nil
-	case ext != ".md" && ext != ".txt":
-		return "", "not a .md or .txt document; not included", nil
 	}
 	return target, "", nil
 }

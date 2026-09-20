@@ -6,7 +6,7 @@ A local project workspace for humans and agents, built around a CLI and durable 
 project records, shows each record's versions across local branches, and
 locates the checkout holding a selected version. Run without a command, it
 opens a read-only terminal Kanban board over the same operations. `context`
-assembles selected work for an agent, and the `grove-work` skill carries it out.**
+assembles staged context for selected work, and the `grove-work` skill carries it out.**
 
 Start with [the restart brief](docs/restart-brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
@@ -94,39 +94,56 @@ remains future work.
 ### Work context and the `grove-work` skill
 
 `grove [--project DIR] context WORK_ID... [--json] [--interaction interactive|headless] [--max-bytes N] [--include PATH]...`
-assembles what an agent needs for explicitly selected work in one checkout, so
-an assignment is a few IDs rather than a composed prompt. It prints the IDs
+assembles context for explicitly selected work in one checkout, so an
+assignment is a few IDs rather than a composed prompt. It prints the IDs
 ordered prerequisites first (ties keep the requested order; prerequisites are
-never added to the selection), then the sources, each once with its `sha256:`
-revision: `grove.yaml`, the selected work, its transitive `depends_on` records,
-questions blocking any of those (resolved ones too), the records the selected
-work names in `relates_to` or `members`, the in-project `.md` and `.txt`
-documents that selected and prerequisite bodies link to, and every
-`--include PATH`. Links are taken from parsed Markdown, so code, fences, images,
-and HTML are never read as links. Links to URLs, other projects, Git metadata,
-and other file types are listed with the reason they were left out. Links inside
-included documents are not followed; the output says so.
+never added to the selection), Git identity, and two kinds of content that it
+keeps apart:
 
-It refuses rather than degrade: unknown, duplicate, or non-work IDs, a linked
-or included file that is missing, a symlink, not regular, or not UTF-8, a source
-that does not fit `--max-bytes` (default 262144, counting source bytes, at most
-8388608), or a checkout that changed while it was read. A refusal prints nothing
+- **Sources, read in full**, each once with its `sha256:` revision:
+  `grove.yaml`, the selected work records, and every `--include PATH`. That is
+  the whole default. An include is a required project-relative file of any
+  type; one file reached by several names (letter case, a hard link) is
+  included and charged once.
+- **Observations, listed and not read**: the transitive `depends_on`
+  prerequisites, questions blocking the selected work or a prerequisite
+  (resolved ones too), and the records the selected work names in `relates_to`
+  or `members` or links to, each with title, status, path, revision, why it is
+  listed, and whether its source is included. Every link in the selected
+  records' bodies is listed with the project path it resolves to. Links are
+  taken from parsed Markdown, so code, fences, images, and HTML are never
+  links; Markdown escapes and entities are decoded before the URL is. A link is
+  never opened, so a listed path is not checked, not even for existence. URLs,
+  other projects, absolute paths, and Git metadata are listed with that reason.
+
+Retrieval is staged with existing commands: `show ID` prints a listed record,
+and `--include PATH` adds a listed file, such as the plan the record names as
+current, with its revision. The command picks no plan or review by itself, and
+it never follows links inside an included document. A listed record's revision
+says which version was seen; a listing is not a reading of its constraints.
+
+It refuses rather than degrade: unknown, duplicate, or non-work IDs, a malformed
+link destination, an included file that is missing, a symlink, not regular, or
+not UTF-8, a source that does not fit `--max-bytes` (default 262144, counting
+source bytes, at most 8388608), or a checkout that changed while it was read.
+Nothing is truncated or summarized to fit. A refusal prints nothing
 to stdout. Exit 0 means context was assembled, never that work is ready,
 authorized, or integrated: a prerequisite's `done` is its recorded status.
 `--interaction` records whether a person can answer (default `interactive`);
 it is the caller's declaration, passed through for the guide to act on. The
 command writes nothing and starts nothing, and needs Git only inside a
 repository. Text output escapes terminal controls and fences each source;
-`--json` has the exact source strings:
+`--json` has the exact source strings (`format_version` 2; version 1 read
+prerequisites, related records, and linked documents in full):
 
 ```text
 {format_version, root, interaction, selected[], order[],
  git: null | {checkout, common_dir, ref, head},
- records[]: {id, path, type, status, selected},
+ records[]: {id, path, type, title, status, revision, roles[], selected, included},
  requirements[]: {work, prerequisite, status, selected},
  questions[]: {id, status, blocks[]},
  sources[]: {path, revision, reasons[], content},
- references[]: {from, target, reason},
+ references[]: {from, target, path, reason},
  scope_notice, source_bytes, max_bytes}
 ```
 
