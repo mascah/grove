@@ -20,8 +20,10 @@ read the brief when the record, a product question, or reconciliation needs it.
   Bubble Tea v2 in `internal/tui`; keep explicit subcommands noninteractive,
   and the board's text escaping and explicit version selection intact. W-013
   reads every branch through one `git cat-file` process, scoped to what the
-  project loader reads; do not add a Git process per branch. The runner
-  contract remains open.
+  project loader reads; do not add a Git process per branch. W-012 reads a
+  record's Git history only while its card is open, as a read any key may
+  cancel; do not read history during the board load. The runner contract
+  remains open.
 - Keep deterministic validation and state changes in software where useful;
   do not assume software can replace judgment instructions or prove acceptance.
 - Record settled choices and the concrete next action in the brief while it

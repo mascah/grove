@@ -57,14 +57,36 @@ record fields and no stored history.
 5. Targeted, full, and race suites, vet, and formatting pass; the owner judges
    the view in a demo.
 
-## Next
+## Evidence, 2026-09-20
 
+Implemented on branch `worktree-W-012` from `a0fd23a` through
+`/grove-work W-012`, following the [plan](../../docs/plans/W-012-card-lineage.md).
 On 2026-09-20 the owner selected "beside, history first": the card screen and
 its version list stay, and History leads the details pane, following the
-focused row (the board's checkout while the ID header has focus). That is
-selected direction; the read and the model are in the
-[plan](../../docs/plans/W-012-card-lineage.md).
+focused row (the board's checkout while the ID header has focus). That
+placement is selected direction; the rest of the design remains the owner's to
+judge in use. The [evidence](../../docs/reviews/2026-09-20-card-lineage-W-012.md)
+maps each acceptance item to its tests and holds the suite results, the
+independent review with dispositions, and the limits. What differs from the
+proposal above:
 
-Checkpoint: `/grove-work W-012`, branch `worktree-W-012` in
-`.claude/worktrees/W-012`, base `a0fd23a`. Plan committed; implementation
-follows its tasks in order.
+- The read is `git log --follow --raw`, which names the record's blob at each
+  commit, then one `cat-file --batch` for those blobs; no path is read back
+  from Git.
+- Merges are never rows, as in plain `git log --follow`: one that brought a
+  branch's commits in would repeat them and name another branch, and asking
+  Git to diff merges breaks rename following. Where the record's status is not
+  the newest listed commit's, a first `here` row gives it and says why.
+- A history read never makes a key wait: another version, refresh, a workspace
+  selection, Esc, and quitting each cancel it.
+
+Automated acceptance (items 1 to 4 and the suites of item 5) is met on the
+branch. **The owner's judgment of the view in a demo, the other half of item
+5, has not happened**, so this record stays active.
+
+## Next
+
+The owner runs the demo and judges the view:
+`cd .claude/worktrees/W-012 && go run ./cmd/grove`, Right to Active, Enter on a
+card. Then close this record and merge `worktree-W-012` into main, or record
+what to change. Not merged or pushed.

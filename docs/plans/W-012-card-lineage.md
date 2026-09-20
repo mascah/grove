@@ -30,7 +30,7 @@ commit, path)`), two Git processes per read, both under the caller's context:
 
 1. `git log --follow --raw --no-abbrev --diff-merges=first-parent
    --no-show-signature --no-color --format=%x00%H %at %s COMMIT --
-   :(literal)PATH`, run in the project root so the project-relative record
+   :(literal)PATH` (superseded, see the adjustment below), run in the project root so the project-relative record
    path resolves under a nested prefix. `--raw` gives the record's blob ID at
    each commit, so renames need no path handling and no path is ever parsed
    from Git's quoted output. A commit line starts with NUL, which a subject
@@ -39,6 +39,25 @@ commit, path)`), two Git processes per read, both under the caller's context:
    reader (IDs only, cached by ID). The status comes from
    `project.ParseRecord`, which reports the field even for a historical record
    that today's validation would reject; an unreadable status shows as `?`.
+
+Adjusted after review on 2026-09-20. The first design asked Git to diff
+merges (`--diff-merges=first-parent`, then `separate`) so that a merge would
+carry a blob and a status. Three review rounds each found a defect of that
+choice: merges that brought a branch in became rows naming another branch; a
+filter for those dropped a conflict resolved by keeping one side; an
+adjacent-row filter depended on an order that tied timestamps break; and, under
+any merge diff, `--follow` takes a rename seen from a merge's other parent for
+the record's own, loses the commits after it, and shows the rename as a
+deletion. The read is now what the record's own example used, plain
+`git log --follow`, stated as `--no-merges --date-order` with a NUL-separated
+format: merges are never rows, and no commit is listed above one made from it.
+The cost is that content a merge itself gave the record has no row. The view
+covers the part of that a reader could be misled by: when a committed or
+unchanged version's status is not the newest listed commit's, a first `here`
+row gives the record's status and says merges are not listed. It does not say
+a merge set it: a clean merge can combine a status set by an older listed
+commit with a newer commit from the other line. A commit that deleted the file
+shows `-`.
 
 A live version follows its path at HEAD (`HeadPath` when the checkout renamed
 it) from the checkout's HEAD commit. A change other than `unchanged` is a first
