@@ -204,6 +204,35 @@ func TestCaseVariantsAreOneSource(t *testing.T) {
 	}
 }
 
+// Markdown escapes and entities are decoded before the destination is read as
+// a URL, and the URL is decoded once.
+func TestMarkdownEscapedDestinations(t *testing.T) {
+	for destination, want := range map[string]string{
+		`../../docs/plan\(v1\).md`:      "docs/plan(v1).md",
+		`../../docs/plan&amp;review.md`: "docs/plan&review.md",
+		`../../docs/a&#32;b.md`:         "docs/a b.md",
+		`../../docs/100%2525.md`:        "docs/100%25.md",
+		`../../docs/back\slash.md`:      `docs/back\slash.md`, // not an escape: s is not punctuation
+	} {
+		if target, reason, err := resolve("grove/work/W-001.md", destination); target != want || reason != "" || err != nil {
+			t.Errorf("%s: %q %q %v", destination, target, reason, err)
+		}
+	}
+
+	root := fixture(t)
+	work(t, root, "W-001", "proposed", "", `[Plan](../../docs/plan\(v1\).md) and [both](../../docs/plan&amp;review.md#tasks)`)
+	write(t, root, "docs/plan(v1).md", "plan\n")
+	write(t, root, "docs/plan&review.md", "both\n")
+	b := build(t, root, Options{}, "W-001")
+	if got := paths(b); !reflect.DeepEqual(got, []string{"docs/plan&review.md", "docs/plan(v1).md", "grove.yaml", "grove/work/W-001.md"}) {
+		t.Fatal(got)
+	}
+	// The reference keeps the destination as the record wrote it.
+	if len(b.References) != 1 || b.References[0].Target != "../../docs/plan&amp;review.md#tasks" {
+		t.Fatalf("%+v", b.References)
+	}
+}
+
 func sha(content string) string {
 	sum := sha256.Sum256([]byte(content))
 	return hex.EncodeToString(sum[:])
@@ -406,7 +435,8 @@ func TestGitIdentity(t *testing.T) {
 }
 
 func FuzzResolve(f *testing.F) {
-	for _, seed := range []string{"../../docs/plan.md", "..%2f..%2f..%2fx.md", "%2e%2e/%2e%2e/%2e%2e/x.md", "../../.GIT/x.md", "//host/x.md", "a\\..\\x.md", "?x.md", "../../docs/a%00.md"} {
+	for _, seed := range []string{"../../docs/plan.md", "..%2f..%2f..%2fx.md", "%2e%2e/%2e%2e/%2e%2e/x.md", "../../.GIT/x.md", "//host/x.md", "a\\..\\x.md", "?x.md", "../../docs/a%00.md",
+		`\.\./\.\./\.\./x.md`, "&period;&period;/&#46;&#46;/&#x2e;&#x2e;/x.md", `../../\.git/x.md`, "../../&#46;git/x.md", "..&sol;..&sol;..&sol;x.md"} {
 		f.Add(seed)
 	}
 	f.Fuzz(func(t *testing.T, destination string) {

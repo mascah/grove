@@ -17,6 +17,7 @@ import (
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 
 	"github.com/mascah/grove/internal/project"
 )
@@ -140,7 +141,11 @@ func links(markdown []byte) []string {
 // resolve turns a link written in the record at from into a project path to
 // include, or the reason it is only a reference. Nothing is read here.
 func resolve(from, destination string) (target, reason string, err error) {
-	u, parseErr := url.Parse(destination)
+	// Goldmark keeps the destination as written. Markdown's backslash escapes
+	// and entities come off first, as its own renderer does; url.Parse then
+	// decodes percent escapes once.
+	decoded := util.ResolveEntityNames(util.ResolveNumericReferences(util.UnescapePunctuations([]byte(destination))))
+	u, parseErr := url.Parse(string(decoded))
 	if parseErr != nil || strings.ContainsRune(u.Path, 0) {
 		return "", "", fmt.Errorf("%s: malformed link destination %q", from, destination)
 	}
