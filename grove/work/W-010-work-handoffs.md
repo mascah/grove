@@ -265,6 +265,16 @@ harness trials, and the owner's acceptance apart.
 
 ## Next
 
+Update, 2026-09-20: the owner ran it. They report that it asked the undecided
+card choice, isolated before writing, and resumed fine after an interruption;
+the repository agrees (plan and the recorded answer are the first commit on
+`worktree-W-012`, based on `a0fd23a`; `main` untouched). Still needed before
+this is marked done: the run's review, reconciliation, and returned handoff
+(W-012 had no Evidence yet and a checkpoint that lagged its commits), and the
+owner's answer to whether this replaces asking for a prompt. The
+[evidence](../../docs/reviews/2026-09-19-W-010-dogfood.md#owners-interactive-run-on-a-real-assignment-2026-09-20)
+has the detail. The original instruction follows.
+
 Owner: start a fresh interactive Claude Code session in the main checkout,
 where the skill and `context` now are, and run
 
