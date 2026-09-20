@@ -10,7 +10,9 @@ adjustment made after review.
 
 **What this evidence is not.** Every check below is automated or an agent's
 review. Acceptance item 5 also asks for the owner's judgment of the view in a
-demo. That has not happened, so W-012 stays `active`.
+demo. The owner gave it on 2026-09-20 after running the demo below, and W-012
+records it: a step in the right direction that works as described, with the
+TUI's information architecture left for later iteration.
 
 ## The owner's decision
 
@@ -75,7 +77,7 @@ choice inside the record.
    pseudo-terminal script blocks Git as a card opens and leaves with `q`,
    Ctrl-C, and Esc: the child is dead each time, terminal modes are restored,
    and after Esc the board still takes keys.
-5. **Suites.** Below. The owner's demo judgment is outstanding.
+5. **Suites.** Below. The owner's demo judgment is recorded in W-012.
 
 ## Verification
 

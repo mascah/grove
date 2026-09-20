@@ -358,15 +358,15 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** the owner judges the card's History section in a demo
-(`cd .claude/worktrees/W-012 && go run ./cmd/grove`, then Enter on a card) and
-closes and merges [W-012](../grove/work/W-012-card-lineage.md) or says what to
-change. On 2026-09-20 `/grove-work W-012` ran in a fresh interactive session
-from the main checkout; the owner selected history beside the version list,
-leading the details pane, and the implementation is on branch `worktree-W-012`
-with its [evidence](reviews/2026-09-20-card-lineage-W-012.md), not merged. That
-was also the dogfooding run W-010's acceptance was waiting for; whether it
-satisfies W-010 is the owner's call. The board
+**Next action:** the owner merges `worktree-W-012` into main, then shapes what
+they want next from the TUI's information architecture. On 2026-09-20
+`/grove-work W-012` ran in a fresh interactive session from the main checkout;
+the owner selected history beside the version list, leading the details pane,
+and after a demo accepted [W-012](../grove/work/W-012-card-lineage.md) as a
+step in the right direction that works as described
+([evidence](reviews/2026-09-20-card-lineage-W-012.md)). That was also the
+dogfooding run W-010's acceptance was waiting for; whether it satisfies W-010
+is the owner's call. The board
 ([W-009](../grove/work/W-009-terminal-picker.md)) and its load fix
 ([W-013](../grove/work/W-013-load-scaling.md)) are done and integrated; run
 the board with `go run ./cmd/grove`. The CLI repairs below were integrated
@@ -462,8 +462,9 @@ Bubble Tea v2.0.9 is used for the board only; adopting it
 more widely follows the owner's judgment of the board. After the owner's first
 demo on 2026-09-19 the card folds identical versions into one row and the board
 says branch and checkout; the next card outcome the owner asked for, a work
-item's lineage from Git history, is implemented on a branch and awaits the
-owner's judgment ([W-012](../grove/work/W-012-card-lineage.md)).
+item's lineage from Git history, is implemented and accepted on branch
+`worktree-W-012` ([W-012](../grove/work/W-012-card-lineage.md)); the owner will
+iterate later on the TUI's information architecture.
 A full load was measured at 27.7 s with 300 branches and is now 0.35 s
 ([W-013](../grove/work/W-013-load-scaling.md)). Keep worktree creation
 as a separate design with

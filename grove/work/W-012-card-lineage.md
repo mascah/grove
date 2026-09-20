@@ -2,9 +2,9 @@
 id: "W-012"
 type: work
 title: "Show a work item's lineage from Git history in its card"
-status: active
+status: done
 created: "2026-09-20T04:36:57Z"
-updated: "2026-09-20T14:55:55Z"
+updated: "2026-09-20T16:39:26Z"
 kind: feature
 priority: 2
 size: small
@@ -81,12 +81,19 @@ proposal above:
   selection, Esc, and quitting each cancel it.
 
 Automated acceptance (items 1 to 4 and the suites of item 5) is met on the
-branch. **The owner's judgment of the view in a demo, the other half of item
-5, has not happened**, so this record stays active.
+branch.
+
+## Owner acceptance, 2026-09-20
+
+After running the demo the owner said it is "a step in the right direction",
+that it "works as described", and that they now understand better what they
+want next, which "doesn't block this work"; they will iterate later on the
+information architecture of the TUI. That is acceptance of this outcome, the
+other half of item 5, not of the card's layout as a final design.
 
 ## Next
 
-The owner runs the demo and judges the view:
-`cd .claude/worktrees/W-012 && go run ./cmd/grove`, Right to Active, Enter on a
-card. Then close this record and merge `worktree-W-012` into main, or record
-what to change. Not merged or pushed.
+Nothing under this record. Implementation is on branch `worktree-W-012`
+(code `9337a44`), reviewed and accepted, and **not merged or pushed**: merging
+it into main is the owner's step. The TUI's information architecture is later
+work that the owner has not yet shaped.
