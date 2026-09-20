@@ -2,9 +2,9 @@
 id: "W-013"
 type: work
 title: "Keep a full board load fast with hundreds of branches and worktrees"
-status: active
+status: done
 created: "2026-09-20T04:36:57Z"
-updated: "2026-09-20T04:57:47Z"
+updated: "2026-09-20T05:06:02Z"
 kind: fix
 priority: 2
 size: small
@@ -93,5 +93,6 @@ inventory, cancellation of every Git process, and identical `versions` and
 
 ## Next
 
-Owner reviews the numbers. If accepted, mark done with
-`go run ./cmd/grove update` when `worktree-W-009` is integrated.
+Nothing under this record. The owner accepted the numbers on 2026-09-19 and it
+was integrated into main with W-009. Reopen as new work if dozens of worktrees
+or the every-branch question start to matter.

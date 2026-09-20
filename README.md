@@ -101,13 +101,17 @@ The columns (Proposed, Active, Done, Abandoned) show the live work records of
 one checkout, named in the header: at first the checkout the command ran in.
 `b` chooses another checkout's live files as the board; this changes what is
 displayed and switches no branch or directory. Work with no live record in
-that checkout is listed under Other sources without a status. Questions and
+that checkout is listed under Elsewhere without a status. Questions and
 decisions are not on the board. No status is combined across branches.
 
-Enter on a card opens every observed version of that record, committed and
-live, each with its own title, status, and source. Opening a card selects
-nothing. Moving to one version and pressing Enter asks `workspace`'s resolver
-about exactly that version's selector; on success the board closes and prints
+Enter on a card opens that record's versions. A version is the record's exact
+content; the board read it at every local branch's tip and in every checkout's
+files, and lists each differing content once with its own title and status.
+Where several branches and checkouts hold the same content the row is a fold
+(`▸ done  same on 4 branches, 4 checkouts`): Enter lists those places, and
+selects nothing. Opening a card selects nothing either. Moving to one branch
+or checkout and pressing Enter asks `workspace`'s resolver about exactly that
+version's selector; on success the board closes and prints
 what `workspace` prints (the project path on stdout, or its JSON with
 `--json`; checkout, branch, record, and revision on stderr). A refusal (the
 version changed, its checkout is missing or ambiguous, the record was deleted
@@ -116,8 +120,8 @@ version must be selected again. The board never creates a worktree, edits a
 record, or starts an editor, shell, or agent.
 
 Keys: arrows or `h` `j` `k` `l` move; Tab switches between the columns and
-Other sources, or between versions and details; PgUp/PgDn scroll details; `s`
-lists every source with its diagnostics, which stay reachable while a banner
+Elsewhere, or between versions and details; PgUp/PgDn scroll details; `s`
+lists every branch and checkout read with its diagnostics, which stay reachable while a banner
 marks an incomplete result; `r` re-reads; Esc goes back, and quits from the
 board; `q` quits. Below 100 columns one status column shows at a time; below
 40x10 the board asks for more room. Leaving without a selection prints nothing

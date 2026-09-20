@@ -4,8 +4,8 @@ Captured: 2026-09-18.
 Status: product direction and starter file defaults selected; the Go CLI
 reads, validates, creates, and updates the operational records, shows their
 versions across local branches, and locates a selected version's checkout.
-A read-only terminal board over those operations is implemented on branch
-`worktree-W-009`, awaiting the owner's judgment in use and integration.
+A read-only terminal board over those operations opens from bare `grove`; the
+owner accepted it as a starting point on 2026-09-19 and it is integrated.
 This document is the restart's current source of intent.
 
 ## Intent and authority
@@ -78,9 +78,10 @@ Selected direction:
   cross-branch versions. The owner selected bare `grove` (no arguments) to open
   the TUI, with the board as its first screen; there will be no `grove board`
   subcommand. Worktree creation and agent launching remain later
-  investments. The board interaction is implemented as proposed on branch
-  `worktree-W-009` ([evidence](reviews/2026-09-19-board-W-009.md)); it has
-  passed automated acceptance and independent review, not yet the owner's use.
+  investments. The board interaction is implemented and integrated
+  ([evidence](reviews/2026-09-19-board-W-009.md)). After a first demo the owner
+  had identical versions folded and the wording changed, then accepted it as
+  good enough for the moment; boundaries, colour, and lineage remain wanted.
 - Eventual agent execution from that workspace, with `claude -p` as the concrete
   first-provider idea. Exact invocation and lifecycle behavior need validation.
 - Lifecycle choice settled on 2026-09-19: running agent sessions continue when
@@ -313,10 +314,11 @@ too disruptive. [Git worktree facilities](https://git-scm.com/docs/git-worktree)
    Reuse existing export/run/reconcile ideas only after inspecting their fit.
 3. **How should the first TUI feel in use?** The owner selected the terminal
    experience and requested early Kanban value. W-009 proposes the checkout
-   board and explicit version view, now implemented on its branch with Bubble
-   Tea v2.0.9; validate that interaction in an owner demo
-   (`go run ./cmd/grove` in `.claude/worktrees/W-009`). The owner's answer is
-   still open. Agent execution is outside the first interaction.
+   board and explicit version view, implemented with Bubble Tea v2.0.9. The
+   owner's first answer (2026-09-19, recorded in W-009): an acceptable start;
+   a list of versions across branches does not say what happened to an item,
+   and lineage over time is what they want from a card (W-012). Agent
+   execution is outside the first interaction.
 
 Related details to resolve at the appropriate boundary:
 
@@ -355,14 +357,16 @@ Related details to resolve at the appropriate boundary:
    behavior. The existing skills may assist development without dictating the
    new product schema.
 
-**Next action:** the owner tries the board and records what it is like to use
-in [W-009](../grove/work/W-009-terminal-picker.md); then integrate branch
-`worktree-W-009` as a separate, explicit step. The CLI repairs below are
-integrated (main `acfc905`, established by Git ancestry), and the board is
-built on them: `cd .claude/worktrees/W-009 && go run ./cmd/grove`. Its
+**Next action:** decide with the owner whether a card opens to lineage or
+keeps the version list beside it, then plan
+[W-012](../grove/work/W-012-card-lineage.md). The board
+([W-009](../grove/work/W-009-terminal-picker.md)) and its load fix
+([W-013](../grove/work/W-013-load-scaling.md)) are done and integrated; run
+the board with `go run ./cmd/grove`. The CLI repairs below were integrated
+first (main `acfc905`, established by Git ancestry). The board's
 [evidence](reviews/2026-09-19-board-W-009.md) separates what automated checks
-and two independent reviews established from the usability judgment they
-cannot supply. The [2026-09-19 review](reviews/2026-09-19-integrated-cli.md) verified W-003
+and two independent reviews established from the owner's judgment, which
+W-009 records. The [2026-09-19 review](reviews/2026-09-19-integrated-cli.md) verified W-003
 integration at `b20d2b0` and W-004/W-005 integration at `5041ae1`, and
 demonstrated wrong-repository routing through a symlinked project prefix,
 success for a checkout deleted during inspection, comment loss and
@@ -421,13 +425,13 @@ selection remains explicit, incomplete results visible, and stale selections
 require refresh. This brings board value into the first TUI; it does not select
 one authoritative status across branches. [W-009](../grove/work/W-009-terminal-picker.md) owns
 the proposed screen, keyboard/output contract, acceptance, and linked plan.
-Bubble Tea v2.0.9 is what the branch uses, for the board only; adopting it
+Bubble Tea v2.0.9 is used for the board only; adopting it
 more widely follows the owner's judgment of the board. After the owner's first
 demo on 2026-09-19 the card folds identical versions into one row and the board
 says branch and checkout; the next card outcome the owner asked for is a work
 item's lineage from Git history ([W-012](../grove/work/W-012-card-lineage.md)).
-A full load was measured at 27.7 s with 300 branches and is 0.35 s on the
-branch ([W-013](../grove/work/W-013-load-scaling.md)). Keep worktree creation
+A full load was measured at 27.7 s with 300 branches and is now 0.35 s
+([W-013](../grove/work/W-013-load-scaling.md)). Keep worktree creation
 as a separate design with
 explicit destination and failure policies; agent launches, claims, and mutation
 through an interactive view come later. Q-001's accepted policy stays unchanged.
@@ -449,8 +453,8 @@ The old application's PostgreSQL/API architecture, deployed Mini service,
 planning-authority cutover, and old roadmap are historical. This local reset
 does not alter any external service, database, credential, remote repository,
 or installed CLI. The sibling skills and nullsec projects remain unchanged.
-No runner has been launched. The W-009 branch uses Bubble Tea v2 for the
-board; main has no TUI framework until that branch is integrated. The new
+No runner has been launched. The board uses Bubble Tea v2, the only TUI
+framework in the module. The new
 Markdown/frontmatter format and file defaults are selected; `grove.yaml` and
 operational records exist, and the inspection, creation, update, versions,
 and workspace CLI is implemented and verified locally. It has not replaced

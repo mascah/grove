@@ -2,9 +2,9 @@
 id: "W-009"
 type: work
 title: "Browse a terminal Kanban board with explicit record versions"
-status: active
+status: done
 created: "2026-09-19T20:23:01Z"
-updated: "2026-09-19T22:45:52Z"
+updated: "2026-09-20T05:06:02Z"
 kind: feature
 priority: 2
 size: medium
@@ -274,15 +274,18 @@ on this branch in `959def6`:
 Lineage is [W-012](W-012-card-lineage.md). Load time is
 [W-013](W-013-load-scaling.md), measured and fixed on this branch.
 
+## Owner acceptance, 2026-09-19
+
+After the folded card, the wording, and the W-013 load fix, the owner said the
+board "seems good enough for the moment" and asked to close this out and merge
+it. That is acceptance of a starting point, not of the design: clearer
+boundaries and colour (feedback item 1), lineage (W-012), and whether a load
+should read every branch (W-013) remain open. The other half of acceptance
+item 6 is met.
+
 ## Next
 
-The owner runs the demo again and judges the folded card and the wording:
-
-```sh
-cd .claude/worktrees/W-009 && go run ./cmd/grove
-```
-
-Then mark this done with `go run ./cmd/grove update`, or say what else to
-adjust. Integrating `worktree-W-009` into main is a separate, explicit step.
-Worktree creation, record edits from the board, and agent execution remain
-separate later work; W-010 does not depend on this.
+Nothing under this record. Integrated into main by merge on 2026-09-19.
+Continue with [W-012](W-012-card-lineage.md). Worktree creation, record edits
+from the board, and agent execution remain separate later work; W-010 does not
+depend on this.
