@@ -91,18 +91,26 @@ func TestHistoryFollowsTheFocusedVersion(t *testing.T) {
 	}
 }
 
-// Merges are not listed, so a status that only a merge set is said, not hidden.
-func TestHistorySaysWhenAMergeSetTheStatus(t *testing.T) {
+// Merges are not listed, so the newest row may not be the record's status
+// here. The card says so rather than let the first row stand for it.
+func TestHistorySaysWhenTheNewestCommitIsNotTheRecord(t *testing.T) {
 	_, f := lineageFixture()
-	f.history = func(context.Context, string, string) ([]versions.Commit, error) { return featLog, nil } // newest: done
+	log := []versions.Commit{featLog[0], mainLog[0]} // newest: done; then active
+	f.history = func(context.Context, string, string) ([]versions.Commit, error) { return log, nil }
 	m := open(t, f, 120, 30)
 	screen := plain(deliverAll(m, press(m, "right", "enter"))) // W-001 is active here
-	note, newest := strings.Index(screen, "merged            active     a merge left the record this way"), strings.Index(screen, "done       4444444")
+	note, newest := strings.Index(screen, "here              active     the record's status here"), strings.Index(screen, "done       4444444")
 	if note < 0 || newest < note {
-		t.Fatalf("expected a merged row above the newest commit:\n%s", screen)
+		t.Fatalf("expected the record's status above the newest commit:\n%s", screen)
 	}
-	if screen = plain(deliverAll(m, press(m, "down", "down"))); strings.Contains(screen, "a merge left") {
+	if screen = plain(deliverAll(m, press(m, "down", "down"))); strings.Contains(screen, "merges are not listed") {
 		t.Fatalf("feature is done, as its newest commit says:\n%s", screen)
+	}
+	// A checkout with uncommitted changes has its own first row instead.
+	f.res.Groups[0].Versions[1].Change = "modified"
+	press(m, "up", "up")
+	if screen = plain(m); strings.Contains(screen, "merges are not listed") || !strings.Contains(screen, "uncommitted       active     modified") {
+		t.Fatalf("a modified checkout:\n%s", screen)
 	}
 }
 

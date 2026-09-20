@@ -24,8 +24,8 @@ type Commit struct {
 // following renames: what plain git log --follow lists. It says what happened
 // on that line of history and nothing about any other branch. Merges are never
 // listed, so content that a merge itself gave the record (a conflict
-// resolution) has no row; a caller that knows the record at commit can tell
-// from the first row. Once ctx is done, running Git processes are killed and
+// resolution) has no row, and the first row need not be the record as it is
+// at commit; a caller that knows the record there can tell. Once ctx is done, running Git processes are killed and
 // the error is ctx.Err().
 func HistoryContext(ctx context.Context, root, commit, path string) ([]Commit, error) {
 	// --raw names the record's blob at each commit, so a rename needs no path

@@ -197,11 +197,12 @@ commit, its short ID, and its subject, following renames. It is the history of
 whichever row has focus, named in its heading: the board's checkout while the
 card's first line has focus, otherwise that branch's tip or that checkout's
 HEAD. A checkout whose files differ from its HEAD gets a first `uncommitted`
-row. Merges are not listed; where a merge itself left the record with another
-status than the newest listed commit, a first `merged` row says so. History is read from Git when a card is open, never while the board
-loads, and no key waits for a read still in progress. It says what happened on
-one branch and nothing about whether another branch contains it.
-[W-012](grove/work/W-012-card-lineage.md) owns this.
+row. Merges are not listed, so where the record's status is not the newest
+listed commit's, a first `here` row gives it and says why. History is read from
+Git when a card is open, never while the board loads, and no key waits for a
+read still in progress. It says what happened on one branch and nothing about
+whether another branch contains it. [W-012](grove/work/W-012-card-lineage.md)
+owns this.
 
 Keys: arrows or `h` `j` `k` `l` move; Tab switches between the columns and
 Elsewhere, or between versions and details; PgUp/PgDn scroll details; `s`
