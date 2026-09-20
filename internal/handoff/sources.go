@@ -72,17 +72,14 @@ func (s *sources) add(name string, info fs.FileInfo, content []byte, reason stri
 	return nil
 }
 
-// addLoaded includes bytes the project loader already read and checked.
+// addLoaded includes bytes the project loader already read and checked. The
+// configuration and the distinct selected records come first, so none of them
+// can already be a source; registering their identity is what lets a later
+// include under another name be recognised.
 func (s *sources) addLoaded(name string, content []byte, reason string) error {
-	if s.known(name, nil, reason) {
-		return nil
-	}
 	info, err := s.dir.Lstat(name)
 	if err != nil {
 		return err
-	}
-	if s.known(name, info, reason) {
-		return nil
 	}
 	return s.add(name, info, content, reason)
 }
@@ -92,22 +89,19 @@ func oversize(name string, remaining int) error {
 }
 
 func (s *sources) addInclude(name string) error {
+	const reason = "included by the caller"
 	if !fs.ValidPath(name) || name == "." || strings.ContainsRune(name, 0) {
 		return fmt.Errorf("--include %s: expected a clean project-relative file path", name)
 	}
 	if gitMetadata(name) {
 		return fmt.Errorf("--include %s: Git metadata is not a source", name)
 	}
-	return s.read(name, "included by the caller", "--include")
-}
-
-func (s *sources) read(name, reason, referrer string) error {
 	if s.known(name, nil, reason) {
 		return nil
 	}
 	info, err := statConfined(s.dir, name)
 	if errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("%s names %s, which does not exist in this checkout", referrer, name)
+		return fmt.Errorf("--include names %s, which does not exist in this checkout", name)
 	}
 	if err != nil {
 		return err
@@ -122,10 +116,11 @@ func (s *sources) read(name, reason, referrer string) error {
 	return s.add(name, info, content, reason)
 }
 
-// holds reports whether the file at name is a source, under any spelling.
-func (s *sources) holds(name string) bool {
+// held returns the source holding the file at name, under any spelling, or
+// nil. It looks at identity only; nothing is opened.
+func (s *sources) held(name string) *Source {
 	info, _ := s.dir.Lstat(name)
-	return s.find(name, info) != nil
+	return s.find(name, info)
 }
 
 // references lists every link in r's body with what it resolves to. It opens
@@ -137,8 +132,8 @@ func (s *sources) references(r *project.Record) ([]Reference, error) {
 		if err != nil {
 			return nil, err
 		}
-		if reason == "" && s.byPath[target] != nil {
-			reason = "included in full; a fragment or query was not applied or checked"
+		if source := s.held(target); reason == "" && target != "" && source != nil {
+			reason = "included in full as " + source.Path + "; any fragment or query was not applied or checked"
 		} else if reason == "" {
 			reason = "in-project path; not opened or checked, --include adds it"
 		}
@@ -212,6 +207,9 @@ func gitMetadata(name string) bool {
 	return slices.ContainsFunc(strings.Split(name, "/"), func(part string) bool { return strings.EqualFold(part, ".git") })
 }
 
+// beforeOpen lets tests replace a file between its stat and its open.
+var beforeOpen = func() {}
+
 // statConfined returns the identity of the regular file name below dir,
 // refusing a symlink in any component, as the record reader does. os.Root
 // keeps a concurrently swapped parent from leading outside dir.
@@ -240,6 +238,7 @@ func statConfined(dir *os.Root, name string) (fs.FileInfo, error) {
 // bytes. Opening without blocking means a file swapped for a FIFO is refused
 // by the descriptor check instead of hanging.
 func readConfined(dir *os.Root, name string, seen fs.FileInfo, limit int) ([]byte, error) {
+	beforeOpen()
 	f, err := dir.OpenFile(name, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, err

@@ -56,6 +56,7 @@ type Record struct {
 	Roles    []string `json:"roles"`    // why it is listed
 	Selected bool     `json:"selected"`
 	Included bool     `json:"included"`
+	Source   string   `json:"source"` // the sources[] path holding it, which another spelling can make differ from Path; "" when listed
 }
 
 // Requirement is one depends_on edge of selected or prerequisite work, with
@@ -168,6 +169,19 @@ func difference(a, b *Bundle) string {
 	}
 	for path := range revisions {
 		return path
+	}
+	listed := map[string]Record{}
+	for _, r := range a.Records {
+		listed[r.ID] = r
+	}
+	for _, r := range b.Records {
+		if !reflect.DeepEqual(listed[r.ID], r) {
+			return r.ID
+		}
+		delete(listed, r.ID)
+	}
+	for id := range listed {
+		return id
 	}
 	return "Git state or record relationships"
 }
@@ -284,12 +298,17 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 	}
 
 	for _, r := range p.Records {
-		if roles[r.ID] != nil {
-			b.Records = append(b.Records, Record{
-				ID: r.ID, Path: r.Path, Type: r.Type, Title: r.Title, Status: r.Status, Revision: project.Revision(r.Source),
-				Roles: roles[r.ID], Selected: slices.Contains(ids, r.ID), Included: s.holds(r.Path),
-			})
+		if roles[r.ID] == nil {
+			continue
 		}
+		row := Record{
+			ID: r.ID, Path: r.Path, Type: r.Type, Title: r.Title, Status: r.Status, Revision: project.Revision(r.Source),
+			Roles: roles[r.ID], Selected: slices.Contains(ids, r.ID),
+		}
+		if source := s.held(r.Path); source != nil {
+			row.Included, row.Source = true, source.Path
+		}
+		b.Records = append(b.Records, row)
 	}
 	for _, source := range s.byPath {
 		b.Sources = append(b.Sources, *source)

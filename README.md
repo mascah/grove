@@ -109,12 +109,15 @@ keeps apart:
   prerequisites, questions blocking the selected work or a prerequisite
   (resolved ones too), and the records the selected work names in `relates_to`
   or `members` or links to, each with title, status, path, revision, why it is
-  listed, and whether its source is included. Every link in the selected
+  listed, and whether its source is included (`source` is the `sources[]` path
+  that holds it, which differs from `path` when it was included under another
+  name). Every link in the selected
   records' bodies is listed with the project path it resolves to. Links are
   taken from parsed Markdown, so code, fences, images, and HTML are never
   links; Markdown escapes and entities are decoded before the URL is. A link is
   never opened, so a listed path is not checked, not even for existence. URLs,
-  other projects, absolute paths, and Git metadata are listed with that reason.
+  fragment-only links, other projects, absolute paths, and Git metadata are
+  listed with that reason and no path.
 
 Retrieval is staged with existing commands: `show ID` prints a listed record,
 and `--include PATH` adds a listed file, such as the plan the record names as
@@ -139,7 +142,7 @@ prerequisites, related records, and linked documents in full):
 ```text
 {format_version, root, interaction, selected[], order[],
  git: null | {checkout, common_dir, ref, head},
- records[]: {id, path, type, title, status, revision, roles[], selected, included},
+ records[]: {id, path, type, title, status, revision, roles[], selected, included, source},
  requirements[]: {work, prerequisite, status, selected},
  questions[]: {id, status, blocks[]},
  sources[]: {path, revision, reasons[], content},

@@ -101,12 +101,12 @@ func TestSelectionOrderAndScope(t *testing.T) {
 	}
 	member, _ := os.ReadFile(filepath.Join(root, "grove/work/W-007.md"))
 	wantRows := map[string]Record{
-		"Q-001": {"Q-001", "grove/questions/Q-001.md", "question", "T", "resolved", "", []string{"question blocking W-001"}, false, false},
-		"Q-002": {"Q-002", "grove/questions/Q-002.md", "question", "T", "open", "", []string{"related to W-003"}, false, false},
-		"W-001": {"W-001", "grove/work/W-001.md", "work", "T", "done", "", []string{"selected work", "prerequisite of W-002"}, true, true},
-		"W-002": {"W-002", "grove/work/W-002.md", "work", "T", "proposed", "", []string{"selected work"}, true, true},
-		"W-003": {"W-003", "grove/work/W-003.md", "work", "T", "proposed", "", []string{"selected work"}, true, true},
-		"W-007": {"W-007", "grove/work/W-007.md", "work", "T", "proposed", "sha256:" + sha(string(member)), []string{"member of W-003"}, false, false},
+		"Q-001": {"Q-001", "grove/questions/Q-001.md", "question", "T", "resolved", "", []string{"question blocking W-001"}, false, false, ""},
+		"Q-002": {"Q-002", "grove/questions/Q-002.md", "question", "T", "open", "", []string{"related to W-003"}, false, false, ""},
+		"W-001": {"W-001", "grove/work/W-001.md", "work", "T", "done", "", []string{"selected work", "prerequisite of W-002"}, true, true, "grove/work/W-001.md"},
+		"W-002": {"W-002", "grove/work/W-002.md", "work", "T", "proposed", "", []string{"selected work"}, true, true, "grove/work/W-002.md"},
+		"W-003": {"W-003", "grove/work/W-003.md", "work", "T", "proposed", "", []string{"selected work"}, true, true, "grove/work/W-003.md"},
+		"W-007": {"W-007", "grove/work/W-007.md", "work", "T", "proposed", "sha256:" + sha(string(member)), []string{"member of W-003"}, false, false, ""},
 	}
 	for id, want := range wantRows {
 		got := rows[id]
@@ -274,14 +274,31 @@ func TestAliasesAreIncludedAndChargedOnce(t *testing.T) {
 			t.Fatalf("%+v", s.Reasons)
 		}
 	}
-	// A listed record is marked included when its file is a source under another name.
-	if b.Records[1].ID != "W-002" || b.Records[1].Included {
+	if b.Records[1].ID != "W-002" || b.Records[1].Included || b.Records[1].Source != "" {
 		t.Fatalf("%+v", b.Records)
 	}
+	// A listed record whose file is a source under another name is marked
+	// included and says which source holds it; so does a link to that file.
+	work(t, root, "W-001", "proposed", "relates_to: [W-002]\n", "[related](W-002.md)")
 	b = build(t, root, Options{Include: []string{"docs/related-link.md"}}, "W-001")
-	if !b.Records[1].Included || !slices.Contains(paths(b), "docs/related-link.md") {
-		t.Fatalf("%+v %v", b.Records, paths(b))
+	if r := b.Records[1]; !r.Included || r.Source != "docs/related-link.md" || !slices.Contains(paths(b), r.Source) ||
+		!strings.Contains(string(Text(b)), "included as docs/related-link.md") {
+		t.Fatalf("%+v %v", r, paths(b))
 	}
+	if ref := b.References[0]; ref.Path != "grove/work/W-002.md" || !strings.Contains(ref.Reason, "included in full as docs/related-link.md") {
+		t.Fatalf("%+v", ref)
+	}
+}
+
+// A file replaced between its stat and its open is refused, not read.
+func TestReplacedBetweenStatAndOpenIsRefused(t *testing.T) {
+	root := fixture(t)
+	work(t, root, "W-001", "proposed", "", "")
+	write(t, root, "docs/p.md", "plan\n")
+	write(t, root, "docs/other.md", "SENTINEL\n")
+	beforeOpen = func() { os.Rename(filepath.Join(root, "docs/other.md"), filepath.Join(root, "docs/p.md")) }
+	defer func() { beforeOpen = func() {} }()
+	refused(t, root, Options{Include: []string{"docs/p.md"}}, "changed while it was being read", "W-001")
 }
 
 func sha(content string) string {
@@ -368,6 +385,7 @@ func TestChangeBetweenReadsIsRefused(t *testing.T) {
 			t.Fatalf("git %v: %v\n%s", args, err, out)
 		}
 	}
+	named := map[string]string{"config": "(grove.yaml)", "plan": "(docs/plan.md)", "selected": "(grove/work/W-002.md)", "prerequisite": "(W-001)", "new blocker": "(Q-001)"}
 	changes := map[string]func(t *testing.T, root string){
 		"config": func(t *testing.T, root string) {
 			write(t, root, "grove.yaml", "schema_version: 1\nrecords: grove\n# note\n")
@@ -401,7 +419,8 @@ func TestChangeBetweenReadsIsRefused(t *testing.T) {
 			git(t, root, "commit", "-q", "-m", "init")
 			betweenReads = func() { change(t, root) }
 			defer func() { betweenReads = func() {} }()
-			refused(t, root, Options{Include: []string{"docs/plan.md"}}, "rerun to read it again", "W-002")
+			// The refusal names the source or listed record that changed, where one did.
+			refused(t, root, Options{Include: []string{"docs/plan.md"}}, named[name]+"; rerun to read it again", "W-002")
 		})
 	}
 }
