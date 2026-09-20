@@ -147,15 +147,17 @@ prerequisites, related records, and linked documents in full):
  scope_notice, source_bytes, max_bytes}
 ```
 
-The [work guide](docs/work-execution.md) is the workflow that uses it:
-preparation, isolated execution, review with bounded fix rounds, checkpoints,
-and what to do when a human decision is missing, interactive or headless. The
-`grove-work` skill is a thin adapter to that guide for
-[Claude](.claude/skills/grove-work/SKILL.md) (`/grove-work W-012`) and
+The [work guide](docs/work-execution.md) is the workflow that uses it: staged
+reading, isolation before the first write, preparation, review with bounded fix
+rounds, checkpoints, and what to do when a human decision is missing,
+interactive or headless. The `grove-work` skill is a thin adapter to that guide
+for [Claude](.claude/skills/grove-work/SKILL.md) (`/grove-work W-012`) and
 [Codex](.agents/skills/grove-work/SKILL.md) (`$grove-work W-012`), invoked
-explicitly and installed nowhere outside this repository. Grove launches no
-agent; [the dogfooding evidence](docs/reviews/2026-09-19-W-010-dogfood.md)
-says which invocations have actually been exercised.
+explicitly and kept in this repository on purpose while it is dogfooded;
+[AGENTS.md](AGENTS.md) holds this repository's development policy, which the
+guide does not repeat. Grove launches no agent;
+[the dogfooding evidence](docs/reviews/2026-09-19-W-010-dogfood.md) says which
+invocations have actually been exercised.
 
 ### The terminal board
 
