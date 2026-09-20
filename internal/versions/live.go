@@ -15,18 +15,17 @@ import (
 
 // identity asks Git where dir is: its Git directory and its path inside the
 // worktree. The Git directory is unique to one worktree of one repository.
-// ponytail: one git process per path, because rev-parse cannot delimit paths
-// that contain newlines. A live checkout costs about eight rev-parse
-// processes per inspection for a project at the repository root and twelve
-// for a nested one (entering, the prefix, the record folder, and the second
-// inventory's re-entry) where it used to cost one: for main plus three
-// worktrees, 10 Git processes became 39, or 55 with a nested prefix. Batch
-// them if inspecting many worktrees becomes slow.
-func identity(ctx context.Context, dir string) (gitDir, prefix string, err error) {
-	if gitDir, err = repo.GitPathContext(ctx, dir, "--git-dir"); err == nil {
-		prefix, err = repo.GitPathContext(ctx, dir, "--show-prefix")
+// ponytail: a live checkout costs three rev-parse processes per inspection for
+// a project at the repository root and five for a nested one (entering, the
+// prefix, the record folder, and the second inventory's re-entry), run one
+// after another. Read checkouts concurrently if dozens of worktrees make an
+// inspection slow; branches cost no processes.
+func identity(ctx context.Context, dir string) (gitDir, prefix, common string, err error) {
+	paths, err := repo.GitPathsContext(ctx, dir, "--git-dir", "--show-prefix", "--git-common-dir")
+	if err != nil {
+		return "", "", "", err
 	}
-	return gitDir, prefix, err
+	return paths[0], paths[1], paths[2], nil
 }
 
 // enterWorktree starts a live source for a registered worktree. The source
@@ -46,11 +45,7 @@ func enterWorktree(ctx context.Context, w repo.Worktree, common string) *Source 
 		s.fail("worktree path is a symlink or not a directory")
 		return s
 	}
-	gitDir, itsPrefix, err := identity(ctx, w.Path)
-	var itsCommon string
-	if err == nil {
-		itsCommon, err = repo.GitPathContext(ctx, w.Path, "--git-common-dir")
-	}
+	gitDir, itsPrefix, itsCommon, err := identity(ctx, w.Path)
 	if err != nil {
 		s.fail("cannot enter worktree: " + err.Error())
 		return s
@@ -110,7 +105,7 @@ func (s *Source) locate(ctx context.Context, prefix string) (dir string, ok bool
 
 // owns checks that Git places dir in this source's worktree at prefix.
 func (s *Source) owns(ctx context.Context, dir, prefix string) error {
-	gitDir, itsPrefix, err := identity(ctx, dir)
+	gitDir, itsPrefix, _, err := identity(ctx, dir)
 	if err != nil {
 		return fmt.Errorf("cannot identify %s: %w", dir, err)
 	}
@@ -123,7 +118,7 @@ func (s *Source) owns(ctx context.Context, dir, prefix string) error {
 // load reads and validates the project of an entered checkout, and its HEAD
 // baseline. An absent project leaves the source not present and undiagnosed.
 // A source loaded under a cancelled ctx means nothing; callers check ctx.
-func (s *Source) load(ctx context.Context, root, prefix string, trees map[string]*tree) {
+func (s *Source) load(ctx context.Context, prefix string, committed *objects) {
 	if s.Locator == "" {
 		return
 	}
@@ -155,7 +150,7 @@ func (s *Source) load(ctx context.Context, root, prefix string, trees map[string
 	if strings.Trim(s.Commit, "0") == "" { // unborn branch: nothing is committed yet
 		s.baseline = &tree{}
 	} else {
-		s.baseline = loadTree(ctx, root, s.Commit, trees)
+		s.baseline = committed.loadTree(s.Commit)
 	}
 	if s.baseline.err != nil {
 		s.fail("cannot read HEAD " + s.Commit + ": " + s.baseline.err.Error())

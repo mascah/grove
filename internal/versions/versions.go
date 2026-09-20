@@ -103,7 +103,8 @@ func inspect(ctx context.Context, root, id string, between func()) (*Result, err
 	if err != nil {
 		return nil, err
 	}
-	trees := map[string]*tree{}
+	committed := newObjects(ctx, root, prefix)
+	defer committed.close()
 	// A cancelled read fails its source like any other Git error; the checks
 	// of ctx from here on keep such diagnostics out of a Result.
 	for _, b := range branches {
@@ -111,7 +112,7 @@ func inspect(ctx context.Context, root, id string, between func()) (*Result, err
 			return nil, err
 		}
 		s := &Source{Kind: "committed", Ref: b.ref, Commit: b.commit}
-		s.admit(loadTree(ctx, root, b.commit, trees))
+		s.admit(committed.loadTree(b.commit))
 		result.Sources = append(result.Sources, s)
 	}
 	for _, w := range first {
@@ -122,7 +123,7 @@ func inspect(ctx context.Context, root, id string, between func()) (*Result, err
 			return nil, err
 		}
 		s := enterWorktree(ctx, w, common)
-		s.load(ctx, root, prefix, trees)
+		s.load(ctx, prefix, committed)
 		result.Sources = append(result.Sources, s)
 	}
 	if err := ctx.Err(); err != nil {

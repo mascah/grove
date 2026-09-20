@@ -41,8 +41,9 @@ func LocateContext(ctx context.Context, root string) (common, prefix string, err
 	if _, err := exec.LookPath("git"); err != nil {
 		return "", "", errors.New("this command requires Git on PATH; coordination state lives in the repository's common directory")
 	}
-	if common, err = GitPathContext(ctx, root, "--git-common-dir"); err == nil {
-		prefix, err = GitPathContext(ctx, root, "--show-prefix")
+	var paths []string
+	if paths, err = GitPathsContext(ctx, root, "--git-common-dir", "--show-prefix"); err == nil {
+		common, prefix = paths[0], paths[1]
 	}
 	if ctx.Err() != nil {
 		return "", "", ctx.Err()
@@ -71,6 +72,27 @@ func GitPathContext(ctx context.Context, dir, option string) (string, error) {
 		return "", fmt.Errorf("git rev-parse %s: missing output terminator", option)
 	}
 	return strings.TrimSuffix(out, "\n"), nil
+}
+
+// GitPathsContext answers several GitPath options with one process when it
+// can. Each answer ends in one terminator, so a reply holding exactly one per
+// option holds no path with a newline in it and splits safely; any other reply
+// is discarded and each option is asked for on its own.
+func GitPathsContext(ctx context.Context, dir string, options ...string) ([]string, error) {
+	out, err := GitContext(ctx, dir, append([]string{"rev-parse", "--path-format=absolute"}, options...)...)
+	if err != nil {
+		return nil, err
+	}
+	if strings.Count(out, "\n") == len(options) && strings.HasSuffix(out, "\n") {
+		return strings.Split(strings.TrimSuffix(out, "\n"), "\n"), nil
+	}
+	paths := make([]string, len(options))
+	for i, option := range options {
+		if paths[i], err = GitPathContext(ctx, dir, option); err != nil {
+			return nil, err
+		}
+	}
+	return paths, nil
 }
 
 // Git runs one git command in dir and returns its stdout.

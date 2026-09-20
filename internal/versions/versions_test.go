@@ -608,3 +608,36 @@ func TestInspectRequiresGit(t *testing.T) {
 		t.Fatalf("plain directories need a Git diagnostic: %v", err)
 	}
 }
+
+// A branch is read for what the project loader reads and nothing else:
+// branches that differ only elsewhere share one loaded project, a differing
+// record folder gets its own, and one git process serves them all.
+func TestCommittedReadIsScopedAndShared(t *testing.T) {
+	root := repoFixture(t)
+	git(t, root, "checkout", "-q", "-b", "code")
+	write(t, root, "src/notes.md", "not a record\n")
+	write(t, root, "grove-extra/work/W-777.md", "not a record either\n")
+	commit(t, root, "code only")
+	git(t, root, "checkout", "-q", "-b", "records", "main")
+	write(t, root, "grove/work/W-001-first.md", record("W-001", "work", "active", "Records body.\n"))
+	commit(t, root, "records")
+	git(t, root, "checkout", "-q", "main")
+
+	trace := filepath.Join(t.TempDir(), "trace")
+	t.Setenv("GIT_TRACE", trace)
+	res := mustInspect(t, root, "")
+	main, code, records := source(t, res, "committed", "refs/heads/main"), source(t, res, "committed", "refs/heads/code"), source(t, res, "committed", "refs/heads/records")
+	if !res.Complete || !code.Valid || main.Commit == code.Commit {
+		t.Fatalf("fixture: %s", dump(res))
+	}
+	if main.project != code.project {
+		t.Error("branches that differ only outside the record folder should share one loaded project")
+	}
+	if main.project == records.project || find(t, group(t, res, "W-001"), "committed", "refs/heads/records").Record.Status != "active" {
+		t.Error("a branch with a differing record folder needs its own project")
+	}
+	log, err := os.ReadFile(trace)
+	if n := strings.Count(string(log), "git cat-file"); err != nil || n != 1 || strings.Contains(string(log), "ls-tree") {
+		t.Errorf("three branches and a checkout should share one cat-file process and list no whole tree: %d, %v", n, err)
+	}
+}
