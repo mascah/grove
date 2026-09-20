@@ -231,20 +231,42 @@ independent review of item 6) is met on the branch. **Owner usability feedback
 on a real demo, the other half of item 6, has not happened**, so this record
 stays active. No screenshot or test stands in for it.
 
+## Owner feedback, 2026-09-19 (first impressions of the demo)
+
+Observed by the owner, in their terms:
+
+1. The board is an acceptable basic starting point; clearer boundaries and
+   colour can come later.
+2. The version view did not help. A done item showed six to eight rows, all
+   `done`, the live ones all `unchanged`, every detail pane the same content
+   with only header fields differing. The owner could not tell what a version
+   is or what to do from there, and asked for a refresher on "workspace". What
+   they expected to be useful instead is a work item's lineage over time: when
+   it was proposed, the commits that touched it, and its status at each.
+3. Concern that a full load takes about 0.6 s at this small scale.
+4. What `b` (checkout) does to the board is confusing.
+5. "Source" is unclear.
+
+Measured afterwards, not owner judgment: the 0.6 s is real (0.56 to 0.57 s for
+`versions` from a built binary; `list` of one checkout is under 10 ms). One
+load spawns 44 Git processes, 35 of them single-path `rev-parse` calls made per
+worktree for the W-006/W-008 provenance checks. The cost grows with worktrees
+and branches, not with records. In this repository every version of W-001 has
+the same content revision, so its eight rows are one content seen from four
+branch tips and four checkouts.
+
+Proposed adjustments, not yet selected: collapse rows with the same content
+revision into one row listing where it was seen, so a card with no divergence
+shows one row; say "branch" and "checkout" in the interface instead of
+"source" and "version" where that is what is meant; make the `b` chooser say
+what changes on the board; show Git lineage for the record's file (`git log
+--follow`, status at each commit) in the card. Lineage is new scope and
+belongs in its own work record if selected.
+
 ## Next
 
-The owner runs the demo and says what the board is like to use:
-
-```sh
-cd .claude/worktrees/W-009 && go run ./cmd/grove
-```
-
-Things only that judgment can settle: whether one checkout's columns with
-versions inside the card is the right everyday view; whether Other sources is
-discoverable enough; the key choices (`b`, `s`, `r`, Tab) and wording; the
-two-line cards; and whether returning a path, rather than opening something,
-is a useful first workspace action. Record that feedback here as its own
-evidence, then either adjust the board or mark this done with
-`go run ./cmd/grove update`. Integrating `worktree-W-009` into main is a
+The owner chooses among the proposed adjustments above. The vocabulary and
+row-collapsing changes fit this record; lineage and load time are candidates
+for their own work records. Until then this stays active. Integrating `worktree-W-009` into main is a
 separate, explicit step. Worktree creation, record edits from the board, and
 agent execution remain separate later work; W-010 does not depend on this.
