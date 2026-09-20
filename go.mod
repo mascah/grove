@@ -6,6 +6,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.9
 	github.com/charmbracelet/x/ansi v0.11.7
 	github.com/charmbracelet/x/term v0.2.2
+	github.com/yuin/goldmark v1.7.13
 	go.yaml.in/yaml/v3 v3.0.4
 )
 

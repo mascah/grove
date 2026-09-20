@@ -2,9 +2,9 @@
 id: "W-010"
 type: work
 title: "Prepare reusable work instructions and execution handoffs"
-status: proposed
+status: active
 created: "2026-09-19T20:44:28Z"
-updated: "2026-09-19T20:47:33Z"
+updated: "2026-09-20T05:23:53Z"
 kind: feature
 priority: 2
 size: medium
@@ -41,9 +41,8 @@ The immediate documentation baseline is now:
 - [Repair implementation prompt](../../docs/prompts/W-006-W-008-implementation.txt).
 - [Kanban implementation prompt](../../docs/prompts/W-009-implementation.txt).
 
-These are authored instructions, not an installed skill, generated context
-bundle, readiness proof, or agent execution capability. They do not complete
-this record's reusable entrypoint outcome.
+That was the baseline before this work. The guide is now the workflow the
+`grove-work` skill loads, and the saved prompts are spent; see Evidence.
 
 ## Predecessor behavior reviewed
 
@@ -74,8 +73,30 @@ use and when to stop, wait, resume, or hand off.
 The [shared implementation plan](../../docs/plans/W-010-W-011-agent-handoffs.md)
 now proposes `grove context` plus repository-local `grove-work` adapters for
 Claude and Codex. The command assembles facts; adapters explicitly load the
-shared guide and required project instructions. These interfaces are prepared
-design, not implemented commands or verified harness behavior.
+shared guide and the repository's agent instructions. Both are implemented on
+branch `worktree-W-010` (see Evidence for what has been verified in a harness).
+
+Owner revision, 2026-09-20, superseding the conflicting prepared design:
+
+- The repository-local adapters are intentional for this dogfooding phase.
+  Plugin distribution, global installation, and portability to another adopted
+  repository are not acceptance requirements here.
+- The shared guide is Grove workflow only. This repository's development
+  policy (restart history, Go verification, `go run ./cmd/grove`, branch
+  conventions, coexistence with the predecessor) lives in `AGENTS.md`, once.
+  The workflow never requires the predecessor's `grove:work`, `grove:close`, or
+  `grove:shape` skills; the predecessor comparison is review evidence.
+- Context is delivered in stages. `context` reads the configuration, the
+  selected records, and explicit includes in full, and lists prerequisites,
+  blocking questions, members, related and linked records, and links, with
+  identity, status, revision, and how to retrieve them. The workflow includes
+  the plan the record names when preparing or implementing, and must read the
+  actual constraints of blocking questions and prerequisites before
+  implementing a unit. A listing never stands in for required evidence, and no
+  filename decides which artifact is current.
+- The execution checkout is established and verified before the first write.
+- W-011's shaping workflow should be able to reuse these boundaries; it is not
+  part of this work.
 
 Use the review's responsibility mapping to select the supported execution path:
 plan preparation, implementation/review ownership, bounded retry/stop conditions,
@@ -88,8 +109,9 @@ required source is an error, while an absent plan must produce an explicit
 preparation step rather than silent omission or a false readiness claim.
 
 Include the selected project/checkout/branch, record paths and exact content
-revisions, linked plans and review evidence, prerequisites and their observed
-statuses, selected order, and the explicit requested action. Never translate
+revisions, prerequisites and their observed statuses, selected order, and the
+explicit requested action; list linked plans and review evidence for retrieval
+when the activity needs them (staged on 2026-09-20; first included in full). Never translate
 `done` into an assertion of integration or structural validation into readiness.
 The output must be inspectable before the user starts an agent. Selection of
 several IDs does not authorize parallel implementation; retain explicit ordering.
@@ -167,6 +189,12 @@ explicitly starting implementation.
    simulated behavior from an actual headless harness trial; leave any unrun
    trial explicit. This slice does not require implementing or launching a runner.
 
+Owner clarification, 2026-09-20: in 1 and 2, "retrieves" and "reproduced" mean
+staged retrieval. The invocation delivers the guide and the selected records
+with revisions at once, and the plan, prerequisites, questions, and evidence
+through `--include` and `show` when the workflow's step needs them. Missing or
+oversized requested sources still fail; nothing is truncated or summarized.
+
 ## Constraints and dependencies
 
 Reuse current records and plain linked artifacts; no predecessor storage model,
@@ -176,14 +204,100 @@ do not invoke predecessor work/close behavior here. No hard dependency on the
 Kanban implementation, and this record does not block W-009. Avoid shared-code
 implementation concurrency with the repair branch.
 
+## Evidence
+
+Implemented on branch `worktree-W-010` from main `91edc0b`, in
+`.claude/worktrees/W-010`, and revised there on 2026-09-20. On the owner's
+instruction the branch was merged into `main` on 2026-09-20 with this work
+still active: integration is not acceptance (establish it by Git ancestry, as
+always). Not pushed. The [dogfooding evidence](../../docs/reviews/2026-09-19-W-010-dogfood.md)
+holds the detail and keeps source inspection, tests, simulated runs, real
+harness trials, and the owner's acceptance apart.
+
+- `grove context WORK_ID...` (`internal/handoff`, `internal/cli/context.go`)
+  and the README contract (`format_version` 2: selected records, configuration,
+  and includes in full; everything else listed); the
+  [work guide](../../docs/work-execution.md), workflow only, with staged
+  reading and isolation before the first write; this repository's policy for
+  it in `AGENTS.md`; thin `grove-work` adapters in `.claude/skills/` and
+  `.agents/skills/`.
+- Revision commits: `8ba9d89` (Markdown destinations decoded before URL
+  interpretation), `10bfc51` (file identity for every source, checked before an
+  alias is read or charged), `ff4deb3` (inclusion policy), `ded60de` and the
+  commit carrying this text (guide, adapters, `AGENTS.md`, plan, evidence).
+  Both defects were reproduced by failing tests before their fixes.
+- Checks on the final code revision, uncached: `go test -count=1 ./...`,
+  `go test -race -count=1 ./...`, `go vet ./...`, `gofmt -l .`,
+  `go mod tidy -diff`, `go run ./cmd/grove check`, and a relative-link and
+  anchor check of the changed documents all pass. `FuzzResolve` ran 4.7 million
+  inputs cleanly with Markdown-escaped traversal seeds.
+- Measured context: `W-012` 99229 to 2719 source bytes at the start; `W-009`
+  210956 to 17383, 32579 with its plan; `W-010 W-011` 193078 to 20694,
+  47932 with the shared plan (like for like, before this revision's text
+  enlarged this record and the plan). The evidence has composition and what each
+  stage reads.
+- Independent review of `079a7da..ded60de` by a separate reviewer agent that
+  edited nothing: ten guard mutations each failed a test, fuzzing and
+  hand-built destinations found no escape or double decoding, output was
+  deterministic, and documentation matched code. One consequential finding, a
+  contradiction in the guide between redirecting a large result in step 1 and
+  writing nothing before step 3, is fixed; so are the minor ones (an `included`
+  row with no matching source path under an alias, link and record matching
+  that disagreed, an unnamed changed record, stale failure advice), with
+  regressions where code changed. The follow-up fixes and the final documents
+  were checked by the implementer only.
+- Real harness trials in disposable clones (Claude Code 2.1.278, codex-cli
+  0.155.1): both discover the adapters from an explicit headless invocation,
+  and both carried a small fixture assignment through staged reads, a worktree
+  before the first write, a resolved blocking question read in full and
+  honoured, and a handoff with `main` untouched.
+- Acceptance 1–3: met by the command, tests, and the real W-006–W-008, W-009,
+  and W-010/W-011 contexts, under the owner's staged-retrieval clarification.
+  4, 6, 7: met for the supported path by the guide, the two simulated headless
+  runs against the first guide (durable question and wait, unacquired external
+  blocker, missing-plan preparation, serial batch, resume from a checkpoint),
+  and the two real trials; interruption mid-implementation was not exercised,
+  and the wait path was not rerun against the revised guide. 8: both
+  invocations are documented and both were exercised headlessly on a fixture;
+  the interactive invocations were not. 5: **open**. A fixture written by the
+  workflow's author is not a real prepared assignment, and the owner has not
+  judged it.
+
 ## Next
 
-Implement with W-011 using the linked shared plan and
-[Fable handoff](../../docs/prompts/W-010-W-011-implementation.txt). The owner agreed
-to this bounded dogfooding investment on 2026-09-19. Verify repair integration
-and coordinate shared CLI/docs ownership with W-009; prefer following its current
-handoff without making it a semantic dependency. The prepared path is native
-serial execution with independent review, explicit headless waits, and prose
-checkpoints; the old controller/runtime machinery remains deferred. Dogfood the
-entrypoint before shaping a manually launched supervised run. Use existing saved
-prompts until the new interfaces are actually implemented and verified.
+Owner: start a fresh interactive Claude Code session in the main checkout,
+where the skill and `context` now are, and run
+
+```text
+/grove-work W-012
+```
+
+W-012 is the dogfooding target the owner chose on 2026-09-20: it is real Go
+work in the board, lists three related records to retrieve when needed, has no
+plan yet, and its Next holds an undecided owner choice (whether lineage
+replaces a card's version list or sits beside it). The run should establish
+what no trial has: that an interactive session discovers the skill; that the
+workflow asks that one question before planning instead of choosing; that a
+real assignment then goes from its ID through a prepared plan, code, the Go
+checks, and review to a handoff in its own worktree, created before the first
+write, without a composed prompt; and that the staged reads arrived when
+needed. Interrupt it once midway and rerun the same invocation to exercise
+resume. Then say whether this replaces asking for a prompt, and record what
+happened in the dogfooding evidence before marking this done. Optionally try
+`$grove-work` in the Codex TUI.
+
+An earlier draft of this Next proposed `/grove-work W-011` from the W-010
+worktree, stacked on the then-unmerged branch. The owner questioned it and it
+was dropped: it would have stacked work on an unaccepted branch, was chosen
+partly because it exercised a rule this revision had just written, and is
+documentation-only work that mirrors the guide under test. The guide's rule
+for records that exist only on another branch therefore stays untested beyond
+reading.
+
+[W-011](W-011-shaping-entrypoint.md) (`grove-shape`, `docs/work-shaping.md`) is
+not started; it is ordinary later work from `main` and can reuse the adapter shape, the interaction-mode convention,
+the workflow/policy split, staged reading, and isolation before the first
+write. The shared ID counter stands at `W 18` after a fixture mistake recorded
+in the evidence; the gap is historical and is not to be reset. Plugin
+distribution, nullsec migration, an attachment schema, and supervised
+launching stay separate, later investments.

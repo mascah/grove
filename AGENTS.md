@@ -1,9 +1,12 @@
 # Working on Grove
 
-Read `docs/restart-brief.md` first. This repository is a fresh product restart,
-with a Go CLI for read-only inspection, configuration, and operational records.
-The brief distinguishes selected
-direction, observed evidence, and proposed design; preserve those distinctions.
+This repository is a fresh product restart, with a Go CLI for read-only
+inspection, configuration, and operational records. `docs/restart-brief.md` is
+the current source of intent; it distinguishes selected direction, observed
+evidence, and proposed design, and those distinctions must be preserved. Read
+it first for anything that shapes direction or is not bounded by a work record.
+Assigned work IDs start from their records instead (see Assigned work) and
+read the brief when the record, a product question, or reconciliation needs it.
 
 - Keep the product useful through ordinary local files and a CLI without a
   required running service. The core record model in `docs/record-model.md`
@@ -39,4 +42,41 @@ direction, observed evidence, and proposed design; preserve those distinctions.
   concurrent implementation in separate worktrees.
 - Verify claims against actual results. Documentation-only changes need link
   and consistency checks. For Go changes run the relevant tests, the full suite
-  (`go test ./...`), and `go vet ./...`; use race tests for relevant changes.
+  (`go test ./...`), `go vet ./...`, `gofmt -l .`, and
+  `go run ./cmd/grove check`; use race tests (`go test -race ./...`) for
+  relevant changes and uncached runs (`-count=1`) for final evidence. TUI work
+  also needs terminal lifecycle and connected-workflow checks.
+
+## Assigned work
+
+To carry out assigned work IDs, follow `docs/work-execution.md`; the
+`grove-work` skill adapters in `.claude/skills/` and `.agents/skills/` load it
+and are kept in this repository on purpose while the workflow is dogfooded.
+That guide is the workflow and writes commands as `grove …`. This section is
+this repository's policy for it, kept here so that neither the guide nor the
+adapters repeat it:
+
+- Every `grove …` in the guide is `go run ./cmd/grove …` in the selected
+  checkout, because the installed `grove` is the predecessor's (above).
+  `go run` reports every failure as exit 1 and prints the command's own code as `exit status N` on
+  stderr; to tell a usage error (2) from a failure (1), build once with
+  `go build -o <temp path> ./cmd/grove` and run that.
+- Do not invoke the predecessor's `grove:work`, `grove:close`, or
+  `grove:shape` skills or its close/archive commands for work here.
+  Comparisons with the predecessor are history in `docs/reviews/`, not
+  required reading.
+- `context` is facts, not authorization, and must stay read-only. It reads the
+  selected records in full and lists the rest; read plans, prerequisites,
+  questions, `docs/record-model.md`, and the brief when the guide's step needs
+  them, not up front.
+- Work branches are `worktree-W-012`, or `worktree-W-012-W-014` for several
+  IDs, in a linked worktree under `.claude/worktrees/`. The default base is
+  `main` only when it holds the selected records; the guide says what to do
+  when it does not. Do not merge or push unless the assignment says so.
+- Plans are `docs/plans/ID-slug.md` and review evidence is under
+  `docs/reviews/`, linked from the owning record. Reconcile the README or
+  `docs/record-model.md` when their contract changes, and the brief's next
+  action when the brief already speaks of the work.
+- Fixtures that create records belong in a disposable clone reached by an
+  explicit absolute `--project` path, never a `cd` that can fail: `new` in a
+  worktree of this repository advances the shared ID counter.

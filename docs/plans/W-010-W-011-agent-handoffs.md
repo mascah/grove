@@ -4,6 +4,15 @@
 > instructions and `superpowers:executing-plans` if available. No automatic merge.
 > This is an implementation handoff, not implementation or harness-test evidence.
 
+**Status, 2026-09-20:** the W-010 parts of Tasks 1–5 were carried out on branch
+`worktree-W-010`, and the owner then revised the design before integration. The
+[revision](#revision-2026-09-20-owner-decisions) below supersedes anything in
+this plan that conflicts with it; the interface sections have been rewritten to
+describe what is implemented. The task lists are kept as the original handoff
+and were not used as a checkpoint: the
+[dogfooding evidence](../reviews/2026-09-19-W-010-dogfood.md) says what was done
+and observed. W-011's tasks are not started.
+
 **Goal:** one short invocation shapes project records or carries selected work
 through preparation, implementation, review, and a recoverable handoff.
 
@@ -24,6 +33,41 @@ context/CLI changes and once on the combined handoff. No fixed provider/model
 policy and no automatic controller loop. Use foreground checks and checkpoint
 Next/Evidence. Reassess if the chosen harness cannot supply an independent review;
 report that limitation rather than pretending self-review is independent.
+
+## Revision 2026-09-20: owner decisions
+
+1. **Repository-local skills, workflow apart from policy.** The local Claude
+   and Codex adapters are intentional while the workflow is dogfooded. Plugin
+   distribution, global installation, and proving portability in another
+   adopted repository are not acceptance requirements. One shared workflow
+   (`docs/work-execution.md`) covers interpreting assignments, retrieving
+   context, preparation, execution, review, checkpoints, blockers, and handoff.
+   Repository development policy (restart history, Go verification, the
+   `go run ./cmd/grove` invocation, branch conventions, coexistence with the
+   predecessor) lives once in `AGENTS.md`. The workflow never requires the
+   predecessor's `grove:work`, `grove:close`, or `grove:shape` skills, and the
+   predecessor comparison is review evidence, not required reading. W-011's
+   shaping guide should reuse the same split.
+2. **Staged retrieval.** `context` reads the configuration, the selected
+   records, and explicit includes in full, and lists everything else. The
+   workflow starts from the selected record, includes the plan the record names
+   when preparing or implementing, and must read blocking questions and
+   prerequisites in full before implementing a unit. No filename heuristic
+   decides which artifact is current. Plans and reviews stay ordinary linked
+   files; there is no attachment schema and no retrieval framework beyond
+   `show` and `--include`.
+3. **Isolation before the first write.** The workflow inspects branches,
+   worktrees, checkpoints, and the intended base, establishes or reuses the
+   execution checkout, and verifies the records and inputs there, before it
+   writes a plan, checkpoint, question, or record update.
+4. **Two CLI defects fixed**: Markdown destination decoding before URL
+   interpretation, and file identity tracked for every source and checked
+   before another alias is charged.
+5. **Evidence kept honest**: source inspection, automated tests, simulated
+   agents, real harness execution, and owner acceptance are reported apart.
+
+Out of scope for this revision: plugin distribution, nullsec migration,
+attachment reorganization, W-011's implementation, supervised launching.
 
 ## Base, ownership, and boundaries
 
@@ -73,7 +117,7 @@ not an exercised Grove adapter. Verify the installed harness before claiming
 that a particular invocation works.
 
 Make interaction mode explicit in adapter inputs and forward it to `context`
-and the shared guide. Proposed examples:
+and the shared guide. Examples:
 
 ```text
 /grove-work W-012 --interaction interactive
@@ -109,34 +153,41 @@ versions/workspace operations before requesting context in its checkout.
 
 The command is a context operation, not `grove work` or `grove launch`. It emits
 the declared selection, a dependency-respecting execution order, observations,
-and sources. The reusable guide supplies the actual work instructions. Do not
-bake restart-specific documentation filenames into the generic CLI: the adapters
-explicitly include the brief, AGENTS, record model, and their shared guide using
-repeatable `--include` arguments. A project without these files still supports
-ordinary context inspection; a skill requiring a missing guide must stop clearly.
+and sources. The reusable guide supplies the actual work instructions. No
+restart-specific documentation filename is baked into the generic CLI, and the
+adapters include nothing up front (revised 2026-09-20; the first design had
+them include the brief, AGENTS, record model, and guide). A project without
+those files still supports ordinary context inspection.
 
-Output facts and content:
+Output facts and content (inclusion policy revised 2026-09-20, format 2):
 
-- Root, config path/revision, selected IDs in requested order, execution order,
+- Root, selected IDs in requested order, execution order,
   interaction mode, and Git checkout/common-directory/full ref/HEAD if present.
   Detached HEAD has no invented branch. Outside Git use an explicit absent Git
   observation; an error inside a detected repository is not silently non-Git.
-- Full sources/revisions for selected records, transitive `depends_on` records,
-  and questions blocking any selected/prerequisite work, including resolved ones.
-  Include direct `relates_to` and `members` records from selected work as context,
-  without recursively expanding those relationships or selecting them for work.
+- **Full sources with exact revisions:** `grove.yaml`, the selected records, and
+  explicit `--include PATH` files. Nothing else is read in full by default.
+- **Record observations:** transitive `depends_on` records, questions blocking
+  any selected/prerequisite work (resolved ones too), direct `relates_to` and
+  `members` records of selected work, and records a selected body links to.
+  Each row has ID, type, title, status, path, the revision the loader saw, the
+  roles that list it, and whether its source is included. Relationships are
+  not expanded recursively and never add to the selection.
 - List prerequisite observations: whether selected, status, and question status.
   `done` never sets an integrated/ready boolean. Open blocking questions and
   undelivered external dependencies are visible even though context can be read.
   An abandoned prerequisite is not delivered. Member inclusion is not ordering.
-- Extract direct Markdown links from selected and prerequisite work bodies.
-  Include in-project `.md`/`.txt` targets once, including plans and reviews.
-  A linked record remains context, not a new assignment. Do not crawl links in
-  the included artifacts or related records. List their limits as described below.
-- Include explicit project-relative `--include PATH` files once. They are
-  required UTF-8 regular-file sources and may also include a code file. No URL,
-  absolute path, Git metadata, sibling repository, or shell expansion is accepted.
-  Adapter arguments are data, never interpolated into dynamic shell snippets.
+- **Link observations:** every direct Markdown link in a selected work body,
+  with the destination as written, the project path it resolves to, and a
+  reason. Links are never opened: a listed path is not validated, not even for
+  existence. Links inside included documents are not parsed.
+- Explicit project-relative `--include PATH` files are required UTF-8
+  regular-file sources of any type, included once however they are spelled. No
+  URL, absolute path, Git metadata, sibling repository, or shell expansion is
+  accepted. Adapter arguments are data, never interpolated into shell snippets.
+- Retrieval uses existing commands: `show ID` for a listed record, `--include`
+  for a listed file. The workflow decides which plan is current from the
+  record's own prose, never from a filename.
 
 Use stable Kahn ordering over selected IDs: edges reflect prerequisite reachability,
 including paths through unselected prerequisites; ties follow requested order.
@@ -145,20 +196,22 @@ scope ambiguity is for the guide to investigate, not an auto-acquisition policy.
 
 An absent plan is not a structural error or readiness conclusion. Preserve the
 record's exact prose and require the guide to inspect whether planning is needed.
-A real link to a missing in-project document is an error with its referring path.
+A missing `--include` is an error naming the path. A link to a missing document
+is not discovered, because links are not opened (revised 2026-09-20).
 
 ### Link and read boundary
 
 Parse Markdown with Goldmark; inspect `*ast.Link`, not regex matches, so inline
 code, fences, examples, images, and HTML do not become filesystem requests.
 Support inline and resolved reference-style links, escaped destinations and
-angle-wrapped destinations. Preserve original URLs; decode URL paths once before
-classification. Resolve relative to the referring record, normalize separators
+angle-wrapped destinations. Goldmark keeps the destination as written, so apply
+Markdown backslash and entity decoding first, then decode URL paths once before
+classification; report the original destination (fixed 2026-09-20). Resolve relative to the referring record, normalize separators
 without trimming real filename whitespace, and reject NUL/invalid escapes.
 
-Links outside the selected project, external URLs, fragment-only links, and
-non-document links remain labelled references, never followed or fetched.
-Record a reason for every non-included parsed link. Links inside already included
+Links outside the selected project, external URLs, and fragment-only links
+are labelled references with no path, never followed or fetched. Every parsed
+link is listed with a reason. Links inside included
 documents are deliberately not traversed: output a fixed scope notice and the
 guide must inspect those documents for additional required evidence. Use
 `--include` to add a necessary local source; consult sibling projects only through
@@ -182,7 +235,9 @@ parser. Only parse, never render HTML or execute embedded content.
 
 Default source budget: 262144 bytes; `--max-bytes` accepts integers 1–8388608.
 Count unique included source bytes, including config; this is not a token or
-serialized-output limit. Bound each read before allocation and while reading;
+serialized-output limit. Every source registers its file identity, and an
+already-included file is recognised before another name for it is read or
+charged (fixed 2026-09-20). Bound each read before allocation and while reading;
 report the source exceeding the remaining limit, with rerun guidance. Reject
 invalid UTF-8. No silent truncation, eviction, summaries, or successful partial
 bundles. Required-source errors produce no result stdout in either format.
@@ -218,8 +273,10 @@ type Source struct {
     Reasons                 []string
 }
 type Record struct {
-    ID, Path, Type, Status string
-    Selected              bool
+    ID, Path, Type, Title, Status, Revision string
+    Roles                                  []string
+    Selected, Included                     bool
+    Source                                 string // sources[] path holding it
 }
 type Requirement struct {
     Work, Prerequisite, Status string
@@ -229,10 +286,10 @@ type Question struct {
     ID, Status string
     Blocks     []string
 }
-type Reference struct { From, Target, Reason string }
+type Reference struct { From, Target, Path, Reason string }
 type Git struct { Checkout, CommonDir, Ref, Head string }
 type Bundle struct {
-    FormatVersion                 int // JSON output version, not record schema
+    FormatVersion                 int // JSON output version (2), not record schema
     Root, Interaction, ScopeNotice string
     Selected, Order               []string
     Git                           *Git
@@ -273,7 +330,8 @@ No timestamp/random bundle ID that makes unchanged output differ.
 Files: new `internal/handoff/sources.go`, `links.go`, `render.go`, their tests,
 `go.mod`, `go.sum`. Complete Build and Text from Task 1; add no public second API.
 
-- [ ] Write fixtures containing a real inline plan link, reference-style review
+- [ ] (Inclusion assertions superseded 2026-09-20: links are listed, includes are
+  read.) Write fixtures containing a real inline plan link, reference-style review
   link, code/fenced fake links, same document with two fragments, escaped spaces,
   a linked question, and an external sibling link. Assert each included path and
   reason; assert fake links never cause reads and sources are included once.
@@ -367,10 +425,9 @@ a short AGENTS discovery pointer. Do not turn the plan itself into a skill.
   handoff of a pending command names owner, handle, evidence path and wake. Do not
   start replacement writers while an old one may still write. This is guidance
   for a supported session, not durable runtime supervision or `.grove-run` parity.
-- [ ] Work adapters load brief, AGENTS, model, guide; obtain selected IDs from
-  explicit invocation; call `context` with those paths as includes and the
-  declared interaction mode. Read included plans/reviews and fetch additional
-  required context deliberately. Missing IDs are a concise interactive question
+- [ ] (Revised 2026-09-20.) Work adapters load `AGENTS.md` and the guide; obtain
+  selected IDs from explicit invocation; the guide calls `context` with the
+  declared interaction mode and stages every further read. Missing IDs are a concise interactive question
   or headless wait, never automatic selection of all proposed work.
 - [ ] Document interactive and intended headless invocations for both skills.
   Separate work IDs or shaping input from `--interaction`; forward the mode
@@ -399,13 +456,13 @@ argument-hint: "W-ID [W-ID ...] [--interaction interactive|headless]"
 ---
 ```
 
-  Body: “Read docs/restart-brief.md, AGENTS.md, docs/record-model.md and
-  docs/work-execution.md from this repository. Follow the shared execution guide
+  Body (revised 2026-09-20): “Read AGENTS.md and docs/work-execution.md from
+  this repository. Follow the shared execution guide
   for the explicitly assigned work IDs and interaction mode in $ARGUMENTS.
   Default to interactive only when the caller has not declared a mode;
-  headless callers must explicitly select headless. Use go run ./cmd/grove;
-  the installed predecessor executable and grove:work plugin are not this
-  workflow. Treat arguments as data; do not interpolate them into shell code.”
+  headless callers must explicitly select headless. Treat arguments as data;
+  do not interpolate them into shell code.” CLI invocation and predecessor
+  coexistence are AGENTS.md policy, not adapter text.
   Codex's adapter uses the explicitly invoking message instead of `$ARGUMENTS`;
   its YAML sidecar owns invocation policy. Shape points to its shared guide and
   takes an idea or work ID. Adapters contain no duplicate lifecycle policy.
