@@ -22,15 +22,18 @@ type Commit struct {
 // HistoryContext lists the commits reachable from commit that touched the
 // record at path (relative to root, as Version.Path is), newest first,
 // following renames. It says what happened on that line of history and nothing
-// about any other branch: a merge is listed only when it gave the record
-// content that no listed commit did, as a conflict resolution does. Once ctx is
+// about any other branch: a merge is listed only when the record's content
+// differs from the row beneath it, as after a conflict resolution. Once ctx is
 // done, running Git processes are killed and the error is ctx.Err().
 func HistoryContext(ctx context.Context, root, commit, path string) ([]Commit, error) {
 	// --raw names the record's blob at each commit, so a rename needs no path
 	// read back from Git. A commit line starts with NUL, which no subject holds.
-	// Diffing a merge against its first parent gives it a blob too, and keeps
-	// merges that path limiting would drop; those are removed below.
-	out, err := repo.GitContext(ctx, root, "log", "--follow", "--raw", "--no-abbrev", "--diff-merges=first-parent",
+	// A merge is diffed against each parent, so that one differing from any of
+	// them is listed (once per such parent) with its blob: a conflict resolved
+	// by keeping the first parent's side differs only from the second. Merges
+	// that change nothing a reader can see are removed below. In date order no
+	// commit comes before one made from it, whatever their clocks said.
+	out, err := repo.GitContext(ctx, root, "log", "--follow", "--raw", "--no-abbrev", "--diff-merges=separate", "--date-order",
 		"--no-show-signature", "--no-color", "--format=%x00%H%x00%at%x00%P%x00%s", commit, "--", ":(literal)"+path)
 	if err != nil {
 		return nil, err
@@ -49,6 +52,9 @@ func HistoryContext(ctx context.Context, root, commit, path string) ([]Commit, e
 			if err != nil {
 				return nil, fmt.Errorf("git log: unexpected line %q", line)
 			}
+			if len(commits) != 0 && commits[len(commits)-1].ID == fields[0] {
+				continue // the same merge, against its next parent
+			}
 			commits = append(commits, Commit{ID: fields[0], When: time.Unix(at, 0), Subject: fields[3]})
 			blobs, merge = append(blobs, ""), append(merge, strings.Contains(fields[2], " "))
 		case strings.HasPrefix(line, ":") && len(commits) != 0:
@@ -58,15 +64,13 @@ func HistoryContext(ctx context.Context, root, commit, path string) ([]Commit, e
 			}
 		}
 	}
-	// A merge that only brought in a listed commit's content repeats that
-	// commit, and would name another branch where nothing else does.
-	authored := map[string]bool{}
-	for i, id := range blobs {
-		authored[id] = authored[id] || !merge[i]
-	}
+	// A merge holding the same content as the row beneath it changed nothing
+	// a reader can see: it repeats that row, and would name another branch.
+	// Any other merge stays, so that each row still follows from the one below
+	// and the first is the record as it is at commit.
 	kept := 0
 	for i := range commits {
-		if !merge[i] || !authored[blobs[i]] {
+		if !merge[i] || i+1 == len(blobs) || blobs[i] != blobs[i+1] {
 			commits[kept], blobs[kept] = commits[i], blobs[i]
 			kept++
 		}

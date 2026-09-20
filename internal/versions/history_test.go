@@ -68,6 +68,13 @@ func TestHistoryFollowsOneLineOfCommits(t *testing.T) {
 	if got := lineage(t, root, main, "grove/work/W-404-absent.md"); got != "" {
 		t.Errorf("an untouched path has a lineage: %q", got)
 	}
+	// A commit that deleted the record has no status to show.
+	git(t, wt, "rm", "-q", first)
+	commit(t, wt, "drop it")
+	write(t, wt, first, record("W-001", "work", "active", "Main body.\n"))
+	if got := lineage(t, wt, commit(t, wt, "bring it back"), first); !strings.HasPrefix(got, "active: bring it back\n-: drop it\nabandoned: abandon on feature\n") {
+		t.Errorf("delete and re-add:\n%q", got)
+	}
 }
 
 // A merge is a row only when it gave the record content of its own; dates are
@@ -104,6 +111,41 @@ func TestHistoryMergesAndDates(t *testing.T) {
 	want := "proposed: resolve by reopening\nabandoned: abandon on main\ndone: finish on feature\nactive: start on feature\nproposed: init"
 	if got := lineage(t, root, resolved, path); got != want {
 		t.Errorf("a conflict resolution:\n%q\nwant\n%q", got, want)
+	}
+	// A later merge that only carries that resolution into feature repeats it.
+	git(t, wt, "merge", "-q", "--no-ff", "-m", "Merge branch 'main' into feature", "main")
+	if got := lineage(t, wt, git(t, wt, "rev-parse", "HEAD"), path); got != want {
+		t.Errorf("a merge carrying a merge's content:\n%q\nwant\n%q", got, want)
+	}
+}
+
+// A conflict resolved by taking one side whole leaves content that a listed
+// commit already has. Whichever side's commit is newer, the first row must be
+// the record as the merge left it.
+func TestHistoryKeepsAResolutionThatTookOneSide(t *testing.T) {
+	path := "grove/work/W-001-first.md"
+	for _, c := range []struct{ take, mainAt, featureAt, want string }{
+		{"--ours", "1700000100", "1700000200", "abandoned: take a side\ndone: finish on feature\nabandoned: abandon on main\nproposed: init"},
+		{"--theirs", "1700000200", "1700000100", "done: take a side\nabandoned: abandon on main\ndone: finish on feature\nproposed: init"},
+	} {
+		t.Run(c.take, func(t *testing.T) {
+			root := repoFixture(t)
+			wt := addWorktree(t, root, "feature-wt", "", "-b", "feature")
+			t.Setenv("GIT_COMMITTER_DATE", c.featureAt+" +0000")
+			write(t, wt, path, record("W-001", "work", "done", "Main body.\n"))
+			commit(t, wt, "finish on feature")
+			t.Setenv("GIT_COMMITTER_DATE", c.mainAt+" +0000")
+			write(t, root, path, record("W-001", "work", "abandoned", "Main body.\n"))
+			commit(t, root, "abandon on main")
+			t.Setenv("GIT_COMMITTER_DATE", "1700000300 +0000")
+			if out, err := exec.Command("git", "-C", root, "merge", "-q", "feature").CombinedOutput(); err == nil {
+				t.Fatalf("expected a conflict: %s", out)
+			}
+			git(t, root, "checkout", c.take, "--", path)
+			if got := lineage(t, root, commit(t, root, "take a side"), path); got != c.want {
+				t.Errorf("got\n%q\nwant\n%q", got, c.want)
+			}
+		})
 	}
 }
 
