@@ -2,9 +2,9 @@
 id: "W-012"
 type: work
 title: "Show a work item's lineage from Git history in its card"
-status: proposed
+status: active
 created: "2026-09-20T04:36:57Z"
-updated: "2026-09-20T04:37:22Z"
+updated: "2026-09-20T14:55:55Z"
 kind: feature
 priority: 2
 size: small
@@ -59,6 +59,12 @@ record fields and no stored history.
 
 ## Next
 
-Decide with the owner whether lineage replaces the version list as what a card
-opens to, or sits beside it. Then plan the read (`git log --follow
---format=... -- path`, then one `cat-file --batch` for the statuses).
+On 2026-09-20 the owner selected "beside, history first": the card screen and
+its version list stay, and History leads the details pane, following the
+focused row (the board's checkout while the ID header has focus). That is
+selected direction; the read and the model are in the
+[plan](../../docs/plans/W-012-card-lineage.md).
+
+Checkpoint: `/grove-work W-012`, branch `worktree-W-012` in
+`.claude/worktrees/W-012`, base `a0fd23a`. Plan committed; implementation
+follows its tasks in order.
