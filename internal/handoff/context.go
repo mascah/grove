@@ -1,7 +1,8 @@
 // Package handoff assembles read-only context for explicitly selected work
 // from one checkout. The selected records, the configuration, and the files
 // the caller names are read in full with their revisions; prerequisites,
-// blocking questions, related records, and links are listed compactly so the
+// blocking questions, attached plans and reviews, related records, and links
+// are listed compactly so the
 // caller can retrieve each when its activity needs it. It reports facts. It
 // does not authorize work, decide readiness, or start anything.
 package handoff
@@ -24,6 +25,7 @@ const (
 
 	scopeNotice = "Read in full, with revisions: grove.yaml, the selected work, and caller includes. " +
 		"Listed only: transitive depends_on prerequisites, questions blocking the selected work or a prerequisite, " +
+		"plans and reviews whose work field names the selected work, " +
 		"records the selected work names in relates_to or members or links to, and every link in the selected work's bodies. " +
 		"A listed record's title, status, and revision are what this checkout held; its constraints are in its body, which show ID prints. " +
 		"A listed link was not opened or checked, not even for existence; --include PATH adds a file with its revision and fails if it is missing. " +
@@ -264,6 +266,14 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 		if blocks != nil {
 			b.Questions = append(b.Questions, Question{ID: r.ID, Status: r.Status, Blocks: blocks})
 			role(r.ID, "question blocking "+strings.Join(blocks, ", "))
+		}
+	}
+	// Plans and reviews name their work; the work does not name them back.
+	for _, r := range p.Records {
+		for _, id := range ids {
+			if slices.Contains(r.Work, id) {
+				role(r.ID, map[string]string{"plan": "plan for ", "review": "review of "}[r.Type]+id)
+			}
 		}
 	}
 	// Relationships of the selected work are context, never more selection.

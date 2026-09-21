@@ -21,7 +21,8 @@ import (
 )
 
 const usage = "Usage: grove [--project DIR] [--json]\n" +
-	"       grove [--project DIR] list | show ID [--json] | check | new TYPE TITLE [--slug SLUG]\n" +
+	"       grove [--project DIR] list | show ID [--json] | brief [--json] | check\n" +
+	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
 	"       grove [--project DIR] workspace --source SELECTOR [--json]\n" +
@@ -34,12 +35,16 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"  list       List records in the selected checkout\n" +
 	"  show ID    Print the complete Markdown source for a record;\n" +
 	"             --json prints {id, path, revision, source} instead\n" +
+	"  brief      Print the project brief that grove.yaml names with brief: PATH;\n" +
+	"             --json prints {path, revision, source}. context never adds it by itself.\n" +
 	"  check      Validate configuration, records, and relationships\n" +
-	"  new        Create a work, question, or decision record with the next shared ID;\n" +
+	"  new        Create a work, question, decision, term, plan, or review record with the\n" +
+	"             next shared ID (term, plan, and review need schema_version 2);\n" +
 	"             put -- before a title that starts with a dash\n" +
 	"  update ID  Change frontmatter fields when the file still matches --expect\n" +
 	"             (the revision from show --json); prints {id, path, revision, changed}.\n" +
-	"             Lists are JSON arrays such as '[\"W-001\"]'; priority is 1-5.\n" +
+	"             Lists are JSON arrays such as '[\"W-001\"]'; priority is 1-5. A plan or\n" +
+	"             review names its work with work=[...]; a review's examined is a Git commit.\n" +
 	"  versions   Show each record's committed version on every local branch and live\n" +
 	"             version in every worktree, with a selector per version; exit 1 if any\n" +
 	"             source could not be inspected. Reads only; nothing is created.\n" +
@@ -50,7 +55,8 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"  context    Assemble context for explicitly selected work in this checkout. Read in\n" +
 	"             full, each with its exact revision: grove.yaml, the selected records, and\n" +
 	"             every --include PATH (a required project-relative file). Listed, not read:\n" +
-	"             prerequisites, blocking questions, related, member, and linked records with\n" +
+	"             prerequisites, blocking questions, plans and reviews whose work names a\n" +
+	"             selected ID, related, member, and linked records with\n" +
 	"             title, status, path, and revision, and the selected records' links with the\n" +
 	"             path each resolves to (never opened, so not checked). Read a listed record\n" +
 	"             with show ID; add a listed file, such as the current plan, with --include.\n" +
@@ -147,6 +153,19 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		}
 		fmt.Fprintf(errOut, "grove: record %s not found in this project\n", visible(a.id))
 		return 1
+	case "brief":
+		source, err := p.ReadBrief()
+		if err != nil {
+			report(errOut, err)
+			return 1
+		}
+		if _, err := fmt.Fprintf(errOut, "File: %s\n", visible(p.Brief)); err != nil {
+			return 1
+		}
+		if a.json {
+			return writeResult(out, errOut, marshal(map[string]any{"path": p.Brief, "revision": project.Revision(source), "source": string(source)}))
+		}
+		return writeResult(out, errOut, source)
 	case "check":
 		return writeResult(out, errOut, fmt.Appendf(nil, "OK: %d records\n", len(p.Records)))
 	default:
@@ -315,8 +334,8 @@ func parseArgs(args []string) (a invocation, err error) {
 	if a.slug != "" && a.command != "new" {
 		return a, fmt.Errorf("--slug applies only to new")
 	}
-	if a.json && a.command != "" && a.command != "show" && a.command != "versions" && a.command != "workspace" && a.command != "context" {
-		return a, fmt.Errorf("--json applies only to the board, show, versions, workspace, and context")
+	if a.json && a.command != "" && a.command != "show" && a.command != "brief" && a.command != "versions" && a.command != "workspace" && a.command != "context" {
+		return a, fmt.Errorf("--json applies only to the board, show, brief, versions, workspace, and context")
 	}
 	if a.source != "" && a.command != "workspace" {
 		return a, fmt.Errorf("--source applies only to workspace")
@@ -329,7 +348,7 @@ func parseArgs(args []string) (a invocation, err error) {
 	}
 	switch a.command {
 	case "":
-	case "list", "check":
+	case "list", "check", "brief":
 		if len(positional) != 1 {
 			err = fmt.Errorf("%s takes no positional arguments", a.command)
 		}

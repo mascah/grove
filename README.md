@@ -35,6 +35,8 @@ go run ./cmd/grove list
 go run ./cmd/grove show W-001
 go run ./cmd/grove check
 go run ./cmd/grove new work "Title of the work" --slug short-name
+go run ./cmd/grove new term "Attempt"  # also plan and review; schema_version 2
+go run ./cmd/grove brief               # the brief grove.yaml names
 go run ./cmd/grove show W-001 --json
 go run ./cmd/grove update W-001 --expect sha256:HEX --set status=active --unset size
 go run ./cmd/grove versions W-001 --json
@@ -58,8 +60,18 @@ Without `--project`, discovery searches upward for `grove.yaml` and stops at
 the current Git checkout boundary. Plain directories also work. Any invalid
 record makes the command fail; no partial list or record is printed.
 
-`new` and `update` require a Git checkout. `new` takes the next `W-`, `Q-`,
-or `D-` number from a counter under the repository's common Git directory,
+With `schema_version: 2`, terms, plans, and reviews are records too (`T-`,
+`P-`, `R-`, in `terms/`, `plans/`, `reviews/`). A plan or review names its
+work in a `work` list, set with `update`, and `context W-NNN` lists the plans
+and reviews attached to the selected work without reading them; a review can
+record the Git commit it `examined`. `brief: PATH` in `grove.yaml` names the
+project brief, which `brief` prints and `check` requires to exist. Schema-1
+projects keep working unchanged; the
+[record model](docs/record-model.md#schema-2-knowledge-records-and-the-brief)
+has the compatibility rules.
+
+`new` and `update` require a Git checkout. `new` takes the next number for the
+record's prefix from a counter under the repository's common Git directory,
 shared by every linked worktree, and floors it by the highest ID on any local
 ref or worktree. Never number new records by hand. Both commands serialize
 through a write lock in that same directory; `update` refuses a stale

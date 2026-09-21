@@ -22,7 +22,7 @@ type Selection struct {
 var (
 	hex12   = regexp.MustCompile(`^[0-9a-f]{12}$`)
 	hex16   = regexp.MustCompile(`^[0-9a-f]{16}$`)
-	idForm  = regexp.MustCompile(`^[WQD]-[0-9]{3,}$`)
+	idForm  = project.IDPattern
 	locForm = regexp.MustCompile(`^[^/:\x00-\x1f]+$`)
 )
 

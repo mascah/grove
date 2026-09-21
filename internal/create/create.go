@@ -23,30 +23,41 @@ import (
 	"github.com/mascah/grove/internal/repo"
 )
 
-type kind struct{ prefix, folder, status, body string }
-
-var kinds = map[string]kind{
-	"work":     {"W", "work", "proposed", "## Outcome\n\n## Constraints\n\n## Acceptance\n\n## Next\n"},
-	"question": {"Q", "questions", "open", "## Question\n\n## Next\n"},
-	"decision": {"D", "decisions", "proposed", "## Decision\n\n## Alternatives\n\n## Reconsideration\n"},
+// bodies are the skeletons new writes; the rest of a type is project.Types.
+var bodies = map[string]string{
+	"work":     "## Outcome\n\n## Constraints\n\n## Acceptance\n\n## Next\n",
+	"question": "## Question\n\n## Next\n",
+	"decision": "## Decision\n\n## Alternatives\n\n## Reconsideration\n",
+	"term":     "## Meaning\n\n## Relationships\n",
+	"plan":     "## Design\n\n## Steps\n",
+	"review":   "## Examined\n\n## Findings\n\n## Disposition\n",
 }
 
 var (
 	slugPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
-	idLine      = regexp.MustCompile(`^id:\s*["']?([WQD])-([0-9]+)["']?\s*$`)
+	idLine      = regexp.MustCompile(`^id:\s*["']?([` + project.Prefixes() + `])-([0-9]+)["']?\s*$`)
 )
 
 // New allocates the next ID for kind, creates the record without overwriting
 // anything, and reloads the project so an unreadable result fails loudly.
 // It returns the created file's path relative to the project root.
 func New(p *project.Project, kindName, title, slug string, now time.Time, report io.Writer) (string, error) {
-	k, ok := kinds[kindName]
-	if !ok {
-		return "", fmt.Errorf("record type must be work, question, or decision")
+	k := project.Type(kindName)
+	if k == nil {
+		return "", fmt.Errorf("record type must be work, question, decision, term, plan, or review")
+	}
+	if k.Schema > p.Schema {
+		return "", fmt.Errorf("%s records need schema_version %d in grove.yaml; this project is schema %d", kindName, k.Schema, p.Schema)
 	}
 	title = strings.TrimSpace(title)
 	if title == "" {
 		return "", fmt.Errorf("a nonempty title is required")
+	}
+	// A term's title is its identity, so new can collide where other types
+	// cannot. Refuse before reserving; a term that appears after this load is
+	// refused again under the write lock, before anything is written.
+	if err := definedTerm(p, kindName, title); err != nil {
+		return "", err
 	}
 	if slug == "" {
 		slug = Slug(title)
@@ -57,16 +68,16 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 	if err != nil {
 		return "", err
 	}
-	n, err := allocate(common, p.Root, p.RecordDir, showPrefix, k.prefix, report)
+	n, err := allocate(common, p.Root, p.RecordDir, showPrefix, k.Prefix, report)
 	if err != nil {
 		return "", err
 	}
-	id := fmt.Sprintf("%s-%03d", k.prefix, n)
-	relative := path.Join(filepath.ToSlash(p.RecordDir), k.folder, id+"-"+slug+".md")
+	id := fmt.Sprintf("%s-%03d", k.Prefix, n)
+	relative := path.Join(filepath.ToSlash(p.RecordDir), k.Folder, id+"-"+slug+".md")
 	stamp := now.UTC().Format("2006-01-02T15:04:05Z")
 	// %q emits Go escapes, a subset of YAML double-quoted escapes.
 	content := fmt.Sprintf("---\nid: %q\ntype: %s\ntitle: %q\nstatus: %s\ncreated: %q\nupdated: %q\n---\n\n%s",
-		id, kindName, title, k.status, stamp, stamp, k.body)
+		id, kindName, title, k.Statuses[0], stamp, stamp, bodies[kindName])
 	full := filepath.Join(p.Root, filepath.FromSlash(relative))
 	// The reservation is already durable, so a failure from here on consumes
 	// it. Publication is serialized with update through the shared write lock,
@@ -82,6 +93,9 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 	}
 	if current.RecordDir != p.RecordDir {
 		return "", fmt.Errorf("%s reserved but not created: the record root changed from %s to %s during allocation", id, p.RecordDir, current.RecordDir)
+	}
+	if err := definedTerm(current, kindName, title); err != nil {
+		return "", fmt.Errorf("%s reserved but not created: %w", id, err)
 	}
 	if !bytes.Equal(current.Config, p.Config) {
 		return "", fmt.Errorf("%s reserved but not created: grove.yaml changed during allocation; inspect it and retry", id)
@@ -104,6 +118,15 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 		return "", fmt.Errorf("created %s but the project no longer validates:\n%s", relative, diagnostics(ds))
 	}
 	return relative, nil
+}
+
+func definedTerm(p *project.Project, kindName, title string) error {
+	for _, r := range p.Records {
+		if kindName == "term" && r.Type == "term" && project.TermKey(r.Title) == project.TermKey(title) {
+			return fmt.Errorf("the term %s is already defined by %s in %s", title, r.ID, r.Path)
+		}
+	}
+	return nil
 }
 
 func diagnostics(ds []project.Diagnostic) string {
@@ -195,7 +218,7 @@ func readCounters(path string) (map[string]int, error) {
 		if len(fields) == 2 {
 			n, err = strconv.Atoi(fields[1])
 		}
-		if len(fields) != 2 || err != nil || n < 1 || len(fields[0]) != 1 || !strings.Contains("WQD", fields[0]) {
+		if len(fields) != 2 || err != nil || n < 1 || len(fields[0]) != 1 || !strings.Contains(project.Prefixes(), fields[0]) {
 			return nil, fmt.Errorf("%s is corrupt (%q); fix or remove it to reinitialize from existing records", path, line)
 		}
 		counters[fields[0]] = n

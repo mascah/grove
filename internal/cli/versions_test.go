@@ -199,13 +199,13 @@ func TestVersionsIncompleteAndNotFound(t *testing.T) {
 		t.Fatalf("code=%d stdout=%q stderr=%s", code, out.String(), errOut.String())
 	}
 	// An invalid current checkout is one invalid live source, not a hard stop.
-	write(t, root, "grove.yaml", "schema_version: 2\nrecords: docs/records\n")
+	write(t, root, "grove.yaml", "schema_version: 3\nrecords: docs/records\n")
 	out.Reset()
 	errOut.Reset()
-	if code := Run([]string{"versions", "W-001"}, root, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "unsupported version 2") || !strings.Contains(out.String(), "live feature-wt refs/heads/feature") {
+	if code := Run([]string{"versions", "W-001"}, root, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "unsupported version 3") || !strings.Contains(out.String(), "live feature-wt refs/heads/feature") {
 		t.Fatalf("code=%d stdout=%s stderr=%s", code, out.String(), errOut.String())
 	}
-	if strings.Count(errOut.String(), "unsupported version 2") != 1 {
+	if strings.Count(errOut.String(), "unsupported version 3") != 1 {
 		t.Fatalf("the diagnostic is attributed once, to the live source:\n%s", errOut.String())
 	}
 	plain := projectFixture(t)

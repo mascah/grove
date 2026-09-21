@@ -66,7 +66,7 @@ everything an assignment could touch, and do not skip what a step requires.
 | --- | --- |
 | Starting | This guide, the repository's agent instructions, and `grove context IDs`: the selected records, complete, plus listings. |
 | Deciding what can start | Any open blocking question or undelivered prerequisite the listing shows (`grove show ID`). |
-| Preparing or implementing a unit | Its current plan: the document the record itself names as its plan. |
+| Preparing or implementing a unit | Its current plan: the document the record itself names as its plan, or the `current` plan record that `context` lists as `plan for` it. |
 | Before implementing a unit | Every question blocking it, open or resolved, and every prerequisite it builds on, with the plan or review of a prerequisite whose interface it uses. |
 | When the activity needs it | A related record, decision, review, or the direction document; the record model when a field's meaning or allowed values matter or the CLI refuses a change. A status change through `grove update` needs none of these. |
 | Not by default | Every related record, historical reviews, spent handoff prompts. |
@@ -82,8 +82,11 @@ and may not exist, and nothing listed was checked for you. Retrieve with
 should be recorded next to the selected work, as it should for the plan.
 
 Decide which plan is current from what the record says, not from a filename: a
-record can link several plans, a superseded one, or a shared one. If the record
-names no plan, that is a [preparation](#4-prepare) step, not a search.
+record can link several plans, a superseded one, or a shared one. Where the
+project's schema has plan records, `context` lists those whose `work` names the
+unit, and a plan's `superseded` status says it is not current. If neither the
+record nor that listing names a plan, that is a [preparation](#4-prepare)
+step, not a search.
 
 ## 1. Assemble context
 
@@ -182,8 +185,9 @@ record's.
 
 An absent plan is a preparation step, not a refusal and not readiness. Within
 the authorized outcome, investigate the code, write the plan where the
-repository keeps plans, link it from the record as its plan, and commit it
-before implementing. Small work may record "no plan needed" with the reason in
+repository keeps plans (a plan record from `grove new plan` with its `work`
+set, where the schema has them; otherwise a document linked from the record as
+its plan), and commit it before implementing. Small work may record "no plan needed" with the reason in
 its Next, committed with the rest of that record's changes rather than on its
 own. Preparation does not widen scope: a plan that needs a product choice the
 record does not make is a missing human decision. Report preparation as
@@ -294,7 +298,10 @@ and next actions stay in the record. Mark a
 record done through the CLI only when its acceptance is met. Automated checks
 and screenshots are not the owner's judgment: if required judgment is
 outstanding, record it and leave the work active. Commit evidence with the
-code. Use prose and links; there is no review or run schema.
+code. Record review evidence where the repository keeps it: a review record
+with its `work` and the `examined` commit where the schema has them, otherwise
+prose and links. A review record holds evidence; it is not approval, and there
+is no run schema.
 
 Unless the assignment says otherwise, do not merge, push, deploy, or remove
 worktrees. Implementation complete, reviewed, accepted by the owner, and

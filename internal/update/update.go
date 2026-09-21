@@ -131,9 +131,12 @@ func plan(r *project.Record, req Request) ([]change, error) {
 		"work":     {"title", "status", "relates_to", "kind", "priority", "size", "members", "depends_on"},
 		"question": {"title", "status", "relates_to", "blocks"},
 		"decision": {"title", "status", "relates_to"},
+		"term":     {"title", "status", "relates_to"},
+		"plan":     {"title", "status", "relates_to", "work"},
+		"review":   {"title", "status", "relates_to", "work", "examined"},
 	}[r.Type]
-	lists := map[string][]string{"relates_to": r.RelatesTo, "members": r.Members, "depends_on": r.DependsOn, "blocks": r.Blocks}
-	strs := map[string]string{"title": r.Title, "status": r.Status, "kind": r.Kind, "size": r.Size}
+	lists := map[string][]string{"relates_to": r.RelatesTo, "members": r.Members, "depends_on": r.DependsOn, "blocks": r.Blocks, "work": r.Work}
+	strs := map[string]string{"title": r.Title, "status": r.Status, "kind": r.Kind, "size": r.Size, "examined": r.Examined}
 	check := func(name string) error {
 		if slices.Contains([]string{"id", "type", "created", "updated"}, name) {
 			return fmt.Errorf("%s cannot be changed by update", name)
@@ -164,7 +167,7 @@ func plan(r *project.Record, req Request) ([]change, error) {
 				continue
 			}
 			changes = append(changes, set("priority", strconv.Itoa(n)))
-		case "relates_to", "members", "depends_on", "blocks":
+		case "relates_to", "members", "depends_on", "blocks", "work":
 			var ids []string
 			if !strings.HasPrefix(strings.TrimSpace(f.Value), "[") || json.Unmarshal([]byte(f.Value), &ids) != nil {
 				return nil, fmt.Errorf("%s must be a JSON array of record ID strings, such as [\"W-001\"]", f.Name)
@@ -188,7 +191,7 @@ func plan(r *project.Record, req Request) ([]change, error) {
 				continue
 			}
 			value := strconv.Quote(f.Value)
-			if f.Name != "title" && word.MatchString(f.Value) {
+			if f.Name != "title" && f.Name != "examined" && word.MatchString(f.Value) { // a commit like "abcdefa" must stay a quoted string
 				value = f.Value // enumerated words stay plain; anything else is quoted for the schema check to reject
 			}
 			changes = append(changes, set(f.Name, value))
@@ -205,7 +208,7 @@ func plan(r *project.Record, req Request) ([]change, error) {
 		switch name {
 		case "priority":
 			present = r.Priority != nil
-		case "relates_to", "members", "depends_on", "blocks":
+		case "relates_to", "members", "depends_on", "blocks", "work":
 			present = lists[name] != nil
 		default:
 			present = strs[name] != ""
@@ -248,6 +251,7 @@ func fields(r *project.Record) map[string]string {
 		"id": r.ID, "type": r.Type, "title": r.Title, "status": r.Status, "kind": r.Kind, "size": r.Size,
 		"priority": priority, "created": created,
 		"relates_to": list(r.RelatesTo), "members": list(r.Members), "depends_on": list(r.DependsOn), "blocks": list(r.Blocks),
+		"work": list(r.Work), "examined": r.Examined,
 	}
 }
 

@@ -2,9 +2,9 @@
 id: "W-019"
 type: work
 title: "Represent domain terms and linked work artifacts"
-status: proposed
+status: done
 created: "2026-09-21T00:54:14Z"
-updated: "2026-09-21T04:39:28Z"
+updated: "2026-09-21T14:23:43Z"
 kind: feature
 size: medium
 priority: 1
@@ -83,9 +83,33 @@ whether new types and the key need `schema_version: 2`.
 7. The record model, CLI help, both guides and `AGENTS.md` describe the
    supported behavior, including the new locations, before anything uses them.
 
+## Evidence
+
+Branch `worktree-W-019` from main `d9fc2a5`; implementation through `fc9bef1`.
+[Plan](../../docs/plans/W-019-knowledge-artifacts.md);
+[R-001](../reviews/R-001-w-019-knowledge-records.md) is the independent
+review, with its findings and their fixes. Verified at `fc9bef1`, uncached:
+`gofmt -l .` and `go vet ./...` clean, `go test -count=1 ./...` ok, and
+`go test -race -count=1 -p 1` ok (the reviewer's run; in the implementer's
+run `internal/versions` flaked as R-001 describes and passed alone).
+`grove check` passes.
+
+1. `internal/cli/knowledge_test.go` creates, updates, lists and validates the
+   three types; `internal/project/project_test.go` covers schema-1 refusal and
+   each bad field with file and field; `versions` and `workspace` read a
+   committed schema-2 tree.
+2. `context W-019` in this checkout lists `R-001  review  current  listed
+   review of W-019`; a plan shared by two work items is listed for both.
+3. `examined` on R-001 names `fc9bef1`.
+4. `grove brief` prints `docs/restart-brief.md`; `TestBrief` covers both
+   locations, a missing file, and refused paths.
+5. Schema 1 is unchanged against a binary built from the base (R-001).
+6. Nine terms, `T-001` to `T-009`: the owner read them on 2026-09-21, agreed
+   with them for now, and they are `settled`.
+7. Record model, README, `AGENTS.md` and both guides reconciled in `4bfb5ff`.
+
 ## Preparation and next
 
-Assignable now: W-011 is done and merged. No plan exists; write a concise one
-at `docs/plans/W-019-knowledge-artifacts.md` settling the proposed items above.
-Human judgment is needed only if the design changes D-005's representation or
-the brief's information ownership. W-020 depends on this; W-029 follows it.
+Done on the owner's verdict of 2026-09-21: the terms (Candidate included) and
+the new commands were accepted, and the owner asked for the merge into `main`.
+Nothing remains here. W-020 depends on this; W-029 follows it.
