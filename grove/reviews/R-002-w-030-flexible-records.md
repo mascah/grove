@@ -4,9 +4,9 @@ type: review
 title: "Independent review of W-030 flexible records"
 status: current
 created: "2026-09-21T16:32:01Z"
-updated: "2026-09-21T16:32:02Z"
+updated: "2026-09-21T16:45:05Z"
 work: ["W-030"]
-examined: "94515975deb6b6e7a4fad8a0b2b04c2de9ab4d90"
+examined: "fffc37434e79b4ee0ff5bd6a0b1e73ce085ccb12"
 ---
 
 ## Examined
