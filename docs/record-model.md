@@ -9,17 +9,60 @@ The first Go CLI now reads and validates this model; W-001 records its evidence.
 [The restart brief](restart-brief.md) owns product direction;
 `grove/` owns operational work, questions, and decision receipts.
 
-## Accepted extensions awaiting implementation
+## Schema 2: knowledge records and the brief
 
 On 2026-09-20 [D-004](../grove/decisions/D-004-interactive-adoption.md) selected
-terms and linked work artifacts ([W-019](../grove/work/W-019-knowledge-artifacts.md))
-and a Review stage with accepted-and-integrated implementation completion
-([W-020](../grove/work/W-020-review-lifecycle.md)). These are future contract
-changes; the schema documented below remains the implemented interface until
-those units deliver explicit compatibility and migration behavior. In particular,
-do not write `status: review`, new record types, or Markdown brief/artifact files
-under `grove/` outside the three supported type folders yet. Historical Done
-records retain their original branch-local acceptance meaning, not proof of merge.
+terms and linked work artifacts, and
+[D-005](../grove/decisions/D-005-typed-knowledge-records.md) selected their
+representation. [W-019](../grove/work/W-019-knowledge-artifacts.md) implements
+it as `schema_version: 2`:
+
+| Type | ID | Folder | Statuses (first is what `new` writes) | Extra fields |
+| --- | --- | --- | --- | --- |
+| `term` | `T-001` | `terms/` | `proposed`, `settled` | none |
+| `plan` | `P-001` | `plans/` | `current`, `superseded` | `work` |
+| `review` | `R-001` | `reviews/` | `current`, `superseded` | `work`, `examined` |
+
+- A term's title is the term; its body gives meaning and relationships, not
+  execution instructions. Two terms whose titles match, ignoring case and
+  surrounding space, are an error.
+- `work` is an optional list of work IDs the plan or review belongs to, checked
+  like `depends_on` targets. One plan can name several work items. Work does
+  not name its plans or reviews back: that side is derived, and
+  `context W-NNN` lists them without reading them. `new` takes no fields, so
+  set it with `update ID --expect REVISION --set 'work=["W-001"]'`.
+- `examined` is an optional quoted Git commit, 7 to 40 lowercase hex digits:
+  what the review looked at. Whether the reviewed content has changed since is
+  a comparison a reader makes, not stored state. Approval, candidates, and
+  dispositions belong to W-020, which may extend the review type. A `report`
+  type is not defined yet.
+- Optional `brief: PATH` in `grove.yaml` names the one project brief: a clean
+  project-relative `.md` path without `..`, anywhere in the project, including
+  directly under the record root (`grove/brief.md`), but never inside a type
+  folder. It is not a record and has no ID or frontmatter rules. That one path
+  is exempt from the misplaced-Markdown rule. Every live command requires a
+  regular, non-symlink file there and names `grove.yaml: brief` when it is
+  missing. `grove brief [--json]` prints it like `show`; `context` never adds
+  it, and `--include PATH` still can.
+
+**Compatibility.** The CLI reads schema 1 and schema 2. A schema-1 project
+keeps exactly the rules below: the three original types, no `brief` key, and
+`new term` refused before any ID is reserved. Moving to schema 2 is the
+deliberate one-line edit of `schema_version`; no command rewrites it, and every
+schema-1 record stays valid. An older CLI refuses a schema-2 project with
+"unsupported version 2", and refuses `new` once a newer CLI has written a `T`,
+`P`, or `R` line to the repository's shared counter file, until that checkout
+has the newer code. A brief outside the record root is not existence-checked
+for committed sources in `versions` or the board, which read only `grove.yaml`
+and the record root.
+
+Plans and reviews written before this support remain ordinary files in
+`docs/plans/` and `docs/reviews/`, linked from their records;
+[W-029](../grove/work/W-029-migrate-knowledge.md) owns migrating them and the
+brief. Not implemented: a Review work status and accepted-and-integrated
+completion ([W-020](../grove/work/W-020-review-lifecycle.md)). Do not write
+`status: review` yet. Historical Done records retain their original
+branch-local acceptance meaning, not proof of merge.
 
 ## Minimum representation
 
@@ -29,7 +72,7 @@ CLI interprets and a freeform Markdown body for explanation.
 | Field | Purpose |
 | --- | --- |
 | `id` | Stable identity; renaming the title or file does not change it |
-| `type` | `work`, `question`, or `decision` |
+| `type` | `work`, `question`, or `decision`; with schema 2 also `term`, `plan`, or `review` |
 | `title` | A readable label for lists, search, and the eventual board |
 | `status` | Explicit lifecycle state for that record type |
 
@@ -39,6 +82,7 @@ The accepted relationship fields cover the starter records:
 - Question `blocks`: work IDs whose outcome needs the answer. An unresolved
   question may be relevant without blocking work.
 - Any record `relates_to`: related record IDs, with no implied ordering or gate.
+- Plan and review `work` (schema 2): the work they belong to.
 
 ## Work planning metadata
 
@@ -112,7 +156,8 @@ records: grove
 ```
 
 `schema_version` versions the configuration and record schema together. Require
-both keys; refuse missing or unsupported versions without guessing, migrating,
+both keys; accept 1 and 2 ([what 2 adds](#schema-2-knowledge-records-and-the-brief));
+refuse missing or unsupported versions without guessing, migrating,
 or rewriting files. This is the new CLI's schema 1, unrelated to the sibling
 skills CLI's schema numbering or `grove.toml` configuration.
 
@@ -139,12 +184,13 @@ grove/
   decisions/
 ```
 
-Read `.md` files recursively within those three type folders. Require frontmatter
-`type` to match its folder (`work`, `question`, or `decision`); nested folders
+Schema 2 adds `terms/`, `plans/`, and `reviews/` beside them. Read `.md` files
+recursively within the type folders of the project's schema. Require frontmatter
+`type` to match its folder; nested folders
 may organize records but do not confer lifecycle meaning. Closed records stay
 discoverable in the same tree. Reject symlinks in the record tree; report `.md`
-files outside the three type folders as misplaced rather than silently dropping
-them. Other file extensions are not records. A missing record root is an error;
+files outside the type folders as misplaced rather than silently dropping
+them (the configured brief excepted). Other file extensions are not records. A missing record root is an error;
 missing type folders simply contain no records.
 
 Generate short filenames as `<id>-<slug>.md`, for example:
@@ -171,7 +217,7 @@ survive renaming; ordinary Markdown path links still need updating when moved.
 ### Identity and dates
 
 Use type-prefixed sequential IDs: `W-001` for work, `Q-001` for questions, and
-`D-001` for decisions. Each type has its own counter; the full prefixed ID is the
+`D-001` for decisions; schema 2 adds `T-`, `P-`, and `R-`. Each type has its own counter; the full prefixed ID is the
 canonical identity, not an alias for a hidden random value. Start at 1, pad to a
 minimum of three digits, and expand beyond 999 (`W-1000`) without wrapping or
 renumbering older records. Require canonical padding and a prefix matching
@@ -268,14 +314,15 @@ Cross-branch relationships remain outside this reader's scope.
 `list`, `show <id>`, and `check` read the selected checkout's live files,
 including uncommitted records. Present the selected project path so the source
 is clear. Those commands change no records, dates, configuration, or Git state.
-`new <type> <title> [--slug SLUG]` allocates the next ID as specified above,
+`new <type> <title> [--slug SLUG]` allocates the next ID as specified above
+(refusing a type the project's schema does not have before reserving anything),
 writes `<id>-<slug>.md` with a body skeleton and equal `created`/`updated`
 timestamps, prints the root-relative path, and fails without deleting the file
 if the project no longer validates. It requires Git and never overwrites.
 `show <id> --json` prints one object with `id`, `path`, `revision`, and
 `source`. `update <id> --expect REVISION` with `--set FIELD=VALUE` and
 `--unset FIELD` changes `title`, `status`, `relates_to`, work planning fields,
-or question `blocks` by editing only those frontmatter entries plus `updated`;
+question `blocks`, plan and review `work`, or review `examined` by editing only those frontmatter entries plus `updated`;
 [W-003](../grove/work/W-003-update-records.md) owns its request, preservation,
 locking, and failure-reporting contract, and prints `{id, path, revision, changed}`.
 `versions [ID] [--json]` reads the same project location on every local
@@ -386,9 +433,9 @@ contract defects that W-006/W-007/W-008 repair; their
 these operations; it changes no schema and writes no record. Editing from an
 interactive view and automatic checkout creation are future investments.
 
-Structured attachments, review/report records, artifact ingestion, and agent
-attempts are deferred. Ordinary Markdown links and prose can carry supporting
-material in the meantime. The work planning metadata above is accepted for
+Plans and reviews are records from schema 2 on. Report records, artifact
+ingestion, and agent attempts are deferred. Ordinary Markdown links and prose
+can carry other supporting material in the meantime. The work planning metadata above is accepted for
 the starting schema; attachment deferral does not require
 deferring useful planning fields. Assignees and richer record types remain
 future additions when the first workflow needs them.

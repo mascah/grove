@@ -33,9 +33,12 @@ read the brief when the record, a product question, or reconciliation needs it.
   concrete next action belong to each work record's Next, never the brief. Do
   not create a second editable account of the same direction.
   W-018 owns the selected interactive adoption milestone; its linked roadmap is
-  investment order, not a batch assignment. D-004's target lifecycle and knowledge
-  layout are not implemented schema: W-019/W-020 own their explicit migrations.
-  Until they ship, use the current record model and execution guide.
+  investment order, not a batch assignment. W-019 implements schema 2: term,
+  plan, and review records (D-005) and the `brief:` key that `grove brief`
+  reads. D-004's target lifecycle is not implemented schema: W-020 owns that
+  migration, and W-029 owns moving the brief and the existing `docs/plans` and
+  `docs/reviews` files. Until they ship, use the current record model and
+  execution guide.
 - `../skills/` and `../nullsec/` are evidence and potential compatibility targets,
   not automatically part of an implementation's write scope. Follow their
   instructions; retrieve their Grove knowledge through `grove status`,
@@ -83,8 +86,10 @@ adapters repeat it:
   IDs, in a linked worktree under `.claude/worktrees/`. The default base is
   `main` only when it holds the selected records; the guide says what to do
   when it does not. Do not merge or push unless the assignment says so.
-- Plans are `docs/plans/ID-slug.md` and review evidence is under
-  `docs/reviews/`, linked from the owning record. Reconcile the README or
+- New plans and review evidence are records: `go run ./cmd/grove new plan`
+  or `new review`, then `update` to set `work` (and a review's `examined`
+  commit). Those written before W-019 stay in `docs/plans/` and
+  `docs/reviews/`, linked from the owning record, until W-029 migrates them. Reconcile the README or
   `docs/record-model.md` when their contract changes, and the brief only when
   the work changes the direction it selects, not to report progress.
 - Fixtures that create records belong in a disposable clone reached by an

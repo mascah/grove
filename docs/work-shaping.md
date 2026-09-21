@@ -53,7 +53,7 @@ output is facts, not permission.
 
 | When | Read |
 | --- | --- |
-| Starting | This guide, the repository's agent instructions, the direction document, and `grove list`. |
+| Starting | This guide, the repository's agent instructions, the direction document (`grove brief` prints it when `grove.yaml` names one), and `grove list`. |
 | The topic touches existing records | Those records in full (`grove show ID`), and `grove versions ID`. For existing work being refined, `grove context IDs`, adding `--include PATH` for a plan or document the record names. |
 | A claim depends on how something behaves | The actual code, configuration, or command output. |
 | A field's meaning or allowed value matters, or the CLI refuses a change | The record model. |
@@ -138,6 +138,9 @@ stale, somebody changed the record: reread it, reconcile, and only then retry.
 Never bypass the check by editing frontmatter by hand or retrying blindly.
 
 Use only the record types, fields, and statuses the record model documents.
+Where the schema has term records, domain vocabulary that the conversation
+settles belongs in one (`grove new term "Name"`): meaning and relationships,
+`proposed` until the person confirms it, never execution instructions.
 Do not invent a type, a field, a status, or a new kind of file under the record
 root for knowledge the schema cannot hold yet. Link an existing ordinary
 document when it helps, and say in your return what had no supported home.
