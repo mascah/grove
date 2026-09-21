@@ -92,7 +92,7 @@ adapters repeat it:
   selected records in full and lists the rest; read plans, prerequisites,
   questions, `docs/record-model.md`, and the brief when the guide's step needs
   them, not up front.
-- Work branches are `worktree-G-012`, or `worktree-G-012-G-014` for several
+- Work branches are `worktree-G-030`, or `worktree-G-030-G-031` for several
   IDs, in a linked worktree under `.claude/worktrees/`. The default base is
   `main` only when it holds the selected records; the guide says what to do
   when it does not. Do not merge or push unless the assignment says so.

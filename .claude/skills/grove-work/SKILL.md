@@ -2,7 +2,7 @@
 name: grove-work
 description: Carry explicitly assigned Grove work IDs through preparation, implementation, review, and handoff in this repository.
 disable-model-invocation: true
-argument-hint: "W-ID [W-ID ...] [--interaction interactive|headless]"
+argument-hint: "G-ID [G-ID ...] [--interaction interactive|headless]"
 ---
 
 Assignment: $ARGUMENTS

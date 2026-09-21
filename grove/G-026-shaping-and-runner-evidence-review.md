@@ -4,8 +4,8 @@ type: review
 title: "Shaping and headless-run evidence"
 status: current
 formerly: "docs/reviews/2026-09-19-shaping-and-runner-evidence.md"
-work: ["G-023"]
-updated: "2026-09-21T21:11:16Z"
+work: ["G-023", "G-025"]
+updated: "2026-09-21T21:23:30Z"
 ---
 
 # Shaping and headless-run evidence

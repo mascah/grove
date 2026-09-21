@@ -127,8 +127,8 @@ reproduced it at the base).
    Limit: neutral-ID work deleted from every source is not shelved.
 7. `convert` tests cover cross-record and shared-plan references, `examined`,
    CRLF/BOM, reruns (by another case too) and refusals that reserve nothing.
-   Rehearsed in a disposable clone on G-037, G-063, G-065, G-066, G-064 and
-   the legacy G-037 plan: mechanical diffs only, `check` ok, reruns refused.
+   Rehearsed in a disposable clone on W-019, R-001, W-030, P-001, D-006 and
+   the legacy W-019 plan: mechanical diffs only, `check` ok, reruns refused.
 
 ## Next
 

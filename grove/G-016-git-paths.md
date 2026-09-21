@@ -97,7 +97,7 @@ prefix, and treats a checkout without the record folder as normal;
 `TestAllocateConcurrentAcrossWorktrees` now allocates concurrently from a
 path Git quotes for display; `TestParseWorktrees` covers bare, detached,
 locked, and prunable entries with exact fields and order. The inaccessible
-scan refusal is unchanged. (4) Existing G-007 to G-011 tests pass unchanged.
+scan refusal is unchanged. (4) Existing G-007 and G-009 to G-011 tests pass unchanged.
 
 Independent review (separate reviewer agent, commits `2e18866` and `9d11bdb`,
 own export): no correctness finding. It confirmed on a base export that the

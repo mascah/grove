@@ -32,7 +32,7 @@ mapping page is created last with `new page`.
 **Legacy documents.** `convert PATH --type plan|review --title H1`, slug from
 the old filename without its date or ID prefix. `work` is the work IDs in the
 filename; a review without one takes the work records that link it
-(`integrated-cli`: G-009 to G-016; `predecessor-work` and
+(`integrated-cli`: G-009 to G-011 and G-014 to G-016; `predecessor-work` and
 `shaping-and-runner-evidence`: G-023). `direction-evaluation` names no work
 and gets `relates_to` G-035, which links it. Status stays the type's first,
 `current`: judging a plan superseded is not mechanical. No `examined` and no

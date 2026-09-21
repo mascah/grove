@@ -156,12 +156,12 @@ document when it helps, and say in your return what had no supported home.
 - **Acceptance:** observable and checkable, including human judgment where
   only a person can judge. No items that exist to be ticked.
 - **Next:** the concrete next action and who can take it, such as "assign",
-  "answer Q-007", or "needs a plan covering X". A size or priority only when
+  "answer G-NNN", or "needs a plan covering X". A size or priority only when
   the person gave one or the evidence supports it.
 
 **Questions** are for real, unresolved human choices. Create one when the
 choice blocks or shapes work and nobody present can make it now; set what it
-stops with `--set 'blocks=["W-…"]'`; put the options, evidence, your
+stops with `--set 'blocks=["G-…"]'`; put the options, evidence, your
 recommendation, and who can answer in its body. Do not create questions for
 technical unknowns you can investigate, or for choices the person made during
 the session.

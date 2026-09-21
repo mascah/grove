@@ -144,23 +144,14 @@ included:
 - `grove/G-019-preserve-updates-plan.md:119: W-001`
 - `grove/G-002-branch-versions.md:43: W-003`
 - `grove/G-012-update-plan.md:144: W-002`
-- `grove/G-050-shaping-review.md:43: W-029, W-030`
-- `grove/G-050-shaping-review.md:45: W-029, W-030`
-- `grove/G-050-shaping-review.md:64: W-029, W-030`
-- `grove/G-050-shaping-review.md:65: W-029, W-030`
-- `grove/G-050-shaping-review.md:68: W-029, W-030`
-- `grove/G-050-shaping-review.md:70: W-029, W-030`
-- `grove/G-050-shaping-review.md:73: W-029, W-030`
-- `grove/G-050-shaping-review.md:78: W-029, W-030`
-- `grove/G-050-shaping-review.md:82: W-029, W-030`
-- `grove/G-050-shaping-review.md:83: W-029, W-030`
-- `grove/G-050-shaping-review.md:104: W-029, W-030`
-- `grove/G-050-shaping-review.md:105: W-029, W-030`
-- `grove/G-050-shaping-review.md:109: W-029, W-030`
-- `grove/G-050-shaping-review.md:110: W-029, W-030`
+- `grove/G-050-shaping-review.md`: every `W-029` and `W-030`, which the trial wrote in its own clones before these numbers existed here
 - `grove/G-015-preserve-updates.md:106: W-003`
+- `grove/G-065-flexible-records.md:130-131: W-019, R-001, W-030, P-001, D-006` (the inputs of a `convert` rehearsal, which takes typed IDs)
+- `grove/G-064-stable-knowledge.md:80: W-019` (evidence about schema 2's folder rule)
 
-A typed ID with no row in the table (`W-014` to `W-017`, `W-090`, `Q-002` and
+A typed ID inside a filename or path (`docs/prompts/W-009-implementation.txt`,
+a fixture's `grove/work/W-001-first.md`, a hypothetical `work/W-019/plan.md`)
+was never rewritten either: it names a file, not a record. A typed ID with no row in the table (`W-014` to `W-017`, `W-090`, `Q-002` and
 the like) never named a record here: it is a fixture's or the predecessor's.
 Records and evidence dated before this migration also name the folders of
 their time (`grove/work/`, `docs/plans/`, `docs/reviews/`) where they describe

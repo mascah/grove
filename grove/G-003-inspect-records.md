@@ -89,4 +89,4 @@ passed; this does not prove acceptance of any record's content.
 ## Next
 
 Shape safe record creation and shared sequential-ID allocation, per the
-[restart brief](brief.md#suggested-sequence-and-current-next-action).
+[restart brief](brief.md#suggested-sequence).

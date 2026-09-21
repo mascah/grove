@@ -191,8 +191,8 @@ The [work guide](docs/work-execution.md) is the workflow that uses it: staged
 reading, isolation before the first write, preparation, review with bounded fix
 rounds, checkpoints, and what to do when a human decision is missing,
 interactive or headless. The `grove-work` skill is a thin adapter to that guide
-for [Claude](.claude/skills/grove-work/SKILL.md) (`/grove-work G-012`) and
-[Codex](.agents/skills/grove-work/SKILL.md) (`$grove-work G-012`), invoked
+for [Claude](.claude/skills/grove-work/SKILL.md) (`/grove-work G-030`) and
+[Codex](.agents/skills/grove-work/SKILL.md) (`$grove-work G-030`), invoked
 explicitly and kept in this repository on purpose while it is dogfooded;
 [AGENTS.md](AGENTS.md) holds this repository's development policy, which the
 guide does not repeat. Grove launches no agent;
@@ -308,7 +308,7 @@ Give a new agent this prompt:
 > Read AGENTS.md, grove/brief.md, and docs/record-model.md. Continue the file-backed
 > Grove CLI and interactive workspace described there. The old application was
 > archived. The Go list/show/check/new/update CLI and its records now work
-> locally, as do versions and workspace; G-003 through G-011 record
+> locally, as do versions and workspace; G-003, G-007 and G-009 to G-011 record
 > verification. Find the next
 > action in G-036 and the work records' Next. Treat the brief's
 > remaining proposals as proposals. Inspect

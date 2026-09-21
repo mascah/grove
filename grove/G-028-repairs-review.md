@@ -4,8 +4,8 @@ type: review
 title: "CLI repairs G-014 to G-016: evidence, 2026-09-19"
 status: current
 formerly: "docs/reviews/2026-09-19-repairs-W-006-W-008.md"
-work: ["G-014", "G-016"]
-updated: "2026-09-21T21:11:16Z"
+work: ["G-014", "G-015", "G-016"]
+updated: "2026-09-21T21:23:30Z"
 ---
 
 # CLI repairs G-014 to G-016: evidence, 2026-09-19

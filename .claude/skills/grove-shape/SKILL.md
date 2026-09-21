@@ -2,7 +2,7 @@
 name: grove-shape
 description: Shape an idea or existing Grove records into proposed work, questions, and attributable decisions in this repository, without implementing anything.
 disable-model-invocation: true
-argument-hint: "TOPIC or W-ID [...] [--interaction interactive|headless]"
+argument-hint: "TOPIC or G-ID [...] [--interaction interactive|headless]"
 ---
 
 Shaping request: $ARGUMENTS

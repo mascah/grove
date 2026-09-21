@@ -93,7 +93,7 @@ step, not a search.
 ## 1. Assemble context
 
 ```sh
-grove context G-012 G-014 --interaction interactive
+grove context G-030 G-031 --interaction interactive
 ```
 
 Pass the IDs and mode as separate arguments exactly as given; never build a
@@ -278,7 +278,7 @@ behaviour; stop that unit before implementation instead.
   launch another session, or loop. Persist the question where the owner will
   find it, in the execution checkout from step 3:
   1. `grove new question "…"`, then set what it blocks with
-     `grove update Q-… --expect REVISION --set 'blocks=["W-…"]'`. Put the
+     `grove update G-… --expect REVISION --set 'blocks=["G-…"]'`. Put the
      options, evidence, and your recommendation in its body.
   2. Checkpoint the affected work's Next, naming the question.
   3. Commit both. Finish any selected work that does not depend on the answer.
@@ -324,11 +324,11 @@ an untracked background agent running as an implied continuation.
 
 | Caller | Invocation |
 | --- | --- |
-| Claude, interactive | `/grove-work G-012 G-014` |
-| Claude, headless | `claude -p "/grove-work G-012 --interaction headless"` |
-| Codex, interactive | `$grove-work G-012 G-014` |
-| Any agent without skills | "Read AGENTS.md and docs/work-execution.md, then follow the guide for `G-012 --interaction headless`." |
-| Inspect first, no agent | `grove context G-012` |
+| Claude, interactive | `/grove-work G-030 G-031` |
+| Claude, headless | `claude -p "/grove-work G-030 --interaction headless"` |
+| Codex, interactive | `$grove-work G-030 G-031` |
+| Any agent without skills | "Read AGENTS.md and docs/work-execution.md, then follow the guide for `G-030 --interaction headless`." |
+| Inspect first, no agent | `grove context G-030` |
 
 Every row ends in this file and the same `context` command; the mode travels
 as the `--interaction` argument and is passed on to `context`, which records it

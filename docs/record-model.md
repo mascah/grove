@@ -151,7 +151,7 @@ it as `schema_version: 2`:
   like `depends_on` targets. One plan can name several work items. Work does
   not name its plans or reviews back: that side is derived, and
   `context W-NNN` lists them without reading them. `new` takes no fields, so
-  set it with `update ID --expect REVISION --set 'work=["G-003"]'`.
+  set it with `update ID --expect REVISION --set 'work=["W-001"]'`.
 - `examined` is an optional quoted Git commit, 7 to 40 lowercase hex digits:
   what the review looked at. Whether the reviewed content has changed since is
   a comparison a reader makes, not stored state. Approval, candidates, and
@@ -347,7 +347,7 @@ from a counter of their own, use type-prefixed sequential IDs: `W-001` for work,
 canonical identity, not an alias for a hidden random value. Start at 1, pad to a
 minimum of three digits, and expand beyond 999 (`W-1000`) without wrapping or
 renumbering older records. Require canonical padding and a prefix matching
-`type`. Store IDs as strings and match references exactly; `show G-003` needs
+`type`. Store IDs as strings and match references exactly; `show W-001` needs
 no abbreviated-ID lookup. Numeric ordering must not rely on lexicographic
 sorting once the counter expands.
 

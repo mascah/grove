@@ -77,7 +77,7 @@ layout-design session unless they cannot meet the selected bounds.
 
 At main `76da081`, `internal/project/project.go` requires a type folder and
 `internal/project/metadata.go` requires matching type and ID prefix. A disposable
-clone passed validation with G-037 beneath `work/knowledge/`, but failed with
+clone passed validation with W-019 beneath `work/knowledge/`, but failed with
 the identical record at the root or an ordinary synthesis page there. Current
 filenames are already conventions, and ID relationships survive path changes;
 ordinary Markdown links still require repair when paths change.
