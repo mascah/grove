@@ -8,9 +8,11 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestGitContextCancelledAndOrdinaryErrors(t *testing.T) {
+	t.Parallel()
 	plain := t.TempDir()
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -40,7 +42,9 @@ func TestUncancellableGitWaitsForHeldPipes(t *testing.T) {
 		t.Skip("needs git")
 	}
 	shim := t.TempDir()
-	script := "#!/bin/sh\nsleep 3 &\nexec \"" + real + "\" \"$@\"\n"
+	waitDelay = 50 * time.Millisecond
+	t.Cleanup(func() { waitDelay = 2 * time.Second })
+	script := "#!/bin/sh\nsleep 0.3 &\nexec \"" + real + "\" \"$@\"\n"
 	if err := os.WriteFile(filepath.Join(shim, "git"), []byte(script), 0o755); err != nil {
 		t.Fatal(err)
 	}

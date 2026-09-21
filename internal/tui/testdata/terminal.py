@@ -112,7 +112,7 @@ class Session:
                 raise AssertionError(f"did not exit; screen tail={self.screen[-600:]!r}")
             self.pump()
         for _ in range(3):
-            self.pump()
+            self.pump(0.005)
         out = self.proc.stdout.read()
         self.after = termios.tcgetattr(self.slave)
         for fd in (self.master, self.slave, self.master2, self.slave2):

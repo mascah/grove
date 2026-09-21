@@ -108,8 +108,11 @@ func WaitDelay(ctx context.Context) time.Duration {
 	if ctx.Done() == nil {
 		return 0
 	}
-	return 2 * time.Second
+	return waitDelay
 }
+
+// waitDelay is a variable so the test for the expired wait need not spend it.
+var waitDelay = 2 * time.Second
 
 // GitContext is Git with cancellation: once ctx is done the process is killed
 // and collected, and the error is ctx.Err() instead of a Git diagnostic.
