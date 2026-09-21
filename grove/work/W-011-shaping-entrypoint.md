@@ -2,9 +2,9 @@
 id: "W-011"
 type: work
 title: "Shape project work through reusable agent instructions"
-status: active
+status: done
 created: "2026-09-19T21:20:41Z"
-updated: "2026-09-21T02:53:09Z"
+updated: "2026-09-21T04:09:41Z"
 kind: feature
 priority: 1
 size: small
@@ -77,17 +77,19 @@ disposable clones, CLI simulation, and what was not exercised.
 | Acceptance | State |
 | --- | --- |
 | 1 | Met for explicit headless invocation in both harnesses; interactive typing of the command is unexercised and stated. |
-| 2 | **Open.** Needs the owner's real requirements conversation and judgment. |
+| 2 | Not exercised through `grove-shape`; closed on the owner's verdict below, with that limit. |
 | 3 | Overlap, other-branch work, unanswered choice, headless wait and unchanged rerun observed; stale revision simulated with the CLI only. |
 | 4 | `check` OK and links resolve; the guide's return reports checkout, branch and commit with today's checkout-scoped board. |
 | 5 | Observed in both trials: status stayed `proposed`, no code, launch or merge. |
 
-**Next:** the owner, not an agent resuming this record, merges this branch
-(documentation only; the adapters exist only here until then), then in a fresh
-session in the main checkout runs `/grove-shape` with a real idea, judges the
-result, and records the verdict here.
-Do not shape in this worktree: it is W-011's execution checkout, so the guide's
-step 4 would rightly stop and ask, and an unrelated proposal would ride on
-`worktree-W-011`.
-W-011 stays active until then. No commands are still running; the fixture
-clones were disposable and hold nothing to keep.
+**Owner's verdict, 2026-09-20 (interactive, in the implementing session):** merge
+and close W-011. The owner's recent requirements conversation already produced
+the work now on `main` (W-018 to W-028) without this guide, and there is no
+fresh idea to shape until that work advances. The owner will run
+`/grove-shape W-019` from the main checkout, inspect the result, and adjust the
+guide through further dogfooding if needed. Done here therefore means delivered,
+independently reviewed and accepted by the owner on the headless evidence; a
+real interactive shaping conversation remains unobserved.
+
+**Next:** none for W-011. Findings from the owner's `/grove-shape W-019` run
+belong to new or related work, not to reopening this record by default.
