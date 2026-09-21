@@ -148,24 +148,36 @@ only a document path. Verified uncached on the final revision: `gofmt -l .`
 and `go vet ./...` clean, `go test -count=1 ./...` ok (four whole-suite runs
 in a row at `1a85fc7`), `grove check` ok. `go test -race -count=1 -p 1 ./...`
 at `1a85fc7`: seven packages ok, `internal/versions` failed
-`TestResolveFinalCheck` once and was NOT yet rerun or investigated; an earlier
-race run at `dd3a6f5` passed that package. Flakes seen and rerun green, both
-outside this change: `internal/tui` `TestTerminal` ("files in the repository
-changed") in whole-suite runs, and the system Git segfaulting once under a
-race run.
+`TestResolveFinalCheck` once. Examined on resume: that test alone passed under
+race, and 20 race runs of the package (10 with Homebrew Git 2.55.0, 10 with
+Apple Git 2.50.1) failed 3 times, each in a different test and each as a
+fixture or `repo.GitContext` child dying before it ran (`git worktree` or
+`git rev-parse`: `signal: segmentation fault`) or, once, as a forked child
+spinning until the 10-minute test timeout. A `sample` of that child,
+symbolized against a race-built test binary, was `__tsan::TraceSwitchPartImpl`
+under `syscall.forkAndExecInChild`: the race detector's runtime in the forked
+child before `exec`, with no Grove frame. That child also held copies of other
+tests' `cat-file --batch` stdin pipes, so three unrelated subtests blocked in
+`Wait` until it was killed. 10 non-race runs of the package in a row were
+ok. Recorded as an environment flake of Go 1.26.2's race detector on macOS,
+not a regression of `dd3a6f5`; no code changed. Rerun a failed race package,
+and kill any orphaned `versions.test` process a timeout leaves behind. Also
+seen and rerun green, likewise outside this change: `internal/tui`
+`TestTerminal` ("files in the repository changed") in whole-suite runs.
 
 ## Next
 
-Checkpoint 2026-09-21, session stopped for usage at `1a85fc7` plus this commit.
-First on resume: `go test -race -count=1 -run TestResolveFinalCheck -v
-./internal/versions`, then the package three times, to tell a flake from a
-regression of `dd3a6f5`; fix or record it, then correct the verification
-paragraph above. No command is still running. Everything else below stands.
+The race failure noted at the 2026-09-21 checkpoint is examined and recorded
+in Evidence as an environment flake; nothing else changed.
 
 Implementation complete and independently reviewed; awaiting the owner's
 judgment of the flat tree and ordinary CLI and board browsing (acceptance 6):
 `ls grove/` and `go run ./cmd/grove` in `.claude/worktrees/W-029`. Then mark
-this done and merge `worktree-W-029` (fast-forward from `70de539`). The merged
+this done and merge `worktree-W-029` (fast-forward from `70de539`). Open for
+the owner while browsing: the 22 converted legacy plans and reviews carry no
+`created`, because `convert` sets none and `update` keeps the field fixed, so
+`list` sorts them last and their document dates live only in G-069; say
+whether a follow-up should set them from Git history. The merged
 local branches `worktree-W-004-W-005`, `worktree-W-006-W-008`, `worktree-W-010`,
 `worktree-W-030` and `worktree-direction-reconciliation` still hold schema 1 or
 2, so `versions` exits 1 and the board says INCOMPLETE until the owner deletes
