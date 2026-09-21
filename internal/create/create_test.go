@@ -79,14 +79,15 @@ func TestAllocateFloorsFromRefsAndWorktrees(t *testing.T) {
 	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
 	// G-007 exists only in the feature branch's history, so the ref scan alone
-	// can find it; G-005 exists only as a live file in the worktree.
-	write(t, wt, "grove/G-007-committed-on-branch.md", record("G-007", "work", "proposed"))
+	// can find it; G-005 exists only as a live file in the worktree. Both are
+	// nested: the scan follows discovery, which is recursive.
+	write(t, wt, "grove/deep/G-007-committed-on-branch.md", record("G-007", "work", "proposed"))
 	git(t, wt, "add", "-A")
 	git(t, wt, "commit", "-q", "-m", "branch record")
-	if err := os.Remove(filepath.Join(wt, "grove/G-007-committed-on-branch.md")); err != nil {
+	if err := os.Remove(filepath.Join(wt, "grove/deep/G-007-committed-on-branch.md")); err != nil {
 		t.Fatal(err)
 	}
-	write(t, wt, "grove/G-005-live-only.md", record("G-005", "work", "proposed"))
+	write(t, wt, "grove/any/where/G-005-live-only.md", record("G-005", "work", "proposed"))
 
 	var report bytes.Buffer
 	n, err := Allocate(root, "grove", &report)

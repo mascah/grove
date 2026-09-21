@@ -301,7 +301,7 @@ func TestDuplicateTermTitle(t *testing.T) {
 	}
 }
 
-// briefFixture is a schema-3 project with one baseline work record, for tests
+// briefFixture is a project with one baseline work record, for tests
 // that also need the brief: configuration key.
 func briefFixture(t *testing.T, config string) string {
 	t.Helper()

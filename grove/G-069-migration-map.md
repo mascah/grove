@@ -149,7 +149,8 @@ included:
 - `grove/G-065-flexible-records.md:130-131: W-019, R-001, W-030, P-001, D-006` (the inputs of a `convert` rehearsal, which takes typed IDs)
 - `grove/G-064-stable-knowledge.md:80: W-019` (evidence about schema 2's folder rule)
 
-A typed ID inside a filename or path (`docs/prompts/W-009-implementation.txt`,
+A typed ID shown as an example of the retired spelling (`W-001` in the README
+and the record model) is an illustration, not a reference. A typed ID inside a filename or path (`docs/prompts/W-009-implementation.txt`,
 a fixture's `grove/work/W-001-first.md`, a hypothetical `work/W-019/plan.md`)
 was never rewritten either: it names a file, not a record. A typed ID with no row in the table (`W-014` to `W-017`, `W-090`, `Q-002` and
 the like) never named a record here: it is a fixture's or the predecessor's.

@@ -111,8 +111,9 @@ owner's to delete, and the handoff says so.
    OK at 69 records, 0 broken links, `go test ./...` ok. The audit's remaining
    typed IDs and old folder names are the historical literals G-069 accounts
    for. Hand edits: AGENTS.md, README, the record model's schema-2 examples,
-   guide examples (`G-012 G-014`), one link label. [ ] Independent review.
-4. [ ] Remove schemas 1 and 2 and the script; fix tests and docs; full
-   verification. Independent review of the combined revision.
-5. [ ] Reconcile G-052, the brief and the documented limits; hand off for the owner's
+   guide examples (corrected to `G-030 G-031` in round 1), one link label. [x] Independent review, round 1, fixed in `c08d213`.
+4. [x] Schemas 1 and 2, `convert ID` and the script removed in `dd3a6f5`, docs
+   in `e1dcfbd`. Final independent review [G-070](G-070-reconciliation-review.md)
+   found lost test coverage, restored with its record.
+5. [x] G-052's evidence and Next, and the brief, reconciled. [ ] The owner's
    judgment of the tree and board (acceptance 6).

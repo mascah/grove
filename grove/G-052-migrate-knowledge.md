@@ -100,11 +100,65 @@ old-layout records. Do not rewrite other sessions' worktrees.
    Subsequent title/type/status changes keep the new ID/path stable. No ongoing
    archive or completion-driven move is introduced.
 
+## Evidence
+
+Branch `worktree-W-029` from main `70de539`. Plan
+[G-068](G-068-reconciliation-plan.md); mapping and historical literals
+[G-069](G-069-migration-map.md); independent review
+[G-070](G-070-reconciliation-review.md), two rounds, all consequential and
+minor findings fixed. Not merged or pushed.
+
+1. 46 records, 13 legacy plans and 9 legacy reviews became `G-001` to `G-068`
+   flat under `grove/`, in document-date order, through `grove convert`; G-069
+   and G-070 were created there with `new`. The type folders, `docs/plans/` and
+   `docs/reviews/` are gone; `grove.yaml` names `grove/brief.md`.
+   `docs/prompts/*.txt` stays as spent evidence, accounted for in G-069.
+2. G-069 has one row per source and each record's `formerly` matches its row.
+   Round 1 diffed all 69 pairs: only mechanical ID, path and link edits, with
+   `created`, `updated`, `status` and `examined` byte-identical. Converted
+   legacy documents carry no `created`; their document dates are in G-069.
+3. `grove check` OK at 70 records. Every relative link and anchor resolves
+   (the reviewers' checkers and the migration script's audit). Remaining typed
+   IDs and old folder names are the literals G-069 accounts for: fixtures,
+   trial clones, the predecessor's records, verbatim quotations, branch names,
+   paths, `formerly`.
+4. `context G-030 G-031`, `context G-010` (shared plan G-013, review G-022),
+   `show`, `brief` and `versions G-052` exercised on migrated proposed and done
+   work. The board, driven in a pseudo-terminal on this checkout, shows
+   Proposed 10, Active 1, Done 15 under neutral IDs and opens a card with its
+   history; `git log --follow` on `grove/G-030-card-lineage.md` reaches its
+   pre-migration commits. Limits: `show W-029` finds nothing, so an old ID is
+   resolved through G-069 or `formerly`; a branch that predates the conversion
+   is a source the current CLI cannot inspect (`unsupported version 2;
+   expected 3`, exit 1, valid sources still print), and the board says
+   INCOMPLETE while such local branches exist. Read them with their own CLI.
+5. README, AGENTS.md, the record model, both guides, the adapters and the
+   brief describe one schema. Rehearsed in disposable clones, by the
+   implementer and again by the round-2 reviewer: the migration reproduced an
+   identical mapping after reset, clean and deleting `neutral-ids`; a rerun was
+   refused reserving nothing; a merge from an old-layout branch carried an edit
+   to the record's new path, conflicted on a record added in the old layout,
+   and a restored typed-ID file fails `check`. `new` issues the next `G-` ID
+   flat, and title, status and type updates keep ID and path.
+6. The owner's judgment is outstanding.
+
+Schemas 1 and 2 are deleted (`dd3a6f5`): `schema_version` must be 3, an ID is
+`G-NNN` only, one `neutral-ids` counter, no type folders, and `convert` takes
+only a document path. Verified uncached on the final revision: `gofmt -l .`
+and `go vet ./...` clean, `go test -count=1 ./...` and `go test -race
+-count=1 -p 1 ./...` ok, `grove check` ok. Flakes seen and rerun green, both
+outside this change: `internal/tui` `TestTerminal` ("files in the repository
+changed") in whole-suite runs, and the system Git segfaulting once under a
+race run.
+
 ## Next
 
-G-037 is delivered. Wait for G-065's foundation, then assign this complete
-one-time reconciliation. Prepare a linked plan covering full inventory and
-mapping, allocation, references/evidence, rehearsal, recovery and unmerged
-branches. Full ID and location reconciliation is already selected; do not ask
-again whether existing content should be included. G-041 can reuse the lessons
-but still owns its separate nullsec inventory and live-cutover authority.
+Implementation complete and independently reviewed; awaiting the owner's
+judgment of the flat tree and ordinary CLI and board browsing (acceptance 6):
+`ls grove/` and `go run ./cmd/grove` in `.claude/worktrees/W-029`. Then mark
+this done and merge `worktree-W-029` (fast-forward from `70de539`). The merged
+local branches `worktree-W-004-W-005`, `worktree-W-006-W-008`, `worktree-W-010`,
+`worktree-W-030` and `worktree-direction-reconciliation` still hold schema 1 or
+2, so `versions` exits 1 and the board says INCOMPLETE until the owner deletes
+them; they are all ancestors of main. G-041 reuses the script's approach from
+`8bf691b` for nullsec but owns its own inventory.

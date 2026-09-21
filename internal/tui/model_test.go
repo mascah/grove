@@ -819,7 +819,7 @@ func TestRefreshUnderOverlays(t *testing.T) {
 	}
 }
 
-// Schema 3 drops the tie between ID and type, so the board follows the type
+// Nothing ties an ID to a type, so the board follows the type
 // field alone: neutral-ID work is a card, and a page, which has no status,
 // never is, whatever its ID or wherever it sits.
 func TestBoardFollowsTypeNotIDOrPlacement(t *testing.T) {
@@ -844,11 +844,13 @@ func TestBoardFollowsTypeNotIDOrPlacement(t *testing.T) {
 		retype(version(fx.cMain, "G-060", "Was a page", ""), "page", ""), retype(version(fx.main, "G-060", "Now work", "active"), "work", "active"),
 		retype(version(fx.cMain, "G-061", "Was work", "done"), "work", "done"), retype(version(fx.main, "G-061", "Now a page", ""), "page", ""),
 		retype(version(fx.cFeat, "G-062", "Work elsewhere", "proposed"), "work", "proposed"))
+	// G-063 is deleted everywhere it is seen, so no record says it was work.
+	vs = append(vs, versions.Version{Source: fx.main, Path: "grove/G-063.md", Change: "deleted"})
 	m := open(t, &fake{res: result(fx.main, fx.sources(), vs...)}, 120, 30)
 	if got, want := board(m), "proposed=D-004 active=G-001,G-060 done= abandoned= shelf=G-062"; got != want {
 		t.Fatalf("board:\n got %s\nwant %s", got, want)
 	}
-	if screen := plain(m); strings.Contains(screen, "page") || strings.Contains(screen, "G-002") || strings.Contains(screen, "W-003") || strings.Contains(screen, "G-061") {
+	if screen := plain(m); strings.Contains(screen, "page") || strings.Contains(screen, "G-002") || strings.Contains(screen, "W-003") || strings.Contains(screen, "G-061") || strings.Contains(screen, "G-063") {
 		t.Fatalf("a page must not appear on the board:\n%s", screen)
 	}
 }
