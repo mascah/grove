@@ -31,6 +31,7 @@ var bodies = map[string]string{
 	"term":     "## Meaning\n\n## Relationships\n",
 	"plan":     "## Design\n\n## Steps\n",
 	"review":   "## Examined\n\n## Findings\n\n## Disposition\n",
+	"page":     "",
 }
 
 var (
@@ -44,7 +45,7 @@ var (
 func New(p *project.Project, kindName, title, slug string, now time.Time, report io.Writer) (string, error) {
 	k := project.Type(kindName)
 	if k == nil {
-		return "", fmt.Errorf("record type must be work, question, decision, term, plan, or review")
+		return "", fmt.Errorf("record type must be work, question, decision, term, plan, review, or page")
 	}
 	if k.Schema > p.Schema {
 		return "", fmt.Errorf("%s records need schema_version %d in grove.yaml; this project is schema %d", kindName, k.Schema, p.Schema)
@@ -68,16 +69,26 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 	if err != nil {
 		return "", err
 	}
-	n, err := allocate(common, p.Root, p.RecordDir, showPrefix, k.Prefix, report)
+	// Schema 3 creates every type flat in the record root under a neutral ID;
+	// earlier schemas keep the type's own prefix and folder.
+	prefix, folder := k.Prefix, k.Folder
+	if p.Schema >= 3 {
+		prefix, folder = project.NeutralPrefix, ""
+	}
+	n, err := allocate(common, p.Root, p.RecordDir, showPrefix, prefix, report)
 	if err != nil {
 		return "", err
 	}
-	id := fmt.Sprintf("%s-%03d", k.Prefix, n)
-	relative := path.Join(filepath.ToSlash(p.RecordDir), k.Folder, id+"-"+slug+".md")
+	id := fmt.Sprintf("%s-%03d", prefix, n)
+	relative := path.Join(filepath.ToSlash(p.RecordDir), folder, id+"-"+slug+".md")
 	stamp := now.UTC().Format("2006-01-02T15:04:05Z")
+	status := ""
+	if len(k.Statuses) != 0 {
+		status = "status: " + k.Statuses[0] + "\n"
+	}
 	// %q emits Go escapes, a subset of YAML double-quoted escapes.
-	content := fmt.Sprintf("---\nid: %q\ntype: %s\ntitle: %q\nstatus: %s\ncreated: %q\nupdated: %q\n---\n\n%s",
-		id, kindName, title, k.Statuses[0], stamp, stamp, bodies[kindName])
+	content := fmt.Sprintf("---\nid: %q\ntype: %s\ntitle: %q\n%screated: %q\nupdated: %q\n---\n\n%s",
+		id, kindName, title, status, stamp, stamp, bodies[kindName])
 	full := filepath.Join(p.Root, filepath.FromSlash(relative))
 	// The reservation is already durable, so a failure from here on consumes
 	// it. Publication is serialized with update through the shared write lock,
@@ -160,9 +171,12 @@ func Slug(title string) string {
 }
 
 // Allocate reserves the next number for prefix in the Git repository containing
-// root. Every worktree and record type shares one lock and one counter file
-// under the Git common directory; the issued number is never at or below an ID
-// found in any local ref or worktree's live records.
+// root. Every worktree and record type shares one lock under the Git common
+// directory; the issued number is never at or below an ID found in any local
+// ref or worktree's live records. Typed prefixes share the next-ids counter
+// file. The neutral prefix has its own, because a CLI that predates it refuses
+// a next-ids holding a prefix it does not know: kept apart, an older checkout
+// goes on allocating typed IDs and never reads or rewrites the neutral counter.
 func Allocate(root, recordDir, prefix string, report io.Writer) (int, error) {
 	common, showPrefix, err := repo.CommonDir(root)
 	if err != nil {
@@ -178,6 +192,9 @@ func allocate(common, root, recordDir, showPrefix, prefix string, report io.Writ
 	}
 	defer unlock()
 	counterPath := filepath.Join(common, "grove", "next-ids")
+	if prefix == project.NeutralPrefix {
+		counterPath = filepath.Join(common, "grove", "neutral-ids")
+	}
 	counters, err := readCounters(counterPath)
 	if err != nil {
 		return 0, err

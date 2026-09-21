@@ -400,3 +400,91 @@ func TestNewRefusesATermDefinedAfterLoad(t *testing.T) {
 		t.Fatal("the project must stay loadable")
 	}
 }
+
+// A schema-3 worktree and an older-schema worktree of one repository share the
+// allocator lock but not a counter file: next-ids never gains a line an older
+// CLI would refuse, and the neutral floor comes from nested records in a ref
+// and in another worktree.
+func TestNeutralAllocationBesideATypedWorktree(t *testing.T) {
+	t.Parallel()
+	root := gitProject(t) // main stays schema 1
+	write(t, root, "grove/work/deep/G-007.md", record("G-007", "work", "done"))
+	write(t, root, "grove.yaml", "schema_version: 3\nrecords: grove\n")
+	git(t, root, "checkout", "-q", "-b", "nested")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-q", "-m", "nested neutral record")
+	git(t, root, "checkout", "-q", "main")
+	next := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-next")
+	git(t, root, "worktree", "add", "-q", "-b", "next", next)
+	write(t, next, "grove.yaml", "schema_version: 3\nrecords: grove\n")
+	write(t, next, "grove/any/where/page.md", "---\nid: G-009\ntype: page\ntitle: Live\n---\n")
+
+	var ids []string
+	for _, tc := range []struct{ root, kind string }{{next, "page"}, {root, "work"}, {next, "work"}, {next, "review"}} {
+		path, err := New(load(t, tc.root), tc.kind, "Some title", "", time.Unix(0, 0), &bytes.Buffer{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, path)
+	}
+	want := []string{"grove/G-010-some-title.md", "grove/work/W-002-some-title.md", "grove/G-011-some-title.md", "grove/G-012-some-title.md"}
+	if !slices.Equal(ids, want) {
+		t.Fatalf("got %v, want %v", ids, want)
+	}
+	source, _ := os.ReadFile(filepath.Join(next, "grove/G-010-some-title.md"))
+	if strings.Contains(string(source), "status") || !strings.Contains(string(source), "type: page\ntitle: \"Some title\"\ncreated:") {
+		t.Fatalf("a page has the minimal envelope and no lifecycle:\n%s", source)
+	}
+	typed, _ := os.ReadFile(filepath.Join(stateDir(t, root), "next-ids"))
+	neutral, _ := os.ReadFile(filepath.Join(stateDir(t, root), "neutral-ids"))
+	if string(typed) != "W 3\n" || string(neutral) != "G 13\n" {
+		t.Fatalf("next-ids=%q neutral-ids=%q", typed, neutral)
+	}
+}
+
+func TestNewPageNeedsSchema3(t *testing.T) {
+	t.Parallel()
+	root := gitProject(t)
+	if _, err := New(load(t, root), "page", "T", "", time.Unix(0, 0), &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "page records need schema_version 3") {
+		t.Fatalf("err = %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(stateDir(t, root), "neutral-ids")); err == nil {
+		t.Fatal("a refused type reserved an ID")
+	}
+}
+
+func TestNeutralAllocationConcurrentAcrossWorktrees(t *testing.T) {
+	t.Parallel()
+	root := gitProject(t)
+	write(t, root, "grove.yaml", "schema_version: 3\nrecords: grove\n")
+	git(t, root, "commit", "-qam", "schema 3")
+	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
+	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
+	projects := []*project.Project{load(t, root), load(t, wt)}
+	var wg sync.WaitGroup
+	for i := range 12 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := New(projects[i%2], "page", "P", "", time.Unix(0, 0), &bytes.Buffer{}); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	wg.Wait()
+	seen := map[string]bool{}
+	for _, dir := range []string{root, wt} {
+		for _, r := range load(t, dir).Records {
+			if !strings.HasPrefix(r.ID, "G-") {
+				continue // W-001 is committed, so both worktrees hold it
+			}
+			if seen[r.ID] {
+				t.Fatalf("%s issued twice", r.ID)
+			}
+			seen[r.ID] = true
+		}
+	}
+	if len(seen) != 12 || !seen["G-012"] || seen["G-013"] {
+		t.Fatalf("expected G-001..G-012, got %v", seen)
+	}
+}
