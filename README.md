@@ -11,17 +11,17 @@ out, and the `grove-shape` skill shapes proposals.**
 
 The selected next milestone is a complete interactive shape → implement →
 review → integrate loop on real nullsec work. Start with
-[W-018's adoption roadmap](docs/plans/W-018-adoption-roadmap.md) for the ordered
+[G-036's adoption roadmap](grove/G-047-adoption-roadmap-plan.md) for the ordered
 work. Its proposed capabilities are not commands available in this build:
 the current board remains checkout-scoped and the schema has no Review status.
 
-Start with [the restart brief](docs/restart-brief.md) and
+Start with [the restart brief](grove/brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
 direction and next investment. The
-[direction evaluation](docs/reviews/2026-09-20-direction-evaluation.md) retains
+[direction evaluation](grove/G-048-direction-evaluation-review.md) retains
 research and evidence from Bench, the sibling skills and the current prototype. [grove.yaml](grove.yaml)
 configures the record tree. The completed first implementation is
-[CLI inspection](grove/work/W-001-inspect-records.md).
+[CLI inspection](grove/G-003-inspect-records.md).
 The installed `grove` still belongs to the sibling skills project; it does not
 read this new format.
 
@@ -32,18 +32,18 @@ Requires Go 1.26 or later. Run from this repository:
 ```sh
 go run ./cmd/grove                 # the terminal board; needs a terminal
 go run ./cmd/grove list
-go run ./cmd/grove show W-001
+go run ./cmd/grove show G-003
 go run ./cmd/grove check
 go run ./cmd/grove new work "Title of the work" --slug short-name
 go run ./cmd/grove new term "Attempt"  # also plan and review; schema_version 2
 go run ./cmd/grove new page "Notes"     # general knowledge; schema_version 3
-go run ./cmd/grove convert W-001        # schema 3: neutral ID, prints the mapping
+go run ./cmd/grove convert notes/old-plan.md --type plan --title "Old plan"  # prints the mapping
 go run ./cmd/grove brief               # the brief grove.yaml names
-go run ./cmd/grove show W-001 --json
-go run ./cmd/grove update W-001 --expect sha256:HEX --set status=active --unset size
-go run ./cmd/grove versions W-001 --json
+go run ./cmd/grove show G-003 --json
+go run ./cmd/grove update G-003 --expect sha256:HEX --set status=active --unset size
+go run ./cmd/grove versions G-003 --json
 go run ./cmd/grove workspace --source SELECTOR --json
-go run ./cmd/grove --project "$(go run ./cmd/grove workspace --source SELECTOR)" show W-001
+go run ./cmd/grove --project "$(go run ./cmd/grove workspace --source SELECTOR)" show G-003
 ```
 
 The first three commands read live files without modifying them; `new` adds
@@ -53,7 +53,7 @@ one object holding the path, a `sha256:` content revision, and the source;
 `check` validates metadata and relationships. `update` changes frontmatter
 fields of one record when its file still hashes to `--expect`, keeps every
 other byte of the file, sets `updated`, and prints the resulting revision.
-Lists are JSON arrays such as `'["W-001"]'`; `--unset` removes an optional
+Lists are JSON arrays such as `'["G-003"]'`; `--unset` removes an optional
 field. Project/file context and errors go to stderr, so
 stdout can be redirected. Exit codes are 0 for success, 1 for inspection/output
 errors, and 2 for invalid command usage.
@@ -81,8 +81,8 @@ and no status; pages are never work cards and `context` reads one only through
 `convert` is the one deliberate identity change, for a record with a typed ID
 or a legacy Markdown document, and prints the old-to-new mapping. Moving a
 project to schema 3 is a one-line edit of `grove.yaml` that no command makes
-for you; this repository is still schema 2 until
-[W-029](grove/work/W-029-migrate-knowledge.md). The
+for you; [G-052](grove/G-052-migrate-knowledge.md) moved this repository, and
+[G-069](grove/G-069-migration-map.md) maps every old ID and path. The
 [record model](docs/record-model.md#schema-3-identity-and-placement-apart-from-classification)
 has the page boundary, allocator compatibility with older checkouts, and
 conversion's limits.
@@ -191,12 +191,12 @@ The [work guide](docs/work-execution.md) is the workflow that uses it: staged
 reading, isolation before the first write, preparation, review with bounded fix
 rounds, checkpoints, and what to do when a human decision is missing,
 interactive or headless. The `grove-work` skill is a thin adapter to that guide
-for [Claude](.claude/skills/grove-work/SKILL.md) (`/grove-work W-012`) and
-[Codex](.agents/skills/grove-work/SKILL.md) (`$grove-work W-012`), invoked
+for [Claude](.claude/skills/grove-work/SKILL.md) (`/grove-work G-012`) and
+[Codex](.agents/skills/grove-work/SKILL.md) (`$grove-work G-012`), invoked
 explicitly and kept in this repository on purpose while it is dogfooded;
 [AGENTS.md](AGENTS.md) holds this repository's development policy, which the
 guide does not repeat. Grove launches no agent;
-[the dogfooding evidence](docs/reviews/2026-09-19-W-010-dogfood.md) says which
+[the dogfooding evidence](grove/G-032-dogfood-review.md) says which
 invocations have actually been exercised.
 
 ### Shaping and the `grove-shape` skill
@@ -210,7 +210,7 @@ it never assigns, implements, promotes status, or merges. The `grove-shape`
 skill is the same kind of thin adapter for
 [Claude](.claude/skills/grove-shape/SKILL.md) (`/grove-shape TOPIC`) and
 [Codex](.agents/skills/grove-shape/SKILL.md) (`$grove-shape TOPIC`);
-[its evidence](docs/reviews/2026-09-20-W-011-shaping.md) says what has been
+[its evidence](grove/G-050-shaping-review.md) says what has been
 exercised.
 
 ### The terminal board
@@ -252,7 +252,7 @@ row. Merges are not listed, so where the record's status is not the newest
 listed commit's, a first `here` row gives it and says why. History is read from
 Git when a card is open, never while the board loads, and no key waits for a
 read still in progress. It says what happened on one branch and nothing about
-whether another branch contains it. [W-012](grove/work/W-012-card-lineage.md)
+whether another branch contains it. [G-030](grove/G-030-card-lineage.md)
 owns this.
 
 Keys: arrows or `h` `j` `k` `l` move; Tab switches between the columns and
@@ -276,11 +276,11 @@ Use `go test ./...`, `go test -race ./...`, and `go vet ./...` for verification;
 Run `lefthook install` once per clone: pre-commit formats staged Go files and
 runs `go vet` and `go mod tidy -diff`; pre-push runs `go test ./...`.
 Agent execution remains future work. The
-[integrated CLI review](docs/reviews/2026-09-19-integrated-cli.md) found
-workspace-provenance, update-preservation, and Git-path defects; W-006 through
-W-008 repair them, with [evidence and remaining limits](docs/reviews/2026-09-19-repairs-W-006-W-008.md).
-[W-009](grove/work/W-009-terminal-picker.md) owns the board's contract and its
-[evidence](docs/reviews/2026-09-19-board-W-009.md), including the owner's judgment
+[integrated CLI review](grove/G-022-integrated-cli-review.md) found
+workspace-provenance, update-preservation, and Git-path defects; G-014 through
+G-016 repair them, with [evidence and remaining limits](grove/G-028-repairs-review.md).
+[G-017](grove/G-017-terminal-picker.md) owns the board's contract and its
+[evidence](grove/G-029-board-review.md), including the owner's judgment
 from a demo, which automated checks do not supply.
 
 The intended experience combines linked work, questions, research, project
@@ -305,12 +305,12 @@ the real project providing workflow evidence. Neither is migrated by this reset.
 
 Give a new agent this prompt:
 
-> Read AGENTS.md, docs/restart-brief.md, and docs/record-model.md. Continue the file-backed
+> Read AGENTS.md, grove/brief.md, and docs/record-model.md. Continue the file-backed
 > Grove CLI and interactive workspace described there. The old application was
 > archived. The Go list/show/check/new/update CLI and its records now work
-> locally, as do versions and workspace; W-001 through W-005 record
+> locally, as do versions and workspace; G-003 through G-011 record
 > verification. Find the next
-> action in W-018 and the work records' Next. Treat the brief's
+> action in G-036 and the work records' Next. Treat the brief's
 > remaining proposals as proposals. Inspect
 > the sibling skills and nullsec projects through their Grove CLI when evidence
 > is needed. Preserve this direction and update the brief as choices settle.

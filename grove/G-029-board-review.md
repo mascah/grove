@@ -1,0 +1,186 @@
+---
+id: "G-029"
+type: review
+title: "Terminal board G-017: evidence, 2026-09-19"
+status: current
+formerly: "docs/reviews/2026-09-19-board-W-009.md"
+work: ["G-017"]
+updated: "2026-09-21T21:11:16Z"
+---
+
+# Terminal board G-017: evidence, 2026-09-19
+
+Branch `worktree-W-009`, worktree `.claude/worktrees/W-009`, base `acfc905`
+(main). One implementer owned the shared interfaces; a subagent made the
+cancellable-read change inside that worktree under review, and two separate
+reviewer agents examined the result. Nothing here was merged or pushed.
+[G-017](G-017-terminal-picker.md) owns the contract and
+acceptance; its [plan](G-021-terminal-picker-plan.md#adjustments-made-while-implementing-2026-09-19)
+records each bounded technical adjustment and why.
+
+**What this evidence is not.** Every check below is automated. Nobody has yet
+used the board and said whether it is pleasant, legible, or the right first
+screen. That judgment is the owner's, from the demo command at the end, and
+G-017 stays `active` until it is given.
+
+## Prerequisite
+
+G-014 to G-016 were established in main by Git ancestry, not by status: all
+eleven repair and review-fix commits (`d5666dd` `5316dbe` `892a842` `2cc7814`
+`dac27fe` `2e18866` `9d11bdb` `9e8430c` `dedac73` `40e882f` `7f02b71`) and the
+four closing documentation commits are ancestors of `acfc905`, and
+`worktree-W-006-W-008` has no commit missing from main. No G-017
+implementation or branch existed. The older worktrees were left untouched.
+
+## Commits
+
+| Commit | Change |
+| --- | --- |
+| `17e560a` | G-017 set active through `grove update` |
+| `188b325` | Cancellable source inspection: `repo.GitContext` and friends, `versions.InspectContext`, `versions.ResolveContext`; the old entrypoints are background wrappers |
+| `418ea31` | `versions.Result.GitDir` identifies the invocation's own checkout |
+| `522783c` | `internal/tui`: model, rendering, and `Run`; pins Bubble Tea v2.0.9 and x/ansi v0.11.7 |
+| `32cf105` | Bare `grove` opens the board; shared workspace result writer; discovery-only project lookup; screen-failure exit; pseudo-terminal harness; README |
+| `3904598` | Review fixes: stale chooser row (panic), clipped incomplete warning, lost reason under the sources screen, two assertions that could not fail |
+| `184b8c3` | Review fixes: kill delay no longer applies to uncancellable Git calls, no empty Git diagnostic, SIGHUP cancels the session; final code revision |
+
+## Acceptance, by item
+
+1. **Columns from exactly one live source.** `TestBoardComesFromOneLiveSource`
+   and `TestContextStates` (fake rows with conflicting titles and statuses),
+   and `TestBoardConnectedWorkflow` on a real main/feature repository: main's
+   board shows W-001 proposed under main's title; `b` then shows it active
+   under the feature title with W-002 in Proposed; branch-only W-002 is on
+   main's Other sources shelf with no status; questions never appear; an
+   invalid or unidentifiable context says "not an empty board" and draws no
+   columns; a valid checkout without work draws four empty columns. `b` calls
+   no backend function, and every file under both checkouts and `.git` hashes
+   the same afterwards.
+2. **Explicit selection.** `TestSelectionIsExplicit`: Enter on a card and Enter
+   on the ID header make zero resolver calls; Enter on a version makes exactly
+   one, with that row's selector; two rows holding identical bytes stay two
+   choices. `TestDeletedRowCannotResolve`. One reviewer's 400-seed random-key
+   probe, swapping and reordering results under the model, found no resolver
+   call whose selector differed from the focused row's.
+3. **Honest refusals.** The connected workflow changes the target after it was
+   displayed: `REFUSED: W-001 changed since it was selected` stays through
+   navigation until `r`; after refresh the header is focused, Enter selects
+   nothing, and explicit reselection resolves and `show` reads the new bytes.
+   A committed version whose checkout differs is refused with the resolver's
+   reason. The whole walk repeats with an unrelated invalid worktree: the
+   INCOMPLETE banner persists on every screen and the chooser refuses that
+   checkout with its diagnostic.
+4. **Model behavior.** `TestStaleAndCancelledReplies` (old generations, an
+   abandoned resolve, a reply for another selector), `TestRefreshFollowsIdentityNotPosition`,
+   `TestRefreshUnderOverlays`, `TestQuitAndInterruptCancelTheRead`,
+   `TestLayoutAtEverySize` (120x30, 100x24, 99x24, 80x24, 40x10, below minimum,
+   resize back; every row exactly the terminal's width, hints never clipped),
+   `TestEverythingStaysReachable` (30 cards, 30 shelf items, 26 versions, a
+   200-line body, 60 diagnostics, at three sizes), `TestHostileTextIsInert`
+   (OSC 52, CSI erase, C1 as rune and as raw byte, CR, a bidirectional
+   override, wide and combining characters, newline and tab in paths, on every
+   screen; record bytes unchanged).
+5. **Terminal.** `internal/tui/testdata/terminal.py`, run by `TestTerminal`
+   against a freshly built binary (race-built under `-race`), eight scenarios:
+   select and `show` through the binary in plain and JSON form with no
+   interface byte on stdout; q, Esc, Ctrl-C from two screens; refusal without
+   a terminal in four stream combinations, with help and explicit commands
+   unaffected; a Git read blocked after a started-handshake, then q or Ctrl-C
+   at startup, refresh, and resolve, with the child's PID gone afterwards; the
+   same under SIGHUP; a screen whose far end closes; resize through the
+   minimum and back; and the framework's three log switches set with no file
+   appearing. Each compares all termios fields before and after and requires
+   the alternate screen left and the cursor shown. The repository tree hashes
+   the same after every scenario.
+6. **Suites and review.** Below.
+7. **Default invocation.** `TestBoardInvocation`, `TestBoardRefusesWithoutTerminal`,
+   and the harness. A reviewer diffed 35 invocations of the explicit commands
+   against a binary built from `acfc905`: stdout and exit codes byte-identical,
+   stderr differing only in the usage banner and the `--json` scope message.
+   Refusal without a terminal took 4 to 7 ms.
+
+## Verification
+
+Run uncached in the worktree at `184b8c3`, the final code revision:
+
+| Check | Actual result |
+| --- | --- |
+| `go test -count=1 ./...` | all 7 packages ok (cli 21.9s, create 3.9s, project 0.4s, repo 7.1s, tui 17.9s, update 6.1s, versions 78.8s) |
+| `go test -race -count=1 ./...` | all 7 packages ok, no race reported (cli 25.3s, create 5.6s, project 2.1s, repo 8.3s, tui 41.3s with a race-built binary under the pseudo-terminal, update 6.8s, versions 87.6s) |
+| `go vet ./...` | clean, exit 0 |
+| `gofmt -l .` | no files listed |
+| `go run ./cmd/grove check` | `OK: 15 records`, exit 0 (rerun after the record and brief edits: same) |
+| `go mod verify`; `go mod tidy` | all modules verified; no diff |
+| `python3 internal/tui/testdata/terminal.py BINARY` | eight scenarios ok; a reviewer ran the earlier seven three times without a flake |
+| Stray processes | `pgrep -fl "sleep 600"` finds none after the suites |
+
+The same suites passed at `32cf105` before review. Cancellation tests were
+written first and failed to compile before the implementation; with the
+resolver's guard disabled one failed with `branch refs/heads/feature moved`,
+and with the inspection guards disabled one returned a Result carrying bogus
+diagnostics. `TestRefreshUnderOverlays` fails without the chooser fix.
+
+## Independent review
+
+Two reviewer agents with fresh context, working read-only with throwaway
+probes they deleted, one on selection, derivation, and text safety, one on
+cancellation, lifecycle, and the CLI contract. Their findings and dispositions:
+
+| Finding | Severity | Disposition |
+| --- | --- | --- |
+| The chooser kept a row index across `r`; fewer checkouts inverted a slice bound and the next frame panicked, or showed no rows | consequential | Fixed in `3904598`: the shared window function clamps, the model clamps on each result; regression fails without it |
+| INCOMPLETE clipped to `INC…` at 40 columns during a pending read | minor | Fixed: the warning leads the banner; regression |
+| A card vanishing while the sources screen covered its versions lost the reason and Esc opened another card | minor | Fixed; regression. Never a selection risk: refresh had already cleared the version focus |
+| A selector-binding assertion decided by the wrong check; a scroll assertion that could not fail at one size | nit | Both replaced |
+| The two-second kill delay also bounded uncancellable Git calls: a helper holding Git's output made `versions` fail with `grove: git worktree: ` where `acfc905` succeeded | minor, demonstrated | Fixed in `184b8c3`: only a cancellable context bounds the wait; a silent Git failure reports the failure; regression with a pipe-holding shim |
+| SIGHUP left a blocked Git child running and the terminal raw | minor, demonstrated | Fixed: `Run` cancels on SIGHUP; harness scenario |
+| `ResolveContext`'s comment overstated what cancellation replaces | nit | Comment corrected |
+| The final `ctx.Err()` guard in `inspect` is not the deciding check in any test | nit | Kept as defense; recorded here |
+| `RUNEWIDTH_EASTASIAN` is read before `Run` can unset anything | nit | No action: it changes cell widths and writes no file |
+
+Verified sound by the reviewers: no Git execution reachable from the context
+entrypoints is unbound; a cancelled call returns neither Result nor Workspace;
+`Result.GitDir` does not reach `versions --json`; the invocation checkout is
+found through a symlinked path, `--project`, a nested prefix, and a linked
+worktree; `reads` and the watched screen are race-free, and `Run` cannot
+return a workspace after an interrupt or a dead screen; unsetting the log
+switches is effective and load-bearing (without it the harness fails with
+`trace.log`); the harness's survivor check does report a surviving child under
+SIGKILL; `PENDIN` (0x20000000) is the only termios bit that differs on macOS
+and flipping `ECHO` fails the comparison; dependency versions match Bubble
+Tea v2.0.9's own requirements.
+
+## Remaining limits
+
+- Owner usability feedback has not happened. Layout, wording, key choices, and
+  whether the board is the right first screen are unjudged.
+- Unix only in evidence: the pseudo-terminal harness needs `python3` with
+  `pty` and `termios`, and is skipped without it. Nothing was run on Windows.
+- SIGKILL cannot restore a terminal or collect a child. SIGTERM exits 0
+  without output, as the framework's quit. A blocked filesystem call (not
+  Git) is not interrupted by cancellation.
+- Every refresh and every resolve re-inspects all branch tips and worktrees
+  (about 0.6 s for this repository's eight sources when this was written;
+  0.24 s after [G-031](G-031-load-scaling.md), which also
+  measures large repositories). No polling, watching,
+  caching, search, filter, or mouse, by design of this slice.
+- Escaping also escapes the joiners inside emoji sequences and non-ASCII
+  spaces; they display as `‍` and the like rather than rendering.
+- Version rows clip a long source label before its change word at 2/5 width;
+  the detail pane shows both in full.
+- The board reads only. Record edits, worktree creation, and launching an
+  editor, shell, or agent remain separate work, as do claims and runs.
+
+## Integration handoff
+
+Integration into main is a separate, explicit step; G-017 being active or done
+asserts the state of this branch only. Demo, from the worktree:
+
+```sh
+cd .claude/worktrees/W-009 && go run ./cmd/grove
+```
+
+It opens on this checkout's board, where G-017 is Active while main's version
+says proposed: Enter on that card shows both. `b` switches the board to main's
+live files. Selecting a version prints its project directory after the screen
+is restored.

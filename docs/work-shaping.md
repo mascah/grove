@@ -220,12 +220,12 @@ define authorization, budgets, logs, and recovery.
 
 | Caller | Invocation |
 | --- | --- |
-| Claude, interactive | `/grove-shape a way to archive finished work` or `/grove-shape W-019` |
-| Claude, headless | `claude -p "/grove-shape W-019 --interaction headless"` |
+| Claude, interactive | `/grove-shape a way to archive finished work` or `/grove-shape G-037` |
+| Claude, headless | `claude -p "/grove-shape G-037 --interaction headless"` |
 | Codex, interactive | `$grove-shape a way to archive finished work` |
 | Any agent without skills | "Read AGENTS.md and docs/work-shaping.md, then follow the guide for: TOPIC." |
 
 The skills are explicit-invocation only. Which rows have been exercised in a
 real harness is recorded in the
-[W-011 evidence](reviews/2026-09-20-W-011-shaping.md); that is history, not
+[G-025 evidence](../grove/G-050-shaping-review.md); that is history, not
 required reading for a shaping session.

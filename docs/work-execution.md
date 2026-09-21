@@ -22,12 +22,12 @@ win.
 ## Contract transition
 
 The owner selected a future Review lifecycle and revised completion meaning in
-[D-004](../grove/decisions/D-004-interactive-adoption.md).
-[W-020](../grove/work/W-020-review-lifecycle.md) owns implementing the transition
+[G-035](../grove/G-035-interactive-adoption.md).
+[G-038](../grove/G-038-review-lifecycle.md) owns implementing the transition
 and revising this guide. Until then follow the supported statuses and handoff
 below: report candidate readiness, human judgment and integration separately;
 do not write unsupported Review status or treat old Done records as merge proof.
-The [adoption roadmap](plans/W-018-adoption-roadmap.md) is not an assignment of
+The [adoption roadmap](../grove/G-047-adoption-roadmap-plan.md) is not an assignment of
 all its members.
 
 ## Inputs
@@ -93,7 +93,7 @@ step, not a search.
 ## 1. Assemble context
 
 ```sh
-grove context W-012 W-014 --interaction interactive
+grove context G-012 G-014 --interaction interactive
 ```
 
 Pass the IDs and mode as separate arguments exactly as given; never build a
@@ -324,11 +324,11 @@ an untracked background agent running as an implied continuation.
 
 | Caller | Invocation |
 | --- | --- |
-| Claude, interactive | `/grove-work W-012 W-014` |
-| Claude, headless | `claude -p "/grove-work W-012 --interaction headless"` |
-| Codex, interactive | `$grove-work W-012 W-014` |
-| Any agent without skills | "Read AGENTS.md and docs/work-execution.md, then follow the guide for `W-012 --interaction headless`." |
-| Inspect first, no agent | `grove context W-012` |
+| Claude, interactive | `/grove-work G-012 G-014` |
+| Claude, headless | `claude -p "/grove-work G-012 --interaction headless"` |
+| Codex, interactive | `$grove-work G-012 G-014` |
+| Any agent without skills | "Read AGENTS.md and docs/work-execution.md, then follow the guide for `G-012 --interaction headless`." |
+| Inspect first, no agent | `grove context G-012` |
 
 Every row ends in this file and the same `context` command; the mode travels
 as the `--interaction` argument and is passed on to `context`, which records it
@@ -338,5 +338,5 @@ must separately define authorization, workspace binding, attempt identity,
 logs, cancellation, and recovery. Which of these rows has been exercised in a
 real harness, and what this workflow keeps, adapts, and defers from the
 predecessor's `/work`, are recorded in the
-[dogfooding evidence](reviews/2026-09-19-W-010-dogfood.md). That is history,
+[dogfooding evidence](../grove/G-032-dogfood-review.md). That is history,
 not required reading for an assignment.

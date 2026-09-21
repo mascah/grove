@@ -5,20 +5,21 @@ good" to the draft. This covers the representation, fields, relationships,
 lifecycles, and initial validation boundary below. The owner accepted the
 [on-disk defaults below](#on-disk-contract) on 2026-09-19, then replaced the
 random-ID/long-filename trial with shared sequential IDs and short filenames.
-The first Go CLI now reads and validates this model; W-001 records its evidence.
-[The restart brief](restart-brief.md) owns product direction;
+The first Go CLI now reads and validates this model; G-003 records its evidence.
+[The restart brief](../grove/brief.md) owns product direction;
 `grove/` owns operational work, questions, and decision receipts.
 
 ## Schema 3: identity and placement apart from classification
 
-[D-006](../grove/decisions/D-006-stable-knowledge.md) selected stable identity
+[G-064](../grove/G-064-stable-knowledge.md) selected stable identity
 and placement, general knowledge pages, flat creation and recursive discovery
-independent of type folders. [W-030](../grove/work/W-030-flexible-records.md)
+independent of type folders. [G-065](../grove/G-065-flexible-records.md)
 implements it as `schema_version: 3`. Everything in the schema-1 and schema-2
 sections below still holds under schema 3 except where this section says
 otherwise, and a schema-1 or schema-2 project keeps exactly its old rules.
-This repository is still schema 2:
-[W-029](../grove/work/W-029-migrate-knowledge.md) owns moving it.
+[G-052](../grove/G-052-migrate-knowledge.md) moved this repository to schema 3
+and converted every record; [G-069](../grove/G-069-migration-map.md) is the
+old-to-new mapping.
 
 - **Discovery.** Every `.md` file beneath the record root, at any depth, is a
   record, except the configured brief. No folder names a type: the root, a
@@ -71,7 +72,7 @@ reads or rewrites the neutral counter, and cannot issue an ID a schema-3
 worktree could also issue, because the namespaces are disjoint. The current CLI
 likewise still issues typed IDs in type folders for a schema-1 or schema-2
 worktree of the same repository. Exercised with a binary built from `bd6debe`
-beside this one; see W-030's evidence.
+beside this one; see G-065's evidence.
 
 **Moving to schema 3** is the deliberate one-line edit of `schema_version`, as
 schema 2 was. No command rewrites it and every schema-2 record stays valid and
@@ -88,7 +89,7 @@ limit: a group deleted from every source carries no record, so only a typed
 
 **Conversion (`grove convert`, schema 3 only).** The one deliberate identity
 change, bounded to one source per run; it is what
-[W-029](../grove/work/W-029-migrate-knowledge.md) uses, never hand-numbering:
+[G-052](../grove/G-052-migrate-knowledge.md) uses, never hand-numbering:
 
 - `convert ID [--slug SLUG]` takes a record with a typed ID. It reserves the
   next neutral ID, changes only `id`, appends `formerly: "OLD-ID"`, and moves
@@ -131,10 +132,10 @@ rewriting, per-type folders or prefixes, and a command that edits
 
 ## Schema 2: knowledge records and the brief
 
-On 2026-09-20 [D-004](../grove/decisions/D-004-interactive-adoption.md) selected
+On 2026-09-20 [G-035](../grove/G-035-interactive-adoption.md) selected
 terms and linked work artifacts, and
-[D-005](../grove/decisions/D-005-typed-knowledge-records.md) selected their
-representation. [W-019](../grove/work/W-019-knowledge-artifacts.md) implements
+[G-051](../grove/G-051-typed-knowledge-records.md) selected their
+representation. [G-037](../grove/G-037-knowledge-artifacts.md) implements
 it as `schema_version: 2`:
 
 | Type | ID | Folder | Statuses (first is what `new` writes) | Extra fields |
@@ -150,11 +151,11 @@ it as `schema_version: 2`:
   like `depends_on` targets. One plan can name several work items. Work does
   not name its plans or reviews back: that side is derived, and
   `context W-NNN` lists them without reading them. `new` takes no fields, so
-  set it with `update ID --expect REVISION --set 'work=["W-001"]'`.
+  set it with `update ID --expect REVISION --set 'work=["G-003"]'`.
 - `examined` is an optional quoted Git commit, 7 to 40 lowercase hex digits:
   what the review looked at. Whether the reviewed content has changed since is
   a comparison a reader makes, not stored state. Approval, candidates, and
-  dispositions belong to W-020, which may extend the review type. A `report`
+  dispositions belong to G-038, which may extend the review type. A `report`
   type is not defined yet.
 - Optional `brief: PATH` in `grove.yaml` names the one project brief: a clean
   project-relative `.md` path without `..`, anywhere in the project, including
@@ -178,11 +179,11 @@ has the newer code. Committed sources in `versions` and the board check only
 the form of `brief`, never that the file exists: they read `grove.yaml` and the
 record root, and only a live checkout is required to hold the brief.
 
-Plans and reviews written before this support remain ordinary files in
-`docs/plans/` and `docs/reviews/`, linked from their records;
-[W-029](../grove/work/W-029-migrate-knowledge.md) owns migrating them and the
+Plans and reviews written before this support were ordinary files in
+`docs/plans/` and `docs/reviews/` until
+[G-052](../grove/G-052-migrate-knowledge.md) converted them and moved the
 brief. Not implemented: a Review work status and accepted-and-integrated
-completion ([W-020](../grove/work/W-020-review-lifecycle.md)). Do not write
+completion ([G-038](../grove/G-038-review-lifecycle.md)). Do not write
 `status: review` yet. Historical Done records retain their original
 branch-local acceptance meaning, not proof of merge.
 
@@ -261,10 +262,10 @@ Defaults accepted 2026-09-19 on the owner's response "YeaI accept those defaults
 folders, timestamps, and optional planning values. Later that day, the owner
 accepted sequential IDs allocated across local worktrees and short filenames
 after finding the original random-ID/timestamp filenames difficult to browse.
-These revised defaults govern the operational records. W-001 implements the
-discovery, validation, graph, and inspection behavior below; W-002 implements
-creation and allocation per [D-003](../grove/decisions/D-003-allocator-mechanism.md).
-[W-003](../grove/work/W-003-update-records.md) implements field updates with
+These revised defaults govern the operational records. G-003 implements the
+discovery, validation, graph, and inspection behavior below; G-007 implements
+creation and allocation per [G-006](../grove/G-006-allocator-mechanism.md).
+[G-009](../grove/G-009-update-records.md) implements field updates with
 content revisions and a shared write lock; renames, moves, deletes, and body
 edits remain unimplemented. This section owns the schema; the brief owns direction.
 
@@ -346,7 +347,7 @@ from a counter of their own, use type-prefixed sequential IDs: `W-001` for work,
 canonical identity, not an alias for a hidden random value. Start at 1, pad to a
 minimum of three digits, and expand beyond 999 (`W-1000`) without wrapping or
 renumbering older records. Require canonical padding and a prefix matching
-`type`. Store IDs as strings and match references exactly; `show W-001` needs
+`type`. Store IDs as strings and match references exactly; `show G-003` needs
 no abbreviated-ID lookup. Numeric ordering must not rely on lexicographic
 sorting once the counter expands.
 
@@ -369,9 +370,9 @@ Allocation requirements for cooperating Grove commands in one local repository:
 The counter belongs to the local repository's Grove project, not to a branch,
 worktree, or configured record-root path. It is local coordination state, not a
 tracked project record; no daemon is required. A Grove-owned directory under
-the Git common directory is the intended home. [D-003](../grove/decisions/D-003-allocator-mechanism.md)
+the Git common directory is the intended home. [G-006](../grove/G-006-allocator-mechanism.md)
 owns the accepted state encoding, lock primitive, and recovery protocol for
-[W-002](../grove/work/W-002-create-records.md) to test with the creation command. `grove new` initializes and maintains `grove/next-ids` under `grove/lock` in
+[G-007](../grove/G-007-create-records.md) to test with the creation command. `grove new` initializes and maintains `grove/next-ids` under `grove/lock` in
 that common directory, and `new` and `update` serialize publication through
 `grove/write.lock` beside them; the read-only inspection commands never create
 any of these files, and none is ever unlinked.
@@ -393,7 +394,7 @@ guarantee. Plain-directory reading remains supported without Git or allocator
 state; automatic allocation outside Git is deferred.
 
 The starter records were renumbered once before any new CLI existed. The mapping
-is retained in [D-002](../grove/decisions/D-002-sequential-ids.md); this is not a
+is retained in [G-004](../grove/G-004-sequential-ids.md); this is not a
 general ID-renaming feature. Schema 1 is still the unshipped starter contract.
 
 Keep `created` and `updated` optional on every type. When present, require quoted
@@ -448,16 +449,16 @@ if the project no longer validates. It requires Git and never overwrites.
 `source`. `update <id> --expect REVISION` with `--set FIELD=VALUE` and
 `--unset FIELD` changes `title`, `status`, `relates_to`, work planning fields,
 question `blocks`, plan and review `work`, or review `examined` by editing only those frontmatter entries plus `updated`;
-[W-003](../grove/work/W-003-update-records.md) owns its request, preservation,
+[G-009](../grove/G-009-update-records.md) owns its request, preservation,
 locking, and failure-reporting contract, and prints `{id, path, revision, changed}`.
 `versions [ID] [--json]` reads the same project location on every local
 branch tip and in every registered worktree, validating each source alone by
 these rules, and prints one row or JSON object per observed version with a
-selector; [W-004](../grove/work/W-004-record-versions.md) owns its source,
+selector; [G-010](../grove/G-010-record-versions.md) owns its source,
 output, incomplete-result, and selector contract. `workspace --source
 SELECTOR [--json]` re-inspects that selection and prints the project
 directory of the existing checkout that still holds exactly that version;
-[W-005](../grove/work/W-005-record-workspace.md) owns its resolution and
+[G-011](../grove/G-011-record-workspace.md) owns its resolution and
 refusal contract. Both require Git and read only.
 
 - `list`: show ID, type, status, and title, ordered by `created` ascending with
@@ -511,16 +512,16 @@ deferred until a real schema change needs them.
 
 The earlier illustrative examples have been replaced by real records:
 
-- [Work: inspect project records](../grove/work/W-001-inspect-records.md)
+- [Work: inspect project records](../grove/G-003-inspect-records.md)
   owns the first CLI's completed outcome and verification evidence.
-- [Question: branch versions](../grove/questions/Q-001-branch-versions.md)
+- [Question: branch versions](../grove/G-002-branch-versions.md)
   retains the accepted grouping and explicit-version-selection policy; source
-  and routing implementation contracts remain in W-004 and W-005.
-- [Decision: starter defaults](../grove/decisions/D-001-starter-defaults.md)
+  and routing implementation contracts remain in G-010 and G-011.
+- [Decision: starter defaults](../grove/G-001-starter-defaults.md)
   records acceptance and points here for the schema rather than copying it.
-- [Work: create records](../grove/work/W-002-create-records.md) owns the
+- [Work: create records](../grove/G-007-create-records.md) owns the
   implemented creation command and shared allocation.
-- [Decision: sequential IDs](../grove/decisions/D-002-sequential-ids.md)
+- [Decision: sequential IDs](../grove/G-004-sequential-ids.md)
   records the naming revision and starter-record ID migration.
 
 Branch-context direction and its evidence remain in the restart brief.
@@ -551,10 +552,10 @@ The CLI now lists, shows, and validates the records tracking its own development
 in one checkout, creates records with shared IDs, updates their fields
 while refusing stale writes, shows each record's versions across local
 branches and worktrees, and locates the existing checkout holding a selected
-version. The [integrated CLI review](reviews/2026-09-19-integrated-cli.md) found
-contract defects that W-006/W-007/W-008 repair; their
-[evidence](reviews/2026-09-19-repairs-W-006-W-008.md) lists the remaining limits.
-[W-009](../grove/work/W-009-terminal-picker.md) adds a read-only terminal board over
+version. The [integrated CLI review](../grove/G-022-integrated-cli-review.md) found
+contract defects that G-014/G-015/G-016 repair; their
+[evidence](../grove/G-028-repairs-review.md) lists the remaining limits.
+[G-017](../grove/G-017-terminal-picker.md) adds a read-only terminal board over
 these operations; it changes no schema and writes no record. Editing from an
 interactive view and automatic checkout creation are future investments.
 

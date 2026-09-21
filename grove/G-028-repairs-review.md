@@ -1,0 +1,136 @@
+---
+id: "G-028"
+type: review
+title: "CLI repairs G-014 to G-016: evidence, 2026-09-19"
+status: current
+formerly: "docs/reviews/2026-09-19-repairs-W-006-W-008.md"
+work: ["G-014", "G-016"]
+updated: "2026-09-21T21:11:16Z"
+---
+
+# CLI repairs G-014 to G-016: evidence, 2026-09-19
+
+Branch `worktree-W-006-W-008`, worktree `.claude/worktrees/W-006-W-008`, base
+`2d6de36` (main when the work began). One implementer made the three repairs
+serially in that order because they share the repository, loader, and CLI
+interfaces. Nothing here was merged or pushed. A done record asserts
+completion on this branch; integration into main is established by Git
+ancestry and remains a separate step.
+
+Each work record owns its acceptance evidence and limits:
+[G-014](G-014-workspace-provenance.md),
+[G-015](G-015-preserve-updates.md),
+[G-016](G-016-git-paths.md). Each plan records the bounded
+technical adjustments made while implementing it. This document holds what
+belongs to the three together: the commits, the combined verification, and
+the review of the combined result. It repairs the defects found by the
+[integrated CLI review](G-022-integrated-cli-review.md) (R1 to R6).
+
+## Commits
+
+| Commit | Record | Change |
+| --- | --- | --- |
+| `d5666dd` | G-014 | Read committed projects two or more levels below the repository root |
+| `5316dbe` | G-014 | Verify live project ownership through every prefix component; re-enter checkouts at the second inventory |
+| `892a842` | G-014 | Re-check the selected target before returning a workspace |
+| `2cc7814` | G-015 | Preserve comments, edit explicit keys, plan flow separators for the whole request |
+| `dac27fe` | G-015 | Compare exact configuration bytes in update and creation |
+| `2e18866` | G-016 | Ask Git for each path on its own; shared NUL-delimited worktree inventory |
+| `9d11bdb` | G-016 | Allocator scans worktrees from that inventory |
+| `9e8430c` | G-014 | Review fixes: configuration vanishing during a read, parent-entry filter, CLI proof |
+| `dedac73` | G-015 | Review fix: the editor's key-position guard was always true |
+| `40e882f` | G-016 | Review fixes: concurrent allocation under odd names; removed a common-directory query (mistaken, see the combined review) |
+| `7f02b71` | G-014 | Restores that common-directory check with a regression; final code revision |
+
+## Reproduction before repair
+
+Every failure was reproduced with the retained regression tests before its
+fix, on a pristine export of `2d6de36` (G-014, G-016) or on the unfixed branch
+(G-015). Observed at the base:
+
+- R1: a feature checkout whose project prefix was an external, intermediate,
+  internal, or dangling symlink, or a nested repository, was reported
+  `Complete:true` with a valid source attributed to `refs/heads/feature`.
+- R2: `workspace --source ... --json` exited 0 with a project path inside a
+  checkout deleted before the second inventory.
+- R3/R4: the comment in `title: # retain` was deleted; removing the final two
+  flow entries failed with `frontmatter: overlapping edits`; `? status` failed
+  with `cannot locate the key's colon`.
+- R5: a comment-only `grove.yaml` change published an update and created a
+  record.
+- R6: for a main checkout named `new\nline`, the repository became `.../new`
+  and the prefix `line/.git\nsub\nproject/`, both live sources were invalid,
+  `lock`, `next-ids`, and `write.lock` appeared under the stray sibling
+  `.../new/grove`, and allocation returned 2 instead of 91.
+
+## Combined verification
+
+Run uncached in the repair worktree at `7f02b71`, the final code revision:
+
+| Check | Actual result |
+| --- | --- |
+| `go test -count=1 ./...` | PASS: cli 14.1s, create 3.9s, project 0.7s, repo 1.6s, update 5.8s, versions 72.2s; the CLI entrypoint has no tests |
+| `go test -race -count=1 ./...` | PASS, all six internal packages |
+| `go vet ./...` | PASS |
+| `gofmt -l cmd internal` | No output |
+| `go run ./cmd/grove check` | `OK: 14 records` |
+| `git diff 2d6de36 HEAD -- go.mod go.sum` | No change; no dependency added |
+| Real use here at `40e882f`: `versions G-014`, then `workspace --source` on this worktree's live selector | Four versions listed; exit 0 and this worktree's path |
+| Local Markdown links and anchors | Pass, except links in the predecessor review to `../skills`, which resolve only from the main checkout's depth and are unchanged here |
+
+The versions package takes three to four times as long as at the base (about
+21s there). About forty new fixtures each build Git repositories, and each
+live checkout now costs more `rev-parse` processes (G-014's limits). Timings
+were taken while reviewers ran their own suites on the same machine.
+
+## Independent review
+
+Four reviews by separate reviewer agents, each working from its own export of
+the committed range and forbidden to edit the repository. The implementer
+wrote none of their probes.
+
+| Scope | Result | Disposition |
+| --- | --- | --- |
+| G-014, `2d6de36..892a842` | No P1/P2. Base failures confirmed; five adversarial probes refused | P3s fixed in `9e8430c` |
+| G-015, `2cc7814` and `dac27fe` | No P1/P2. 46 adversarial `Edit` probes: correct bytes or a safe refusal | Key guard fixed in `dedac73`; two cosmetic behaviours accepted and recorded in G-015 |
+| G-016, `2e18866` and `9d11bdb` | No correctness finding. No remaining newline-unsafe parsing of path-bearing Git output | `40e882f` |
+| Combined, `2d6de36..40e882f` | **One P1**, below. Otherwise: selector and `Parse` byte-identical to the base, `versions --json` identical on the same fixture, no CLI source change outside tests, lock order and `*Failure` unchanged, reads write nothing, no scope beyond the three repairs, and every production hunk turns the suite red when reverted | P1 fixed in `7f02b71` |
+
+The combined review's P1: the G-016 review measured the extra Git processes
+and called the common-directory query in `enterWorktree` redundant, because
+the Git directory must be the common directory or sit directly below
+`<common>/worktrees`. `40e882f` removed it. The combined reviewer then built a
+separate repository with `git init --separate-git-dir <common>/worktrees/evil`,
+registered it by writing its `gitdir` file, and showed it admitted as a valid
+live source and returned by `workspace`: the shape of the Git directory
+matched and only the common directory differed. That needs a write inside
+the repository's Git directory, but it is the defect G-014 exists to prevent,
+and G-014's design names the common directory. `7f02b71` restores the check;
+`TestInspectForeignRepositoryRegisteredAsWorktree` fails at `40e882f` and
+passes now. The same commit removes two unused parameters and an unreachable
+guard the review named, and corrects the measured process counts. `7f02b71`
+itself was verified by that regression and the suites above; it was not sent
+for a fifth review.
+
+## Remaining limits
+
+Per record, in each record's Evidence. Across the three: changes after
+`workspace`'s final check and arbitrary writers after update's final
+comparison stay outside the guarantees; a checkout's own `.git` file
+repointed at a sibling worktree's Git directory is accepted, as it was at the
+base; macOS and Git 2.50.1 only; no Windows, separate-clone, or crash
+durability testing. A pre-existing 300ms lock assertion in
+`internal/update/update_test.go` can pass falsely on a loaded machine.
+
+## Integration handoff
+
+Main advanced from `2d6de36` to `d387853` with documentation-only commits
+while this work ran, and `grove/brief.md` was edited on both sides
+around its next-action section. Main was then merged into this branch and
+that one conflict resolved by keeping both accounts: the repairs' state from
+this branch and the G-023/G-025 direction from main. No code conflicted; the
+merged tree builds, vets, passes `check` with 15 records, and passes the cli,
+update, create, and repo packages. Main can now merge this branch without
+conflict unless it advances again. After merging, rerun the full and race
+suites on main; ancestry of this branch's tip, not these records' statuses,
+establishes integration.

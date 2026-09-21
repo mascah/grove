@@ -1,7 +1,7 @@
 # Working on Grove
 
 This repository is a fresh product restart, with a Go CLI for read-only
-inspection, configuration, and operational records. `docs/restart-brief.md` is
+inspection, configuration, and operational records. `grove/brief.md` is
 the current source of intent; it distinguishes selected direction, observed
 evidence, and proposed design, and those distinctions must be preserved. Read
 it first for anything that shapes direction or is not bounded by a work record.
@@ -14,16 +14,16 @@ read the brief when the record, a product question, or reconciliation needs it.
   The starter file defaults use short sequential IDs, replacing the random-ID
   trial. Allocation coordinates across local worktrees through Git's common
   metadata directory; reading records requires no allocator state.
-  W-001 implements the reader, W-002 record creation with shared allocation,
-  and W-003 field updates with content revisions and a shared write lock.
-  W-009 implements the read-only terminal board that bare `grove` opens, with
+  G-003 implements the reader, G-007 record creation with shared allocation,
+  and G-009 field updates with content revisions and a shared write lock.
+  G-017 implements the read-only terminal board that bare `grove` opens, with
   Bubble Tea v2 in `internal/tui`; keep explicit subcommands noninteractive,
-  and the board's text escaping and exact source targeting intact. D-004 selects
-  a future project-wide current view; W-024 owns that projection and may replace
+  and the board's text escaping and exact source targeting intact. G-035 selects
+  a future project-wide current view; G-042 owns that projection and may replace
   mandatory version picking in ordinary browsing, while retaining explicit source
-  inspection and freshness checks. The current board is still checkout-scoped. W-013
+  inspection and freshness checks. The current board is still checkout-scoped. G-031
   reads every branch through one `git cat-file` process, scoped to what the
-  project loader reads; do not add a Git process per branch. W-012 reads a
+  project loader reads; do not add a Git process per branch. G-030 reads a
   record's Git history only while its card is open, as a read any key may
   cancel; do not read history during the board load. The runner contract
   remains open.
@@ -32,22 +32,23 @@ read the brief when the record, a product question, or reconciliation needs it.
 - Record settled choices in the brief while it remains small. Progress and the
   concrete next action belong to each work record's Next, never the brief. Do
   not create a second editable account of the same direction.
-  W-018 owns the selected interactive adoption milestone; its linked roadmap is
-  investment order, not a batch assignment. W-019 implements schema 2: term,
-  plan, and review records (D-005) and the `brief:` key that `grove brief`
-  reads. D-006 selects stable identity/placement and flexible knowledge: W-030
-  implements it as opt-in schema 3 (neutral `G-` IDs from their own counter
-  file, `page` records, flat creation, recursive discovery, `update --set
-  type=`, and `convert`). This repository's `grove.yaml` stays schema 2.
-  D-004's target lifecycle is also pending: W-020 owns that migration. W-029 follows W-030 to reconcile all existing Grove
-  records, the brief and legacy `docs/plans`/`docs/reviews` content into one flat
-  layout with neutral IDs, a durable old-to-new mapping and repaired references.
-  This explicit one-time conversion is separate from normal operations keeping
-  IDs and paths stable. Until W-029 is assigned, do not set `schema_version: 3`,
-  run `convert`, or hand-author neutral IDs or pages in this repository; exercise
-  them in a disposable clone. Schemas 1 and 2 keep their rules and wording
-  only until W-029 converts this repository and deletes them: Grove keeps no
-  backward compatibility before its first release.
+  G-036 owns the selected interactive adoption milestone; its linked roadmap is
+  investment order, not a batch assignment. G-037 implements schema 2: term,
+  plan, and review records (G-051) and the `brief:` key that `grove brief`
+  reads. G-064 selects stable identity/placement and flexible knowledge: G-065
+  implements it as schema 3 (neutral `G-` IDs from their own counter file,
+  `page` records, flat creation, recursive discovery, `update --set type=`,
+  and `convert`). G-035's target lifecycle is also pending: G-038 owns that
+  migration. G-052 reconciled this repository on 2026-09-21: `grove.yaml` is
+  schema 3, every record, former `docs/plans` and `docs/reviews` document
+  included, has a neutral ID flat under `grove/`, and the brief is
+  `grove/brief.md`. [G-069](grove/G-069-migration-map.md) maps each old ID and
+  path to its counterpart; use it, not a search of old names, to follow a
+  reference in an old commit or message. That explicit one-time conversion is
+  separate from normal operations, which keep IDs and paths stable: do not run
+  `convert` on a record again or hand-author IDs. G-052 also deletes schemas 1
+  and 2: Grove keeps no backward compatibility before its first release, and
+  an old commit is inspected with the CLI in that commit.
 - `../skills/` and `../nullsec/` are evidence and potential compatibility targets,
   not automatically part of an implementation's write scope. Follow their
   instructions; retrieve their Grove knowledge through `grove status`,
@@ -85,20 +86,19 @@ adapters repeat it:
   `go build -o <temp path> ./cmd/grove` and run that.
 - Do not invoke the predecessor's `grove:work`, `grove:close`, or
   `grove:shape` skills or its close/archive commands for work here.
-  Comparisons with the predecessor are history in `docs/reviews/`, not
+  Comparisons with the predecessor are history in review records, not
   required reading.
 - `context` is facts, not authorization, and must stay read-only. It reads the
   selected records in full and lists the rest; read plans, prerequisites,
   questions, `docs/record-model.md`, and the brief when the guide's step needs
   them, not up front.
-- Work branches are `worktree-W-012`, or `worktree-W-012-W-014` for several
+- Work branches are `worktree-G-012`, or `worktree-G-012-G-014` for several
   IDs, in a linked worktree under `.claude/worktrees/`. The default base is
   `main` only when it holds the selected records; the guide says what to do
   when it does not. Do not merge or push unless the assignment says so.
 - New plans and review evidence are records: `go run ./cmd/grove new plan`
   or `new review`, then `update` to set `work` (and a review's `examined`
-  commit). Those written before W-019 stay in `docs/plans/` and
-  `docs/reviews/`, linked from the owning record, until W-029 migrates them. Reconcile the README or
+  commit). Reconcile the README or
   `docs/record-model.md` when their contract changes, and the brief only when
   the work changes the direction it selects, not to report progress.
 - Fixtures that create records belong in a disposable clone reached by an
