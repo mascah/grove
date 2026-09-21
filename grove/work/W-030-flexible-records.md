@@ -131,9 +131,12 @@ reproduced it at the base).
 
 ## Next
 
-Implementation complete and independently reviewed; not merged or pushed. The
-owner's judgment of the page envelope, `G-NNN`, and `convert` as W-029's
-interface is theirs to give. Then merge `worktree-W-030` and assign W-029,
-which sets `schema_version: 3` here, converts every record and legacy document
-with `convert`, collects the mapping lines, moves the brief by hand and repairs
-body links, none of which `convert` does.
+Implementation complete and independently reviewed; not merged or pushed.
+The owner accepted the page envelope, `G-NNN`, and `convert` as W-029's
+interface on 2026-09-21, and directed that Grove keep no backward
+compatibility before its first release: schemas 1 and 2 are kept only until
+W-029 converts this repository, then deleted. Next: merge `worktree-W-030` and
+assign W-029, which sets `schema_version: 3` here, converts every record and
+legacy document with `convert`, collects the mapping lines, moves the brief by
+hand, repairs body links (none of which `convert` does), and then removes the
+schema 1/2 support.

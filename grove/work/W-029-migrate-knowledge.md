@@ -38,6 +38,12 @@ In:
 - Retain one durable old-ID/path to new-ID/path mapping, including legacy files
   that had no record ID. It must let a reader of an old commit locate the current
   counterpart. No permanent duplicate records or compatibility symlink tree.
+- After the conversion, delete schema 1 and 2 support and the compatibility
+  kept for them: folder/type and prefix/type rules, per-type counters,
+  schema-gated wording, and old/new-checkout tests. The owner directed on
+  2026-09-21 that Grove keeps no backward compatibility before its first
+  release; one current schema remains. An old commit stays inspectable with
+  the CLI in that commit (`go run ./cmd/grove` there), not the current one.
 
 Preserve original timestamps, statuses, authority, historical conclusions and
 evidence. Only mechanical schema/identity/path transformations are in scope.
@@ -84,7 +90,8 @@ old-layout records. Do not rewrite other sessions' worktrees.
 4. Context, attachments, dependencies, explicit lookup, board/detail and history
    are exercised on migrated proposed and done work. Relationships use the new
    IDs; shared plans/reviews remain discoverable without preloading their bodies.
-   Historical branches remain inspectable and lineage limits are documented.
+   Historical commits remain inspectable with their own CLI, and lineage
+   limits are documented.
 5. README, instructions, guides and adapters use the reconciled convention;
    no new authoring path produces the old layout. A disposable rehearsal checks
    restart/rollback and reintegration from a branch containing old IDs/paths.

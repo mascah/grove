@@ -45,7 +45,9 @@ read the brief when the record, a product question, or reconciliation needs it.
   This explicit one-time conversion is separate from normal operations keeping
   IDs and paths stable. Until W-029 is assigned, do not set `schema_version: 3`,
   run `convert`, or hand-author neutral IDs or pages in this repository; exercise
-  them in a disposable clone. Schemas 1 and 2 must keep their rules and wording.
+  them in a disposable clone. Schemas 1 and 2 keep their rules and wording
+  only until W-029 converts this repository and deletes them: Grove keeps no
+  backward compatibility before its first release.
 - `../skills/` and `../nullsec/` are evidence and potential compatibility targets,
   not automatically part of an implementation's write scope. Follow their
   instructions; retrieve their Grove knowledge through `grove status`,

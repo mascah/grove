@@ -69,9 +69,11 @@ put; views bound everyday clutter. Per-type folder/prefix settings, automatic
 filing and a general schema-extension engine are not selected. This repo gets
 one deliberate reconciliation of all existing records, legacy plans/reviews
 and the brief into the flat layout, with neutral record IDs and an old-to-new
-mapping. Stable placement applies to normal operation after that migration;
-historical branches remain readable. This is selected direction pending
-W-030/W-029, not permission to bypass today's schema 2.
+mapping. Stable placement applies to normal operation after that migration.
+Until a first release Grove keeps no backward compatibility: after W-029 only
+the current schema is read, and an old commit is inspected with the CLI it
+carries. This is selected direction pending W-029, not permission to bypass
+today's schema 2.
 
 Retrieve context by activity: shaping starts with the brief and relevant
 knowledge; preparation with selected work and affected interfaces; execution
@@ -136,7 +138,7 @@ Bootstrap should create valid configuration and minimal harness entrypoints,
 preserve existing instructions, and create content directories as needed. A
 shaping session develops the brief. The target keeps brief, knowledge and
 artifacts under the configured Grove root with flat creation and stable paths.
-W-030 owns compatible support; W-029 reconciles all existing Grove records and
+W-030 supplies the support; W-029 reconciles all existing Grove records and
 legacy documents, including their IDs and file locations. Preserve provenance
 and repair current references; do not retain parallel editable layouts. Product
 and workflow instructions keep their functional homes. This repo's migration
