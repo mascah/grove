@@ -2,9 +2,9 @@
 id: "T-001"
 type: term
 title: "Work"
-status: proposed
+status: settled
 created: "2026-09-21T05:01:55Z"
-updated: "2026-09-21T05:02:47Z"
+updated: "2026-09-21T14:23:31Z"
 relates_to: ["T-003", "T-004"]
 ---
 

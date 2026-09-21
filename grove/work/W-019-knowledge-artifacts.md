@@ -2,9 +2,9 @@
 id: "W-019"
 type: work
 title: "Represent domain terms and linked work artifacts"
-status: active
+status: done
 created: "2026-09-21T00:54:14Z"
-updated: "2026-09-21T04:55:42Z"
+updated: "2026-09-21T14:23:43Z"
 kind: feature
 size: medium
 priority: 1
@@ -104,15 +104,12 @@ run `internal/versions` flaked as R-001 describes and passed alone).
 4. `grove brief` prints `docs/restart-brief.md`; `TestBrief` covers both
    locations, a missing file, and refused paths.
 5. Schema 1 is unchanged against a binary built from the base (R-001).
-6. Nine terms, `T-001` to `T-009`, all `proposed`: **awaiting the owner**.
+6. Nine terms, `T-001` to `T-009`: the owner read them on 2026-09-21, agreed
+   with them for now, and they are `settled`.
 7. Record model, README, `AGENTS.md` and both guides reconciled in `4bfb5ff`.
 
 ## Preparation and next
 
-Implementation complete and independently reviewed; not merged, not pushed.
-Next, for the owner: read the nine terms in `grove/terms/` (Candidate is an
-addition to the eight listed above) and judge them and the work. Then mark
-this done, settle the terms, and merge. Until the merge, older code in other
-checkouts refuses `grove new` on the shared counter file's `T` and `R` lines
-and reports this branch as unsupported schema 2. W-020 depends on this; W-029
-follows it.
+Done on the owner's verdict of 2026-09-21: the terms (Candidate included) and
+the new commands were accepted, and the owner asked for the merge into `main`.
+Nothing remains here. W-020 depends on this; W-029 follows it.

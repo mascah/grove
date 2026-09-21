@@ -2,9 +2,9 @@
 id: "T-009"
 type: term
 title: "Revision"
-status: proposed
+status: settled
 created: "2026-09-21T05:01:57Z"
-updated: "2026-09-21T05:02:48Z"
+updated: "2026-09-21T14:23:35Z"
 relates_to: ["T-004", "T-008"]
 ---
 

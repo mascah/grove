@@ -2,9 +2,9 @@
 id: "T-008"
 type: term
 title: "Source"
-status: proposed
+status: settled
 created: "2026-09-21T05:01:57Z"
-updated: "2026-09-21T05:02:48Z"
+updated: "2026-09-21T14:23:34Z"
 relates_to: ["T-009"]
 ---
 

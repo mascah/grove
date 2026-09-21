@@ -2,9 +2,9 @@
 id: "T-002"
 type: term
 title: "Preparation"
-status: proposed
+status: settled
 created: "2026-09-21T05:01:56Z"
-updated: "2026-09-21T05:02:47Z"
+updated: "2026-09-21T14:23:32Z"
 relates_to: ["T-001", "T-003"]
 ---
 
