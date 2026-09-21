@@ -61,8 +61,8 @@ implementation or merge. Do not add a launcher, timer or process supervision.
 The W-011 portion of the old
 [shared handoff plan](../../docs/plans/W-010-W-011-agent-handoffs.md) is superseded
 by this scope revision on 2026-09-20; W-010 is done and must not be reimplemented.
-No current W-011 implementation plan exists. Prepare a concise
-`docs/plans/W-011-shaping-entrypoint.md` from this record and the delivered work
-adapter/guide patterns, then implement when assigned. The
+The current plan is
+[W-011-shaping-entrypoint.md](../../docs/plans/W-011-shaping-entrypoint.md),
+prepared 2026-09-20 on `worktree-W-011` when W-011 was assigned. The
 [roadmap](../../docs/plans/W-018-adoption-roadmap.md) holds coordination only;
 predecessor reviews are optional targeted research, not mandatory startup context.
