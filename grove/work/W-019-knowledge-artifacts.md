@@ -85,7 +85,9 @@ whether new types and the key need `schema_version: 2`.
 
 ## Preparation and next
 
-Assignable now: W-011 is done and merged. No plan exists; write a concise one
-at `docs/plans/W-019-knowledge-artifacts.md` settling the proposed items above.
-Human judgment is needed only if the design changes D-005's representation or
-the brief's information ownership. W-020 depends on this; W-029 follows it.
+Plan: [W-019 plan](../../docs/plans/W-019-knowledge-artifacts.md), which settles
+the proposed items above (statuses, `examined`, `brief:` key, schema 2).
+Branch `worktree-W-019` from main `d9fc2a5`. Next: implement the plan's steps
+in order. Human judgment is needed only if the design changes D-005's
+representation or the brief's information ownership, and for the owner's
+reading of the starting terms. W-020 depends on this; W-029 follows it.
