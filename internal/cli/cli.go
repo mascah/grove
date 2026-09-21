@@ -3,6 +3,7 @@ package cli
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -24,6 +25,8 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] list | show ID [--json] | brief [--json] | check\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n" +
+	"       grove [--project DIR] convert ID [--slug SLUG]\n" +
+	"       grove [--project DIR] convert PATH --type TYPE --title TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
 	"       grove [--project DIR] workspace --source SELECTOR [--json]\n" +
 	"       grove [--project DIR] context WORK_ID... [--json] [--interaction interactive|headless]\n" +
@@ -38,13 +41,24 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"  brief      Print the project brief that grove.yaml names with brief: PATH;\n" +
 	"             --json prints {path, revision, source}. context never adds it by itself.\n" +
 	"  check      Validate configuration, records, and relationships\n" +
-	"  new        Create a work, question, decision, term, plan, or review record with the\n" +
-	"             next shared ID (term, plan, and review need schema_version 2);\n" +
-	"             put -- before a title that starts with a dash\n" +
+	"  new        Create a work, question, decision, term, plan, review, or page record with\n" +
+	"             the next shared ID (term, plan, and review need schema_version 2; page\n" +
+	"             needs 3). Schema 3 gives every type a neutral G- ID, flat in the record\n" +
+	"             root; a page is general knowledge with a title and no status.\n" +
+	"             Put -- before a title that starts with a dash\n" +
 	"  update ID  Change frontmatter fields when the file still matches --expect\n" +
 	"             (the revision from show --json); prints {id, path, revision, changed}.\n" +
 	"             Lists are JSON arrays such as '[\"W-001\"]'; priority is 1-5. A plan or\n" +
 	"             review names its work with work=[...]; a review's examined is a Git commit.\n" +
+	"             Schema 3 accepts type=TYPE with whatever else the new type requires in the\n" +
+	"             same update; the ID and path never change.\n" +
+	"  convert    Schema 3's one deliberate identity change. A record with a typed ID gets the\n" +
+	"             next neutral ID and formerly: OLD-ID, moves flat into the record root, and\n" +
+	"             relationship lists naming it are rewritten; nothing else in it changes. A\n" +
+	"             Markdown document outside the record root becomes a new record with the\n" +
+	"             document as its body and formerly: PATH; the original is left in place.\n" +
+	"             Prints {from, from_path, id, path}. Bodies and Markdown links are never\n" +
+	"             rewritten. A source already converted is refused, reserving nothing.\n" +
 	"  versions   Show each record's committed version on every local branch and live\n" +
 	"             version in every worktree, with a selector per version; exit 1 if any\n" +
 	"             source could not be inspected. Reads only; nothing is created.\n" +
@@ -121,6 +135,17 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 			return 1
 		}
 		return 0
+	case "convert":
+		c, err := update.Convert(p.Root, a.convert, errOut)
+		if err != nil {
+			report(errOut, err)
+			return 1
+		}
+		if _, err := io.Copy(out, bytes.NewReader(marshal(map[string]any{"from": c.From, "from_path": c.FromPath, "id": c.ID, "path": c.Path}))); err != nil {
+			fmt.Fprintf(errOut, "grove: write output: %s (%s was converted to %s in %s)\n", err, visible(c.From), c.ID, visible(c.Path))
+			return 1
+		}
+		return 0
 	case "new":
 		path, err := create.New(p, a.kind, a.title, a.slug, time.Now(), errOut)
 		if err != nil {
@@ -133,7 +158,7 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		table := tabwriter.NewWriter(&buffer, 0, 4, 2, ' ', 0)
 		fmt.Fprintln(table, "ID\tTYPE\tSTATUS\tTITLE")
 		for _, r := range p.Records {
-			fmt.Fprintf(table, "%s\t%s\t%s\t%s\n", r.ID, r.Type, r.Status, visible(r.Title))
+			fmt.Fprintf(table, "%s\t%s\t%s\t%s\n", r.ID, r.Type, cmp.Or(r.Status, "-"), visible(r.Title)) // a page has no status
 		}
 		table.Flush() // The destination is a bytes.Buffer, whose writes cannot fail.
 		return writeResult(out, errOut, buffer.Bytes())
@@ -177,6 +202,7 @@ type invocation struct {
 	project, command, id, kind, title, slug, source string
 	help, json                                      bool
 	request                                         update.Request
+	convert                                         update.ConvertRequest
 	ids                                             []string // context
 	options                                         handoff.Options
 }
@@ -229,6 +255,8 @@ func parseArgs(args []string) (a invocation, err error) {
 	}{
 		{"--project", "directory", once(&a.project)},
 		{"--slug", "slug", once(&a.slug)},
+		{"--type", "record type", once(&a.convert.Type)},
+		{"--title", "title", once(&a.convert.Title)},
 		{"--source", "selector", once(&a.source)},
 		{"--expect", "revision", once(&a.request.Expect)},
 		{"--interaction", "mode", func(value string) error {
@@ -331,8 +359,11 @@ func parseArgs(args []string) (a invocation, err error) {
 	if len(positional) != 0 { // no command selects the board, under the same option rules
 		a.command = positional[0]
 	}
-	if a.slug != "" && a.command != "new" {
-		return a, fmt.Errorf("--slug applies only to new")
+	if a.slug != "" && a.command != "new" && a.command != "convert" {
+		return a, fmt.Errorf("--slug applies only to new and convert")
+	}
+	if (a.convert.Type != "" || a.convert.Title != "") && a.command != "convert" {
+		return a, fmt.Errorf("--type and --title apply only to convert")
 	}
 	if a.json && a.command != "" && a.command != "show" && a.command != "brief" && a.command != "versions" && a.command != "workspace" && a.command != "context" {
 		return a, fmt.Errorf("--json applies only to the board, show, brief, versions, workspace, and context")
@@ -376,6 +407,12 @@ func parseArgs(args []string) (a invocation, err error) {
 	case "context":
 		if a.ids = positional[1:]; len(a.ids) == 0 {
 			err = fmt.Errorf("context requires at least one work ID")
+		}
+	case "convert":
+		if len(positional) != 2 {
+			err = fmt.Errorf("convert requires exactly one record ID or document path")
+		} else {
+			a.convert.Source, a.convert.Slug = positional[1], a.slug
 		}
 	case "new":
 		if len(positional) != 3 {

@@ -33,7 +33,7 @@ func Load(cwd, explicit string) (*Project, []Diagnostic) {
 	// LoadFS judges only the brief's path, because a committed source holds just
 	// grove.yaml and the record folder. A live checkout must have the file.
 	if p.Brief != "" {
-		if _, err := readConfined(root, p.Brief); err != nil {
+		if _, err := ReadConfined(root, p.Brief); err != nil {
 			ds = sortedDiagnostics(append(ds, Diagnostic{Path: "grove.yaml", Field: "brief", Message: err.Error()}))
 		}
 	}
@@ -259,12 +259,12 @@ func (p *Project) ReadBrief() ([]byte, error) {
 	if p.Brief == "" {
 		return nil, errors.New("grove.yaml names no brief; add a brief: PATH key (schema_version 2)")
 	}
-	return readConfined(p.Root, p.Brief)
+	return ReadConfined(p.Root, p.Brief)
 }
 
-// readConfined reads a regular file below root, refusing a symlink in any
+// ReadConfined reads a regular file below root, refusing a symlink in any
 // component so the path cannot leave the project.
-func readConfined(root, name string) ([]byte, error) {
+func ReadConfined(root, name string) ([]byte, error) {
 	fsys := os.DirFS(root)
 	for i, c := range name {
 		if c == '/' {

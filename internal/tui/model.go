@@ -608,7 +608,8 @@ func (m *Model) cards() (columns [4][]card, shelf []card) {
 }
 
 // isWork reports a work group. A group of only deleted rows carries no record,
-// and validation ties the ID prefix to the type.
+// so the ID prefix decides: validation ties it to the type before schema 3. A
+// neutral ID says nothing, so work deleted in every source is not shelved.
 func isWork(g versions.Group) bool {
 	for _, v := range g.Versions {
 		if v.Record != nil {

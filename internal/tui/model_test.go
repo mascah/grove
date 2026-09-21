@@ -818,3 +818,30 @@ func TestRefreshUnderOverlays(t *testing.T) {
 		t.Fatalf("the warning was clipped by the pending read:\n%s", plain(m))
 	}
 }
+
+// Schema 3 drops the tie between ID and type, so the board follows the type
+// field alone: neutral-ID work is a card, and a page, which has no status,
+// never is, whatever its ID or wherever it sits.
+func TestBoardFollowsTypeNotIDOrPlacement(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	retype := func(v versions.Version, kind, status string) versions.Version {
+		v.Record.Type, v.Record.Status = kind, status
+		return v
+	}
+	var vs []versions.Version
+	for _, s := range []*versions.Source{fx.cMain, fx.main} {
+		vs = append(vs,
+			retype(version(s, "G-001", "Neutral work", "active"), "work", "active"),
+			retype(version(s, "G-002", "A page about proposed work", ""), "page", ""),
+			retype(version(s, "W-003", "A page under an old work ID", ""), "page", ""),
+			retype(version(s, "D-004", "Reclassified into work", "proposed"), "work", "proposed"))
+	}
+	m := open(t, &fake{res: result(fx.main, fx.sources(), vs...)}, 120, 30)
+	if got, want := board(m), "proposed=D-004 active=G-001 done= abandoned= shelf="; got != want {
+		t.Fatalf("board:\n got %s\nwant %s", got, want)
+	}
+	if screen := plain(m); strings.Contains(screen, "page") || strings.Contains(screen, "G-002") || strings.Contains(screen, "W-003") {
+		t.Fatalf("a page must not appear on the board:\n%s", screen)
+	}
+}

@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"io"
 	"text/tabwriter"
@@ -48,7 +49,7 @@ func runVersions(root string, a invocation, out, errOut io.Writer) int {
 			for _, v := range g.Versions {
 				status, change := "-", "-"
 				if v.Record != nil {
-					status = v.Record.Status
+					status = cmp.Or(v.Record.Status, "-") // a page has no status
 				}
 				if v.Change != "" {
 					change = v.Change

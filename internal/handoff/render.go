@@ -2,6 +2,7 @@ package handoff
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
 	"strconv"
 	"strings"
@@ -42,7 +43,7 @@ func Text(b *Bundle) []byte {
 				state = "included as " + r.Source
 			}
 		}
-		line("  %s", inert(strings.Join([]string{r.ID, r.Type, r.Status, state, strings.Join(r.Roles, "; ")}, "  "), false))
+		line("  %s", inert(strings.Join([]string{r.ID, r.Type, cmp.Or(r.Status, "-"), state, strings.Join(r.Roles, "; ")}, "  "), false))
 		line("      %s", inert(strings.Join([]string{strconv.Quote(r.Title), r.Path, r.Revision}, "  "), false))
 	}
 	if len(b.Requirements) != 0 {
