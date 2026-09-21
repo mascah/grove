@@ -2,9 +2,9 @@
 id: "W-011"
 type: work
 title: "Shape project work through reusable agent instructions"
-status: proposed
+status: done
 created: "2026-09-19T21:20:41Z"
-updated: "2026-09-21T01:03:42Z"
+updated: "2026-09-21T04:09:41Z"
 kind: feature
 priority: 1
 size: small
@@ -56,13 +56,40 @@ implementation or merge. Do not add a launcher, timer or process supervision.
 5. No implementation, sibling migration, unsupported schema, status promotion,
    agent launch or automatic merge is a side effect of shaping.
 
-## Preparation and next
+## Evidence and next
 
-The W-011 portion of the old
-[shared handoff plan](../../docs/plans/W-010-W-011-agent-handoffs.md) is superseded
-by this scope revision on 2026-09-20; W-010 is done and must not be reimplemented.
-No current W-011 implementation plan exists. Prepare a concise
-`docs/plans/W-011-shaping-entrypoint.md` from this record and the delivered work
-adapter/guide patterns, then implement when assigned. The
-[roadmap](../../docs/plans/W-018-adoption-roadmap.md) holds coordination only;
-predecessor reviews are optional targeted research, not mandatory startup context.
+Checkpoint 2026-09-20. Assigned alone (`/grove-work W-011`, interactive);
+branch `worktree-W-011` in `.claude/worktrees/W-011`, base `main` `70f19c5`.
+The current plan is
+[W-011-shaping-entrypoint.md](../../docs/plans/W-011-shaping-entrypoint.md); the
+W-011 portion of the old
+[shared handoff plan](../../docs/plans/W-010-W-011-agent-handoffs.md) is
+superseded. The [roadmap](../../docs/plans/W-018-adoption-roadmap.md) holds
+coordination only.
+
+Delivered: [the shaping guide](../../docs/work-shaping.md), the `grove-shape`
+adapters for Claude and Codex, and the AGENTS.md and README sections. On the
+owner's instruction of 2026-09-20 the brief no longer tracks progress or a next
+action, so this record's Next is the only one. [Evidence](../../docs/reviews/2026-09-20-W-011-shaping.md)
+separates source checks, observed `claude -p` and `codex exec` trials in
+disposable clones, CLI simulation, and what was not exercised.
+
+| Acceptance | State |
+| --- | --- |
+| 1 | Met for explicit headless invocation in both harnesses; interactive typing of the command is unexercised and stated. |
+| 2 | Not exercised through `grove-shape`; closed on the owner's verdict below, with that limit. |
+| 3 | Overlap, other-branch work, unanswered choice, headless wait and unchanged rerun observed; stale revision simulated with the CLI only. |
+| 4 | `check` OK and links resolve; the guide's return reports checkout, branch and commit with today's checkout-scoped board. |
+| 5 | Observed in both trials: status stayed `proposed`, no code, launch or merge. |
+
+**Owner's verdict, 2026-09-20 (interactive, in the implementing session):** merge
+and close W-011. The owner's recent requirements conversation already produced
+the work now on `main` (W-018 to W-028) without this guide, and there is no
+fresh idea to shape until that work advances. The owner will run
+`/grove-shape W-019` from the main checkout, inspect the result, and adjust the
+guide through further dogfooding if needed. Done here therefore means delivered,
+independently reviewed and accepted by the owner on the headless evidence; a
+real interactive shaping conversation remains unobserved.
+
+**Next:** none for W-011. Findings from the owner's `/grove-shape W-019` run
+belong to new or related work, not to reopening this record by default.

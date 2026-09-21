@@ -6,7 +6,8 @@ A local project workspace for humans and agents, built around a CLI and durable 
 project records, shows each record's versions across local branches, and
 locates the checkout holding a selected version. Run without a command, it
 opens a read-only terminal Kanban board over the same operations. `context`
-assembles staged context for selected work, and the `grove-work` skill carries it out.**
+assembles staged context for selected work, the `grove-work` skill carries it
+out, and the `grove-shape` skill shapes proposals.**
 
 The selected next milestone is a complete interactive shape → implement →
 review → integrate loop on real nullsec work. Start with
@@ -169,6 +170,20 @@ guide does not repeat. Grove launches no agent;
 [the dogfooding evidence](docs/reviews/2026-09-19-W-010-dogfood.md) says which
 invocations have actually been exercised.
 
+### Shaping and the `grove-shape` skill
+
+The [shaping guide](docs/work-shaping.md) is the workflow before an assignment
+exists: discuss an idea or existing records, check other branches and
+worktrees for overlap, and write proposed work, real human questions, and
+attributable decisions with today's `new`, `update`, `versions`, and `check`.
+It keeps intent, observed evidence, proposed design, and decisions apart, and
+it never assigns, implements, promotes status, or merges. The `grove-shape`
+skill is the same kind of thin adapter for
+[Claude](.claude/skills/grove-shape/SKILL.md) (`/grove-shape TOPIC`) and
+[Codex](.agents/skills/grove-shape/SKILL.md) (`$grove-shape TOPIC`);
+[its evidence](docs/reviews/2026-09-20-W-011-shaping.md) says what has been
+exercised.
+
 ### The terminal board
 
 `grove [--project DIR] [--json]`, with no command, opens the board. In this
@@ -265,8 +280,8 @@ Give a new agent this prompt:
 > Grove CLI and interactive workspace described there. The old application was
 > archived. The Go list/show/check/new/update CLI and its records now work
 > locally, as do versions and workspace; W-001 through W-005 record
-> verification. Follow the brief's
-> next action. Treat the brief's
+> verification. Find the next
+> action in W-018 and the work records' Next. Treat the brief's
 > remaining proposals as proposals. Inspect
 > the sibling skills and nullsec projects through their Grove CLI when evidence
 > is needed. Preserve this direction and update the brief as choices settle.
