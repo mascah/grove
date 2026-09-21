@@ -14,7 +14,7 @@ func relationships(r *Record) []struct {
 		targets []string
 	}{
 		{"depends_on", r.DependsOn}, {"members", r.Members},
-		{"blocks", r.Blocks}, {"relates_to", r.RelatesTo},
+		{"blocks", r.Blocks}, {"relates_to", r.RelatesTo}, {"work", r.Work},
 	}
 }
 
@@ -59,6 +59,19 @@ func Validate(records []*Record) []Diagnostic {
 					ds = append(ds, Diagnostic{Path: r.Path, Field: rel.field, Message: message})
 				}
 			}
+		}
+	}
+	// A term's title is the term, so two records for one term are a conflict.
+	terms := map[string]*Record{}
+	for _, r := range records {
+		if r.Type != "term" || r.Title == "" {
+			continue
+		}
+		name := strings.ToLower(strings.TrimSpace(r.Title))
+		if first := terms[name]; first != nil {
+			ds = append(ds, Diagnostic{Path: r.Path, Field: "title", Message: "term already defined by " + first.ID + " in " + first.Path})
+		} else {
+			terms[name] = r
 		}
 	}
 	// Membership is decomposition, not an execution-order edge. Mixing these

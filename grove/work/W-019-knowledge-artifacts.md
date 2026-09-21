@@ -2,9 +2,9 @@
 id: "W-019"
 type: work
 title: "Represent domain terms and linked work artifacts"
-status: proposed
+status: active
 created: "2026-09-21T00:54:14Z"
-updated: "2026-09-21T04:39:28Z"
+updated: "2026-09-21T04:55:42Z"
 kind: feature
 size: medium
 priority: 1

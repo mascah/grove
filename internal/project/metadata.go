@@ -23,6 +23,8 @@ type Record struct {
 	Created, Updated        *time.Time
 	DependsOn, Members      []string
 	Blocks, RelatesTo       []string
+	Work                    []string // plan and review: the work they belong to
+	Examined                string   // review: the Git commit it examined
 	Path                    string
 	Source                  []byte
 }
@@ -158,12 +160,52 @@ func (m *metadata) listField(key string) []string {
 	return result
 }
 
+// TypeInfo is one record type. Statuses[0] is what new writes. Schema is the
+// schema_version that introduces the type; older projects refuse its folder.
+type TypeInfo struct {
+	Name, Prefix, Folder string
+	Statuses             []string
+	Schema               int
+}
+
+// Types is the whole record vocabulary, in ID display order.
+var Types = []TypeInfo{
+	{"work", "W", "work", []string{"proposed", "active", "done", "abandoned"}, 1},
+	{"question", "Q", "questions", []string{"open", "resolved"}, 1},
+	{"decision", "D", "decisions", []string{"proposed", "accepted", "rejected"}, 1},
+	{"term", "T", "terms", []string{"proposed", "settled"}, 2},
+	{"plan", "P", "plans", []string{"current", "superseded"}, 2},
+	{"review", "R", "reviews", []string{"current", "superseded"}, 2},
+}
+
+// Type returns the named type, or nil.
+func Type(name string) *TypeInfo {
+	for i := range Types {
+		if Types[i].Name == name {
+			return &Types[i]
+		}
+	}
+	return nil
+}
+
+// Prefixes is every ID prefix letter in display order, e.g. "WQDTPR".
+func Prefixes() string {
+	var b strings.Builder
+	for _, t := range Types {
+		b.WriteString(t.Prefix)
+	}
+	return b.String()
+}
+
 var datePattern = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")
-var idPattern = regexp.MustCompile("^[WQD]-[0-9]{3,}$")
+
+// IDPattern matches the shape of any record ID; validID adds canonical padding.
+var IDPattern = regexp.MustCompile("^[" + Prefixes() + "]-[0-9]{3,}$")
+var commitPattern = regexp.MustCompile("^[0-9a-f]{7,40}$")
 
 func validID(id, kind string) bool {
-	prefix := map[string]string{"work": "W-", "question": "Q-", "decision": "D-"}[kind]
-	if prefix == "" || !strings.HasPrefix(id, prefix) || !idPattern.MatchString(id) {
+	t := Type(kind)
+	if t == nil || !strings.HasPrefix(id, t.Prefix+"-") || !IDPattern.MatchString(id) {
 		return false
 	}
 	number := id[2:]
@@ -228,11 +270,7 @@ func ParseRecord(path, folderType string, source []byte) (*Record, []Diagnostic)
 	if !validID(r.ID, r.Type) {
 		m.problem("id", "expected a canonical positive ID with matching type prefix, e.g. W-001, Q-001, D-001")
 	}
-	lifecycles := map[string][]string{
-		"work":     {"proposed", "active", "done", "abandoned"},
-		"question": {"open", "resolved"}, "decision": {"proposed", "accepted", "rejected"},
-	}
-	if !slices.Contains(lifecycles[r.Type], r.Status) {
+	if t := Type(r.Type); t == nil || !slices.Contains(t.Statuses, r.Status) {
 		m.problem("status", "unsupported lifecycle value for "+r.Type)
 	}
 	allowed := []string{"id", "type", "title", "status", "relates_to", "created", "updated"}
@@ -256,6 +294,16 @@ func ParseRecord(path, folderType string, source []byte) (*Record, []Diagnostic)
 	if r.Type == "question" {
 		allowed = append(allowed, "blocks")
 		r.Blocks = m.listField("blocks")
+	}
+	if r.Type == "plan" || r.Type == "review" {
+		allowed = append(allowed, "work")
+		r.Work = m.listField("work")
+	}
+	if r.Type == "review" {
+		allowed = append(allowed, "examined")
+		if r.Examined = m.stringField("examined", false); r.Examined != "" && !commitPattern.MatchString(r.Examined) {
+			m.problem("examined", "expected a quoted Git commit of 7 to 40 lowercase hex digits")
+		}
 	}
 	for key := range m.fields {
 		if !slices.Contains(allowed, key) {
