@@ -9,30 +9,34 @@ The first Go CLI now reads and validates this model; G-003 records its evidence.
 [The restart brief](../grove/brief.md) owns product direction;
 `grove/` owns operational work, questions, and decision receipts.
 
-## Schema 3: identity and placement apart from classification
+## Identity and placement apart from classification
 
 [G-064](../grove/G-064-stable-knowledge.md) selected stable identity
 and placement, general knowledge pages, flat creation and recursive discovery
 independent of type folders. [G-065](../grove/G-065-flexible-records.md)
-implements it as `schema_version: 3`. Everything in the schema-1 and schema-2
-sections below still holds under schema 3 except where this section says
-otherwise, and a schema-1 or schema-2 project keeps exactly its old rules.
-[G-052](../grove/G-052-migrate-knowledge.md) moved this repository to schema 3
-and converted every record; [G-069](../grove/G-069-migration-map.md) is the
-old-to-new mapping.
+implemented it as `schema_version: 3`, the one schema Grove now reads.
+[G-052](../grove/G-052-migrate-knowledge.md) converted every record of this
+repository to it and then deleted schemas 1 and 2, their type folders, typed
+`W-`/`Q-`/`D-`/`T-`/`P-`/`R-` IDs and per-type counters: Grove keeps no backward
+compatibility before its first release. [G-069](../grove/G-069-migration-map.md)
+is the old-to-new mapping. A commit from before the conversion is inspected
+with the CLI in that commit (`go run ./cmd/grove` there); the current CLI
+reports such a branch in `versions` and the board as a source it cannot
+inspect. Where a later section's dated history names typed IDs or type
+folders, this section is the current rule.
 
 - **Discovery.** Every `.md` file beneath the record root, at any depth, is a
-  record, except the configured brief. No folder names a type: the root, a
-  former type folder and any other nested folder are equally valid, so records
-  written under schema 2 stay valid where they are. A `.md` file there that is
+  record, except the configured brief. No folder names a type: the root and
+  any nested folder are equally valid. A `.md` file there that is
   not a valid record is a diagnostic, never skipped, dot folders included; only
   the lowercase `.md` extension counts. The brief may be any clean
-  project-relative `.md` path, including one inside a former type folder.
-  Symlinks are refused as before.
-- **Identity.** An ID is one of the letters `W Q D T P R G`, a hyphen, and a
-  canonical number (`G-001`, `G-1000`). It carries no type: `new` issues
-  `G-NNN` for every type, and an existing `W-019` stays `W-019` whatever
-  happens to its `type`. IDs are still unique per checkout and matched exactly.
+  project-relative `.md` path.
+  Symlinks are refused.
+- **Identity.** An ID is `G-`, and a canonical number of at least
+  three digits (`G-001`, `G-1000`). It carries no type: `new` issues `G-NNN`
+  for every type, and a record keeps its ID whatever happens to its `type`.
+  IDs are unique per checkout and matched exactly. Any other spelling,
+  a typed `W-001` included, is an invalid ID.
 - **Placement.** `new` writes `ROOT/G-NNN-slug.md`, flat. No command moves or
   renames a record when its title, type or status changes. `convert` below is
   the only command that moves a file.
@@ -53,51 +57,24 @@ old-to-new mapping.
   status=proposed` from a page, or `--set type=page --unset status` toward
   one, and the project must still validate, so work that a plan or question
   names cannot stop being work. Reclassifying grants nothing: an `accepted`
-  decision is a claim in a file, as it always was. Schemas 1 and 2 still
-  refuse `type`.
+  decision is a claim in a file, as it always was.
 - **`formerly`.** An optional string that only `convert` writes and `update`
   refuses: the typed ID or document path a record replaced. Two records with
-  one `formerly`, or a `formerly` naming an ID that still exists in the
-  checkout, are errors, which is how a merge from a branch that predates a
-  conversion is caught instead of quietly restoring a second owner.
+  one `formerly` are an error. A merge from a branch that predates the
+  conversion cannot quietly restore a second owner: a restored typed-ID record
+  fails `check` on its ID.
 
-**Allocation.** Neutral numbers come from `grove/neutral-ids` in the Git common
-directory, beside `grove/next-ids` and under the same `grove/lock`, with the
-same format (`G 12`), floor scan (every `.md` beneath the record root in every
-local ref and worktree, nested included) and recovery notices. The two files
-are separate on purpose. A CLI that predates schema 3 refuses a `next-ids`
-holding a prefix it does not know, so `G` never goes there: an older checkout
-keeps allocating `W-`/`Q-`/… IDs for its schema-1 or schema-2 worktree, never
-reads or rewrites the neutral counter, and cannot issue an ID a schema-3
-worktree could also issue, because the namespaces are disjoint. The current CLI
-likewise still issues typed IDs in type folders for a schema-1 or schema-2
-worktree of the same repository. Exercised with a binary built from `bd6debe`
-beside this one; see G-065's evidence.
+**Allocation.** Numbers come from the one counter file `grove/neutral-ids` in
+the Git common directory, under `grove/lock`, in the form `G 12`, with the
+floor scan (every `.md` beneath the record root in every local ref and
+worktree, nested included) and recovery notices described under
+[Identity and dates](#identity-and-dates). A `grove/next-ids` file left by the
+deleted typed counters is never read or written.
 
-**Moving to schema 3** is the deliberate one-line edit of `schema_version`, as
-schema 2 was. No command rewrites it and every schema-2 record stays valid and
-in place. It cannot be undone by editing the number back once a page, a neutral
-ID or a record outside a type folder exists: schema 2 refuses those. An older
-CLI refuses the checkout with "unsupported version 3; expected 1 or 2" on every
-command, reads included, until that checkout has newer code. `versions`,
-`workspace` and the board judge each branch and checkout by its own
-`grove.yaml`, so schema-2 and schema-3 sources are read side by side. Where
-sources disagree about a record's type, the board follows the record in the
-checkout it is showing, and shelves work that checkout does not hold. One
-limit: a group deleted from every source carries no record, so only a typed
-`W-` ID can still say it was work; deleted neutral-ID work is not shelved.
+**Conversion (`grove convert`).** Turns a Markdown document outside the record
+root into a record, one source per run. Its other form, which gave a typed-ID
+record a neutral ID, did G-052's conversion and was deleted with typed IDs:
 
-**Conversion (`grove convert`, schema 3 only).** The one deliberate identity
-change, bounded to one source per run; it is what
-[G-052](../grove/G-052-migrate-knowledge.md) uses, never hand-numbering:
-
-- `convert ID [--slug SLUG]` takes a record with a typed ID. It reserves the
-  next neutral ID, changes only `id`, appends `formerly: "OLD-ID"`, and moves
-  the file to `ROOT/G-NNN-slug.md` (slug from the old filename unless given).
-  `created`, `updated`, `status`, `examined` and every body byte are kept.
-  Relationship lists in other records that name the old ID are rewritten to
-  the new one (a rewritten list is written in flow style), again without
-  touching `updated`.
 - `convert PATH --type TYPE --title TITLE [--slug SLUG]` takes a Markdown
   document outside the record root, such as a plan written before plan
   records. It creates a record whose body is the document's bytes (less a
@@ -109,40 +86,34 @@ change, bounded to one source per run; it is what
 - Stdout is one JSON line, `{from, from_path, id, path}`: the mapping entry.
   Collecting these is the caller's durable old-to-new mapping.
 - A source that some record's `formerly` already names (compared without case,
-  since a case-insensitive filesystem opens `docs/Plan.md` as `docs/plan.md`),
-  an ID that is already neutral, and a missing source are refused before any
+  since a case-insensitive filesystem opens `docs/Plan.md` as `docs/plan.md`)
+  and a missing source are refused before any
   ID is reserved, so a rerun neither duplicates a record nor remaps an
   identity. A refusal after the reservation, such as an existing target file,
   consumes the number and says so; gaps are acceptable, as for `new`.
 - Not rewritten: body prose, Markdown links (the moved file's own relative
   links included), `examined`, and anything outside the record root. The
   caller repairs links from the mapping; `check` does not verify them.
-- Everything is validated before the first write. The writes themselves are
-  not atomic across files: the new file is created first (an existing target
-  refuses the run untouched), then the old file is removed, then referrers
-  are replaced. A failure after the new file exists exits 1 but still prints
-  the mapping line, which is already true of the files. An interruption leaves
-  a checkout that fails `check`, naming the half-converted record; recover with
-  Git and run it again. Convert from a
-  clean, committed record root.
+- Everything is validated before the write, and an existing target file
+  refuses the run untouched. The original document is never modified or
+  removed.
 
 Not provided: lookup of a record by its former ID, batch conversion, link
-rewriting, per-type folders or prefixes, and a command that edits
-`schema_version`.
+rewriting, and per-type folders or prefixes.
 
-## Schema 2: knowledge records and the brief
+## Knowledge records and the brief
 
 On 2026-09-20 [G-035](../grove/G-035-interactive-adoption.md) selected
 terms and linked work artifacts, and
 [G-051](../grove/G-051-typed-knowledge-records.md) selected their
-representation. [G-037](../grove/G-037-knowledge-artifacts.md) implements
-it as `schema_version: 2`:
+representation, which [G-037](../grove/G-037-knowledge-artifacts.md)
+implemented:
 
-| Type | ID | Folder | Statuses (first is what `new` writes) | Extra fields |
-| --- | --- | --- | --- | --- |
-| `term` | `T-001` | `terms/` | `proposed`, `settled` | none |
-| `plan` | `P-001` | `plans/` | `current`, `superseded` | `work` |
-| `review` | `R-001` | `reviews/` | `current`, `superseded` | `work`, `examined` |
+| Type | Statuses (first is what `new` writes) | Extra fields |
+| --- | --- | --- |
+| `term` | `proposed`, `settled` | none |
+| `plan` | `current`, `superseded` | `work` |
+| `review` | `current`, `superseded` | `work`, `examined` |
 
 - A term's title is the term; its body gives meaning and relationships, not
   execution instructions. Two terms whose titles match, ignoring case and
@@ -150,8 +121,8 @@ it as `schema_version: 2`:
 - `work` is an optional list of work IDs the plan or review belongs to, checked
   like `depends_on` targets. One plan can name several work items. Work does
   not name its plans or reviews back: that side is derived, and
-  `context W-NNN` lists them without reading them. `new` takes no fields, so
-  set it with `update ID --expect REVISION --set 'work=["W-001"]'`.
+  `context G-NNN` lists them without reading them. `new` takes no fields, so
+  set it with `update ID --expect REVISION --set 'work=["G-001"]'`.
 - `examined` is an optional quoted Git commit, 7 to 40 lowercase hex digits:
   what the review looked at. Whether the reviewed content has changed since is
   a comparison a reader makes, not stored state. Approval, candidates, and
@@ -159,25 +130,16 @@ it as `schema_version: 2`:
   type is not defined yet.
 - Optional `brief: PATH` in `grove.yaml` names the one project brief: a clean
   project-relative `.md` path without `..`, anywhere in the project, including
-  directly under the record root (`grove/brief.md`), but never inside a type
-  folder (compared without case). It is not a record and has no ID or frontmatter rules. That one path
-  is exempt from the misplaced-Markdown rule. Every live command requires a
+  directly under the record root (`grove/brief.md`). It is not a record and
+  has no ID or frontmatter rules; that one path is exempt from discovery
+  (compared without case). Every live command requires a
   regular, non-symlink file there and names `grove.yaml: brief` when it is
   missing. `grove brief [--json]` prints it like `show`; `context` never adds
   it, and `--include PATH` still can.
 
-**Compatibility.** The CLI reads schemas 1, 2 and 3
-([schema 3](#schema-3-identity-and-placement-apart-from-classification) has its
-own compatibility rules). A schema-1 project
-keeps exactly the rules below: the three original types, no `brief` key, and
-`new term` refused before any ID is reserved. Moving to schema 2 is the
-deliberate one-line edit of `schema_version`; no command rewrites it, and every
-schema-1 record stays valid. An older CLI refuses a schema-2 project with
-"unsupported version 2", and refuses `new` once a newer CLI has written a `T`,
-`P`, or `R` line to the repository's shared counter file, until that checkout
-has the newer code. Committed sources in `versions` and the board check only
-the form of `brief`, never that the file exists: they read `grove.yaml` and the
-record root, and only a live checkout is required to hold the brief.
+Committed sources in `versions` and the board check only the form of `brief`,
+never that the file exists: they read `grove.yaml` and the record root, and
+only a live checkout is required to hold the brief.
 
 Plans and reviews written before this support were ordinary files in
 `docs/plans/` and `docs/reviews/` until
@@ -195,9 +157,9 @@ CLI interprets and a freeform Markdown body for explanation.
 | Field | Purpose |
 | --- | --- |
 | `id` | Stable identity; renaming the title or file does not change it |
-| `type` | `work`, `question`, or `decision`; with schema 2 also `term`, `plan`, or `review`; with schema 3 also `page` |
+| `type` | `work`, `question`, `decision`, `term`, `plan`, `review`, or `page` |
 | `title` | A readable label for lists, search, and the eventual board |
-| `status` | Explicit lifecycle state for that record type; a schema-3 `page` has none |
+| `status` | Explicit lifecycle state for that record type; a `page` has none |
 
 The accepted relationship fields cover the starter records:
 
@@ -205,7 +167,7 @@ The accepted relationship fields cover the starter records:
 - Question `blocks`: work IDs whose outcome needs the answer. An unresolved
   question may be relevant without blocking work.
 - Any record `relates_to`: related record IDs, with no implied ordering or gate.
-- Plan and review `work` (schema 2): the work they belong to.
+- Plan and review `work`: the work they belong to.
 
 ## Work planning metadata
 
@@ -259,7 +221,7 @@ capability records, a type outside the current three-type starter model.
 
 Defaults accepted 2026-09-19 on the owner's response "YeaI accept those defaults":
 `grove.yaml` with schema version and configurable record root, the three type
-folders, timestamps, and optional planning values. Later that day, the owner
+folders (since replaced by [flat placement](#identity-and-placement-apart-from-classification)), timestamps, and optional planning values. Later that day, the owner
 accepted sequential IDs allocated across local worktrees and short filenames
 after finding the original random-ID/timestamp filenames difficult to browse.
 These revised defaults govern the operational records. G-003 implements the
@@ -274,15 +236,16 @@ edits remain unimplemented. This section owns the schema; the brief owns directi
 Keep one `grove.yaml` at the project root:
 
 ```yaml
-schema_version: 1
+schema_version: 3
 records: grove
+brief: grove/brief.md
 ```
 
 `schema_version` versions the configuration and record schema together. Require
-both keys; accept 1 and 2 ([what 2 adds](#schema-2-knowledge-records-and-the-brief));
-refuse missing or unsupported versions without guessing, migrating,
-or rewriting files. This is the new CLI's schema 1, unrelated to the sibling
-skills CLI's schema numbering or `grove.toml` configuration.
+both keys, with `brief` optional; accept exactly 3 and refuse a missing or
+other version without guessing, migrating, or rewriting files. The number is
+this CLI's, unrelated to the sibling skills CLI's schema numbering or
+`grove.toml` configuration.
 
 Resolve `records` relative to the directory containing `grove.yaml`. Permit a
 different relative folder, such as `docs/grove`; require it to remain inside the
@@ -302,31 +265,22 @@ these initial commands.
 ```text
 grove.yaml
 grove/
-  work/
-  questions/
-  decisions/
+  brief.md
+  G-001-starter-defaults.md
+  G-003-inspect-records.md
 ```
 
-Schema 2 adds `terms/`, `plans/`, and `reviews/` beside them; schema 3
-[drops type folders](#schema-3-identity-and-placement-apart-from-classification). Read `.md` files
-recursively within the type folders of the project's schema. Require frontmatter
-`type` to match its folder; nested folders
-may organize records but do not confer lifecycle meaning. Closed records stay
-discoverable in the same tree. Reject symlinks in the record tree; report `.md`
-files outside the type folders as misplaced rather than silently dropping
-them (the configured brief excepted). Other file extensions are not records. A missing record root is an error;
-missing type folders simply contain no records.
+Read `.md` files recursively beneath the record root. Nested folders may
+organize records but confer no type or lifecycle meaning; `new` writes flat.
+Closed records stay discoverable in the same tree. Reject symlinks in the
+record tree; report a `.md` file that is not a valid record rather than
+silently dropping it (the configured brief excepted). Other file extensions
+are not records. A missing record root is an error.
 
-Generate short filenames as `<id>-<slug>.md`, for example:
+Generate short filenames as `<id>-<slug>.md`.
 
-```text
-work/W-001-inspect-records.md
-questions/Q-001-branch-versions.md
-decisions/D-001-starter-defaults.md
-```
-
-Keep dates in frontmatter. The number supplies allocation order within each
-record type; it does not prove creation time, priority, or execution order.
+Keep dates in frontmatter. The number supplies allocation order; it
+does not prove creation time, priority, or execution order.
 Use a short descriptive slug, with the full title in frontmatter. `grove new`
 accepts an explicit `--slug`, or derives lowercase ASCII
 letters/digits separated by hyphens from the title, trim to at most 32 characters
@@ -340,16 +294,13 @@ survive renaming; ordinary Markdown path links still need updating when moved.
 
 ### Identity and dates
 
-Before schema 3, which
-[issues neutral `G-` IDs](#schema-3-identity-and-placement-apart-from-classification)
-from a counter of their own, use type-prefixed sequential IDs: `W-001` for work, `Q-001` for questions, and
-`D-001` for decisions; schema 2 adds `T-`, `P-`, and `R-`. Each type has its own counter; the full prefixed ID is the
-canonical identity, not an alias for a hidden random value. Start at 1, pad to a
-minimum of three digits, and expand beyond 999 (`W-1000`) without wrapping or
-renumbering older records. Require canonical padding and a prefix matching
-`type`. Store IDs as strings and match references exactly; `show W-001` needs
-no abbreviated-ID lookup. Numeric ordering must not rely on lexicographic
-sorting once the counter expands.
+Use neutral sequential IDs, `G-001` for every type, from one counter. The
+full ID is the canonical identity, not an alias for a hidden random value.
+Start at 1, pad to a minimum of three digits, and expand beyond 999
+(`G-1000`) without wrapping or renumbering older records. Require canonical
+padding. Store IDs as strings and match references exactly; `show G-001`
+needs no abbreviated-ID lookup. Numeric ordering must not rely on
+lexicographic sorting once the counter expands.
 
 For Git projects, creation commands coordinate through the shared
 directory returned by `git rev-parse --path-format=absolute --git-common-dir`.
@@ -360,7 +311,7 @@ metadata as well as a shared common directory. This is supported by
 Allocation requirements for cooperating Grove commands in one local repository:
 
 1. Acquire an exclusive lock shared by every worktree and all record types.
-2. Reserve the next number for the requested type and durably save the advanced
+2. Reserve the next number and durably save the advanced
    counter while holding the lock. If locking or persistence fails, do not issue
    an ID or create a record.
 3. Release the lock, then create the record in its selected checkout without
@@ -372,7 +323,7 @@ worktree, or configured record-root path. It is local coordination state, not a
 tracked project record; no daemon is required. A Grove-owned directory under
 the Git common directory is the intended home. [G-006](../grove/G-006-allocator-mechanism.md)
 owns the accepted state encoding, lock primitive, and recovery protocol for
-[G-007](../grove/G-007-create-records.md) to test with the creation command. `grove new` initializes and maintains `grove/next-ids` under `grove/lock` in
+[G-007](../grove/G-007-create-records.md) to test with the creation command. `grove new` initializes and maintains `grove/neutral-ids` under `grove/lock` in
 that common directory, and `new` and `update` serialize publication through
 `grove/write.lock` beside them; the read-only inspection commands never create
 any of these files, and none is ever unlinked.
@@ -395,7 +346,7 @@ state; automatic allocation outside Git is deferred.
 
 The starter records were renumbered once before any new CLI existed. The mapping
 is retained in [G-004](../grove/G-004-sequential-ids.md); this is not a
-general ID-renaming feature. Schema 1 is still the unshipped starter contract.
+general ID-renaming feature.
 
 Keep `created` and `updated` optional on every type. When present, require quoted
 UTC timestamps in `YYYY-MM-DDTHH:MM:SSZ` form, and require `updated >= created`
@@ -441,7 +392,7 @@ Cross-branch relationships remain outside this reader's scope.
 including uncommitted records. Present the selected project path so the source
 is clear. Those commands change no records, dates, configuration, or Git state.
 `new <type> <title> [--slug SLUG]` allocates the next ID as specified above
-(refusing a type the project's schema does not have before reserving anything),
+(refusing an unknown type before reserving anything),
 writes `<id>-<slug>.md` with a body skeleton and equal `created`/`updated`
 timestamps, prints the root-relative path, and fails without deleting the file
 if the project no longer validates. It requires Git and never overwrites.
@@ -462,7 +413,7 @@ directory of the existing checkout that still holds exactly that version;
 refusal contract. Both require Git and read only.
 
 - `list`: show ID, type, status, and title, ordered by `created` ascending with
-  undated records last, then ID prefix and numeric suffix as the tie-breaker.
+  undated records last, then the ID's number as the tie-breaker.
   Do not infer urgency from that order.
 - `show <id>`: show the file path and complete Markdown source, including
   frontmatter and relationships. The original bytes go to stdout; project and
@@ -497,9 +448,9 @@ promise a transactional snapshot or ownership of the files.
 
 ### Why these defaults
 
-Type folders support manual browsing; a configurable root accommodates projects
-that keep knowledge under `docs/`. A flat directory remains possible future
-design if three folders become friction. Shared sequential IDs make filenames
+Type folders supported manual browsing until they became friction and G-064
+selected a flat root; a configurable root accommodates projects that keep
+knowledge under `docs/`. Shared sequential IDs make filenames
 and references readable for the initial local-worktree audience. The earlier
 random-ID/timestamp filename trial was rejected after actual browsing; a hidden
 random identity with numbered aliases would add a second identity without being
@@ -559,7 +510,7 @@ contract defects that G-014/G-015/G-016 repair; their
 these operations; it changes no schema and writes no record. Editing from an
 interactive view and automatic checkout creation are future investments.
 
-Plans and reviews are records from schema 2 on. Report records, artifact
+Plans and reviews are records. Report records, artifact
 ingestion, and agent attempts are deferred. Ordinary Markdown links and prose
 can carry other supporting material in the meantime. The work planning metadata above is accepted for
 the starting schema; attachment deferral does not require

@@ -33,22 +33,22 @@ read the brief when the record, a product question, or reconciliation needs it.
   concrete next action belong to each work record's Next, never the brief. Do
   not create a second editable account of the same direction.
   G-036 owns the selected interactive adoption milestone; its linked roadmap is
-  investment order, not a batch assignment. G-037 implements schema 2: term,
-  plan, and review records (G-051) and the `brief:` key that `grove brief`
-  reads. G-064 selects stable identity/placement and flexible knowledge: G-065
-  implements it as schema 3 (neutral `G-` IDs from their own counter file,
-  `page` records, flat creation, recursive discovery, `update --set type=`,
-  and `convert`). G-035's target lifecycle is also pending: G-038 owns that
-  migration. G-052 reconciled this repository on 2026-09-21: `grove.yaml` is
-  schema 3, every record, former `docs/plans` and `docs/reviews` document
-  included, has a neutral ID flat under `grove/`, and the brief is
-  `grove/brief.md`. [G-069](grove/G-069-migration-map.md) maps each old ID and
-  path to its counterpart; use it, not a search of old names, to follow a
-  reference in an old commit or message. That explicit one-time conversion is
-  separate from normal operations, which keep IDs and paths stable: do not run
-  `convert` on a record again or hand-author IDs. G-052 also deletes schemas 1
-  and 2: Grove keeps no backward compatibility before its first release, and
-  an old commit is inspected with the CLI in that commit.
+  investment order, not a batch assignment. G-037 added term, plan, and review
+  records (G-051) and the `brief:` key that `grove brief` reads. G-064 selected
+  stable identity/placement and flexible knowledge, which G-065 implemented:
+  neutral `G-` IDs from one counter, `page` records, flat creation, recursive
+  discovery, and `update --set type=`. G-035's target lifecycle is pending:
+  G-038 owns that migration. G-052 reconciled this repository on 2026-09-21:
+  every record, former `docs/plans` and `docs/reviews` document included, has
+  a neutral ID flat under `grove/`, the brief is `grove/brief.md`, and
+  [G-069](grove/G-069-migration-map.md) maps each old ID and path to its
+  counterpart; use it to follow a reference in an old commit or message.
+  G-052 also deleted schemas 1 and 2 with their typed IDs, type folders and
+  counters: `schema_version: 3` is the only schema, Grove keeps no backward
+  compatibility before its first release, and an old commit is inspected with
+  the CLI in that commit. Ordinary operations keep IDs and paths stable: never
+  hand-author or renumber an ID, and keep `convert` for documents outside the
+  record root.
 - `../skills/` and `../nullsec/` are evidence and potential compatibility targets,
   not automatically part of an implementation's write scope. Follow their
   instructions; retrieve their Grove knowledge through `grove status`,

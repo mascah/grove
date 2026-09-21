@@ -35,8 +35,8 @@ go run ./cmd/grove list
 go run ./cmd/grove show G-003
 go run ./cmd/grove check
 go run ./cmd/grove new work "Title of the work" --slug short-name
-go run ./cmd/grove new term "Attempt"  # also plan and review; schema_version 2
-go run ./cmd/grove new page "Notes"     # general knowledge; schema_version 3
+go run ./cmd/grove new term "Attempt"  # also question, decision, plan and review
+go run ./cmd/grove new page "Notes"     # general knowledge, no status
 go run ./cmd/grove convert notes/old-plan.md --type plan --title "Old plan"  # prints the mapping
 go run ./cmd/grove brief               # the brief grove.yaml names
 go run ./cmd/grove show G-003 --json
@@ -62,33 +62,31 @@ Without `--project`, discovery searches upward for `grove.yaml` and stops at
 the current Git checkout boundary. Plain directories also work. Any invalid
 record makes the command fail; no partial list or record is printed.
 
-With `schema_version: 2`, terms, plans, and reviews are records too (`T-`,
-`P-`, `R-`, in `terms/`, `plans/`, `reviews/`). A plan or review names its
-work in a `work` list, set with `update`, and `context W-NNN` lists the plans
-and reviews attached to the selected work without reading them; a review can
-record the Git commit it `examined`. `brief: PATH` in `grove.yaml` names the
-project brief, which `brief` prints and `check` requires to exist. Schema-1
-projects keep working unchanged; the
-[record model](docs/record-model.md#schema-2-knowledge-records-and-the-brief)
-has the compatibility rules.
-
-With `schema_version: 3`, folders stop meaning anything: every `.md` beneath
-the record root is a record wherever it sits, `new` gives every type a neutral
-`G-NNN` ID in a flat `ROOT/G-NNN-slug.md`, and existing typed IDs and paths
-stay valid untouched. `new page "Title"` creates general knowledge with a title
-and no status; pages are never work cards and `context` reads one only through
+Every `.md` beneath the record root is a record wherever it sits, and folders
+mean nothing: `new` gives every type a neutral `G-NNN` ID in a flat
+`ROOT/G-NNN-slug.md`. Work, questions, decisions, terms, plans and reviews keep
+their own rules. A plan or review names its work in a `work` list, set with
+`update`, and `context G-NNN` lists the plans and reviews attached to the
+selected work without reading them; a review can record the Git commit it
+`examined`. `new page "Title"` creates general knowledge with a title and no
+status; pages are never work cards and `context` reads one only through
 `--include`. `update --set type=...` reclassifies in place, keeping ID and path.
-`convert` is the one deliberate identity change, for a record with a typed ID
-or a legacy Markdown document, and prints the old-to-new mapping. Moving a
-project to schema 3 is a one-line edit of `grove.yaml` that no command makes
-for you; [G-052](grove/G-052-migrate-knowledge.md) moved this repository, and
-[G-069](grove/G-069-migration-map.md) maps every old ID and path. The
-[record model](docs/record-model.md#schema-3-identity-and-placement-apart-from-classification)
-has the page boundary, allocator compatibility with older checkouts, and
-conversion's limits.
+`convert` turns a Markdown document outside the record root into a record and
+prints the old-to-new mapping. `brief: PATH` in `grove.yaml` names the project
+brief, which `brief` prints and `check` requires to exist.
 
-`new` and `update` require a Git checkout. `new` takes the next number for the
-record's prefix from a counter under the repository's common Git directory,
+`schema_version: 3` is the only schema: Grove keeps no backward compatibility
+before its first release. [G-052](grove/G-052-migrate-knowledge.md) converted
+this repository from typed IDs (`W-001`) in type folders, and
+[G-069](grove/G-069-migration-map.md) maps every old ID and path to its
+counterpart. Inspect an older commit with the CLI in that commit; `versions`
+and the board report a branch that predates the conversion as a source they
+cannot inspect. The
+[record model](docs/record-model.md#identity-and-placement-apart-from-classification)
+has the page boundary and conversion's limits.
+
+`new` and `update` require a Git checkout. `new` takes the next number
+from a counter under the repository's common Git directory,
 shared by every linked worktree, and floors it by the highest ID on any local
 ref or worktree. Never number new records by hand. Both commands serialize
 through a write lock in that same directory; `update` refuses a stale

@@ -66,14 +66,13 @@ predefined semantic category or ticket lifecycle. Known operational records
 retain explicit contracts for the facts software acts on. Classification,
 title and status changes preserve identity and path. Completed records stay
 put; views bound everyday clutter. Per-type folder/prefix settings, automatic
-filing and a general schema-extension engine are not selected. This repo gets
+filing and a general schema-extension engine are not selected. This repo got
 one deliberate reconciliation of all existing records, legacy plans/reviews
 and the brief into the flat layout, with neutral record IDs and an old-to-new
 mapping. Stable placement applies to normal operation after that migration.
-Until a first release Grove keeps no backward compatibility: after G-052 only
-the current schema is read, and an old commit is inspected with the CLI it
-carries. This is selected direction pending G-052, not permission to bypass
-today's schema 2.
+Until a first release Grove keeps no backward compatibility: only the current
+schema is read, and an old commit is inspected with the CLI it carries. G-052
+delivered the reconciliation and [G-069](G-069-migration-map.md) is its mapping.
 
 Retrieve context by activity: shaping starts with the brief and relevant
 knowledge; preparation with selected work and affected interfaces; execution
