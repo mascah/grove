@@ -15,7 +15,7 @@ import (
 	"github.com/mascah/grove/internal/project"
 )
 
-const config = "schema_version: 1\nrecords: grove\n"
+const config = "schema_version: 3\nrecords: grove\n"
 
 func record(id, kind, status, body string) string {
 	return "---\nid: \"" + id + "\"\ntype: " + kind + "\ntitle: T " + id + "\nstatus: " + status + "\n---\n" + body
@@ -49,7 +49,7 @@ func commit(t *testing.T, dir, message string) string {
 	return git(t, dir, "rev-parse", "HEAD")
 }
 
-// repoFixture returns a committed main worktree holding W-001 and Q-001.
+// repoFixture returns a committed main worktree holding G-001 and G-002.
 func repoFixture(t *testing.T) string {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
@@ -65,8 +65,8 @@ func repoFixture(t *testing.T) string {
 	}
 	git(t, root, "init", "-q", "-b", "main")
 	write(t, root, "grove.yaml", config)
-	write(t, root, "grove/work/W-001-first.md", record("W-001", "work", "proposed", "Main body.\n"))
-	write(t, root, "grove/questions/Q-001-q.md", record("Q-001", "question", "open", "Q.\n"))
+	write(t, root, "grove/work/G-001-first.md", record("G-001", "work", "proposed", "Main body.\n"))
+	write(t, root, "grove/questions/G-002-q.md", record("G-002", "question", "open", "Q.\n"))
 	commit(t, root, "init")
 	return root
 }
@@ -132,8 +132,8 @@ func TestInspectMainAndFeature(t *testing.T) {
 	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
-	write(t, wt, "grove/work/W-001-first.md", record("W-001", "work", "active", "Feature body.\n"))
-	write(t, wt, "grove/work/W-002-second.md", record("W-002", "work", "proposed", "Only here.\n"))
+	write(t, wt, "grove/work/G-001-first.md", record("G-001", "work", "active", "Feature body.\n"))
+	write(t, wt, "grove/work/G-003-second.md", record("G-003", "work", "proposed", "Only here.\n"))
 	tip := commit(t, wt, "feature progress")
 	mainTip := git(t, root, "rev-parse", "HEAD")
 
@@ -141,10 +141,10 @@ func TestInspectMainAndFeature(t *testing.T) {
 	if !res.Complete || res.Prefix != "" || res.Project != root {
 		t.Fatalf("unexpected result header: %+v", res)
 	}
-	if ids := groupIDs(res); !reflect.DeepEqual(ids, []string{"W-001", "W-002", "Q-001"}) {
+	if ids := groupIDs(res); !reflect.DeepEqual(ids, []string{"G-001", "G-002", "G-003"}) {
 		t.Fatalf("groups: %v", ids)
 	}
-	g := group(t, res, "W-001")
+	g := group(t, res, "G-001")
 	if len(g.Versions) != 4 {
 		t.Fatalf("expected four versions, got %+v", g.Versions)
 	}
@@ -162,7 +162,7 @@ func TestInspectMainAndFeature(t *testing.T) {
 	if main.Record.Status != "proposed" || feature.Record.Status != "active" || main.Revision == feature.Revision {
 		t.Fatalf("statuses must come from each branch: %s %s", main.Record.Status, feature.Record.Status)
 	}
-	if string(main.Record.Source) != record("W-001", "work", "proposed", "Main body.\n") || string(feature.Record.Source) != record("W-001", "work", "active", "Feature body.\n") {
+	if string(main.Record.Source) != record("G-001", "work", "proposed", "Main body.\n") || string(feature.Record.Source) != record("G-001", "work", "active", "Feature body.\n") {
 		t.Fatal("committed sources must carry each branch's exact bytes")
 	}
 	if main.Source.Commit != mainTip || feature.Source.Commit != tip {
@@ -188,17 +188,17 @@ func TestInspectMainAndFeature(t *testing.T) {
 			selectors[v.Selector] = true
 		}
 	}
-	if !strings.HasPrefix(main.Selector, "committed:refs/heads/main@"+mainTip[:12]+":W-001@"+strings.TrimPrefix(main.Revision, "sha256:")[:12]+":") ||
-		!strings.HasPrefix(liveFeature.Selector, "live:feature:refs/heads/feature@"+tip[:12]+":W-001@") {
+	if !strings.HasPrefix(main.Selector, "committed:refs/heads/main@"+mainTip[:12]+":G-001@"+strings.TrimPrefix(main.Revision, "sha256:")[:12]+":") ||
+		!strings.HasPrefix(liveFeature.Selector, "live:feature:refs/heads/feature@"+tip[:12]+":G-001@") {
 		t.Fatalf("selector grammar: %s %s", main.Selector, liveFeature.Selector)
 	}
-	if two := group(t, res, "W-002"); len(two.Versions) != 2 || two.Versions[0].Source.Ref != "refs/heads/feature" || two.Versions[1].Source.Locator != "feature" {
-		t.Fatalf("W-002 exists only on the feature: %+v", two.Versions)
+	if two := group(t, res, "G-003"); len(two.Versions) != 2 || two.Versions[0].Source.Ref != "refs/heads/feature" || two.Versions[1].Source.Locator != "feature" {
+		t.Fatalf("G-003 exists only on the feature: %+v", two.Versions)
 	}
-	if only := mustInspect(t, root, "W-002"); len(only.Groups) != 1 || only.Groups[0].ID != "W-002" || len(only.Sources) != 4 {
+	if only := mustInspect(t, root, "G-003"); len(only.Groups) != 1 || only.Groups[0].ID != "G-003" || len(only.Sources) != 4 {
 		t.Fatalf("an ID filter keeps every source: %+v", only.Groups)
 	}
-	if none := mustInspect(t, root, "W-009"); len(none.Groups) != 0 || !none.Complete {
+	if none := mustInspect(t, root, "G-009"); len(none.Groups) != 0 || !none.Complete {
 		t.Fatalf("an absent ID is an empty, complete result: %+v", none.Groups)
 	}
 	// The same call from the feature worktree sees the same picture.
@@ -238,16 +238,16 @@ func TestInspectBranchWithoutCheckoutAndDetached(t *testing.T) {
 	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "temp", "", "-b", "orphan")
-	write(t, wt, "grove/work/W-001-first.md", record("W-001", "work", "done", "Orphan.\n"))
+	write(t, wt, "grove/work/G-001-first.md", record("G-001", "work", "done", "Orphan.\n"))
 	commit(t, wt, "orphan")
 	git(t, root, "worktree", "remove", "--force", wt)
 	detached := addWorktree(t, root, "det", "orphan", "--detach")
 
-	res := mustInspect(t, root, "W-001")
+	res := mustInspect(t, root, "G-001")
 	if !res.Complete {
 		t.Fatalf("unexpected diagnostics: %+v", res.Sources)
 	}
-	g := group(t, res, "W-001")
+	g := group(t, res, "G-001")
 	orphan := find(t, g, "committed", "refs/heads/orphan")
 	if orphan.Record.Status != "done" {
 		t.Fatalf("a branch without a checkout contributes its committed records: %+v", orphan)
@@ -261,7 +261,7 @@ func TestInspectBranchWithoutCheckoutAndDetached(t *testing.T) {
 	if !d.Source.Detached() || d.Source.Ref != "" || d.Source.Worktree != detached || d.Change != "unchanged" || d.Record.Status != "done" {
 		t.Fatalf("detached checkout: %+v", d)
 	}
-	if !strings.HasPrefix(d.Selector, "live:det:detached@"+orphan.Source.Commit[:12]+":W-001@") {
+	if !strings.HasPrefix(d.Selector, "live:det:detached@"+orphan.Source.Commit[:12]+":G-001@") {
 		t.Fatalf("detached selector: %s", d.Selector)
 	}
 	if n := len(g.Versions); n != 4 { // main + orphan committed, main + det live
@@ -273,20 +273,20 @@ func TestInspectLiveChanges(t *testing.T) {
 	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
-	write(t, wt, "grove/work/W-002-second.md", record("W-002", "work", "proposed", "Two.\n"))
-	write(t, wt, "grove/work/W-004-fourth.md", record("W-004", "work", "proposed", "Four.\n"))
-	write(t, wt, "grove/work/W-005-fifth.md", record("W-005", "work", "proposed", "Five.\n"))
+	write(t, wt, "grove/work/G-003-second.md", record("G-003", "work", "proposed", "Two.\n"))
+	write(t, wt, "grove/work/G-005-fourth.md", record("G-005", "work", "proposed", "Four.\n"))
+	write(t, wt, "grove/work/G-006-fifth.md", record("G-006", "work", "proposed", "Five.\n"))
 	commit(t, wt, "records")
-	write(t, wt, "grove/work/W-001-first.md", record("W-001", "work", "active", "Main body.\n"))
-	if err := os.Remove(filepath.Join(wt, "grove/work/W-002-second.md")); err != nil {
+	write(t, wt, "grove/work/G-001-first.md", record("G-001", "work", "active", "Main body.\n"))
+	if err := os.Remove(filepath.Join(wt, "grove/work/G-003-second.md")); err != nil {
 		t.Fatal(err)
 	}
-	write(t, wt, "grove/work/W-003-third.md", record("W-003", "work", "proposed", "Three.\n"))
-	if err := os.Rename(filepath.Join(wt, "grove/work/W-004-fourth.md"), filepath.Join(wt, "grove/work/W-004-renamed.md")); err != nil {
+	write(t, wt, "grove/work/G-004-third.md", record("G-004", "work", "proposed", "Three.\n"))
+	if err := os.Rename(filepath.Join(wt, "grove/work/G-005-fourth.md"), filepath.Join(wt, "grove/work/G-005-renamed.md")); err != nil {
 		t.Fatal(err)
 	}
-	write(t, wt, "grove/work/W-005-moved.md", record("W-005", "work", "done", "Five.\n"))
-	if err := os.Remove(filepath.Join(wt, "grove/work/W-005-fifth.md")); err != nil {
+	write(t, wt, "grove/work/G-006-moved.md", record("G-006", "work", "done", "Five.\n"))
+	if err := os.Remove(filepath.Join(wt, "grove/work/G-006-fifth.md")); err != nil {
 		t.Fatal(err)
 	}
 
@@ -295,8 +295,8 @@ func TestInspectLiveChanges(t *testing.T) {
 		t.Fatalf("unexpected diagnostics: %+v", res.Sources)
 	}
 	want := map[string][2]string{
-		"W-001": {"modified", ""}, "W-002": {"deleted", ""}, "W-003": {"added", ""},
-		"W-004": {"renamed", "grove/work/W-004-fourth.md"}, "W-005": {"modified", "grove/work/W-005-fifth.md"},
+		"G-001": {"modified", ""}, "G-003": {"deleted", ""}, "G-004": {"added", ""},
+		"G-005": {"renamed", "grove/work/G-005-fourth.md"}, "G-006": {"modified", "grove/work/G-006-fifth.md"},
 	}
 	for id, expect := range want {
 		v := find(t, group(t, res, id), "live", "feature")
@@ -304,25 +304,25 @@ func TestInspectLiveChanges(t *testing.T) {
 			t.Fatalf("%s: change=%s head_path=%s, expected %v", id, v.Change, v.HeadPath, expect)
 		}
 	}
-	deleted := find(t, group(t, res, "W-002"), "live", "feature")
-	if deleted.Record != nil || deleted.Selector != "" || deleted.Revision != "" || deleted.Path != "grove/work/W-002-second.md" {
+	deleted := find(t, group(t, res, "G-003"), "live", "feature")
+	if deleted.Record != nil || deleted.Selector != "" || deleted.Revision != "" || deleted.Path != "grove/work/G-003-second.md" {
 		t.Fatalf("a deleted record is a row without content or selector: %+v", deleted)
 	}
-	if c := find(t, group(t, res, "W-002"), "committed", "refs/heads/feature"); c.Record.Status != "proposed" {
-		t.Fatal("the committed W-002 stays visible on the branch")
+	if c := find(t, group(t, res, "G-003"), "committed", "refs/heads/feature"); c.Record.Status != "proposed" {
+		t.Fatal("the committed G-003 stays visible on the branch")
 	}
-	if v := find(t, group(t, res, "W-004"), "live", "feature"); v.Path != "grove/work/W-004-renamed.md" {
+	if v := find(t, group(t, res, "G-005"), "live", "feature"); v.Path != "grove/work/G-005-renamed.md" {
 		t.Fatalf("renamed path: %s", v.Path)
 	}
-	if v := find(t, group(t, res, "W-001"), "live", "."); v.Change != "unchanged" {
+	if v := find(t, group(t, res, "G-001"), "live", "."); v.Change != "unchanged" {
 		t.Fatalf("main is clean: %s", v.Change)
 	}
 	// A checkout whose HEAD has no project reports every record as added.
 	empty := addWorktree(t, root, "empty", git(t, root, "commit-tree", "-m", "empty", git(t, root, "hash-object", "-t", "tree", "--stdin", "-w")), "--detach")
 	write(t, empty, "grove.yaml", config)
-	write(t, empty, "grove/work/W-001-first.md", record("W-001", "work", "proposed", "x\n"))
-	res = mustInspect(t, root, "W-001")
-	if v := find(t, group(t, res, "W-001"), "live", "empty"); v.Change != "added" || !res.Complete {
+	write(t, empty, "grove/work/G-001-first.md", record("G-001", "work", "proposed", "x\n"))
+	res = mustInspect(t, root, "G-001")
+	if v := find(t, group(t, res, "G-001"), "live", "empty"); v.Change != "added" || !res.Complete {
 		t.Fatalf("no project at HEAD means an empty baseline: %+v", v)
 	}
 }
@@ -332,15 +332,15 @@ func TestInspectPrefixAndConfig(t *testing.T) {
 	root := repoFixture(t)
 	// Move the project below the repository root with a different record folder.
 	git(t, root, "rm", "-q", "-r", "grove.yaml", "grove")
-	write(t, root, "sub/grove.yaml", "schema_version: 1\nrecords: docs/records\n")
-	write(t, root, "sub/docs/records/work/W-001-first.md", record("W-001", "work", "proposed", "Main.\n"))
-	write(t, root, "sub/docs/records/questions/Q-001-q.md", record("Q-001", "question", "open", "Q.\n"))
+	write(t, root, "sub/grove.yaml", "schema_version: 3\nrecords: docs/records\n")
+	write(t, root, "sub/docs/records/work/G-001-first.md", record("G-001", "work", "proposed", "Main.\n"))
+	write(t, root, "sub/docs/records/questions/G-002-q.md", record("G-002", "question", "open", "Q.\n"))
 	commit(t, root, "nested")
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
 	git(t, wt, "rm", "-q", "-r", "sub/docs")
 	write(t, wt, "sub/grove.yaml", config)
-	write(t, wt, "sub/grove/work/W-001-first.md", record("W-001", "work", "active", "Feature.\n"))
-	write(t, wt, "sub/grove/questions/Q-001-q.md", record("Q-001", "question", "open", "Q.\n"))
+	write(t, wt, "sub/grove/work/G-001-first.md", record("G-001", "work", "active", "Feature.\n"))
+	write(t, wt, "sub/grove/questions/G-002-q.md", record("G-002", "question", "open", "Q.\n"))
 	commit(t, wt, "feature config")
 	git(t, root, "branch", "-q", "bare-branch", git(t, root, "commit-tree", "-m", "no project", git(t, root, "hash-object", "-t", "tree", "--stdin", "-w")))
 
@@ -348,15 +348,15 @@ func TestInspectPrefixAndConfig(t *testing.T) {
 	if res.Prefix != "sub/" || !res.Complete {
 		t.Fatalf("prefix=%q sources=%s", res.Prefix, dump(res))
 	}
-	g := group(t, res, "W-001")
+	g := group(t, res, "G-001")
 	main, feature := find(t, g, "committed", "refs/heads/main"), find(t, g, "committed", "refs/heads/feature")
-	if main.Path != "docs/records/work/W-001-first.md" || feature.Path != "grove/work/W-001-first.md" || main.Source.ConfigRevision == feature.Source.ConfigRevision {
+	if main.Path != "docs/records/work/G-001-first.md" || feature.Path != "grove/work/G-001-first.md" || main.Source.ConfigRevision == feature.Source.ConfigRevision {
 		t.Fatalf("each source uses its own configuration: %+v %+v", main, feature)
 	}
 	if feature.Source.ConfigRevision != project.Revision([]byte(config)) {
 		t.Fatalf("configuration revision hashes the exact grove.yaml bytes: %s", feature.Source.ConfigRevision)
 	}
-	if l := find(t, g, "live", "feature"); l.Path != "grove/work/W-001-first.md" || l.Change != "unchanged" || l.Source.Worktree != wt {
+	if l := find(t, g, "live", "feature"); l.Path != "grove/work/G-001-first.md" || l.Change != "unchanged" || l.Source.Worktree != wt {
 		t.Fatalf("live feature: %+v", l)
 	}
 	if b := source(t, res, "committed", "refs/heads/bare-branch"); b.Present || b.Valid || len(b.Diagnostics) != 0 {
@@ -371,9 +371,9 @@ func TestInspectSourceLocalValidation(t *testing.T) {
 	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
-	write(t, wt, "grove/work/W-002-second.md", "---\nid: \"W-002\"\ntype: work\ntitle: T\nstatus: proposed\ndepends_on: [\"W-009\"]\n---\n")
+	write(t, wt, "grove/work/G-003-second.md", "---\nid: \"G-003\"\ntype: work\ntitle: T\nstatus: proposed\ndepends_on: [\"G-009\"]\n---\n")
 	commit(t, wt, "dangling dependency")
-	write(t, root, "grove/work/W-009-ninth.md", record("W-009", "work", "done", "Only on main.\n"))
+	write(t, root, "grove/work/G-009-ninth.md", record("G-009", "work", "done", "Only on main.\n"))
 	commit(t, root, "ninth on main")
 
 	res := mustInspect(t, root, "")
@@ -382,21 +382,21 @@ func TestInspectSourceLocalValidation(t *testing.T) {
 	}
 	for _, where := range []string{"refs/heads/feature"} {
 		s := source(t, res, "committed", where)
-		if s.Valid || !s.Present || len(s.Diagnostics) != 1 || !strings.Contains(s.Diagnostics[0], "unresolved target W-009") {
+		if s.Valid || !s.Present || len(s.Diagnostics) != 1 || !strings.Contains(s.Diagnostics[0], "unresolved target G-009") {
 			t.Fatalf("feature source: %+v", s)
 		}
 	}
-	if s := source(t, res, "live", "feature"); s.Valid || !strings.Contains(strings.Join(s.Diagnostics, "\n"), "unresolved target W-009") {
+	if s := source(t, res, "live", "feature"); s.Valid || !strings.Contains(strings.Join(s.Diagnostics, "\n"), "unresolved target G-009") {
 		t.Fatalf("live feature source: %+v", s)
 	}
 	if s := source(t, res, "committed", "refs/heads/main"); !s.Valid {
 		t.Fatalf("main stays valid: %+v", s)
 	}
-	if _, ok := lookup(res, "W-002"); ok {
+	if _, ok := lookup(res, "G-003"); ok {
 		t.Fatal("records from invalid sources are not admitted as observations")
 	}
-	if g := group(t, res, "W-009"); len(g.Versions) != 2 {
-		t.Fatalf("W-009 from the valid main sources: %+v", g.Versions)
+	if g := group(t, res, "G-009"); len(g.Versions) != 2 {
+		t.Fatalf("G-009 from the valid main sources: %+v", g.Versions)
 	}
 }
 
@@ -413,10 +413,10 @@ func TestInspectIncomplete(t *testing.T) {
 	t.Parallel()
 	root := repoFixture(t)
 	bad := addWorktree(t, root, "bad", "", "-b", "bad-yaml")
-	write(t, bad, "grove/work/W-002-second.md", "---\nid: \"W-002\"\ntype: work\ntitle: [unclosed\nstatus: proposed\n---\n")
+	write(t, bad, "grove/work/G-003-second.md", "---\nid: \"G-003\"\ntype: work\ntitle: [unclosed\nstatus: proposed\n---\n")
 	commit(t, bad, "bad yaml")
 	dup := addWorktree(t, root, "dup", "", "-b", "dup-ids")
-	write(t, dup, "grove/work/W-001-copy.md", record("W-001", "work", "done", "Copy.\n"))
+	write(t, dup, "grove/work/G-001-copy.md", record("G-001", "work", "done", "Copy.\n"))
 	commit(t, dup, "duplicate id")
 	gone := addWorktree(t, root, "gone", "", "-b", "gone")
 	if err := os.RemoveAll(gone); err != nil {
@@ -436,8 +436,8 @@ func TestInspectIncomplete(t *testing.T) {
 		t.Fatal("invalid sources make the result incomplete")
 	}
 	expect := map[string]string{
-		"committed refs/heads/bad-yaml": "grove/work/W-002-second.md:", "live bad": "grove/work/W-002-second.md:",
-		"committed refs/heads/dup-ids": "duplicate W-001", "live dup": "duplicate W-001",
+		"committed refs/heads/bad-yaml": "grove/work/G-003-second.md:", "live bad": "grove/work/G-003-second.md:",
+		"committed refs/heads/dup-ids": "duplicate G-001", "live dup": "duplicate G-001",
 		"committed refs/heads/sym": "grove.yaml: symlink", "live sym": "grove.yaml: symlink",
 		"live gone": "prunable",
 	}
@@ -461,7 +461,7 @@ func TestInspectIncomplete(t *testing.T) {
 	if len(expect) != 0 {
 		t.Fatalf("sources not reported: %v", expect)
 	}
-	if g := group(t, res, "W-001"); len(g.Versions) != 3 { // main and gone committed, main live
+	if g := group(t, res, "G-001"); len(g.Versions) != 3 { // main and gone committed, main live
 		t.Fatalf("valid sources still contribute: %s", dump(res))
 	}
 	if !res.Complete {
@@ -480,7 +480,7 @@ func TestInspectUnstable(t *testing.T) {
 	leaving := addWorktree(t, root, "leaving", "", "-b", "leaving")
 	detaching := addWorktree(t, root, "detaching", "", "-b", "detaching")
 	res, err := inspect(t.Context(), root, "", func() {
-		write(t, moving, "grove/work/W-002-second.md", record("W-002", "work", "proposed", "x\n"))
+		write(t, moving, "grove/work/G-003-second.md", record("G-003", "work", "proposed", "x\n"))
 		commit(t, moving, "moved")
 		git(t, root, "worktree", "remove", "--force", leaving)
 		git(t, detaching, "checkout", "-q", "--detach")
@@ -510,7 +510,7 @@ func TestInspectUnstable(t *testing.T) {
 	if s := source(t, res, "live", "."); !s.Valid {
 		t.Fatalf("the untouched checkout stays valid: %+v", s.Diagnostics)
 	}
-	if _, ok := lookup(res, "W-002"); ok {
+	if _, ok := lookup(res, "G-003"); ok {
 		t.Fatal("records from an unstable source are not admitted")
 	}
 }
@@ -518,13 +518,13 @@ func TestInspectUnstable(t *testing.T) {
 func TestInspectBytesAndSelectors(t *testing.T) {
 	t.Parallel()
 	root := repoFixture(t)
-	bom := "\ufeff---\r\nid: \"W-002\"\r\ntype: work\r\ntitle: \"Ünïcode\"\r\nstatus: proposed\r\n---\r\nBody without final newline"
-	write(t, root, "grove/work/W-002-bom.md", bom)
+	bom := "\ufeff---\r\nid: \"G-003\"\r\ntype: work\r\ntitle: \"Ünïcode\"\r\nstatus: proposed\r\n---\r\nBody without final newline"
+	write(t, root, "grove/work/G-003-bom.md", bom)
 	commit(t, root, "bom crlf")
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
 
-	res := mustInspect(t, root, "W-002")
-	g := group(t, res, "W-002")
+	res := mustInspect(t, root, "G-003")
+	g := group(t, res, "G-003")
 	sum := sha256.Sum256([]byte(bom))
 	want := "sha256:" + hex.EncodeToString(sum[:])
 	seen := map[string]bool{}
@@ -546,7 +546,7 @@ func TestInspectPathsAndRepeatedReads(t *testing.T) {
 	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "odd\nname\twith space", "", "-b", "odd")
-	write(t, wt, "grove/work/W-002-with space.md", record("W-002", "work", "proposed", "x\n"))
+	write(t, wt, "grove/work/G-003-with space.md", record("G-003", "work", "proposed", "x\n"))
 	commit(t, wt, "odd path")
 
 	res := mustInspect(t, root, "")
@@ -554,8 +554,8 @@ func TestInspectPathsAndRepeatedReads(t *testing.T) {
 	if s.Worktree != wt || !s.Valid {
 		t.Fatalf("worktree path must round-trip: %+v", s)
 	}
-	v := find(t, group(t, res, "W-002"), "live", "odd-name-with-space")
-	if v.Path != "grove/work/W-002-with space.md" || !strings.HasPrefix(v.Selector, "live:odd-name-with-space:refs/heads/odd@") {
+	v := find(t, group(t, res, "G-003"), "live", "odd-name-with-space")
+	if v.Path != "grove/work/G-003-with space.md" || !strings.HasPrefix(v.Selector, "live:odd-name-with-space:refs/heads/odd@") {
 		t.Fatalf("record path and selector: %+v", v)
 	}
 	for i := 0; i < 3; i++ {
@@ -577,24 +577,24 @@ func TestInspectUnbornAndInvalidHEAD(t *testing.T) {
 	}
 	git(t, root, "init", "-q", "-b", "main")
 	write(t, root, "grove.yaml", config)
-	write(t, root, "grove/work/W-001-first.md", record("W-001", "work", "proposed", "x\n"))
+	write(t, root, "grove/work/G-001-first.md", record("G-001", "work", "proposed", "x\n"))
 	res := mustInspect(t, root, "")
 	if !res.Complete || len(res.Sources) != 1 || res.Sources[0].Locator != "." || !res.Sources[0].Valid {
 		t.Fatalf("a project with no commits yet is one valid live source: %s", dump(res))
 	}
-	if v := find(t, group(t, res, "W-001"), "live", "."); v.Change != "added" {
+	if v := find(t, group(t, res, "G-001"), "live", "."); v.Change != "added" {
 		t.Fatalf("every record is added before the first commit: %+v", v)
 	}
 	// A HEAD whose project does not validate cannot be compared with, but the
 	// valid live checkout still counts; its changes are unknown and noted.
 	commit(t, root, "first")
 	temp := addWorktree(t, root, "temp", "", "-b", "bad")
-	write(t, temp, "grove/work/W-001-copy.md", record("W-001", "work", "done", "dup\n"))
+	write(t, temp, "grove/work/G-001-copy.md", record("G-001", "work", "done", "dup\n"))
 	bad := commit(t, temp, "duplicate ids")
 	git(t, root, "worktree", "remove", "--force", temp)
 	wt := addWorktree(t, root, "det", bad, "--detach")
 	git(t, root, "branch", "-q", "-D", "bad")
-	if err := os.Remove(filepath.Join(wt, "grove/work/W-001-copy.md")); err != nil {
+	if err := os.Remove(filepath.Join(wt, "grove/work/G-001-copy.md")); err != nil {
 		t.Fatal(err)
 	}
 	res = mustInspect(t, root, "")
@@ -605,7 +605,7 @@ func TestInspectUnbornAndInvalidHEAD(t *testing.T) {
 	if !det.Valid || !strings.Contains(det.Note, "HEAD "+bad+" does not validate") {
 		t.Fatalf("expected a note on the detached source: %+v", det)
 	}
-	if v := find(t, group(t, res, "W-001"), "live", "det"); v.Change != "unknown" || v.Selector == "" {
+	if v := find(t, group(t, res, "G-001"), "live", "det"); v.Change != "unknown" || v.Selector == "" {
 		t.Fatalf("changes against an invalid HEAD are unknown but the version is selectable: %+v", v)
 	}
 }
@@ -614,7 +614,7 @@ func TestInspectRequiresGit(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	write(t, root, "grove.yaml", config)
-	write(t, root, "grove/work/W-001-first.md", record("W-001", "work", "proposed", "x\n"))
+	write(t, root, "grove/work/G-001-first.md", record("G-001", "work", "proposed", "x\n"))
 	if _, err := Inspect(root, ""); err == nil || !strings.Contains(err.Error(), "requires a Git repository") {
 		t.Fatalf("plain directories need a Git diagnostic: %v", err)
 	}
@@ -627,10 +627,10 @@ func TestCommittedReadIsScopedAndShared(t *testing.T) {
 	root := repoFixture(t)
 	git(t, root, "checkout", "-q", "-b", "code")
 	write(t, root, "src/notes.md", "not a record\n")
-	write(t, root, "grove-extra/work/W-777.md", "not a record either\n")
+	write(t, root, "grove-extra/work/G-777.md", "not a record either\n")
 	commit(t, root, "code only")
 	git(t, root, "checkout", "-q", "-b", "records", "main")
-	write(t, root, "grove/work/W-001-first.md", record("W-001", "work", "active", "Records body.\n"))
+	write(t, root, "grove/work/G-001-first.md", record("G-001", "work", "active", "Records body.\n"))
 	commit(t, root, "records")
 	git(t, root, "checkout", "-q", "main")
 
@@ -644,7 +644,7 @@ func TestCommittedReadIsScopedAndShared(t *testing.T) {
 	if main.project != code.project {
 		t.Error("branches that differ only outside the record folder should share one loaded project")
 	}
-	if main.project == records.project || find(t, group(t, res, "W-001"), "committed", "refs/heads/records").Record.Status != "active" {
+	if main.project == records.project || find(t, group(t, res, "G-001"), "committed", "refs/heads/records").Record.Status != "active" {
 		t.Error("a branch with a differing record folder needs its own project")
 	}
 	log, err := os.ReadFile(trace)

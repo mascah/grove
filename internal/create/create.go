@@ -8,13 +8,11 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"maps"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -36,7 +34,7 @@ var bodies = map[string]string{
 
 var (
 	slugPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
-	idLine      = regexp.MustCompile(`^id:\s*["']?([` + project.Prefixes() + `])-([0-9]+)["']?\s*$`)
+	idLine      = regexp.MustCompile(`^id:\s*["']?` + project.NeutralPrefix + `-([0-9]+)["']?\s*$`)
 )
 
 // New allocates the next ID for kind, creates the record without overwriting
@@ -45,13 +43,7 @@ var (
 func New(p *project.Project, kindName, title, slug string, now time.Time, report io.Writer) (string, error) {
 	k := project.Type(kindName)
 	if k == nil {
-		if p.Schema < 3 { // earlier schemas keep their wording
-			return "", fmt.Errorf("record type must be work, question, decision, term, plan, or review")
-		}
 		return "", fmt.Errorf("record type must be work, question, decision, term, plan, review, or page")
-	}
-	if k.Schema > p.Schema {
-		return "", fmt.Errorf("%s records need schema_version %d in grove.yaml; this project is schema %d", kindName, k.Schema, p.Schema)
 	}
 	title = strings.TrimSpace(title)
 	if title == "" {
@@ -72,18 +64,13 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 	if err != nil {
 		return "", err
 	}
-	// Schema 3 creates every type flat in the record root under a neutral ID;
-	// earlier schemas keep the type's own prefix and folder.
-	prefix, folder := k.Prefix, k.Folder
-	if p.Schema >= 3 {
-		prefix, folder = project.NeutralPrefix, ""
-	}
-	n, err := allocate(common, p.Root, p.RecordDir, showPrefix, prefix, report)
+	// Every type creates flat in the record root under the one neutral ID.
+	n, err := allocate(common, p.Root, p.RecordDir, showPrefix, report)
 	if err != nil {
 		return "", err
 	}
-	id := fmt.Sprintf("%s-%03d", prefix, n)
-	relative := path.Join(filepath.ToSlash(p.RecordDir), folder, id+"-"+slug+".md")
+	id := fmt.Sprintf("%s-%03d", project.NeutralPrefix, n)
+	relative := path.Join(filepath.ToSlash(p.RecordDir), id+"-"+slug+".md")
 	stamp := now.UTC().Format("2006-01-02T15:04:05Z")
 	status := ""
 	if len(k.Statuses) != 0 {
@@ -176,90 +163,77 @@ func Slug(title string) string {
 	return s
 }
 
-// Allocate reserves the next number for prefix in the Git repository containing
-// root. Every worktree and record type shares one lock under the Git common
-// directory; the issued number is never at or below an ID found in any local
-// ref or worktree's live records. Typed prefixes share the next-ids counter
-// file. The neutral prefix has its own, because a CLI that predates it refuses
-// a next-ids holding a prefix it does not know: kept apart, an older checkout
-// goes on allocating typed IDs and never reads or rewrites the neutral counter.
-func Allocate(root, recordDir, prefix string, report io.Writer) (int, error) {
+// Allocate reserves the next number in the Git repository containing root.
+// Every worktree shares one lock under the Git common directory; the issued
+// number is never at or below an ID found in any local ref or worktree's live
+// records. An existing next-ids file from before the one neutral counter is
+// simply ignored.
+func Allocate(root, recordDir string, report io.Writer) (int, error) {
 	common, showPrefix, err := repo.CommonDir(root)
 	if err != nil {
 		return 0, err
 	}
-	return allocate(common, root, recordDir, showPrefix, prefix, report)
+	return allocate(common, root, recordDir, showPrefix, report)
 }
 
-func allocate(common, root, recordDir, showPrefix, prefix string, report io.Writer) (int, error) {
+func allocate(common, root, recordDir, showPrefix string, report io.Writer) (int, error) {
 	unlock, err := repo.AllocatorLock(common)
 	if err != nil {
 		return 0, err
 	}
 	defer unlock()
-	counterPath := filepath.Join(common, "grove", "next-ids")
-	if prefix == project.NeutralPrefix {
-		counterPath = filepath.Join(common, "grove", "neutral-ids")
-	}
-	counters, err := readCounters(counterPath)
+	counterPath := filepath.Join(common, "grove", "neutral-ids")
+	current, known, err := readCounter(counterPath)
 	if err != nil {
 		return 0, err
 	}
-	floor, err := highestUsed(root, recordDir, showPrefix, prefix)
+	floor, err := highestUsed(root, recordDir, showPrefix)
 	if err != nil {
 		return 0, err
 	}
 	next := floor + 1
-	current, known := counters[prefix]
 	switch {
 	case !known:
-		fmt.Fprintf(report, "Initialized the %s counter at %d from records in local refs and worktrees; reservations for records never written or since deleted cannot be recovered.\n", prefix, next)
+		fmt.Fprintf(report, "Initialized the %s counter at %d from records in local refs and worktrees; reservations for records never written or since deleted cannot be recovered.\n", project.NeutralPrefix, next)
 	case current < next:
-		fmt.Fprintf(report, "The %s counter (%d) was below records in use; continuing at %d.\n", prefix, current, next)
+		fmt.Fprintf(report, "The %s counter (%d) was below records in use; continuing at %d.\n", project.NeutralPrefix, current, next)
 	default:
 		next = current
 	}
-	counters[prefix] = next + 1
-	if err := writeCounters(counterPath, counters); err != nil {
+	if err := writeCounter(counterPath, next+1); err != nil {
 		return 0, fmt.Errorf("no ID issued: %w", err)
 	}
 	return next, nil
 }
 
-func readCounters(path string) (map[string]int, error) {
-	counters := map[string]int{}
+func readCounter(path string) (int, bool, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return counters, nil
+		return 0, false, nil
 	}
 	if err != nil {
-		return nil, err
+		return 0, false, err
 	}
-	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
-		fields := strings.Fields(line)
-		n := 0
-		if len(fields) == 2 {
-			n, err = strconv.Atoi(fields[1])
-		}
-		if len(fields) != 2 || err != nil || n < 1 || len(fields[0]) != 1 || !strings.Contains(project.Prefixes(), fields[0]) {
-			return nil, fmt.Errorf("%s is corrupt (%q); fix or remove it to reinitialize from existing records", path, line)
-		}
-		counters[fields[0]] = n
+	fields := strings.Fields(strings.TrimSpace(string(data)))
+	var n int
+	if len(fields) == 2 {
+		n, err = strconv.Atoi(fields[1])
 	}
-	return counters, nil
+	if len(fields) != 2 || err != nil || n < 1 || fields[0] != project.NeutralPrefix {
+		return 0, false, fmt.Errorf("%s is corrupt (%q); fix or remove it to reinitialize from existing records", path, strings.TrimSpace(string(data)))
+	}
+	return n, true, nil
 }
 
-func writeCounters(path string, counters map[string]int) error {
-	tmp, err := os.CreateTemp(filepath.Dir(path), "next-ids-*")
+func writeCounter(path string, n int) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), "neutral-ids-*")
 	if err != nil {
 		return err
 	}
 	defer os.Remove(tmp.Name())
-	for _, prefix := range slices.Sorted(maps.Keys(counters)) {
-		if _, err := fmt.Fprintf(tmp, "%s %d\n", prefix, counters[prefix]); err != nil {
-			tmp.Close()
-			return err
-		}
+	if _, err := fmt.Fprintf(tmp, "%s %d\n", project.NeutralPrefix, n); err != nil {
+		tmp.Close()
+		return err
 	}
 	if err := tmp.Sync(); err != nil {
 		tmp.Close()
@@ -275,14 +249,14 @@ func writeCounters(path string, counters map[string]int) error {
 // every worktree. Lines that merely look like IDs only raise the floor.
 // ponytail: one git grep over all refs per allocation; scan only on
 // initialization or mismatch if repositories with many refs make this slow.
-func highestUsed(root, recordDir, showPrefix, prefix string) (int, error) {
+func highestUsed(root, recordDir, showPrefix string) (int, error) {
 	highest := 0
 	note := func(line string) {
 		m := idLine.FindStringSubmatch(line)
-		if m == nil || m[1] != prefix {
+		if m == nil {
 			return
 		}
-		if n, err := strconv.Atoi(m[2]); err == nil && n > highest {
+		if n, err := strconv.Atoi(m[1]); err == nil && n > highest {
 			highest = n
 		}
 	}

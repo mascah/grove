@@ -21,7 +21,7 @@ func TestShowJSONMatchesExactBytes(t *testing.T) {
 	noFinalNewline := strings.TrimSuffix(crlf, "\r\n")
 	write(t, root, "docs/records/questions/question.md", noFinalNewline)
 	before := hashes(t, root)
-	for _, id := range []string{"W-001", "Q-001"} {
+	for _, id := range []string{"G-001", "G-002"} {
 		var plain, jsonOut, errOut bytes.Buffer
 		if code := Run([]string{"show", id}, root, &plain, &errOut); code != 0 {
 			t.Fatal(errOut.String())
@@ -35,7 +35,7 @@ func TestShowJSONMatchesExactBytes(t *testing.T) {
 		}
 		sum := sha256.Sum256(plain.Bytes())
 		want := map[string]any{"id": id, "path": "docs/records/work/renamed.md", "revision": "sha256:" + hex.EncodeToString(sum[:]), "source": plain.String()}
-		if id == "Q-001" {
+		if id == "G-002" {
 			want["path"] = "docs/records/questions/question.md"
 			if plain.String() != noFinalNewline {
 				t.Fatal("plain show altered BOM, CRLF, or the missing final newline")
@@ -58,7 +58,7 @@ func TestShowJSONMatchesExactBytes(t *testing.T) {
 
 func TestShowJSONUsage(t *testing.T) {
 	t.Parallel()
-	for _, args := range [][]string{{"list", "--json"}, {"check", "--json"}, {"show", "--json", "--json", "W-001"}, {"new", "work", "T", "--json"}} {
+	for _, args := range [][]string{{"list", "--json"}, {"check", "--json"}, {"show", "--json", "--json", "G-001"}, {"new", "work", "T", "--json"}} {
 		var out, errOut bytes.Buffer
 		if code := Run(args, t.TempDir(), &out, &errOut); code != 2 || out.Len() != 0 {
 			t.Fatalf("%v: code=%d stderr=%s", args, code, errOut.String())
@@ -66,7 +66,7 @@ func TestShowJSONUsage(t *testing.T) {
 	}
 	root := projectFixture(t)
 	var out, errOut bytes.Buffer
-	if code := Run([]string{"--json", "show", "W-404"}, root, &out, &errOut); code != 1 || out.Len() != 0 {
+	if code := Run([]string{"--json", "show", "G-404"}, root, &out, &errOut); code != 1 || out.Len() != 0 {
 		t.Fatalf("missing record: code=%d stdout=%q", code, out.String())
 	}
 }

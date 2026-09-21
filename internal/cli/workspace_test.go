@@ -13,14 +13,14 @@ import (
 	"testing"
 )
 
-const selector = "live:.:refs/heads/main@0123456789ab:W-001@0123456789ab:0123456789abcdef"
+const selector = "live:.:refs/heads/main@0123456789ab:G-001@0123456789ab:0123456789abcdef"
 
 func TestWorkspaceUsage(t *testing.T) {
 	t.Parallel()
 	for _, args := range [][]string{
-		{"workspace"}, {"workspace", "W-001", "--source", selector}, {"workspace", "--source"}, {"workspace", "--source", ""},
-		{"workspace", "--source", "W-001"}, {"workspace", "--source", selector, "--source", selector},
-		{"workspace", "--source", "committed:main@0123456789ab:W-001@0123456789ab:0123456789abcdef"},
+		{"workspace"}, {"workspace", "G-001", "--source", selector}, {"workspace", "--source"}, {"workspace", "--source", ""},
+		{"workspace", "--source", "G-001"}, {"workspace", "--source", selector, "--source", selector},
+		{"workspace", "--source", "committed:main@0123456789ab:G-001@0123456789ab:0123456789abcdef"},
 		{"versions", "--source", selector}, {"list", "--source", selector},
 	} {
 		var out, errOut bytes.Buffer
@@ -58,7 +58,7 @@ func TestWorkspaceCLI(t *testing.T) {
 	gitIn(t, root, "worktree", "add", "-q", "--detach", odd, "feature")
 	before := map[string]map[string][32]byte{root: hashes(t, root), wt: hashes(t, wt), odd: hashes(t, odd)}
 
-	live := versionSelector(t, root, "W-001", "live feature-wt refs/heads/feature")
+	live := versionSelector(t, root, "G-001", "live feature-wt refs/heads/feature")
 	var out, errOut bytes.Buffer
 	if code := Run([]string{"workspace", "--source", live}, root, &out, &errOut); code != 0 || out.String() != wt+"\n" {
 		t.Fatalf("code=%d stdout=%q stderr=%s", code, out.String(), errOut.String())
@@ -70,7 +70,7 @@ func TestWorkspaceCLI(t *testing.T) {
 	}
 	out.Reset()
 	errOut.Reset()
-	detached := versionSelector(t, root, "W-001", "live odd-wt detached")
+	detached := versionSelector(t, root, "G-001", "live odd-wt detached")
 	if code := Run([]string{"workspace", "--source", detached, "--json"}, root, &out, &errOut); code != 0 {
 		t.Fatal(errOut.String())
 	}
@@ -80,7 +80,7 @@ func TestWorkspaceCLI(t *testing.T) {
 	}
 	want := map[string]any{
 		"checkout": odd, "project": odd, "record": filepath.Join(odd, "docs/records/work/renamed.md"), "ref": nil,
-		"head": gitIn(t, odd, "rev-parse", "HEAD"), "revision": showJSON(t, odd, "W-001")["revision"], "selector": detached,
+		"head": gitIn(t, odd, "rev-parse", "HEAD"), "revision": showJSON(t, odd, "G-001")["revision"], "selector": detached,
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("json:\n%v\nwant\n%v", got, want)
@@ -96,8 +96,8 @@ func TestWorkspaceCLI(t *testing.T) {
 	// Refusals exit 1 with a grove: diagnostic and nothing on stdout.
 	write(t, wt, "docs/records/work/renamed.md", strings.Replace(work, "status: proposed", "status: done", 1))
 	for _, c := range []struct{ selector, want string }{
-		{live, "W-001 changed since it was selected"},
-		{versionSelector(t, root, "W-001", "committed refs/heads/feature"), "select the live observation instead"},
+		{live, "G-001 changed since it was selected"},
+		{versionSelector(t, root, "G-001", "committed refs/heads/feature"), "select the live observation instead"},
 		{strings.Replace(live, "feature-wt", "elsewhere", 1), "worktree elsewhere is no longer registered"},
 	} {
 		out.Reset()
@@ -127,7 +127,7 @@ func TestJointWorkflow(t *testing.T) {
 	t.Parallel()
 	root, wt := featureFixture(t)
 	var out, errOut bytes.Buffer
-	if code := Run([]string{"versions", "W-001", "--json"}, root, &out, &errOut); code != 0 {
+	if code := Run([]string{"versions", "G-001", "--json"}, root, &out, &errOut); code != 0 {
 		t.Fatal(errOut.String())
 	}
 	var listed struct {
@@ -161,7 +161,7 @@ func TestJointWorkflow(t *testing.T) {
 	}
 	out.Reset()
 	errOut.Reset()
-	if code := Run([]string{"--project", located["project"].(string), "show", "W-001"}, t.TempDir(), &out, &errOut); code != 0 {
+	if code := Run([]string{"--project", located["project"].(string), "show", "G-001"}, t.TempDir(), &out, &errOut); code != 0 {
 		t.Fatal(errOut.String())
 	}
 	if out.String() != chosen["source"] || !strings.Contains(out.String(), "status: active") {
@@ -177,7 +177,7 @@ func TestJointWorkflow(t *testing.T) {
 // it deletes the fixture's feature checkout just before the second inventory.
 func TestWorkspaceCheckoutDeletedDuringInspection(t *testing.T) {
 	root, wt := featureFixture(t)
-	live := versionSelector(t, root, "W-001", "live feature-wt refs/heads/feature")
+	live := versionSelector(t, root, "G-001", "live feature-wt refs/heads/feature")
 	real, err := exec.LookPath("git")
 	if err != nil {
 		t.Fatal(err)
@@ -219,7 +219,7 @@ func TestNewlineCheckoutCLI(t *testing.T) {
 		t.Fatal(err)
 	}
 	root := filepath.Join(parent, "new\nline")
-	write(t, root, "grove.yaml", "schema_version: 1\nrecords: docs/records\n")
+	write(t, root, "grove.yaml", "schema_version: 3\nrecords: docs/records\n")
 	write(t, root, "docs/records/work/renamed.md", work)
 	write(t, root, "docs/records/questions/question.md", question)
 	gitIn(t, root, "init", "-q", "-b", "main")
@@ -227,7 +227,7 @@ func TestNewlineCheckoutCLI(t *testing.T) {
 	gitIn(t, root, "commit", "-q", "-m", "init")
 
 	var out, errOut bytes.Buffer
-	if code := Run([]string{"workspace", "--source", versionSelector(t, root, "W-001", "live . refs/heads/main"), "--json"}, root, &out, &errOut); code != 0 {
+	if code := Run([]string{"workspace", "--source", versionSelector(t, root, "G-001", "live . refs/heads/main"), "--json"}, root, &out, &errOut); code != 0 {
 		t.Fatal(errOut.String())
 	}
 	var got map[string]any
@@ -245,7 +245,7 @@ func TestNewlineCheckoutCLI(t *testing.T) {
 	}
 	out.Reset()
 	errOut.Reset()
-	if code := Run([]string{"update", "W-001", "--expect", showJSON(t, root, "W-001")["revision"].(string), "--set", "status=active"}, root, &out, &errOut); code != 0 {
+	if code := Run([]string{"update", "G-001", "--expect", showJSON(t, root, "G-001")["revision"].(string), "--set", "status=active"}, root, &out, &errOut); code != 0 {
 		t.Fatal(errOut.String())
 	}
 	if _, err := os.Stat(filepath.Join(root, ".git", "grove", "write.lock")); err != nil {
@@ -272,7 +272,7 @@ func TestForeignProjectPrefixCLI(t *testing.T) {
 	wt := filepath.Join(filepath.Dir(root), "feature-wt")
 	gitIn(t, root, "worktree", "add", "-q", "-b", "feature", wt)
 	project := filepath.Join(root, "sub")
-	earlier := versionSelector(t, project, "W-001", "live feature-wt refs/heads/feature")
+	earlier := versionSelector(t, project, "G-001", "live feature-wt refs/heads/feature")
 	if err := os.RemoveAll(filepath.Join(wt, "sub")); err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +281,7 @@ func TestForeignProjectPrefixCLI(t *testing.T) {
 	}
 
 	var out, errOut bytes.Buffer
-	if code := Run([]string{"versions", "W-001", "--json"}, project, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "is a symlink") {
+	if code := Run([]string{"versions", "G-001", "--json"}, project, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "is a symlink") {
 		t.Fatalf("code=%d stderr=%s", code, errOut.String())
 	}
 	var listed struct {

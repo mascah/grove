@@ -26,7 +26,7 @@ func TestBoardInvocation(t *testing.T) {
 		}
 	}
 	for _, args := range [][]string{
-		{"board"}, {"W-009"}, {"--json", "--json"}, {"--project", "a", "--project", "b"}, {"--wat"}, {"--project"}, {"--project="},
+		{"board"}, {"G-009"}, {"--json", "--json"}, {"--project", "a", "--project", "b"}, {"--wat"}, {"--project"}, {"--project="},
 		{"--source", selector}, {"--slug", "x"}, {"--expect", rev}, {"--set", "status=done"}, {"--unset", "kind"}, {"--json", "board"},
 	} {
 		var out, errOut bytes.Buffer
@@ -165,7 +165,7 @@ func boardWorkflow(t *testing.T, broken bool) {
 		record := filepath.Join(wt, "docs/records/work/renamed.md")
 		onFeature := strings.NewReplacer("status: proposed", "status: active", "Inspect records", "Inspect records, on feature").Replace(work)
 		write(t, wt, "docs/records/work/renamed.md", onFeature)
-		write(t, wt, "docs/records/work/only.md", strings.NewReplacer("W-001", "W-002", "Inspect records", "Only on feature").Replace(work))
+		write(t, wt, "docs/records/work/only.md", strings.NewReplacer("G-001", "G-003", "Inspect records", "Only on feature").Replace(work))
 		gitIn(t, wt, "add", "-A")
 		gitIn(t, wt, "commit", "-q", "-m", "retitle and add")
 		if broken {
@@ -186,8 +186,8 @@ func boardWorkflow(t *testing.T, broken bool) {
 		before := all()
 
 		s := openBoard(t, root)
-		s.want("Board: checkout . (main)", "Proposed (1)", "Active (0)", "Inspect records", "W-001  2 versions", "Elsewhere (1", "): W-002 ")
-		s.lacks("on feature", "Only on feature", "Q-001")
+		s.want("Board: checkout . (main)", "Proposed (1)", "Active (0)", "Inspect records", "G-001  2 versions", "Elsewhere (1", "): G-003 ")
+		s.lacks("on feature", "Only on feature", "G-002")
 		incomplete(s)
 
 		s.press("b")
@@ -204,7 +204,7 @@ func boardWorkflow(t *testing.T, broken bool) {
 		s.want("Board: checkout . (main)", "Active (0)")
 
 		s.press("enter")
-		s.want("W-001   2 versions differ", "▸ proposed   same on ", "▸ active     same on 1 branch, 1 checkout")
+		s.want("G-001   2 versions differ", "▸ proposed   same on ", "▸ active     same on 1 branch, 1 checkout")
 		s.lacks("checkout feature-wt (feature)  unchanged")
 		incomplete(s)
 		// The card opens on the lineage of the board's checkout, from real Git.
@@ -226,7 +226,7 @@ func boardWorkflow(t *testing.T, broken bool) {
 		}
 		ws := s.m.Workspace
 		var out, errOut bytes.Buffer
-		if code := Run([]string{"--project", ws.Project, "show", "W-001"}, root, &out, &errOut); code != 0 || out.String() != onFeature || ws.Project != wt || ws.Record != record {
+		if code := Run([]string{"--project", ws.Project, "show", "G-001"}, root, &out, &errOut); code != 0 || out.String() != onFeature || ws.Project != wt || ws.Record != record {
 			t.Fatalf("show through the selected workspace: code=%d project=%s\n%s", code, ws.Project, out.String())
 		}
 		// The board's result goes through workspace's own writer.
@@ -251,9 +251,9 @@ func boardWorkflow(t *testing.T, broken bool) {
 		if s.press("enter") || s.m.Workspace != nil {
 			t.Fatal("a stale selection resolved")
 		}
-		s.want("REFUSED: W-001 changed since it was selected", "Nothing was opened. Press r to refresh")
+		s.want("REFUSED: G-001 changed since it was selected", "Nothing was opened. Press r to refresh")
 		s.press("up", "down")
-		s.want("REFUSED: W-001 changed since it was selected")
+		s.want("REFUSED: G-001 changed since it was selected")
 		s.press("r")
 		s.lacks("REFUSED")
 		s.want("active     checkout feature-wt (feature)  modified", "3 versions differ")
@@ -266,7 +266,7 @@ func boardWorkflow(t *testing.T, broken bool) {
 			t.Fatalf("explicit reselection after refresh should resolve:\n%s", s.screen())
 		}
 		out.Reset()
-		if code := Run([]string{"--project", s.m.Workspace.Project, "show", "W-001"}, root, &out, &errOut); code != 0 || out.String() != changed {
+		if code := Run([]string{"--project", s.m.Workspace.Project, "show", "G-001"}, root, &out, &errOut); code != 0 || out.String() != changed {
 			t.Fatalf("show after reselection: %d\n%s", code, out.String())
 		}
 		// A committed version routes only while its checkout still matches it.
@@ -276,7 +276,7 @@ func boardWorkflow(t *testing.T, broken bool) {
 		if s.press("enter") || s.m.Workspace != nil {
 			t.Fatal("a committed version whose checkout differs must be refused")
 		}
-		s.want("REFUSED: the live W-001 in worktree feature-wt differs from the committed version selected")
+		s.want("REFUSED: the live G-001 in worktree feature-wt differs from the committed version selected")
 		if !reflect.DeepEqual(before, all()) {
 			t.Fatal("refusal, refresh, and reselection changed files")
 		}

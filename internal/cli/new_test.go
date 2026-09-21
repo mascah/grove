@@ -31,7 +31,7 @@ func TestNewCreatesRecordAndReadCommandsLeaveNoState(t *testing.T) {
 	t.Parallel()
 	root := gitFixture(t)
 	state := filepath.Join(root, ".git", "grove")
-	for _, args := range [][]string{{"list"}, {"show", "W-001"}, {"check"}} {
+	for _, args := range [][]string{{"list"}, {"show", "G-001"}, {"check"}} {
 		var out, errOut bytes.Buffer
 		if code := Run(args, root, &out, &errOut); code != 0 {
 			t.Fatal(errOut.String())
@@ -44,12 +44,12 @@ func TestNewCreatesRecordAndReadCommandsLeaveNoState(t *testing.T) {
 	if code := Run([]string{"new", "work", "Second thing", "--slug", "second"}, root, &out, &errOut); code != 0 {
 		t.Fatal(errOut.String())
 	}
-	if out.String() != "docs/records/work/W-002-second.md\n" || !strings.Contains(errOut.String(), "Initialized") {
+	if out.String() != "docs/records/G-003-second.md\n" || !strings.Contains(errOut.String(), "Initialized") {
 		t.Fatalf("stdout=%q stderr=%q", out.String(), errOut.String())
 	}
 	out.Reset()
 	errOut.Reset()
-	if code := Run([]string{"--project", root, "new", "question", "Why?"}, t.TempDir(), &out, &errOut); code != 0 || out.String() != "docs/records/questions/Q-002-why.md\n" {
+	if code := Run([]string{"--project", root, "new", "question", "Why?"}, t.TempDir(), &out, &errOut); code != 0 || out.String() != "docs/records/G-004-why.md\n" {
 		t.Fatalf("code=%d stdout=%q stderr=%q", code, out.String(), errOut.String())
 	}
 	out.Reset()
@@ -57,7 +57,7 @@ func TestNewCreatesRecordAndReadCommandsLeaveNoState(t *testing.T) {
 		t.Fatalf("created records must validate: %s %s", out.String(), errOut.String())
 	}
 	out.Reset()
-	if code := Run([]string{"list"}, root, &out, &errOut); code != 0 || !strings.Contains(out.String(), "W-002  work      proposed  Second thing") {
+	if code := Run([]string{"list"}, root, &out, &errOut); code != 0 || !strings.Contains(out.String(), "G-003  work      proposed  Second thing") {
 		t.Fatalf("list must show the created record: %s", out.String())
 	}
 }

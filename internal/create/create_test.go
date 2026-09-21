@@ -14,7 +14,7 @@ import (
 	"github.com/mascah/grove/internal/project"
 )
 
-const config = "schema_version: 1\nrecords: grove\n"
+const config = "schema_version: 3\nrecords: grove\n"
 
 func record(id, kind, status string) string {
 	return "---\nid: \"" + id + "\"\ntype: " + kind + "\ntitle: T\nstatus: " + status + "\n---\nBody.\n"
@@ -41,7 +41,7 @@ func write(t *testing.T, root, path, source string) {
 	}
 }
 
-// gitProject returns a committed Git project containing W-001.
+// gitProject returns a committed Git project containing G-001.
 func gitProject(t *testing.T) string {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
@@ -53,7 +53,7 @@ func gitProject(t *testing.T) string {
 	}
 	git(t, root, "init", "-q", "-b", "main")
 	write(t, root, "grove.yaml", config)
-	write(t, root, "grove/work/W-001-first.md", record("W-001", "work", "done"))
+	write(t, root, "grove/G-001-first.md", record("G-001", "work", "done"))
 	git(t, root, "add", "-A")
 	git(t, root, "commit", "-q", "-m", "init")
 	return root
@@ -78,53 +78,50 @@ func TestAllocateFloorsFromRefsAndWorktrees(t *testing.T) {
 	root := gitProject(t)
 	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
-	// W-007 exists only in the feature branch's history, so the ref scan alone
-	// can find it; W-005 exists only as a live file in the worktree.
-	write(t, wt, "grove/work/W-007-committed-on-branch.md", record("W-007", "work", "proposed"))
+	// G-007 exists only in the feature branch's history, so the ref scan alone
+	// can find it; G-005 exists only as a live file in the worktree.
+	write(t, wt, "grove/G-007-committed-on-branch.md", record("G-007", "work", "proposed"))
 	git(t, wt, "add", "-A")
 	git(t, wt, "commit", "-q", "-m", "branch record")
-	if err := os.Remove(filepath.Join(wt, "grove/work/W-007-committed-on-branch.md")); err != nil {
+	if err := os.Remove(filepath.Join(wt, "grove/G-007-committed-on-branch.md")); err != nil {
 		t.Fatal(err)
 	}
-	write(t, wt, "grove/work/W-005-live-only.md", record("W-005", "work", "proposed"))
+	write(t, wt, "grove/G-005-live-only.md", record("G-005", "work", "proposed"))
 
 	var report bytes.Buffer
-	n, err := Allocate(root, "grove", "W", &report)
+	n, err := Allocate(root, "grove", &report)
 	if err != nil || n != 8 {
-		t.Fatalf("got %d, %v; want 8 from committed W-007 and live W-005", n, err)
+		t.Fatalf("got %d, %v; want 8 from committed G-007 and live G-005", n, err)
 	}
 	if !strings.Contains(strings.ToLower(report.String()), "initialized") {
 		t.Fatalf("first allocation should report initialization: %q", report.String())
 	}
 	report.Reset()
-	n, err = Allocate(wt, "grove", "W", &report)
+	n, err = Allocate(wt, "grove", &report)
 	if err != nil || n != 9 {
 		t.Fatalf("got %d, %v; want 9 from the shared counter", n, err)
 	}
 	if report.Len() != 0 {
 		t.Fatalf("steady-state allocation should be silent: %q", report.String())
 	}
-	if n, err := Allocate(root, "grove", "Q", &report); err != nil || n != 1 {
-		t.Fatalf("questions start at 1: got %d, %v", n, err)
-	}
 }
 
 func TestAllocateCorrectsCounterBelowFloor(t *testing.T) {
 	t.Parallel()
 	root := gitProject(t)
-	write(t, root, "grove/work/W-004-later.md", record("W-004", "work", "proposed"))
+	write(t, root, "grove/G-004-later.md", record("G-004", "work", "proposed"))
 	dir := stateDir(t, root)
-	write(t, dir, "next-ids", "W 2\n")
+	write(t, dir, "neutral-ids", "G 2\n")
 	var report bytes.Buffer
-	n, err := Allocate(root, "grove", "W", &report)
+	n, err := Allocate(root, "grove", &report)
 	if err != nil || n != 5 {
 		t.Fatalf("got %d, %v; want 5", n, err)
 	}
 	if !strings.Contains(report.String(), "below") {
 		t.Fatalf("should report the corrected counter: %q", report.String())
 	}
-	data, _ := os.ReadFile(filepath.Join(dir, "next-ids"))
-	if !strings.Contains(string(data), "W 6\n") {
+	data, _ := os.ReadFile(filepath.Join(dir, "neutral-ids"))
+	if !strings.Contains(string(data), "G 6\n") {
 		t.Fatalf("counter not persisted: %q", data)
 	}
 }
@@ -142,7 +139,7 @@ func TestAllocateConcurrentAcrossWorktrees(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			n, err := Allocate(roots[i%2], "grove", "W", &bytes.Buffer{})
+			n, err := Allocate(roots[i%2], "grove", &bytes.Buffer{})
 			if err != nil {
 				t.Error(err)
 				return
@@ -169,16 +166,16 @@ func TestAllocateRefusesWhenAWorktreeCannotBeScanned(t *testing.T) {
 	root := gitProject(t)
 	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
-	hidden := filepath.Join(wt, "grove/work/W-030-unreadable.md")
-	write(t, wt, "grove/work/W-030-unreadable.md", record("W-030", "work", "proposed"))
+	hidden := filepath.Join(wt, "grove/G-030-unreadable.md")
+	write(t, wt, "grove/G-030-unreadable.md", record("G-030", "work", "proposed"))
 	if err := os.Chmod(hidden, 0); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.Chmod(hidden, 0o644) })
-	if n, err := Allocate(root, "grove", "W", &bytes.Buffer{}); err == nil {
+	if n, err := Allocate(root, "grove", &bytes.Buffer{}); err == nil {
 		t.Fatalf("issued %d although a worktree record could not be read", n)
 	}
-	if _, err := os.Stat(filepath.Join(stateDir(t, root), "next-ids")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(stateDir(t, root), "neutral-ids")); !os.IsNotExist(err) {
 		t.Fatalf("no counter may be written when the floor is unknown: %v", err)
 	}
 }
@@ -199,7 +196,7 @@ func TestPersistenceFailureIssuesNoIDAndCreatesNoFile(t *testing.T) {
 	if _, err := New(p, "work", "Blocked", "blocked", time.Now(), &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "no ID issued") {
 		t.Fatalf("expected a persistence diagnostic, got %v", err)
 	}
-	if entries, _ := os.ReadDir(filepath.Join(root, "grove/work")); len(entries) != 1 {
+	if entries, _ := os.ReadDir(filepath.Join(root, "grove")); len(entries) != 1 {
 		t.Fatalf("failed allocation must create nothing: %v", entries)
 	}
 }
@@ -208,7 +205,7 @@ func TestAllocateRequiresGit(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	write(t, root, "grove.yaml", config)
-	if _, err := Allocate(root, "grove", "W", &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "Git") {
+	if _, err := Allocate(root, "grove", &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "Git") {
 		t.Fatalf("expected a Git requirement error, got %v", err)
 	}
 	entries, _ := os.ReadDir(root)
@@ -223,13 +220,13 @@ func TestNewCreatesValidRecords(t *testing.T) {
 	now := time.Date(2026, 9, 19, 16, 0, 0, 0, time.UTC)
 	var report bytes.Buffer
 	path, err := New(load(t, root), "work", `Title: with "quotes" & more`, "", now, &report)
-	if err != nil || path != "grove/work/W-002-title-with-quotes-more.md" {
+	if err != nil || path != "grove/G-002-title-with-quotes-more.md" {
 		t.Fatalf("got %q, %v", path, err)
 	}
 	p := load(t, root)
-	i := slices.IndexFunc(p.Records, func(r *project.Record) bool { return r.ID == "W-002" })
+	i := slices.IndexFunc(p.Records, func(r *project.Record) bool { return r.ID == "G-002" })
 	if i < 0 {
-		t.Fatal("W-002 not readable")
+		t.Fatal("G-002 not readable")
 	}
 	r := p.Records[i]
 	if r.Title != `Title: with "quotes" & more` || r.Status != "proposed" || r.Created == nil || !r.Created.Equal(now) || !r.Updated.Equal(now) {
@@ -238,10 +235,10 @@ func TestNewCreatesValidRecords(t *testing.T) {
 	if !strings.Contains(string(r.Source), "## Outcome") {
 		t.Fatalf("missing body skeleton: %s", r.Source)
 	}
-	if path, err := New(p, "question", "Which?", "which", now, &report); err != nil || path != "grove/questions/Q-001-which.md" {
+	if path, err := New(p, "question", "Which?", "which", now, &report); err != nil || path != "grove/G-003-which.md" {
 		t.Fatalf("got %q, %v", path, err)
 	}
-	if path, err := New(p, "decision", "Choose", "", now, &report); err != nil || path != "grove/decisions/D-001-choose.md" {
+	if path, err := New(p, "decision", "Choose", "", now, &report); err != nil || path != "grove/G-004-choose.md" {
 		t.Fatalf("got %q, %v", path, err)
 	}
 	load(t, root)
@@ -252,7 +249,7 @@ func TestNewNeverOverwritesAndConsumesReservation(t *testing.T) {
 	root := gitProject(t)
 	// A directory at the target name makes O_EXCL creation fail while the
 	// reader (which skips directories) still sees a valid project.
-	if err := os.MkdirAll(filepath.Join(root, "grove/work/W-002-x.md"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(root, "grove/G-002-x.md"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 	p := load(t, root)
@@ -261,8 +258,8 @@ func TestNewNeverOverwritesAndConsumesReservation(t *testing.T) {
 		t.Fatal("expected creation to fail on an existing path")
 	}
 	path, err := New(p, "work", "Y", "y", now, &bytes.Buffer{})
-	if err != nil || path != "grove/work/W-003-y.md" {
-		t.Fatalf("failed creation must consume W-002: got %q, %v", path, err)
+	if err != nil || path != "grove/G-003-y.md" {
+		t.Fatalf("failed creation must consume G-002: got %q, %v", path, err)
 	}
 }
 
@@ -275,7 +272,7 @@ func TestNewRejectsBadSlugAndKind(t *testing.T) {
 			t.Fatalf("expected %v to be rejected", c)
 		}
 	}
-	if entries, _ := os.ReadDir(filepath.Join(root, "grove/work")); len(entries) != 1 {
+	if entries, _ := os.ReadDir(filepath.Join(root, "grove")); len(entries) != 1 {
 		t.Fatalf("rejected input must not create files: %v", entries)
 	}
 }
@@ -299,19 +296,19 @@ func TestNewRefusesWhenRecordRootChangedAfterLoad(t *testing.T) {
 	t.Parallel()
 	root := gitProject(t)
 	p := load(t, root)
-	write(t, root, "other/work/W-001-first.md", record("W-001", "work", "done"))
-	write(t, root, "grove.yaml", "schema_version: 1\nrecords: other\n")
+	write(t, root, "other/G-001-first.md", record("G-001", "work", "done"))
+	write(t, root, "grove.yaml", "schema_version: 3\nrecords: other\n")
 	_, err := New(p, "work", "Moved", "moved", time.Now(), &bytes.Buffer{})
 	if err == nil || !strings.Contains(err.Error(), "record root changed") {
 		t.Fatalf("expected a configuration-change refusal, got %v", err)
 	}
-	for _, dir := range []string{"grove/work", "other/work"} {
+	for _, dir := range []string{"grove", "other"} {
 		if entries, _ := os.ReadDir(filepath.Join(root, dir)); len(entries) != 1 {
 			t.Fatalf("%s: nothing may be created: %v", dir, entries)
 		}
 	}
 	write(t, root, "grove.yaml", config)
-	if path, err := New(load(t, root), "work", "Next", "next", time.Now(), &bytes.Buffer{}); err != nil || path != "grove/work/W-003-next.md" {
+	if path, err := New(load(t, root), "work", "Next", "next", time.Now(), &bytes.Buffer{}); err != nil || path != "grove/G-003-next.md" {
 		t.Fatalf("the refused reservation must stay consumed: got %q, %v", path, err)
 	}
 }
@@ -327,10 +324,10 @@ func TestNewRefusesWhenConfigurationBytesChangedAfterLoad(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "reserved but not created: grove.yaml changed") {
 		t.Fatalf("expected a configuration-change refusal, got %v", err)
 	}
-	if entries, _ := os.ReadDir(filepath.Join(root, "grove/work")); len(entries) != 1 {
+	if entries, _ := os.ReadDir(filepath.Join(root, "grove")); len(entries) != 1 {
 		t.Fatalf("nothing may be created: %v", entries)
 	}
-	if path, err := New(load(t, root), "work", "Next", "next", time.Now(), &bytes.Buffer{}); err != nil || path != "grove/work/W-003-next.md" {
+	if path, err := New(load(t, root), "work", "Next", "next", time.Now(), &bytes.Buffer{}); err != nil || path != "grove/G-003-next.md" {
 		t.Fatalf("the refused reservation must stay consumed: got %q, %v", path, err)
 	}
 }
@@ -349,14 +346,14 @@ func TestAllocateScansOddlyNamedWorktrees(t *testing.T) {
 		}
 		root := filepath.Join(parent, "new\nline")
 		write(t, filepath.Join(root, prefix), "grove.yaml", config)
-		write(t, filepath.Join(root, prefix), "grove/work/W-001-first.md", record("W-001", "work", "done"))
+		write(t, filepath.Join(root, prefix), "grove/G-001-first.md", record("G-001", "work", "done"))
 		git(t, root, "init", "-q", "-b", "main")
 		git(t, root, "add", "-A")
 		git(t, root, "commit", "-q", "-m", "init")
 		odd := filepath.Join(parent, "odd \"quoted\"\n\twt ")
 		git(t, root, "worktree", "add", "-q", "-b", "odd", odd)
-		write(t, filepath.Join(odd, prefix), "grove/work/W-090-live-only.md", record("W-090", "work", "proposed"))
-		write(t, odd, "elsewhere/grove/work/W-500-unrelated.md", record("W-500", "work", "proposed"))
+		write(t, filepath.Join(odd, prefix), "grove/G-090-live-only.md", record("G-090", "work", "proposed"))
+		write(t, odd, "elsewhere/grove/G-500-unrelated.md", record("G-500", "work", "proposed"))
 		// A checkout without the record folder is normal, not a scan error.
 		absent := filepath.Join(parent, "absent\nwt")
 		git(t, root, "worktree", "add", "-q", "--detach", absent)
@@ -364,13 +361,13 @@ func TestAllocateScansOddlyNamedWorktrees(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if n, err := Allocate(filepath.Join(root, prefix), "grove", "W", &bytes.Buffer{}); err != nil || n != 91 {
-			t.Fatalf("prefix %q: got %d, %v; want 91 from the live W-090", prefix, n, err)
+		if n, err := Allocate(filepath.Join(root, prefix), "grove", &bytes.Buffer{}); err != nil || n != 91 {
+			t.Fatalf("prefix %q: got %d, %v; want 91 from the live G-090", prefix, n, err)
 		}
-		if n, err := Allocate(filepath.Join(odd, prefix), "grove", "W", &bytes.Buffer{}); err != nil || n != 92 {
+		if n, err := Allocate(filepath.Join(odd, prefix), "grove", &bytes.Buffer{}); err != nil || n != 92 {
 			t.Fatalf("prefix %q: got %d, %v; want 92 from the shared counter", prefix, n, err)
 		}
-		if _, err := os.Stat(filepath.Join(root, ".git", "grove", "next-ids")); err != nil {
+		if _, err := os.Stat(filepath.Join(root, ".git", "grove", "neutral-ids")); err != nil {
 			t.Fatalf("the counter belongs under the real common directory: %v", err)
 		}
 		if entries, _ := os.ReadDir(parent); len(entries) != 3 {
@@ -384,80 +381,25 @@ func TestAllocateScansOddlyNamedWorktrees(t *testing.T) {
 func TestNewRefusesATermDefinedAfterLoad(t *testing.T) {
 	t.Parallel()
 	root := gitProject(t)
-	write(t, root, "grove.yaml", "schema_version: 2\nrecords: grove\n")
 	stale := load(t, root)
 	if _, err := New(load(t, root), "term", "Attempt", "", time.Now(), &bytes.Buffer{}); err != nil {
 		t.Fatal(err)
 	}
 	_, err := New(stale, "term", "attempt", "", time.Now(), &bytes.Buffer{})
-	if err == nil || !strings.Contains(err.Error(), "T-002 reserved but not created: the term attempt is already defined by T-001") {
+	if err == nil || !strings.Contains(err.Error(), "G-003 reserved but not created: the term attempt is already defined by G-002") {
 		t.Fatalf("expected a refusal under the write lock, got %v", err)
 	}
-	if entries, _ := os.ReadDir(filepath.Join(root, "grove/terms")); len(entries) != 1 {
-		t.Fatalf("nothing may be written: %v", entries)
+	if entries, _ := os.ReadDir(filepath.Join(root, "grove")); len(entries) != 2 {
+		t.Fatalf("nothing may be written for the refused attempt: %v", entries)
 	}
 	if len(load(t, root).Records) == 0 {
 		t.Fatal("the project must stay loadable")
 	}
 }
 
-// A schema-3 worktree and an older-schema worktree of one repository share the
-// allocator lock but not a counter file: next-ids never gains a line an older
-// CLI would refuse, and the neutral floor comes from nested records in a ref
-// and in another worktree.
-func TestNeutralAllocationBesideATypedWorktree(t *testing.T) {
-	t.Parallel()
-	root := gitProject(t) // main stays schema 1
-	write(t, root, "grove/work/deep/G-007.md", record("G-007", "work", "done"))
-	write(t, root, "grove.yaml", "schema_version: 3\nrecords: grove\n")
-	git(t, root, "checkout", "-q", "-b", "nested")
-	git(t, root, "add", "-A")
-	git(t, root, "commit", "-q", "-m", "nested neutral record")
-	git(t, root, "checkout", "-q", "main")
-	next := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-next")
-	git(t, root, "worktree", "add", "-q", "-b", "next", next)
-	write(t, next, "grove.yaml", "schema_version: 3\nrecords: grove\n")
-	write(t, next, "grove/any/where/page.md", "---\nid: G-009\ntype: page\ntitle: Live\n---\n")
-
-	var ids []string
-	for _, tc := range []struct{ root, kind string }{{next, "page"}, {root, "work"}, {next, "work"}, {next, "review"}} {
-		path, err := New(load(t, tc.root), tc.kind, "Some title", "", time.Unix(0, 0), &bytes.Buffer{})
-		if err != nil {
-			t.Fatal(err)
-		}
-		ids = append(ids, path)
-	}
-	want := []string{"grove/G-010-some-title.md", "grove/work/W-002-some-title.md", "grove/G-011-some-title.md", "grove/G-012-some-title.md"}
-	if !slices.Equal(ids, want) {
-		t.Fatalf("got %v, want %v", ids, want)
-	}
-	source, _ := os.ReadFile(filepath.Join(next, "grove/G-010-some-title.md"))
-	if strings.Contains(string(source), "status") || !strings.Contains(string(source), "type: page\ntitle: \"Some title\"\ncreated:") {
-		t.Fatalf("a page has the minimal envelope and no lifecycle:\n%s", source)
-	}
-	typed, _ := os.ReadFile(filepath.Join(stateDir(t, root), "next-ids"))
-	neutral, _ := os.ReadFile(filepath.Join(stateDir(t, root), "neutral-ids"))
-	if string(typed) != "W 3\n" || string(neutral) != "G 13\n" {
-		t.Fatalf("next-ids=%q neutral-ids=%q", typed, neutral)
-	}
-}
-
-func TestNewPageNeedsSchema3(t *testing.T) {
+func TestAllocationConcurrentAcrossWorktrees(t *testing.T) {
 	t.Parallel()
 	root := gitProject(t)
-	if _, err := New(load(t, root), "page", "T", "", time.Unix(0, 0), &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "page records need schema_version 3") {
-		t.Fatalf("err = %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(stateDir(t, root), "neutral-ids")); err == nil {
-		t.Fatal("a refused type reserved an ID")
-	}
-}
-
-func TestNeutralAllocationConcurrentAcrossWorktrees(t *testing.T) {
-	t.Parallel()
-	root := gitProject(t)
-	write(t, root, "grove.yaml", "schema_version: 3\nrecords: grove\n")
-	git(t, root, "commit", "-qam", "schema 3")
 	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
 	projects := []*project.Project{load(t, root), load(t, wt)}
@@ -475,8 +417,8 @@ func TestNeutralAllocationConcurrentAcrossWorktrees(t *testing.T) {
 	seen := map[string]bool{}
 	for _, dir := range []string{root, wt} {
 		for _, r := range load(t, dir).Records {
-			if !strings.HasPrefix(r.ID, "G-") {
-				continue // W-001 is committed, so both worktrees hold it
+			if r.ID == "G-001" {
+				continue // committed baseline, held by both worktrees
 			}
 			if seen[r.ID] {
 				t.Fatalf("%s issued twice", r.ID)
@@ -484,7 +426,7 @@ func TestNeutralAllocationConcurrentAcrossWorktrees(t *testing.T) {
 			seen[r.ID] = true
 		}
 	}
-	if len(seen) != 12 || !seen["G-012"] || seen["G-013"] {
-		t.Fatalf("expected G-001..G-012, got %v", seen)
+	if len(seen) != 12 || !seen["G-013"] || seen["G-014"] {
+		t.Fatalf("expected G-002..G-013, got %v", seen)
 	}
 }

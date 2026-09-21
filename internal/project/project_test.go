@@ -25,7 +25,7 @@ func fixture(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	put(t, root, "grove.yaml", "schema_version: 1\nrecords: grove\n")
+	put(t, root, "grove.yaml", "schema_version: 3\nrecords: grove\n")
 	if err := os.Mkdir(filepath.Join(root, "grove"), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -51,16 +51,16 @@ func diagnostics(ds []Diagnostic) string {
 func TestLoadRenamedNestedRecordsAndPreserveSource(t *testing.T) {
 	t.Parallel()
 	root := fixture(t)
-	source := record("W-001", "work", "kind: investigation\npriority: 2\nsize: small\ncreated: \"2026-09-19T14:08:40Z\"\n")
-	source = "\ufeff" + strings.ReplaceAll(source, "\n", "\r\n")
+	source := record("G-001", "work", "kind: investigation\npriority: 2\nsize: small\ncreated: \"2026-09-19T14:08:40Z\"\n")
+	source = string(rune(0xFEFF)) + strings.ReplaceAll(source, "\n", "\r\n")
 	put(t, root, "grove/work/nested/custom.md", source)
-	put(t, root, "grove/questions/anything.md", record("Q-001", "question", ""))
+	put(t, root, "grove/questions/anything.md", record("G-002", "question", ""))
 	put(t, root, "grove/notes.txt", "not a record")
 	p, ds := Load(filepath.Join(root, "grove", "work", "nested"), "")
 	if len(ds) != 0 {
 		t.Fatal(diagnostics(ds))
 	}
-	if len(p.Records) != 2 || p.Records[0].ID != "W-001" {
+	if len(p.Records) != 2 || p.Records[0].ID != "G-001" {
 		t.Fatalf("records: %+v", p.Records)
 	}
 	if string(p.Records[0].Source) != source || p.Records[0].Path != "grove/work/nested/custom.md" {
@@ -83,7 +83,7 @@ func TestDiscoveryAndExplicitProject(t *testing.T) {
 	if len(ds) != 0 || p.Root != root {
 		t.Fatalf("explicit parent project: %v", diagnostics(ds))
 	}
-	put(t, root, "nested/grove.yaml", "schema_version: 1\nrecords: records\n")
+	put(t, root, "nested/grove.yaml", "schema_version: 3\nrecords: records\n")
 	if err := os.Mkdir(filepath.Join(root, "nested", "records"), 0755); err != nil {
 		t.Fatal(err)
 	}
@@ -102,18 +102,19 @@ func TestInvalidConfiguration(t *testing.T) {
 	for _, tc := range []struct{ name, source, field string }{
 		{"version missing", "records: grove\n", "schema_version"},
 		{"unsupported", "schema_version: 4\nrecords: grove\n", "schema_version"},
-		{"brief before schema 2", "schema_version: 1\nrecords: grove\nbrief: docs/brief.md\n", "brief"},
-		{"quoted version", "schema_version: \"1\"\nrecords: grove\n", "schema_version"},
-		{"fractional version", "schema_version: 1.0\nrecords: grove\n", "schema_version"},
-		{"null root", "schema_version: 1\nrecords: null\n", "records"},
-		{"escape", "schema_version: 1\nrecords: ../outside\n", "records"},
-		{"hidden escape", "schema_version: 1\nrecords: a/../grove\n", "records"},
-		{"project root", "schema_version: 1\nrecords: .\n", "records"},
-		{"absolute root", "schema_version: 1\nrecords: /tmp\n", "records"},
-		{"unknown", "schema_version: 1\nrecords: grove\nextra: true\n", "extra"},
-		{"duplicate", "schema_version: 1\nrecords: grove\nrecords: other\n", "records"},
-		{"extra document", "schema_version: 1\nrecords: grove\n---\n{}\n", "document"},
-		{"missing root", "schema_version: 1\nrecords: absent\n", "records"},
+		{"schema 1 no longer supported", "schema_version: 1\nrecords: grove\n", "schema_version"},
+		{"schema 2 no longer supported", "schema_version: 2\nrecords: grove\n", "schema_version"},
+		{"quoted version", "schema_version: \"3\"\nrecords: grove\n", "schema_version"},
+		{"fractional version", "schema_version: 3.0\nrecords: grove\n", "schema_version"},
+		{"null root", "schema_version: 3\nrecords: null\n", "records"},
+		{"escape", "schema_version: 3\nrecords: ../outside\n", "records"},
+		{"hidden escape", "schema_version: 3\nrecords: a/../grove\n", "records"},
+		{"project root", "schema_version: 3\nrecords: .\n", "records"},
+		{"absolute root", "schema_version: 3\nrecords: /tmp\n", "records"},
+		{"unknown", "schema_version: 3\nrecords: grove\nextra: true\n", "extra"},
+		{"duplicate", "schema_version: 3\nrecords: grove\nrecords: other\n", "records"},
+		{"extra document", "schema_version: 3\nrecords: grove\n---\n{}\n", "document"},
+		{"missing root", "schema_version: 3\nrecords: absent\n", "records"},
 		{"non mapping", "- records\n", "mapping"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -131,37 +132,36 @@ func TestInvalidConfiguration(t *testing.T) {
 
 func TestStrictRecordMetadata(t *testing.T) {
 	t.Parallel()
-	base := record("W-001", "work", "")
+	base := record("G-001", "work", "")
 	for _, tc := range []struct{ name, source, field string }{
 		{"missing title", strings.Replace(base, "title: Example\n", "", 1), "title"},
 		{"numeric title", strings.Replace(base, "title: Example", "title: 123", 1), "title"},
 		{"empty title", strings.Replace(base, "title: Example", "title: \"  \"", 1), "title"},
-		{"null", record("W-001", "work", "size: null\n"), "size"},
-		{"priority float", record("W-001", "work", "priority: 2.0\n"), "priority"},
-		{"priority range", record("W-001", "work", "priority: 6\n"), "priority"},
-		{"size", record("W-001", "work", "size: spike\n"), "size"},
-		{"kind", record("W-001", "work", "kind: magic\n"), "kind"},
-		{"unknown", record("W-001", "work", "priorty: 2\n"), "priorty"},
-		{"duplicate key", record("W-001", "work", "title: Again\n"), "title"},
-		{"duplicate relationship", record("W-001", "work", "relates_to: [D-001, D-001]\n"), "relates_to"},
-		{"sequence required", record("W-001", "work", "depends_on: W-002\n"), "depends_on"},
-		{"nonstring target", record("W-001", "work", "depends_on: [42]\n"), "depends_on"},
-		{"wrong type field", record("W-001", "work", "blocks: []\n"), "blocks"},
-		{"bare timestamp", record("W-001", "work", "created: 2026-09-19T12:00:00Z\n"), "created"},
-		{"offset timestamp", record("W-001", "work", "created: \"2026-09-19T12:00:00+00:00\"\n"), "created"},
-		{"fraction timestamp", record("W-001", "work", "created: \"2026-09-19T12:00:00.123Z\"\n"), "created"},
-		{"invalid date", record("W-001", "work", "created: \"2026-02-30T12:00:00Z\"\n"), "created"},
-		{"backward date", record("W-001", "work", "created: \"2026-09-19T12:00:00Z\"\nupdated: \"2026-09-18T12:00:00Z\"\n"), "updated"},
-		{"backward zero date", record("W-001", "work", "created: \"0001-01-01T00:00:00Z\"\nupdated: \"0000-01-01T00:00:00Z\"\n"), "updated"},
-		{"id prefix", record("Q-001", "work", ""), "id"},
-		{"zero id", record("W-000", "work", ""), "id"},
-		{"short id", record("W-1", "work", ""), "id"},
-		{"extra padding", record("W-0001", "work", ""), "id"},
+		{"null", record("G-001", "work", "size: null\n"), "size"},
+		{"priority float", record("G-001", "work", "priority: 2.0\n"), "priority"},
+		{"priority range", record("G-001", "work", "priority: 6\n"), "priority"},
+		{"size", record("G-001", "work", "size: spike\n"), "size"},
+		{"kind", record("G-001", "work", "kind: magic\n"), "kind"},
+		{"unknown", record("G-001", "work", "priorty: 2\n"), "priorty"},
+		{"duplicate key", record("G-001", "work", "title: Again\n"), "title"},
+		{"duplicate relationship", record("G-001", "work", "relates_to: [G-002, G-002]\n"), "relates_to"},
+		{"sequence required", record("G-001", "work", "depends_on: G-002\n"), "depends_on"},
+		{"nonstring target", record("G-001", "work", "depends_on: [42]\n"), "depends_on"},
+		{"wrong type field", record("G-001", "work", "blocks: []\n"), "blocks"},
+		{"bare timestamp", record("G-001", "work", "created: 2026-09-19T12:00:00Z\n"), "created"},
+		{"offset timestamp", record("G-001", "work", "created: \"2026-09-19T12:00:00+00:00\"\n"), "created"},
+		{"fraction timestamp", record("G-001", "work", "created: \"2026-09-19T12:00:00.123Z\"\n"), "created"},
+		{"invalid date", record("G-001", "work", "created: \"2026-02-30T12:00:00Z\"\n"), "created"},
+		{"backward date", record("G-001", "work", "created: \"2026-09-19T12:00:00Z\"\nupdated: \"2026-09-18T12:00:00Z\"\n"), "updated"},
+		{"backward zero date", record("G-001", "work", "created: \"0001-01-01T00:00:00Z\"\nupdated: \"0000-01-01T00:00:00Z\"\n"), "updated"},
+		{"zero id", record("G-000", "work", ""), "id"},
+		{"short id", record("G-1", "work", ""), "id"},
+		{"extra padding", record("G-0001", "work", ""), "id"},
+		{"unknown prefix", record("X-001", "work", ""), "id"},
 		{"lifecycle", strings.Replace(base, "status: proposed", "status: resolved", 1), "status"},
-		{"wrong folder", record("Q-001", "question", ""), "type"},
 		{"unclosed header", strings.TrimSuffix(base, "---\nBody with --- inside.\n"), "frontmatter"},
 		{"no header", "Hello\n", "frontmatter"},
-		{"alias", "---\nid: W-001\ntype: work\ntitle: &label Example\nstatus: *label\n---\n", "alias"},
+		{"alias", "---\nid: G-001\ntype: work\ntitle: &label Example\nstatus: *label\n---\n", "alias"},
 		{"custom tag", strings.Replace(base, "title: Example", "title: !special Example", 1), "title"},
 		{"invalid utf8", base + "\xff", "UTF-8"},
 	} {
@@ -178,13 +178,13 @@ func TestStrictRecordMetadata(t *testing.T) {
 	}
 }
 
-func TestRejectSymlinksAndMisplacedMarkdown(t *testing.T) {
+func TestRejectSymlinks(t *testing.T) {
 	t.Parallel()
 	for _, target := range []string{"grove.yaml", "grove", "grove/work", "grove/work/link.md", "grove/link.txt"} {
 		t.Run(target, func(t *testing.T) {
 			root := fixture(t)
 			outside := t.TempDir()
-			put(t, outside, "target", record("W-001", "work", ""))
+			put(t, outside, "target", record("G-001", "work", ""))
 			path := filepath.Join(root, target)
 			os.Remove(path)
 			os.MkdirAll(filepath.Dir(path), 0755)
@@ -197,21 +197,14 @@ func TestRejectSymlinksAndMisplacedMarkdown(t *testing.T) {
 			}
 		})
 	}
-	root := fixture(t)
-	put(t, root, "grove/misplaced.md", record("W-001", "work", ""))
-	put(t, root, "grove/other/nested.md", record("W-002", "work", ""))
-	_, ds := Load(root, "")
-	if len(ds) != 2 || !strings.Contains(diagnostics(ds), "type folder") {
-		t.Fatal(diagnostics(ds))
-	}
 }
 
 func TestOrderUsesCreationThenNumericID(t *testing.T) {
 	t.Parallel()
 	root := fixture(t)
-	for _, id := range []string{"W-1000", "W-999", "W-002", "W-001"} {
+	for _, id := range []string{"G-1000", "G-999", "G-002", "G-001"} {
 		extra := ""
-		if id == "W-002" {
+		if id == "G-002" {
 			extra = "created: \"2026-09-19T12:00:00Z\"\n"
 		}
 		put(t, root, "grove/work/"+id+".md", record(id, "work", extra))
@@ -224,7 +217,7 @@ func TestOrderUsesCreationThenNumericID(t *testing.T) {
 	for _, r := range p.Records {
 		ids = append(ids, r.ID)
 	}
-	if strings.Join(ids, ",") != "W-002,W-001,W-999,W-1000" {
+	if strings.Join(ids, ",") != "G-002,G-001,G-999,G-1000" {
 		t.Fatal(ids)
 	}
 }
@@ -232,19 +225,18 @@ func TestOrderUsesCreationThenNumericID(t *testing.T) {
 func TestExplicitZeroTimeIsNotAnAbsentDate(t *testing.T) {
 	t.Parallel()
 	root := fixture(t)
-	put(t, root, "grove/work/undated.md", record("W-001", "work", ""))
-	put(t, root, "grove/work/dated.md", record("W-999", "work", "created: \"0001-01-01T00:00:00Z\"\n"))
+	put(t, root, "grove/work/undated.md", record("G-001", "work", ""))
+	put(t, root, "grove/work/dated.md", record("G-999", "work", "created: \"0001-01-01T00:00:00Z\"\n"))
 	p, ds := Load(root, "")
-	if len(ds) != 0 || p.Records[0].ID != "W-999" {
+	if len(ds) != 0 || p.Records[0].ID != "G-999" {
 		t.Fatalf("a present timestamp must sort before undated records: %s", diagnostics(ds))
 	}
 }
 
-func schema2(t *testing.T, config string) string {
+func schema3(t *testing.T, config string) string {
 	t.Helper()
 	root := fixture(t)
-	put(t, root, "grove.yaml", "schema_version: 2\nrecords: grove\n"+config)
-	put(t, root, "grove/work/W-001.md", record("W-001", "work", ""))
+	put(t, root, "grove.yaml", "schema_version: 3\nrecords: grove\n"+config)
 	return root
 }
 
@@ -252,12 +244,13 @@ func typed(id, kind, status, extra string) string {
 	return "---\nid: " + id + "\ntype: " + kind + "\ntitle: " + id + " title\nstatus: " + status + "\n" + extra + "---\nBody.\n"
 }
 
-func TestSchema2KnowledgeRecords(t *testing.T) {
+func TestKnowledgeRecords(t *testing.T) {
 	t.Parallel()
-	root := schema2(t, "")
-	put(t, root, "grove/terms/T-001-attempt.md", typed("T-001", "term", "settled", "relates_to: [\"W-001\"]\n"))
-	put(t, root, "grove/plans/P-001-shared.md", typed("P-001", "plan", "current", "work: [\"W-001\"]\n"))
-	put(t, root, "grove/reviews/R-001-first.md", typed("R-001", "review", "current", "work: [\"W-001\"]\nexamined: \"42c077d\"\n"))
+	root := schema3(t, "")
+	put(t, root, "grove/G-001.md", typed("G-001", "work", "proposed", ""))
+	put(t, root, "grove/terms/G-002-attempt.md", typed("G-002", "term", "settled", "relates_to: [\"G-001\"]\n"))
+	put(t, root, "grove/plans/G-003-shared.md", typed("G-003", "plan", "current", "work: [\"G-001\"]\n"))
+	put(t, root, "grove/reviews/G-004-first.md", typed("G-004", "review", "current", "work: [\"G-001\"]\nexamined: \"42c077d\"\n"))
 	p, ds := Load(root, root)
 	if len(ds) != 0 {
 		t.Fatalf("unexpected diagnostics:\n%s", diagnostics(ds))
@@ -266,39 +259,28 @@ func TestSchema2KnowledgeRecords(t *testing.T) {
 		t.Fatalf("got %d records", len(p.Records))
 	}
 	for _, r := range p.Records {
-		if r.ID == "R-001" && (r.Examined != "42c077d" || len(r.Work) != 1) {
+		if r.ID == "G-004" && (r.Examined != "42c077d" || len(r.Work) != 1) {
 			t.Fatalf("review fields not read: %+v", r)
 		}
-	}
-}
-
-func TestSchema1RefusesKnowledgeFolders(t *testing.T) {
-	t.Parallel()
-	root := fixture(t)
-	put(t, root, "grove/terms/T-001-attempt.md", typed("T-001", "term", "settled", ""))
-	_, ds := Load(root, root)
-	if got := diagnostics(ds); !strings.Contains(got, "grove/terms/T-001-attempt.md: Markdown record must be inside a work, questions, or decisions type folder") {
-		t.Fatalf("schema 1 must keep refusing new folders; got %s", got)
 	}
 }
 
 func TestKnowledgeRecordProblemsNameFileAndField(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct{ name, path, source, want string }{
-		{"missing work target", "grove/plans/P-001.md", typed("P-001", "plan", "current", "work: [\"W-009\"]\n"), "grove/plans/P-001.md: work: unresolved target W-009"},
-		{"work target not work", "grove/plans/P-001.md", typed("P-001", "plan", "current", "work: [\"P-001\"]\n"), "work: self-reference"},
-		{"work names a term", "grove/reviews/R-001.md", typed("R-001", "review", "current", "work: [\"T-001\"]\n"), "grove/reviews/R-001.md: work: target T-001 must be work"},
-		{"unquoted numeric commit", "grove/reviews/R-001.md", typed("R-001", "review", "current", "examined: 1234567\n"), "examined: expected a nonempty string"},
-		{"not a commit", "grove/reviews/R-001.md", typed("R-001", "review", "current", "examined: \"main\"\n"), "examined: expected a quoted Git commit"},
-		{"examined on a plan", "grove/plans/P-001.md", typed("P-001", "plan", "current", "examined: \"42c077d\"\n"), "examined: unknown field"},
-		{"work on a term", "grove/terms/T-002.md", typed("T-002", "term", "proposed", "work: [\"W-001\"]\n"), "work: unknown field"},
-		{"bad status", "grove/terms/T-002.md", typed("T-002", "term", "done", ""), "status: unsupported lifecycle value for term"},
-		{"wrong prefix", "grove/plans/T-002.md", typed("T-002", "plan", "current", ""), "id: expected a canonical"},
+		{"missing work target", "grove/plans/G-002.md", typed("G-002", "plan", "current", "work: [\"G-009\"]\n"), "grove/plans/G-002.md: work: unresolved target G-009"},
+		{"work target not work", "grove/plans/G-002.md", typed("G-002", "plan", "current", "work: [\"G-002\"]\n"), "work: self-reference"},
+		{"work names a term", "grove/reviews/G-002.md", typed("G-002", "review", "current", "work: [\"G-001\"]\n"), "grove/reviews/G-002.md: work: target G-001 must be work"},
+		{"unquoted numeric commit", "grove/reviews/G-002.md", typed("G-002", "review", "current", "examined: 1234567\n"), "examined: expected a nonempty string"},
+		{"not a commit", "grove/reviews/G-002.md", typed("G-002", "review", "current", "examined: \"main\"\n"), "examined: expected a quoted Git commit"},
+		{"examined on a plan", "grove/plans/G-002.md", typed("G-002", "plan", "current", "examined: \"42c077d\"\n"), "examined: unknown field"},
+		{"work on a term", "grove/terms/G-003.md", typed("G-003", "term", "proposed", "work: [\"G-001\"]\n"), "work: unknown field"},
+		{"bad status", "grove/terms/G-003.md", typed("G-003", "term", "done", ""), "status: unsupported lifecycle value for term"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			root := schema2(t, "")
-			put(t, root, "grove/terms/T-001.md", typed("T-001", "term", "settled", ""))
+			root := schema3(t, "")
+			put(t, root, "grove/G-001.md", typed("G-001", "term", "settled", ""))
 			put(t, root, tc.path, tc.source)
 			_, ds := Load(root, root)
 			if got := diagnostics(ds); !strings.Contains(got, tc.want) {
@@ -310,13 +292,22 @@ func TestKnowledgeRecordProblemsNameFileAndField(t *testing.T) {
 
 func TestDuplicateTermTitle(t *testing.T) {
 	t.Parallel()
-	root := schema2(t, "")
-	put(t, root, "grove/terms/T-001.md", "---\nid: T-001\ntype: term\ntitle: Attempt\nstatus: settled\n---\n")
-	put(t, root, "grove/terms/T-002.md", "---\nid: T-002\ntype: term\ntitle: \" attempt\"\nstatus: proposed\n---\n")
+	root := schema3(t, "")
+	put(t, root, "grove/terms/G-001.md", "---\nid: G-001\ntype: term\ntitle: Attempt\nstatus: settled\n---\n")
+	put(t, root, "grove/terms/G-002.md", "---\nid: G-002\ntype: term\ntitle: \" attempt\"\nstatus: proposed\n---\n")
 	_, ds := Load(root, root)
-	if got := diagnostics(ds); !strings.Contains(got, "grove/terms/T-002.md: title: term already defined by T-001") {
+	if got := diagnostics(ds); !strings.Contains(got, "grove/terms/G-002.md: title: term already defined by G-001") {
 		t.Fatalf("got %s", got)
 	}
+}
+
+// briefFixture is a schema-3 project with one baseline work record, for tests
+// that also need the brief: configuration key.
+func briefFixture(t *testing.T, config string) string {
+	t.Helper()
+	root := schema3(t, config)
+	put(t, root, "grove/G-001.md", record("G-001", "work", ""))
+	return root
 }
 
 func TestBrief(t *testing.T) {
@@ -325,15 +316,13 @@ func TestBrief(t *testing.T) {
 		{"under the record root", "brief: grove/brief.md\n", "grove/brief.md", ""},
 		{"elsewhere in the project", "brief: docs/restart-brief.md\n", "docs/restart-brief.md", ""},
 		{"missing", "brief: grove/brief.md\n", "", "grove.yaml: brief: "},
-		{"inside a type folder", "brief: grove/work/brief.md\n", "", "brief: must not be inside a record type folder"},
-		{"inside a type folder by another case", "brief: Grove/Work/brief.md\n", "", "brief: must not be inside a record type folder"},
 		{"escaping", "brief: ../brief.md\n", "", "brief: must name a project-relative .md file"},
 		{"unclean", "brief: ./grove/brief.md\n", "grove/brief.md", "brief: must name a project-relative .md file"},
 		{"not Markdown", "brief: grove/brief.txt\n", "grove/brief.txt", "brief: must name a project-relative .md file"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			root := schema2(t, tc.config)
+			root := briefFixture(t, tc.config)
 			if tc.file != "" {
 				put(t, root, tc.file, "# Brief\n")
 			}
@@ -354,19 +343,9 @@ func TestBrief(t *testing.T) {
 			}
 		})
 	}
-	t.Run("another Markdown file at the root is still misplaced", func(t *testing.T) {
-		t.Parallel()
-		root := schema2(t, "brief: grove/brief.md\n")
-		put(t, root, "grove/brief.md", "# Brief\n")
-		put(t, root, "grove/notes.md", "# Notes\n")
-		_, ds := Load(root, root)
-		if got := diagnostics(ds); !strings.Contains(got, "grove/notes.md: Markdown record must be inside a type folder") {
-			t.Fatalf("got %s", got)
-		}
-	})
 	t.Run("spelled with another case than the disk", func(t *testing.T) {
 		t.Parallel()
-		root := schema2(t, "brief: grove/Notes/brief.md\n")
+		root := briefFixture(t, "brief: grove/Notes/brief.md\n")
 		put(t, root, "grove/notes/brief.md", "# Brief\n")
 		if _, err := os.Stat(filepath.Join(root, "grove/Notes/brief.md")); err != nil {
 			t.Skip("case-sensitive filesystem")
@@ -377,7 +356,7 @@ func TestBrief(t *testing.T) {
 	})
 	t.Run("symlinked parent directory", func(t *testing.T) {
 		t.Parallel()
-		root := schema2(t, "brief: docs/brief.md\n")
+		root := briefFixture(t, "brief: docs/brief.md\n")
 		put(t, root, "real/brief.md", "# Brief\n")
 		if err := os.Symlink("real", filepath.Join(root, "docs")); err != nil {
 			t.Fatal(err)
@@ -389,7 +368,7 @@ func TestBrief(t *testing.T) {
 	})
 	t.Run("symlinked brief", func(t *testing.T) {
 		t.Parallel()
-		root := schema2(t, "brief: docs/brief.md\n")
+		root := briefFixture(t, "brief: docs/brief.md\n")
 		put(t, root, "real.md", "# Brief\n")
 		if err := os.Mkdir(filepath.Join(root, "docs"), 0755); err != nil {
 			t.Fatal(err)
@@ -404,26 +383,19 @@ func TestBrief(t *testing.T) {
 	})
 }
 
-func schema3(t *testing.T, config string) string {
-	t.Helper()
-	root := fixture(t)
-	put(t, root, "grove.yaml", "schema_version: 3\nrecords: grove\n"+config)
-	return root
-}
-
 const page = "---\nid: G-002\ntype: page\ntitle: Synthesis\nrelates_to: [\"G-001\"]\n---\nNotes.\n"
 
-// Location carries no meaning in schema 3: the root, a legacy type folder, and
-// an arbitrary nested folder all hold any type, under neutral or legacy IDs.
-func TestSchema3DiscoversByIdentityNotLocation(t *testing.T) {
+// Location carries no meaning: the root, a legacy-named folder, and an
+// arbitrary nested folder all hold any type, under recursive discovery.
+func TestDiscoversByIdentityNotLocation(t *testing.T) {
 	t.Parallel()
 	root := schema3(t, "brief: grove/brief.md\n")
 	put(t, root, "grove/brief.md", "# Brief, not a record\n")
 	put(t, root, "grove/G-001-work.md", typed("G-001", "work", "proposed", ""))
 	put(t, root, "grove/G-002-synthesis.md", page)
-	put(t, root, "grove/decisions/deep/er/G-003.md", typed("G-003", "plan", "current", "work: [\"G-001\", \"W-001\"]\n"))
-	put(t, root, "grove/work/W-001-legacy.md", typed("W-001", "work", "done", "depends_on: [\"G-001\"]\n"))
-	put(t, root, "grove/D-001-reclassified.md", typed("D-001", "term", "settled", "formerly: \"docs/old.md\"\n"))
+	put(t, root, "grove/decisions/deep/er/G-003.md", typed("G-003", "plan", "current", "work: [\"G-001\"]\n"))
+	put(t, root, "grove/work/G-004-legacy-folder.md", typed("G-004", "work", "done", "depends_on: [\"G-001\"]\n"))
+	put(t, root, "grove/G-005-reclassified.md", typed("G-005", "term", "settled", "formerly: \"docs/old.md\"\n"))
 	put(t, root, "grove/notes.txt", "ignored")
 	p, ds := Load(root, root)
 	if len(ds) != 0 {
@@ -439,14 +411,14 @@ func TestSchema3DiscoversByIdentityNotLocation(t *testing.T) {
 	}
 }
 
-func TestSchema3RecordProblems(t *testing.T) {
+func TestRecordProblems(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct{ name, path, source, want string }{
 		{"page with a lifecycle", "grove/a.md", "---\nid: G-002\ntype: page\ntitle: T\nstatus: proposed\n---\n", "status: unknown field"},
 		{"page with a work field", "grove/a.md", "---\nid: G-002\ntype: page\ntitle: T\npriority: 1\n---\n", "priority: unknown field"},
 		{"no type is not a page", "grove/a.md", "---\nid: G-002\ntitle: T\n---\n", "type: required field is missing"},
 		{"unknown type", "grove/a.md", typed("G-002", "note", "open", ""), "type: unknown record type"},
-		{"work without status in a pages folder", "grove/pages/a.md", "---\nid: G-002\ntype: work\ntitle: T\n---\n", "status: required field is missing"},
+		{"work record missing status", "grove/a.md", "---\nid: G-002\ntype: work\ntitle: T\n---\n", "status: required field is missing"},
 		{"work with a bad status", "grove/a.md", typed("G-002", "work", "settled", ""), "status: unsupported lifecycle value for work"},
 		{"plain Markdown", "grove/a.md", "# Just prose\n", "frontmatter: expected an opening --- line"},
 		{"uncanonical ID", "grove/a.md", typed("G-02", "work", "proposed", ""), "id: expected a canonical positive ID, e.g. G-001"},
@@ -468,23 +440,5 @@ func TestSchema3RecordProblems(t *testing.T) {
 				t.Fatalf("wanted %q naming %s; got:\n%s", tc.want, tc.path, got)
 			}
 		})
-	}
-}
-
-// Schema 2 must not learn schema 3's freedoms by accident.
-func TestSchema2RefusesSchema3Forms(t *testing.T) {
-	t.Parallel()
-	for _, tc := range []struct{ path, source, want string }{
-		{"grove/G-002.md", page, "Markdown record must be inside a type folder: work, questions, decisions, terms, plans, reviews"},
-		{"grove/work/G-002.md", typed("G-002", "work", "proposed", ""), "id: expected a canonical positive ID with matching type prefix"},
-		{"grove/work/W-002.md", typed("W-002", "work", "proposed", "formerly: \"x\"\n"), "formerly: unknown field"},
-		{"grove/pages/G-002.md", page, "Markdown record must be inside a type folder"},
-	} {
-		root := schema2(t, "")
-		put(t, root, "grove/work/G-001.md", typed("W-009", "work", "proposed", ""))
-		put(t, root, tc.path, tc.source)
-		if _, ds := Load(root, root); !strings.Contains(diagnostics(ds), tc.want) {
-			t.Fatalf("%s: wanted %q; got:\n%s", tc.path, tc.want, diagnostics(ds))
-		}
 	}
 }

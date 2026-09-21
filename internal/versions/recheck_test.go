@@ -11,26 +11,26 @@ import (
 // Each mutation lands after the inspection and before the final check of the
 // target about to be returned.
 func TestResolveFinalCheck(t *testing.T) {
-	record1 := "sub/grove/work/W-001-first.md"
+	record1 := "sub/grove/work/G-001-first.md"
 	cases := []struct {
 		name, kind string // kind of selection: live or committed
 		mutate     func(t *testing.T, root, wt string)
 		want       string
 	}{
 		{"record bytes", "live", func(t *testing.T, root, wt string) {
-			write(t, wt, record1, record("W-001", "work", "done", "Edited.\n"))
+			write(t, wt, record1, record("G-001", "work", "done", "Edited.\n"))
 		}, "changed while its workspace was being resolved"},
 		{"configuration bytes", "committed", func(t *testing.T, root, wt string) {
 			write(t, wt, "sub/grove.yaml", config+"# note\n")
 		}, "changed while its workspace was being resolved"},
 		{"record path", "live", func(t *testing.T, root, wt string) {
-			must(t, os.Rename(filepath.Join(wt, record1), filepath.Join(wt, "sub/grove/work/W-001-moved.md")))
+			must(t, os.Rename(filepath.Join(wt, record1), filepath.Join(wt, "sub/grove/work/G-001-moved.md")))
 		}, "changed while its workspace was being resolved"},
 		{"record deleted", "committed", func(t *testing.T, root, wt string) {
 			must(t, os.Remove(filepath.Join(wt, record1)))
 		}, "changed while its workspace was being resolved"},
 		{"source made invalid", "live", func(t *testing.T, root, wt string) {
-			write(t, wt, "sub/grove/work/W-002-second.md", "---\nid: \"W-002\"\ntype: work\ntitle: T\nstatus: bogus\n---\n")
+			write(t, wt, "sub/grove/work/G-003-second.md", "---\nid: \"G-003\"\ntype: work\ntitle: T\nstatus: bogus\n---\n")
 		}, "stopped being a valid source"},
 		{"project removed", "live", func(t *testing.T, root, wt string) {
 			must(t, os.RemoveAll(filepath.Join(wt, "sub")))
@@ -81,7 +81,7 @@ func TestResolveFinalCheck(t *testing.T) {
 			if c.kind == "committed" {
 				where = "refs/heads/feature"
 			}
-			selected := selectorFor(t, project, "W-001", c.kind, where)
+			selected := selectorFor(t, project, "G-001", c.kind, where)
 			var after map[string][32]byte
 			w, err := resolveWith(t.Context(), project, selected, func() {
 				c.mutate(t, root, wt)
@@ -105,10 +105,10 @@ func TestResolveFinalCheckAdmits(t *testing.T) {
 	root, wt := nestedFixture(t)
 	project := filepath.Join(root, "sub")
 	bad := addWorktree(t, root, "bad", "", "-b", "bad")
-	write(t, bad, "sub/grove/work/W-002-second.md", "---\nid: \"W-002\"\ntype: work\ntitle: [unclosed\nstatus: proposed\n---\n")
+	write(t, bad, "sub/grove/work/G-003-second.md", "---\nid: \"G-003\"\ntype: work\ntitle: [unclosed\nstatus: proposed\n---\n")
 	write(t, wt, "sub/dirty.txt", "unrelated\n")
-	live := selectorFor(t, project, "W-001", "live", "feature")
-	committed := selectorFor(t, project, "W-001", "committed", "refs/heads/feature")
+	live := selectorFor(t, project, "G-001", "live", "feature")
+	committed := selectorFor(t, project, "G-001", "committed", "refs/heads/feature")
 	before := treeHashes(t, filepath.Dir(root))
 	for _, selected := range []string{live, committed} {
 		w, err := resolveWith(t.Context(), project, selected, func() { write(t, wt, "sub/dirty.txt", "unrelated\n") })

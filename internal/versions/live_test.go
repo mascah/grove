@@ -15,7 +15,7 @@ func deepFixture(t *testing.T) (root, wt string) {
 	root = repoFixture(t)
 	git(t, root, "rm", "-q", "-r", "grove.yaml", "grove")
 	write(t, root, "outer/sub/grove.yaml", config)
-	write(t, root, "outer/sub/grove/work/W-001-first.md", record("W-001", "work", "proposed", "Main.\n"))
+	write(t, root, "outer/sub/grove/work/G-001-first.md", record("G-001", "work", "proposed", "Main.\n"))
 	commit(t, root, "nested project")
 	return root, addWorktree(t, root, "feature", "", "-b", "feature")
 }
@@ -28,7 +28,7 @@ func foreignRepo(t *testing.T, dir, below string) {
 	}
 	git(t, dir, "init", "-q", "-b", "main")
 	write(t, dir, filepath.Join(below, "grove.yaml"), config)
-	write(t, dir, filepath.Join(below, "grove/work/W-001-first.md"), record("W-001", "work", "done", "Foreign.\n"))
+	write(t, dir, filepath.Join(below, "grove/work/G-001-first.md"), record("G-001", "work", "done", "Foreign.\n"))
 	commit(t, dir, "foreign")
 }
 
@@ -76,7 +76,7 @@ func TestInspectProjectLocation(t *testing.T) {
 		}, "belongs to another repository or worktree"},
 		{"nested repository at the record folder", func(t *testing.T, wt string) {
 			must(t, os.RemoveAll(filepath.Join(wt, "outer/sub/grove")))
-			write(t, wt, "outer/sub/grove/work/W-001-first.md", record("W-001", "work", "done", "Foreign.\n"))
+			write(t, wt, "outer/sub/grove/work/G-001-first.md", record("G-001", "work", "done", "Foreign.\n"))
 			git(t, filepath.Join(wt, "outer/sub/grove"), "init", "-q")
 		}, "belongs to another repository or worktree"},
 		{"missing directory", func(t *testing.T, wt string) {
@@ -91,11 +91,11 @@ func TestInspectProjectLocation(t *testing.T) {
 			t.Parallel()
 			root, wt := deepFixture(t)
 			project := filepath.Join(root, "outer/sub")
-			earlier := selectorFor(t, project, "W-001", "live", "feature")
+			earlier := selectorFor(t, project, "G-001", "live", "feature")
 			c.mutate(t, wt)
 			before := treeHashes(t, filepath.Dir(root))
 
-			res := mustInspect(t, project, "W-001")
+			res := mustInspect(t, project, "G-001")
 			s := source(t, res, "live", "feature")
 			if s.Valid || res.Complete != (c.want == "") || (c.want == "") != (len(s.Diagnostics) == 0 && !s.Present) {
 				t.Fatalf("feature source: complete=%v %+v", res.Complete, s)
@@ -103,7 +103,7 @@ func TestInspectProjectLocation(t *testing.T) {
 			if c.want != "" && !strings.Contains(strings.Join(s.Diagnostics, "\n"), c.want) {
 				t.Fatalf("expected %q in %v", c.want, s.Diagnostics)
 			}
-			g := group(t, res, "W-001")
+			g := group(t, res, "G-001")
 			for _, v := range g.Versions {
 				if v.Source == s {
 					t.Fatalf("the feature checkout must contribute no version: %+v", v)
@@ -133,7 +133,7 @@ func TestInspectWorktreeReplacedByPlainDirectory(t *testing.T) {
 	git(t, root, "worktree", "add", "-q", "--lock", "-b", "inner", inner)
 	must(t, os.RemoveAll(inner))
 	must(t, os.Mkdir(inner, 0o755))
-	res := mustInspect(t, root, "W-001")
+	res := mustInspect(t, root, "G-001")
 	for _, s := range res.Sources {
 		if s.Worktree == inner && (s.Valid || s.Locator != "" || len(s.Diagnostics) == 0) {
 			t.Fatalf("plain directory admitted as a checkout: %+v", s)
@@ -148,7 +148,7 @@ func TestInspectPrunableDuringRead(t *testing.T) {
 	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
-	res, err := inspect(t.Context(), root, "W-001", func() {
+	res, err := inspect(t.Context(), root, "G-001", func() {
 		must(t, os.RemoveAll(wt))
 	})
 	if err != nil {
@@ -157,7 +157,7 @@ func TestInspectPrunableDuringRead(t *testing.T) {
 	if res.Complete || source(t, res, "live", "feature").Valid {
 		t.Fatal("deleted checkout remained selectable")
 	}
-	for _, v := range group(t, res, "W-001").Versions {
+	for _, v := range group(t, res, "G-001").Versions {
 		if v.Source.Worktree == wt {
 			t.Fatalf("a vanished checkout must not contribute: %+v", v)
 		}
@@ -168,7 +168,7 @@ func TestInspectForeignDuringRead(t *testing.T) {
 	t.Parallel()
 	root, wt := deepFixture(t)
 	project := filepath.Join(root, "outer/sub")
-	res, err := inspect(t.Context(), project, "W-001", func() {
+	res, err := inspect(t.Context(), project, "G-001", func() {
 		must(t, os.Rename(filepath.Join(wt, "outer/sub"), filepath.Join(wt, "elsewhere")))
 		must(t, os.Symlink("../elsewhere", filepath.Join(wt, "outer/sub")))
 	})
@@ -194,15 +194,15 @@ func TestOddGitPathsRoundTrip(t *testing.T) {
 	must(t, os.Mkdir(root, 0o755))
 	git(t, root, "init", "-q", "-b", "main")
 	write(t, root, "sub\nproject/grove.yaml", config)
-	write(t, root, "sub\nproject/grove/work/W-001-first.md", record("W-001", "work", "proposed", "Main.\n"))
+	write(t, root, "sub\nproject/grove/work/G-001-first.md", record("G-001", "work", "proposed", "Main.\n"))
 	commit(t, root, "init")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
-	write(t, wt, "sub\nproject/grove/work/W-001-first.md", record("W-001", "work", "active", "Feature.\n"))
+	write(t, wt, "sub\nproject/grove/work/G-001-first.md", record("G-001", "work", "active", "Feature.\n"))
 	commit(t, wt, "feature")
 	project := filepath.Join(root, "sub\nproject")
 	before := treeHashes(t, parent)
 
-	res := mustInspect(t, project, "W-001")
+	res := mustInspect(t, project, "G-001")
 	if !res.Complete || res.Repository != filepath.Join(root, ".git") || res.Prefix != "sub\nproject/" {
 		t.Fatalf("repository %q prefix %q: %s", res.Repository, res.Prefix, dump(res))
 	}
@@ -215,18 +215,18 @@ func TestOddGitPathsRoundTrip(t *testing.T) {
 	if linked == nil || !linked.Valid || linked.GitDir != filepath.Join(root, ".git", "worktrees", linked.Locator) {
 		t.Fatalf("linked source: %+v", linked)
 	}
-	g := group(t, res, "W-001")
+	g := group(t, res, "G-001")
 	for _, c := range []struct{ kind, where, checkout string }{
 		{"live", ".", root}, {"live", linked.Locator, wt},
 		{"committed", "refs/heads/main", root}, {"committed", "refs/heads/feature", wt},
 	} {
 		w := resolve(t, project, find(t, g, c.kind, c.where).Selector)
-		if w.Checkout != c.checkout || w.Project != filepath.Join(c.checkout, "sub\nproject") || w.Record != filepath.Join(w.Project, "grove/work/W-001-first.md") {
+		if w.Checkout != c.checkout || w.Project != filepath.Join(c.checkout, "sub\nproject") || w.Record != filepath.Join(w.Project, "grove/work/G-001-first.md") {
 			t.Fatalf("%s %s: %+v", c.kind, c.where, w)
 		}
 	}
 	// The same picture from the linked checkout.
-	if again := mustInspect(t, filepath.Join(wt, "sub\nproject"), "W-001"); !reflect.DeepEqual(selectorsOf(res), selectorsOf(again)) {
+	if again := mustInspect(t, filepath.Join(wt, "sub\nproject"), "G-001"); !reflect.DeepEqual(selectorsOf(res), selectorsOf(again)) {
 		t.Fatal("selectors depend on the repository, not the invoking checkout")
 	}
 	if !reflect.DeepEqual(before, treeHashes(t, parent)) {
@@ -241,7 +241,7 @@ func TestInspectConfigurationRemovedDuringRead(t *testing.T) {
 	t.Parallel()
 	root, wt := deepFixture(t)
 	project := filepath.Join(root, "outer/sub")
-	res, err := inspect(t.Context(), project, "W-001", func() {
+	res, err := inspect(t.Context(), project, "G-001", func() {
 		must(t, os.Remove(filepath.Join(wt, "outer/sub/grove.yaml")))
 	})
 	must(t, err)
@@ -262,10 +262,10 @@ func TestInspectForeignRepositoryRegisteredAsWorktree(t *testing.T) {
 	git(t, filepath.Dir(root), "init", "-q", "-b", "foreign", "--separate-git-dir", admin, evil)
 	git(t, evil, "fetch", "-q", root, "main")
 	git(t, evil, "reset", "-q", "--hard", "FETCH_HEAD")
-	write(t, evil, "grove/work/W-001-first.md", record("W-001", "work", "done", "Foreign.\n"))
+	write(t, evil, "grove/work/G-001-first.md", record("G-001", "work", "done", "Foreign.\n"))
 	write(t, admin, "gitdir", filepath.Join(evil, ".git")+"\n")
 
-	res := mustInspect(t, root, "W-001")
+	res := mustInspect(t, root, "G-001")
 	var found bool
 	for _, s := range res.Sources {
 		if s.Worktree == evil {
@@ -278,7 +278,7 @@ func TestInspectForeignRepositoryRegisteredAsWorktree(t *testing.T) {
 	if !found || res.Complete {
 		t.Fatalf("the registration must be listed and refused: %s", dump(res))
 	}
-	for _, v := range group(t, res, "W-001").Versions {
+	for _, v := range group(t, res, "G-001").Versions {
 		if v.Source.Worktree == evil {
 			t.Fatalf("the foreign record must not be a version: %+v", v)
 		}

@@ -309,12 +309,9 @@ func compareSources(a, b *Source) int {
 	return strings.Compare(a.Worktree, b.Worktree)
 }
 
-// compareIDs orders by type as project.Types lists them, numerically within each.
+// compareIDs orders IDs numerically: every ID shares the neutral prefix, so
+// length comparison avoids both lexical G-1000 < G-999 and integer overflow.
 func compareIDs(a, b string) int {
-	rank := func(id string) int { return strings.Index(project.Prefixes(), id[:1]) }
-	if c := rank(a) - rank(b); c != 0 {
-		return c
-	}
 	if len(a) != len(b) {
 		return len(a) - len(b)
 	}

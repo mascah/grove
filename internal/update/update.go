@@ -84,7 +84,7 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 	if current != req.Expect {
 		return Result{}, fmt.Errorf("%s changed since the expected revision; its current revision is %s", r.ID, current)
 	}
-	changes, err := plan(r, req, p.Schema)
+	changes, err := plan(r, req)
 	if err != nil {
 		return Result{}, err
 	}
@@ -107,7 +107,7 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: %w", r.Path, err)
 	}
-	next, ds := project.ParseRecord(r.Path, r.Type, p.Schema, candidate)
+	next, ds := project.ParseRecord(r.Path, candidate)
 	if len(ds) != 0 {
 		return Result{}, fmt.Errorf("the update would leave %s invalid:\n%s", r.ID, diagnostics(ds))
 	}
@@ -126,7 +126,7 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 
 // plan validates the request against the record's type and drops fields whose
 // parsed meaning already matches, so a no-op never rewrites the file.
-func plan(r *project.Record, req Request, schema int) ([]change, error) {
+func plan(r *project.Record, req Request) ([]change, error) {
 	fields := map[string][]string{
 		"work":     {"title", "status", "relates_to", "kind", "priority", "size", "members", "depends_on"},
 		"question": {"title", "status", "relates_to", "blocks"},
@@ -136,28 +136,21 @@ func plan(r *project.Record, req Request, schema int) ([]change, error) {
 		"review":   {"title", "status", "relates_to", "work", "examined"},
 		"page":     {"title", "relates_to"},
 	}
-	allowed := fields[r.Type]
-	// Schema 3 lets classification change while ID and path stay. The request
-	// may then name the new type's fields too, and whatever the old type leaves
-	// behind; the candidate must still satisfy the new type's whole contract.
+	// Classification can change while ID and path stay. The request may then
+	// name the new type's fields too, and whatever the old type leaves behind;
+	// the candidate must still satisfy the new type's whole contract.
+	allowed := append(slices.Clone(fields[r.Type]), "type")
 	retype := false
-	if schema >= 3 {
-		allowed = append(slices.Clone(allowed), "type")
-		for _, f := range req.Set {
-			if f.Name == "type" {
-				retype = true
-				allowed = append(allowed, fields[f.Value]...)
-			}
+	for _, f := range req.Set {
+		if f.Name == "type" {
+			retype = true
+			allowed = append(allowed, fields[f.Value]...)
 		}
 	}
 	lists := map[string][]string{"relates_to": r.RelatesTo, "members": r.Members, "depends_on": r.DependsOn, "blocks": r.Blocks, "work": r.Work}
 	strs := map[string]string{"title": r.Title, "status": r.Status, "kind": r.Kind, "size": r.Size, "examined": r.Examined, "type": r.Type}
-	// Schema 3 frees type and adds formerly, which only convert writes; earlier
-	// schemas have no formerly, so it keeps the unknown-field wording there.
-	fixed := []string{"id", "created", "updated", "type"}
-	if schema >= 3 {
-		fixed = []string{"id", "created", "updated", "formerly"}
-	}
+	// type is free to change; formerly is fixed, since only convert writes it.
+	fixed := []string{"id", "created", "updated", "formerly"}
 	check := func(name string) error {
 		if slices.Contains(fixed, name) {
 			return fmt.Errorf("%s cannot be changed by update", name)

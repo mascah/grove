@@ -12,8 +12,8 @@ import (
 	"testing"
 )
 
-const work = "---\nid: W-001\ntype: work\ntitle: Inspect records\nstatus: proposed\nrelates_to: [Q-001]\n---\nAn outcome.\n"
-const question = "---\nid: Q-001\ntype: question\ntitle: Which version?\nstatus: open\nblocks: []\n---\nAn uncertainty.\n"
+const work = "---\nid: G-001\ntype: work\ntitle: Inspect records\nstatus: proposed\nrelates_to: [G-002]\n---\nAn outcome.\n"
+const question = "---\nid: G-002\ntype: question\ntitle: Which version?\nstatus: open\nblocks: []\n---\nAn uncertainty.\n"
 
 func write(t *testing.T, root, path, source string) {
 	t.Helper()
@@ -33,7 +33,7 @@ func projectFixture(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	write(t, real, "grove.yaml", "schema_version: 1\nrecords: docs/records\n")
+	write(t, real, "grove.yaml", "schema_version: 3\nrecords: docs/records\n")
 	write(t, real, "docs/records/work/renamed.md", work)
 	write(t, real, "docs/records/questions/question.md", question)
 	return real
@@ -66,7 +66,7 @@ func TestCommandsInspectWithoutChangingFiles(t *testing.T) {
 	t.Parallel()
 	root := projectFixture(t)
 	before := hashes(t, root)
-	for _, args := range [][]string{{"list"}, {"show", "W-001"}, {"check"}, {"list", "--project", root}, {"--project=" + root, "show", "Q-001"}} {
+	for _, args := range [][]string{{"list"}, {"show", "G-001"}, {"check"}, {"list", "--project", root}, {"--project=" + root, "show", "G-002"}} {
 		var out, errOut bytes.Buffer
 		code := Run(args, filepath.Join(root, "docs", "records"), &out, &errOut)
 		if code != 0 || !strings.Contains(errOut.String(), root) {
@@ -74,7 +74,7 @@ func TestCommandsInspectWithoutChangingFiles(t *testing.T) {
 		}
 		switch args[0] {
 		case "list":
-			if !strings.Contains(out.String(), "W-001") || !strings.Contains(out.String(), "proposed") || !strings.Contains(out.String(), "Inspect records") || !strings.Contains(out.String(), "question") {
+			if !strings.Contains(out.String(), "G-001") || !strings.Contains(out.String(), "proposed") || !strings.Contains(out.String(), "Inspect records") || !strings.Contains(out.String(), "question") {
 				t.Fatal(out.String())
 			}
 		case "show":
@@ -99,9 +99,9 @@ func TestCommandsInspectWithoutChangingFiles(t *testing.T) {
 func TestInvalidNeighborPreventsPartialOutput(t *testing.T) {
 	t.Parallel()
 	root := projectFixture(t)
-	write(t, root, "docs/records/work/broken.md", "---\nid: W-002\ntype: work\ntitle: Broken\nstatus: imaginary\n---\n")
+	write(t, root, "docs/records/work/broken.md", "---\nid: G-003\ntype: work\ntitle: Broken\nstatus: imaginary\n---\n")
 	before := hashes(t, root)
-	for _, args := range [][]string{{"list"}, {"show", "W-001"}, {"check"}} {
+	for _, args := range [][]string{{"list"}, {"show", "G-001"}, {"check"}} {
 		var out, errOut bytes.Buffer
 		if code := Run(args, root, &out, &errOut); code != 1 {
 			t.Fatalf("%v returned %d", args, code)
@@ -118,7 +118,7 @@ func TestInvalidNeighborPreventsPartialOutput(t *testing.T) {
 func TestUsageAndMissingID(t *testing.T) {
 	t.Parallel()
 	// No command at all selects the board; see TestBoardInvocation.
-	for _, args := range [][]string{{"unknown"}, {"show"}, {"show", "W-001", "extra"}, {"list", "extra"}, {"--project"}, {"list", "--wat"}, {"--project=", "list"}, {"--project", "a", "--project", "b", "list"}} {
+	for _, args := range [][]string{{"unknown"}, {"show"}, {"show", "G-001", "extra"}, {"list", "extra"}, {"--project"}, {"list", "--wat"}, {"--project=", "list"}, {"--project", "a", "--project", "b", "list"}} {
 		var out, errOut bytes.Buffer
 		if code := Run(args, t.TempDir(), &out, &errOut); code != 2 || out.Len() != 0 || !strings.Contains(errOut.String(), "Usage:") {
 			t.Fatalf("%v: code=%d stderr=%s", args, code, errOut.String())
@@ -132,7 +132,7 @@ func TestUsageAndMissingID(t *testing.T) {
 	}
 	root := projectFixture(t)
 	var out, errOut bytes.Buffer
-	if code := Run([]string{"show", "W-999"}, root, &out, &errOut); code != 1 || out.Len() != 0 || !strings.Contains(errOut.String(), "W-999") {
+	if code := Run([]string{"show", "G-999"}, root, &out, &errOut); code != 1 || out.Len() != 0 || !strings.Contains(errOut.String(), "G-999") {
 		t.Fatalf("missing identity: code=%d stderr=%s", code, errOut.String())
 	}
 }
@@ -153,7 +153,7 @@ func TestEmptyProjectAndLiteralSource(t *testing.T) {
 	write(t, root, "docs/records/questions/custom.md", source)
 	out.Reset()
 	errOut.Reset()
-	if code := Run([]string{"show", "Q-001"}, root, &out, &errOut); code != 0 || out.String() != source {
+	if code := Run([]string{"show", "G-002"}, root, &out, &errOut); code != 0 || out.String() != source {
 		t.Fatal("show normalized line endings or final newline")
 	}
 }
@@ -165,7 +165,7 @@ func (brokenWriter) Write([]byte) (int, error) { return 0, errors.New("output un
 func TestOutputFailureReturnsNonzero(t *testing.T) {
 	t.Parallel()
 	root := projectFixture(t)
-	for _, args := range [][]string{{"list"}, {"show", "W-001"}, {"check"}, {"--help"}} {
+	for _, args := range [][]string{{"list"}, {"show", "G-001"}, {"check"}, {"--help"}} {
 		var errOut bytes.Buffer
 		if code := Run(args, root, brokenWriter{}, &errOut); code != 1 {
 			t.Fatalf("%v: code=%d", args, code)

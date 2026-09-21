@@ -15,7 +15,6 @@ import (
 type Project struct {
 	Root      string
 	RecordDir string // configured record folder, relative to Root
-	Schema    int    // schema_version; it decides which record types exist
 	Config    []byte // exact grove.yaml bytes
 	Brief     string // configured brief, relative to Root with forward slashes; "" when none
 	Records   []*Record
@@ -52,19 +51,16 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 	p.Config = source
 	config := parseMapping("grove.yaml", source, 0)
 	version, ok := config.integerField("schema_version", true)
-	if ok && (version < 1 || version > 3) {
-		config.problem("schema_version", fmt.Sprintf("unsupported version %d; expected 1, 2, or 3", version))
+	if ok && version != 3 {
+		config.problem("schema_version", fmt.Sprintf("unsupported version %d; expected 3", version))
 	}
 	recordDir := config.stringField("records", true)
 	for key := range config.fields {
-		if key != "schema_version" && key != "records" && !(key == "brief" && version >= 2) {
+		if key != "schema_version" && key != "records" && key != "brief" {
 			config.problem(key, "unknown configuration key")
 		}
 	}
-	brief := ""
-	if version >= 2 {
-		brief = config.stringField("brief", false)
-	}
+	brief := config.stringField("brief", false)
 	if recordDir != "" {
 		if !dedicated(recordDir) {
 			config.problem("records", "must name a dedicated relative subdirectory without .. components")
@@ -75,29 +71,12 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 	if len(config.errors) != 0 {
 		return p, sortedDiagnostics(config.errors)
 	}
-	p.RecordDir, p.Schema = recordDir, version
+	p.RecordDir = recordDir
 	recordRoot := path.Clean(filepath.ToSlash(recordDir))
-	// From schema 3 no folder names a type, which also frees the brief to sit
-	// anywhere and leaves every check below that consults folders inert.
-	folders := map[string]string{}
-	var names []string
-	for _, t := range Types {
-		if t.Schema <= version && version < 3 {
-			folders[t.Folder] = t.Name
-			names = append(names, t.Folder)
-		}
-	}
 	if brief != "" {
 		clean := path.Clean(filepath.ToSlash(brief))
-		// Compared without case, because a case-insensitive filesystem would
-		// open grove/Work/x.md as the record grove/work/x.md.
-		lower, lowerRoot := strings.ToLower(clean), strings.ToLower(recordRoot)+"/"
-		inside := strings.Split(strings.TrimPrefix(lower, lowerRoot), "/")
-		switch {
-		case !dedicated(brief) || clean != filepath.ToSlash(brief) || path.Ext(clean) != ".md":
+		if !dedicated(brief) || clean != filepath.ToSlash(brief) || path.Ext(clean) != ".md" {
 			config.problem("brief", "must name a project-relative .md file as a clean path without .. components")
-		case strings.HasPrefix(lower, lowerRoot) && len(inside) > 1 && folders[inside[0]] != "":
-			config.problem("brief", "must not be inside a record type folder")
 		}
 		if len(config.errors) != 0 {
 			return p, sortedDiagnostics(config.errors)
@@ -124,12 +103,6 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 			problem("expected a regular file or directory")
 			return nil
 		}
-		inside := strings.TrimPrefix(relative, recordRoot+"/")
-		parts := strings.Split(inside, "/")
-		if len(parts) == 1 && folders[parts[0]] != "" {
-			problem("type folder must be a directory")
-			return nil
-		}
 		if path.Ext(relative) != ".md" {
 			return nil
 		}
@@ -138,21 +111,12 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 		if p.Brief != "" && strings.EqualFold(relative, p.Brief) {
 			return nil
 		}
-		kind := folders[parts[0]]
-		if version < 3 && (len(parts) < 2 || kind == "") {
-			if version == 1 { // schema 1 keeps its wording as well as its rules
-				problem("Markdown record must be inside a work, questions, or decisions type folder")
-			} else {
-				problem("Markdown record must be inside a type folder: " + strings.Join(names, ", "))
-			}
-			return nil
-		}
 		source, err := readRegular(fsys, relative)
 		if err != nil {
 			problem(err.Error())
 			return nil
 		}
-		record, problems := ParseRecord(relative, kind, version, source)
+		record, problems := ParseRecord(relative, source)
 		p.Records = append(p.Records, record)
 		ds = append(ds, problems...)
 		return nil
@@ -257,7 +221,7 @@ func checkRecordRoot(fsys fs.FS, relative string) error {
 // ReadBrief returns the configured brief's bytes from the live checkout.
 func (p *Project) ReadBrief() ([]byte, error) {
 	if p.Brief == "" {
-		return nil, errors.New("grove.yaml names no brief; add a brief: PATH key (schema_version 2)")
+		return nil, errors.New("grove.yaml names no brief; add a brief: PATH key")
 	}
 	return ReadConfined(p.Root, p.Brief)
 }
@@ -304,8 +268,8 @@ func compareRecords(a, b *Record) int {
 			return c
 		}
 	}
-	// Canonical IDs use the same two-character prefix and zero padding.
-	// Length comparison avoids both lexical W-1000 < W-999 and integer overflow.
+	// Canonical IDs share the neutral prefix and zero padding. Length
+	// comparison avoids both lexical G-1000 < G-999 and integer overflow.
 	if len(a.ID) >= 2 && len(b.ID) >= 2 && a.ID[:2] == b.ID[:2] && len(a.ID) != len(b.ID) {
 		if len(a.ID) < len(b.ID) {
 			return -1

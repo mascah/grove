@@ -23,7 +23,7 @@ func gitIn(t *testing.T, dir string, args ...string) string {
 	return strings.TrimSpace(string(out))
 }
 
-// featureFixture adds a linked worktree whose W-001 is active with a changed
+// featureFixture adds a linked worktree whose G-001 is active with a changed
 // body, committed on branch feature, beside the main checkout from gitFixture.
 func featureFixture(t *testing.T) (root, wt string) {
 	t.Helper()
@@ -39,7 +39,7 @@ func featureFixture(t *testing.T) (root, wt string) {
 func TestVersionsUsage(t *testing.T) {
 	t.Parallel()
 	for _, args := range [][]string{
-		{"versions", "W-001", "W-002"}, {"versions", "--slug", "x"}, {"list", "--json"}, {"versions", "--json", "--json"},
+		{"versions", "G-001", "G-003"}, {"versions", "--slug", "x"}, {"list", "--json"}, {"versions", "--json", "--json"},
 		{"versions", "--expect", rev},
 	} {
 		var out, errOut bytes.Buffer
@@ -55,9 +55,9 @@ func TestVersionsUsage(t *testing.T) {
 func TestVersionsLeavesGitUnchanged(t *testing.T) {
 	t.Parallel()
 	root, wt := featureFixture(t)
-	write(t, wt, "docs/records/questions/dirty.md", strings.Replace(question, "Q-001", "Q-002", 1))
+	write(t, wt, "docs/records/questions/dirty.md", strings.Replace(question, "G-002", "G-003", 1))
 	before := map[string]map[string][32]byte{root: hashes(t, root), wt: hashes(t, wt)}
-	for _, args := range [][]string{{"versions"}, {"versions", "W-001", "--json"}, {"--project", wt, "versions", "Q-002"}} {
+	for _, args := range [][]string{{"versions"}, {"versions", "G-001", "--json"}, {"--project", wt, "versions", "G-003"}} {
 		var out, errOut bytes.Buffer
 		if code := Run(args, root, &out, &errOut); code != 0 {
 			t.Fatalf("%v: %s", args, errOut.String())
@@ -75,16 +75,16 @@ func TestVersionsCLI(t *testing.T) {
 	t.Parallel()
 	root, wt := featureFixture(t)
 	var out, errOut bytes.Buffer
-	if code := Run([]string{"versions", "W-001"}, root, &out, &errOut); code != 0 {
+	if code := Run([]string{"versions", "G-001"}, root, &out, &errOut); code != 0 {
 		t.Fatal(errOut.String())
 	}
 	rows := rowsOf(out.String())
 	want := [][]string{
 		{"ID", "STATUS", "SOURCE", "CHANGE", "SELECTOR"},
-		{"W-001", "active", "committed refs/heads/feature", "-", "committed:refs/heads/feature@"},
-		{"W-001", "proposed", "committed refs/heads/main", "-", "committed:refs/heads/main@"},
-		{"W-001", "proposed", "live . refs/heads/main", "unchanged", "live:.:refs/heads/main@"},
-		{"W-001", "active", "live feature-wt refs/heads/feature", "unchanged", "live:feature-wt:refs/heads/feature@"},
+		{"G-001", "active", "committed refs/heads/feature", "-", "committed:refs/heads/feature@"},
+		{"G-001", "proposed", "committed refs/heads/main", "-", "committed:refs/heads/main@"},
+		{"G-001", "proposed", "live . refs/heads/main", "unchanged", "live:.:refs/heads/main@"},
+		{"G-001", "active", "live feature-wt refs/heads/feature", "unchanged", "live:feature-wt:refs/heads/feature@"},
 	}
 	if len(rows) != len(want) {
 		t.Fatalf("stdout:\n%s", out.String())
@@ -101,7 +101,7 @@ func TestVersionsCLI(t *testing.T) {
 	}
 	out.Reset()
 	errOut.Reset()
-	if code := Run([]string{"versions", "W-001", "--json"}, wt, &out, &errOut); code != 0 {
+	if code := Run([]string{"versions", "G-001", "--json"}, wt, &out, &errOut); code != 0 {
 		t.Fatal(errOut.String())
 	}
 	var got struct {
@@ -139,7 +139,7 @@ func TestVersionsCLI(t *testing.T) {
 	gitIn(t, root, "worktree", "add", "-q", "--detach", odd)
 	out.Reset()
 	errOut.Reset()
-	if code := Run([]string{"versions", "Q-001", "--json"}, root, &out, &errOut); code != 0 {
+	if code := Run([]string{"versions", "G-002", "--json"}, root, &out, &errOut); code != 0 {
 		t.Fatal(errOut.String())
 	}
 	if !strings.Contains(out.String(), `"worktree":"`+strings.Replace(odd, "\n", `\n`, 1)+`"`) || strings.Contains(out.String(), "\n"+"wt") {
@@ -147,13 +147,13 @@ func TestVersionsCLI(t *testing.T) {
 	}
 	out.Reset()
 	errOut.Reset()
-	if code := Run([]string{"versions", "Q-001"}, root, &out, &errOut); code != 0 || !strings.Contains(errOut.String(), `odd\nwt`) || !strings.Contains(out.String(), "live odd-wt detached") {
+	if code := Run([]string{"versions", "G-002"}, root, &out, &errOut); code != 0 || !strings.Contains(errOut.String(), `odd\nwt`) || !strings.Contains(out.String(), "live odd-wt detached") {
 		t.Fatalf("text output escapes control characters: %s\n%s", out.String(), errOut.String())
 	}
 	rows = rowsOf(out.String())
 	last := rows[len(rows)-1]
-	revision := strings.TrimPrefix(showJSON(t, root, "Q-001")["revision"].(string), "sha256:")[:12]
-	if !reflect.DeepEqual(last[:4], []string{"Q-001", "open", "live odd-wt detached", "unchanged"}) || !strings.HasPrefix(last[4], "live:odd-wt:detached@"+gitIn(t, odd, "rev-parse", "HEAD")[:12]+":Q-001@"+revision+":") {
+	revision := strings.TrimPrefix(showJSON(t, root, "G-002")["revision"].(string), "sha256:")[:12]
+	if !reflect.DeepEqual(last[:4], []string{"G-002", "open", "live odd-wt detached", "unchanged"}) || !strings.HasPrefix(last[4], "live:odd-wt:detached@"+gitIn(t, odd, "rev-parse", "HEAD")[:12]+":G-002@"+revision+":") {
 		t.Fatalf("detached row: %q", last)
 	}
 }
@@ -176,10 +176,10 @@ func rowsOf(text string) [][]string {
 func TestVersionsIncompleteAndNotFound(t *testing.T) {
 	t.Parallel()
 	root, wt := featureFixture(t)
-	write(t, wt, "docs/records/work/broken.md", "---\nid: W-001\ntype: work\ntitle: dup\nstatus: proposed\n---\n")
+	write(t, wt, "docs/records/work/broken.md", "---\nid: G-001\ntype: work\ntitle: dup\nstatus: proposed\n---\n")
 	var out, errOut bytes.Buffer
 	code := Run([]string{"versions"}, root, &out, &errOut)
-	if code != 1 || !strings.Contains(errOut.String(), "duplicate W-001") || !strings.Contains(errOut.String(), "the result is incomplete") {
+	if code != 1 || !strings.Contains(errOut.String(), "duplicate G-001") || !strings.Contains(errOut.String(), "the result is incomplete") {
 		t.Fatalf("code=%d stderr=%s", code, errOut.String())
 	}
 	if !strings.Contains(out.String(), "committed refs/heads/feature") || strings.Contains(out.String(), "live feature-wt") {
@@ -195,14 +195,14 @@ func TestVersionsIncompleteAndNotFound(t *testing.T) {
 	}
 	out.Reset()
 	errOut.Reset()
-	if code := Run([]string{"versions", "W-404"}, root, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "record W-404 not found in any valid source") || !strings.HasPrefix(out.String(), "ID  ") {
+	if code := Run([]string{"versions", "G-404"}, root, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "record G-404 not found in any valid source") || !strings.HasPrefix(out.String(), "ID  ") {
 		t.Fatalf("code=%d stdout=%q stderr=%s", code, out.String(), errOut.String())
 	}
 	// An invalid current checkout is one invalid live source, not a hard stop.
 	write(t, root, "grove.yaml", "schema_version: 4\nrecords: docs/records\n")
 	out.Reset()
 	errOut.Reset()
-	if code := Run([]string{"versions", "W-001"}, root, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "unsupported version 4") || !strings.Contains(out.String(), "live feature-wt refs/heads/feature") {
+	if code := Run([]string{"versions", "G-001"}, root, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "unsupported version 4") || !strings.Contains(out.String(), "live feature-wt refs/heads/feature") {
 		t.Fatalf("code=%d stdout=%s stderr=%s", code, out.String(), errOut.String())
 	}
 	if strings.Count(errOut.String(), "unsupported version 4") != 1 {

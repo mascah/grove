@@ -25,7 +25,6 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] list | show ID [--json] | brief [--json] | check\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n" +
-	"       grove [--project DIR] convert ID [--slug SLUG]\n" +
 	"       grove [--project DIR] convert PATH --type TYPE --title TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
 	"       grove [--project DIR] workspace --source SELECTOR [--json]\n" +
@@ -42,23 +41,20 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             --json prints {path, revision, source}. context never adds it by itself.\n" +
 	"  check      Validate configuration, records, and relationships\n" +
 	"  new        Create a work, question, decision, term, plan, review, or page record with\n" +
-	"             the next shared ID (term, plan, and review need schema_version 2; page\n" +
-	"             needs 3). Schema 3 gives every type a neutral G- ID, flat in the record\n" +
-	"             root; a page is general knowledge with a title and no status.\n" +
+	"             the next shared ID, flat in the record root; a page is general knowledge\n" +
+	"             with a title and no status.\n" +
 	"             Put -- before a title that starts with a dash\n" +
 	"  update ID  Change frontmatter fields when the file still matches --expect\n" +
 	"             (the revision from show --json); prints {id, path, revision, changed}.\n" +
-	"             Lists are JSON arrays such as '[\"W-001\"]'; priority is 1-5. A plan or\n" +
+	"             Lists are JSON arrays such as '[\"G-001\"]'; priority is 1-5. A plan or\n" +
 	"             review names its work with work=[...]; a review's examined is a Git commit.\n" +
-	"             Schema 3 accepts type=TYPE with whatever else the new type requires in the\n" +
+	"             update accepts type=TYPE with whatever else the new type requires in the\n" +
 	"             same update; the ID and path never change.\n" +
-	"  convert    Schema 3's one deliberate identity change. A record with a typed ID gets the\n" +
-	"             next neutral ID and formerly: OLD-ID, moves flat into the record root, and\n" +
-	"             relationship lists naming it are rewritten; nothing else in it changes. A\n" +
-	"             Markdown document outside the record root becomes a new record with the\n" +
-	"             document as its body and formerly: PATH; the original is left in place.\n" +
-	"             Prints {from, from_path, id, path}. Bodies and Markdown links are never\n" +
-	"             rewritten. A source already converted is refused, reserving nothing.\n" +
+	"  convert    The one deliberate identity change. A Markdown document outside the record\n" +
+	"             root becomes a new record with the document as its body and formerly: PATH;\n" +
+	"             the original is left in place. Prints {from, from_path, id, path}. Bodies\n" +
+	"             and Markdown links are never rewritten. A source already converted is\n" +
+	"             refused, reserving nothing.\n" +
 	"  versions   Show each record's committed version on every local branch and live\n" +
 	"             version in every worktree, with a selector per version; exit 1 if any\n" +
 	"             source could not be inspected. Reads only; nothing is created.\n" +
@@ -413,7 +409,7 @@ func parseArgs(args []string) (a invocation, err error) {
 		}
 	case "convert":
 		if len(positional) != 2 {
-			err = fmt.Errorf("convert requires exactly one record ID or document path")
+			err = fmt.Errorf("convert requires exactly one document path")
 		} else {
 			a.convert.Source, a.convert.Slug = positional[1], a.slug
 		}

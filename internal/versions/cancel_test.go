@@ -88,8 +88,8 @@ func cancelDuring(t *testing.T, fifo string, call func(context.Context) (returne
 func TestCancellationKillsGitAndWritesNothing(t *testing.T) {
 	root, _ := nestedFixture(t)
 	project := filepath.Join(root, "sub")
-	live := selectorFor(t, project, "W-001", "live", "feature")
-	committed := selectorFor(t, project, "W-001", "committed", "refs/heads/feature")
+	live := selectorFor(t, project, "G-001", "live", "feature")
+	committed := selectorFor(t, project, "G-001", "committed", "refs/heads/feature")
 	block, fifo := blockingGit(t)
 	blockAt := func(arg string) func() {
 		return func() { must(t, os.WriteFile(block, []byte(arg), 0o644)) }
@@ -159,7 +159,7 @@ func TestCancelledBeforeStart(t *testing.T) {
 	t.Parallel()
 	root, _ := nestedFixture(t)
 	project := filepath.Join(root, "sub")
-	live := selectorFor(t, project, "W-001", "live", "feature")
+	live := selectorFor(t, project, "G-001", "live", "feature")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if res, err := InspectContext(ctx, project, ""); !errors.Is(err, context.Canceled) || res != nil {

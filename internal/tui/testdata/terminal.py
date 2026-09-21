@@ -17,7 +17,7 @@ GIT = shutil.which("git")
 ENTER, DOWN, ESC, CTRL_C = b"\r", b"\x1b[B", b"\x1b", b"\x03"
 ALT_ON, ALT_OFF = b"\x1b[?1049h", b"\x1b[?1049l"
 
-WORK = "---\nid: W-001\ntype: work\ntitle: {title}\nstatus: {status}\n---\nAn outcome.\n"
+WORK = "---\nid: G-001\ntype: work\ntitle: {title}\nstatus: {status}\n---\nAn outcome.\n"
 
 
 def git(cwd, *args):
@@ -26,18 +26,18 @@ def git(cwd, *args):
 
 
 def fixture(base):
-    """main has W-001 proposed; a linked worktree on feature has it active."""
+    """main has G-001 proposed; a linked worktree on feature has it active."""
     root, wt = os.path.join(base, "main"), os.path.join(base, "feature-wt")
     os.makedirs(os.path.join(root, "grove", "work"))
     with open(os.path.join(root, "grove.yaml"), "w") as f:
-        f.write("schema_version: 1\nrecords: grove\n")
-    with open(os.path.join(root, "grove", "work", "W-001-first.md"), "w") as f:
+        f.write("schema_version: 3\nrecords: grove\n")
+    with open(os.path.join(root, "grove", "work", "G-001-first.md"), "w") as f:
         f.write(WORK.format(title="First on main", status="proposed"))
     git(root, "init", "-q", "-b", "main")
     git(root, "add", "-A")
     git(root, "commit", "-q", "-m", "main")
     git(root, "worktree", "add", "-q", "-b", "feature", wt)
-    with open(os.path.join(wt, "grove", "work", "W-001-first.md"), "w") as f:
+    with open(os.path.join(wt, "grove", "work", "G-001-first.md"), "w") as f:
         f.write(WORK.format(title="First on feature", status="active"))
     git(wt, "add", "-A")
     git(wt, "commit", "-q", "-m", "feature")
@@ -182,8 +182,8 @@ def select_and_show(root, wt, base):
         check(flags or out == (wt + "\n").encode(), f"plain result is exactly the path and a newline: {out!r}")
         tail = s.screen[s.screen.rfind(ALT_OFF):]
         check(b"Checkout: " + wt.encode() in tail and b"refs/heads/feature" in tail, f"context belongs on stderr after the screen: {tail!r}")
-        shown = subprocess.run([GROVE, "--project", project, "show", "W-001"], capture_output=True, cwd=base)
-        with open(os.path.join(wt, "grove", "work", "W-001-first.md"), "rb") as f:
+        shown = subprocess.run([GROVE, "--project", project, "show", "G-001"], capture_output=True, cwd=base)
+        with open(os.path.join(wt, "grove", "work", "G-001-first.md"), "rb") as f:
             check(shown.returncode == 0 and shown.stdout == f.read(), "show did not read the selected bytes")
 
 
@@ -217,7 +217,7 @@ def refuses_without_terminal(root, wt, base):
             check(b"needs a terminal" in text and b"grove list" in text and b"--help" in text, f"no guidance: {text!r}")
             check(b"\x1b" not in text and same_modes(s.after, s.before), "the refusal touched the terminal")
     # Help and explicit commands stay noninteractive, with or without a terminal.
-    for args, cwd in ((["--help"], base), (["help"], base), (["list"], root), (["versions", "W-001"], root)):
+    for args, cwd in ((["--help"], base), (["help"], base), (["list"], root), (["versions", "G-001"], root)):
         for stdin, stderr in (("null", "pipe"), ("pty", "pty")):
             s = Session(cwd, args, stdin=stdin, stderr=stderr)
             code, out = s.finish()
