@@ -116,8 +116,11 @@ State the checkout, branch, and HEAD that will hold the records.
   execution checkout or holds someone else's uncommitted record edits; ask
   instead. Commit only when the person agrees, and only shaping's own files.
 - **Headless:** always an isolated new proposal branch and worktree, named as
-  the repository's instructions say, based where the repository's default base
-  holds the records being refined. Commit there. Never write to the checkout
+  the repository's instructions say. Base it on the repository's default base
+  when that holds the records being refined. When `versions` shows them only
+  on another branch, base the proposal there, or return the limit if that
+  branch is someone's unfinished work; never branch from the default and
+  recreate them. Commit there. Never write to the checkout
   the session started in, and never reset, clean, or reuse another session's
   checkout.
 

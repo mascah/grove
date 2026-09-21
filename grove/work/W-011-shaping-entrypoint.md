@@ -81,7 +81,11 @@ disposable clones, CLI simulation, and what was not exercised.
 | 4 | `check` OK and links resolve; the guide's return reports checkout, branch and commit with today's checkout-scoped board. |
 | 5 | Observed in both trials: status stayed `proposed`, no code, launch or merge. |
 
-**Next (owner):** in a fresh session on this branch, or after merging it, run
+**Next (owner):** merge this branch (documentation only; the adapters exist only
+here until then), then in a fresh session in the main checkout run
 `/grove-shape` with a real idea, judge the result, and record the verdict here.
+Do not shape in this worktree: it is W-011's execution checkout, so the guide's
+step 4 would rightly stop and ask, and an unrelated proposal would ride on
+`worktree-W-011`.
 W-011 stays active until then. No commands are still running; the fixture
 clones were disposable and hold nothing to keep.
