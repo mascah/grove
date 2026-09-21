@@ -87,11 +87,14 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 	}
 	if brief != "" {
 		clean := path.Clean(filepath.ToSlash(brief))
-		inside := strings.Split(strings.TrimPrefix(clean, recordRoot+"/"), "/")
+		// Compared without case, because a case-insensitive filesystem would
+		// open grove/Work/x.md as the record grove/work/x.md.
+		lower, lowerRoot := strings.ToLower(clean), strings.ToLower(recordRoot)+"/"
+		inside := strings.Split(strings.TrimPrefix(lower, lowerRoot), "/")
 		switch {
 		case !dedicated(brief) || clean != filepath.ToSlash(brief) || path.Ext(clean) != ".md":
 			config.problem("brief", "must name a project-relative .md file as a clean path without .. components")
-		case strings.HasPrefix(clean, recordRoot+"/") && len(inside) > 1 && folders[inside[0]] != "":
+		case strings.HasPrefix(lower, lowerRoot) && len(inside) > 1 && folders[inside[0]] != "":
 			config.problem("brief", "must not be inside a record type folder")
 		}
 		if len(config.errors) != 0 {
@@ -133,7 +136,11 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 		}
 		kind := folders[parts[0]]
 		if len(parts) < 2 || kind == "" {
-			problem("Markdown record must be inside a type folder: " + strings.Join(names, ", "))
+			if version == 1 { // schema 1 keeps its wording as well as its rules
+				problem("Markdown record must be inside a work, questions, or decisions type folder")
+			} else {
+				problem("Markdown record must be inside a type folder: " + strings.Join(names, ", "))
+			}
 			return nil
 		}
 		source, err := readRegular(fsys, relative)

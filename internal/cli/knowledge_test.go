@@ -37,11 +37,13 @@ func TestKnowledgeRecordsThroughNewUpdateAndContext(t *testing.T) {
 			t.Fatalf("new %s: code=%d stdout=%q stderr=%s", kind, code, out, errOut)
 		}
 	}
-	if code, _, errOut := run(t, root, "new", "term", "attempt "); code != 1 || !strings.Contains(errOut, "term already defined by T-001") {
-		t.Fatalf("a second record for one term must be reported: code=%d stderr=%s", code, errOut)
+	// A second record for one term is refused before anything is reserved or
+	// written, so the project stays loadable and T-002 stays free.
+	if code, out, errOut := run(t, root, "new", "term", " attempt "); code != 1 || out != "" || !strings.Contains(errOut, "the term attempt is already defined by T-001 in docs/records/terms/T-001-attempt.md") {
+		t.Fatalf("code=%d stdout=%q stderr=%s", code, out, errOut)
 	}
-	if err := os.Remove(filepath.Join(root, "docs/records/terms/T-002-attempt.md")); err != nil {
-		t.Fatal(err)
+	if code, out, errOut := run(t, root, "new", "term", "Candidate"); code != 0 || out != "docs/records/terms/T-002-candidate.md\n" {
+		t.Fatalf("code=%d stdout=%q stderr=%s", code, out, errOut)
 	}
 	revision := func(id string) string { return showJSON(t, root, id)["revision"].(string) }
 	if code, _, errOut := run(t, root, "update", "P-001", "--expect", revision("P-001"), "--set", `work=["W-001"]`); code != 0 {
@@ -68,7 +70,7 @@ func TestKnowledgeRecordsThroughNewUpdateAndContext(t *testing.T) {
 			t.Fatalf("%s %s: code=%d stderr=%s", c.id, c.set, code, errOut)
 		}
 	}
-	if code, out, errOut := run(t, root, "check"); code != 0 || out != "OK: 5 records\n" {
+	if code, out, errOut := run(t, root, "check"); code != 0 || out != "OK: 6 records\n" {
 		t.Fatalf("code=%d stdout=%q stderr=%s", code, out, errOut)
 	}
 	code, out, errOut := run(t, root, "context", "W-001")
@@ -136,5 +138,37 @@ func TestBriefCommand(t *testing.T) {
 	plain := gitFixture(t)
 	if code, _, errOut := run(t, plain, "brief"); code != 1 || !strings.Contains(errOut, "grove.yaml names no brief") {
 		t.Fatalf("code=%d stderr=%s", code, errOut)
+	}
+}
+
+// A committed schema-2 tree goes through the versions tree reader, which gives
+// the loader only grove.yaml and the record folder.
+func TestVersionsReadsCommittedKnowledgeRecords(t *testing.T) {
+	t.Parallel()
+	root := gitFixture(t)
+	write(t, root, "grove.yaml", "schema_version: 2\nrecords: docs/records\nbrief: docs/records/brief.md\n")
+	write(t, root, "docs/records/brief.md", "# Brief\n")
+	for _, kind := range []string{"term", "plan", "review"} {
+		if code, _, errOut := run(t, root, "new", kind, "A "+kind); code != 0 {
+			t.Fatal(errOut)
+		}
+	}
+	gitIn(t, root, "add", "-A")
+	gitIn(t, root, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "commit", "-q", "-m", "schema 2")
+	code, out, errOut := run(t, root, "versions")
+	if code != 0 || strings.Contains(errOut, "invalid") {
+		t.Fatalf("code=%d stderr=%s", code, errOut)
+	}
+	for _, want := range []string{"T-001  proposed  committed refs/heads/main", "P-001  current   committed refs/heads/main", "R-001  current   committed refs/heads/main"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "brief") {
+		t.Fatalf("the brief is not a record:\n%s", out)
+	}
+	selector := versionSelector(t, root, "T-001", "committed refs/heads/main")
+	if code, out, errOut := run(t, root, "workspace", "--source", selector); code != 0 || out != root+"\n" {
+		t.Fatalf("a term selector must resolve: code=%d stdout=%q stderr=%s", code, out, errOut)
 	}
 }

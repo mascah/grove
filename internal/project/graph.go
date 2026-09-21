@@ -18,6 +18,9 @@ func relationships(r *Record) []struct {
 	}
 }
 
+// TermKey is what makes two term titles the same term.
+func TermKey(title string) string { return strings.ToLower(strings.TrimSpace(title)) }
+
 // Validate reports identity and relationship problems across a complete
 // record set. Callers substituting a candidate record must pass the whole set.
 func Validate(records []*Record) []Diagnostic {
@@ -67,7 +70,7 @@ func Validate(records []*Record) []Diagnostic {
 		if r.Type != "term" || r.Title == "" {
 			continue
 		}
-		name := strings.ToLower(strings.TrimSpace(r.Title))
+		name := TermKey(r.Title)
 		if first := terms[name]; first != nil {
 			ds = append(ds, Diagnostic{Path: r.Path, Field: "title", Message: "term already defined by " + first.ID + " in " + first.Path})
 		} else {

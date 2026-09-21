@@ -39,7 +39,7 @@ it as `schema_version: 2`:
 - Optional `brief: PATH` in `grove.yaml` names the one project brief: a clean
   project-relative `.md` path without `..`, anywhere in the project, including
   directly under the record root (`grove/brief.md`), but never inside a type
-  folder. It is not a record and has no ID or frontmatter rules. That one path
+  folder (compared without case). It is not a record and has no ID or frontmatter rules. That one path
   is exempt from the misplaced-Markdown rule. Every live command requires a
   regular, non-symlink file there and names `grove.yaml: brief` when it is
   missing. `grove brief [--json]` prints it like `show`; `context` never adds
@@ -52,9 +52,9 @@ deliberate one-line edit of `schema_version`; no command rewrites it, and every
 schema-1 record stays valid. An older CLI refuses a schema-2 project with
 "unsupported version 2", and refuses `new` once a newer CLI has written a `T`,
 `P`, or `R` line to the repository's shared counter file, until that checkout
-has the newer code. A brief outside the record root is not existence-checked
-for committed sources in `versions` or the board, which read only `grove.yaml`
-and the record root.
+has the newer code. Committed sources in `versions` and the board check only
+the form of `brief`, never that the file exists: they read `grove.yaml` and the
+record root, and only a live checkout is required to hold the brief.
 
 Plans and reviews written before this support remain ordinary files in
 `docs/plans/` and `docs/reviews/`, linked from their records;

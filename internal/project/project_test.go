@@ -277,7 +277,7 @@ func TestSchema1RefusesKnowledgeFolders(t *testing.T) {
 	root := fixture(t)
 	put(t, root, "grove/terms/T-001-attempt.md", typed("T-001", "term", "settled", ""))
 	_, ds := Load(root, root)
-	if got := diagnostics(ds); !strings.Contains(got, "grove/terms/T-001-attempt.md: Markdown record must be inside a type folder: work, questions, decisions") {
+	if got := diagnostics(ds); !strings.Contains(got, "grove/terms/T-001-attempt.md: Markdown record must be inside a work, questions, or decisions type folder") {
 		t.Fatalf("schema 1 must keep refusing new folders; got %s", got)
 	}
 }
@@ -326,6 +326,7 @@ func TestBrief(t *testing.T) {
 		{"elsewhere in the project", "brief: docs/restart-brief.md\n", "docs/restart-brief.md", ""},
 		{"missing", "brief: grove/brief.md\n", "", "grove.yaml: brief: "},
 		{"inside a type folder", "brief: grove/work/brief.md\n", "", "brief: must not be inside a record type folder"},
+		{"inside a type folder by another case", "brief: Grove/Work/brief.md\n", "", "brief: must not be inside a record type folder"},
 		{"escaping", "brief: ../brief.md\n", "", "brief: must name a project-relative .md file"},
 		{"unclean", "brief: ./grove/brief.md\n", "grove/brief.md", "brief: must name a project-relative .md file"},
 		{"not Markdown", "brief: grove/brief.txt\n", "grove/brief.txt", "brief: must name a project-relative .md file"},
@@ -360,6 +361,18 @@ func TestBrief(t *testing.T) {
 		put(t, root, "grove/notes.md", "# Notes\n")
 		_, ds := Load(root, root)
 		if got := diagnostics(ds); !strings.Contains(got, "grove/notes.md: Markdown record must be inside a type folder") {
+			t.Fatalf("got %s", got)
+		}
+	})
+	t.Run("symlinked parent directory", func(t *testing.T) {
+		t.Parallel()
+		root := schema2(t, "brief: docs/brief.md\n")
+		put(t, root, "real/brief.md", "# Brief\n")
+		if err := os.Symlink("real", filepath.Join(root, "docs")); err != nil {
+			t.Fatal(err)
+		}
+		_, ds := Load(root, root)
+		if got := diagnostics(ds); !strings.Contains(got, "grove.yaml: brief: docs is a symlink") {
 			t.Fatalf("got %s", got)
 		}
 	})

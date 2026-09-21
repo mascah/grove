@@ -61,8 +61,9 @@ branch `worktree-W-019`.
 4. **Context.** `context W-NNN` lists each plan and review whose `work` names
    a selected ID, with role `plan for W-NNN` / `review of W-NNN`, not included.
    The scope notice says so. No structural change, so `format_version` stays 2.
-5. **Terms.** Create work, preparation, attempt, review, approval,
-   integration, source and revision with `grove new term`, written from the
+5. **Terms.** Create work, preparation, attempt, candidate, review, approval,
+   integration, source and revision with `grove new term` (candidate was added
+   during modeling: review, approval and integration are all defined by it), written from the
    brief, record model and guides, status `proposed` until the owner judges
    them. Meaning and relationships only.
 
@@ -79,7 +80,7 @@ branch `worktree-W-019`.
    plans and reviews are `grove new plan|review` records from here on;
    existing `docs/plans` and `docs/reviews` stay until W-029.
 5. Last, because it touches shared state: `grove.yaml` to schema 2 with
-   `brief`, the eight terms, and this work's review as the first `R-` record.
+   `brief`, the terms, and this work's review as the first `R-` record.
 6. Full verification per `AGENTS.md`, then one independent review of the
    final combined revision; fix rounds capped at three.
 
@@ -90,7 +91,7 @@ branch `worktree-W-019`.
   or `R` line, and older code reports this branch as unsupported schema 2.
   Removing the counter file is safe (it reinitializes from a scan) but loses
   unwritten reservations. Merging resolves both.
-- A brief outside the record root is not existence-checked on committed
-  sources in `versions` or the board.
+- The brief's existence is checked only in a live checkout, never on
+  committed sources in `versions` or the board.
 - This plan itself stays in `docs/plans/`: it predates the support. W-029
   migrates it with the rest.

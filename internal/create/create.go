@@ -53,6 +53,13 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 	if title == "" {
 		return "", fmt.Errorf("a nonempty title is required")
 	}
+	// A term's title is its identity, so new can collide where other types
+	// cannot. Refuse before reserving; the reload below covers a concurrent one.
+	for _, r := range p.Records {
+		if kindName == "term" && r.Type == "term" && project.TermKey(r.Title) == project.TermKey(title) {
+			return "", fmt.Errorf("the term %s is already defined by %s in %s", title, r.ID, r.Path)
+		}
+	}
 	if slug == "" {
 		slug = Slug(title)
 	} else if !slugPattern.MatchString(slug) {

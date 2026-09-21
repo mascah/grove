@@ -268,7 +268,7 @@ func ParseRecord(path, folderType string, source []byte) (*Record, []Diagnostic)
 		m.problem("type", "must match type folder "+folderType)
 	}
 	if !validID(r.ID, r.Type) {
-		m.problem("id", "expected a canonical positive ID with matching type prefix, e.g. W-001, Q-001, D-001")
+		m.problem("id", "expected a canonical positive ID with matching type prefix, e.g. W-001, Q-001, D-001, T-001")
 	}
 	if t := Type(r.Type); t == nil || !slices.Contains(t.Statuses, r.Status) {
 		m.problem("status", "unsupported lifecycle value for "+r.Type)
