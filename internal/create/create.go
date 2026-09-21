@@ -54,11 +54,10 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 		return "", fmt.Errorf("a nonempty title is required")
 	}
 	// A term's title is its identity, so new can collide where other types
-	// cannot. Refuse before reserving; the reload below covers a concurrent one.
-	for _, r := range p.Records {
-		if kindName == "term" && r.Type == "term" && project.TermKey(r.Title) == project.TermKey(title) {
-			return "", fmt.Errorf("the term %s is already defined by %s in %s", title, r.ID, r.Path)
-		}
+	// cannot. Refuse before reserving; a term that appears after this load is
+	// refused again under the write lock, before anything is written.
+	if err := definedTerm(p, kindName, title); err != nil {
+		return "", err
 	}
 	if slug == "" {
 		slug = Slug(title)
@@ -95,6 +94,9 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 	if current.RecordDir != p.RecordDir {
 		return "", fmt.Errorf("%s reserved but not created: the record root changed from %s to %s during allocation", id, p.RecordDir, current.RecordDir)
 	}
+	if err := definedTerm(current, kindName, title); err != nil {
+		return "", fmt.Errorf("%s reserved but not created: %w", id, err)
+	}
 	if !bytes.Equal(current.Config, p.Config) {
 		return "", fmt.Errorf("%s reserved but not created: grove.yaml changed during allocation; inspect it and retry", id)
 	}
@@ -116,6 +118,15 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 		return "", fmt.Errorf("created %s but the project no longer validates:\n%s", relative, diagnostics(ds))
 	}
 	return relative, nil
+}
+
+func definedTerm(p *project.Project, kindName, title string) error {
+	for _, r := range p.Records {
+		if kindName == "term" && r.Type == "term" && project.TermKey(r.Title) == project.TermKey(title) {
+			return fmt.Errorf("the term %s is already defined by %s in %s", title, r.ID, r.Path)
+		}
+	}
+	return nil
 }
 
 func diagnostics(ds []project.Diagnostic) string {

@@ -131,7 +131,9 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 		if path.Ext(relative) != ".md" {
 			return nil
 		}
-		if relative == p.Brief {
+		// Without case, as the brief's own check is: the walker sees the
+		// spelling on disk, which a case-insensitive filesystem lets differ.
+		if p.Brief != "" && strings.EqualFold(relative, p.Brief) {
 			return nil
 		}
 		kind := folders[parts[0]]

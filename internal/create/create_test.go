@@ -378,3 +378,25 @@ func TestAllocateScansOddlyNamedWorktrees(t *testing.T) {
 		}
 	}
 }
+
+// Another process can define the term between this caller's load and its
+// turn at the write lock; the second record must never reach the disk.
+func TestNewRefusesATermDefinedAfterLoad(t *testing.T) {
+	t.Parallel()
+	root := gitProject(t)
+	write(t, root, "grove.yaml", "schema_version: 2\nrecords: grove\n")
+	stale := load(t, root)
+	if _, err := New(load(t, root), "term", "Attempt", "", time.Now(), &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	_, err := New(stale, "term", "attempt", "", time.Now(), &bytes.Buffer{})
+	if err == nil || !strings.Contains(err.Error(), "T-002 reserved but not created: the term attempt is already defined by T-001") {
+		t.Fatalf("expected a refusal under the write lock, got %v", err)
+	}
+	if entries, _ := os.ReadDir(filepath.Join(root, "grove/terms")); len(entries) != 1 {
+		t.Fatalf("nothing may be written: %v", entries)
+	}
+	if len(load(t, root).Records) == 0 {
+		t.Fatal("the project must stay loadable")
+	}
+}

@@ -364,6 +364,17 @@ func TestBrief(t *testing.T) {
 			t.Fatalf("got %s", got)
 		}
 	})
+	t.Run("spelled with another case than the disk", func(t *testing.T) {
+		t.Parallel()
+		root := schema2(t, "brief: grove/Notes/brief.md\n")
+		put(t, root, "grove/notes/brief.md", "# Brief\n")
+		if _, err := os.Stat(filepath.Join(root, "grove/Notes/brief.md")); err != nil {
+			t.Skip("case-sensitive filesystem")
+		}
+		if _, ds := Load(root, root); len(ds) != 0 {
+			t.Fatalf("the brief must be exempt however it is spelled: %s", diagnostics(ds))
+		}
+	})
 	t.Run("symlinked parent directory", func(t *testing.T) {
 		t.Parallel()
 		root := schema2(t, "brief: docs/brief.md\n")
