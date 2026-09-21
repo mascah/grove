@@ -87,10 +87,12 @@ Then choose: **refine** an existing proposal that owns the outcome; **relate**
 a new record to neighbours that overlap only partly (`relates_to`, and
 `depends_on` only for a real prerequisite); or **create** when nothing owns the
 outcome. Never create a duplicate because the existing record is on another
-branch. If the version to refine is another session's unfinished or uncommitted
-work, it is not yours to edit: say where it is and ask (interactive) or return
-the limit (headless). `grove workspace --source SELECTOR` resolves a version's
-existing checkout.
+branch. Relationship fields resolve only within the checkout being written, so
+name a record that exists only elsewhere in prose, with its branch, until the
+two are integrated. If the version to refine is another session's unfinished
+or uncommitted work, it is not yours to edit: say where it is and ask
+(interactive) or return the limit (headless).
+`grove workspace --source SELECTOR` resolves a version's existing checkout.
 
 ## 3. Discuss and investigate
 

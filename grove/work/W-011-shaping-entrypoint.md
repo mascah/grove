@@ -56,13 +56,32 @@ implementation or merge. Do not add a launcher, timer or process supervision.
 5. No implementation, sibling migration, unsupported schema, status promotion,
    agent launch or automatic merge is a side effect of shaping.
 
-## Preparation and next
+## Evidence and next
 
-The W-011 portion of the old
-[shared handoff plan](../../docs/plans/W-010-W-011-agent-handoffs.md) is superseded
-by this scope revision on 2026-09-20; W-010 is done and must not be reimplemented.
+Checkpoint 2026-09-20. Assigned alone (`/grove-work W-011`, interactive);
+branch `worktree-W-011` in `.claude/worktrees/W-011`, base `main` `70f19c5`.
 The current plan is
-[W-011-shaping-entrypoint.md](../../docs/plans/W-011-shaping-entrypoint.md),
-prepared 2026-09-20 on `worktree-W-011` when W-011 was assigned. The
-[roadmap](../../docs/plans/W-018-adoption-roadmap.md) holds coordination only;
-predecessor reviews are optional targeted research, not mandatory startup context.
+[W-011-shaping-entrypoint.md](../../docs/plans/W-011-shaping-entrypoint.md); the
+W-011 portion of the old
+[shared handoff plan](../../docs/plans/W-010-W-011-agent-handoffs.md) is
+superseded. The [roadmap](../../docs/plans/W-018-adoption-roadmap.md) holds
+coordination only.
+
+Delivered: [the shaping guide](../../docs/work-shaping.md), the `grove-shape`
+adapters for Claude and Codex, and the AGENTS.md, README and brief
+reconciliation. [Evidence](../../docs/reviews/2026-09-20-W-011-shaping.md)
+separates source checks, observed `claude -p` and `codex exec` trials in
+disposable clones, CLI simulation, and what was not exercised.
+
+| Acceptance | State |
+| --- | --- |
+| 1 | Met for explicit headless invocation in both harnesses; interactive typing of the command is unexercised and stated. |
+| 2 | **Open.** Needs the owner's real requirements conversation and judgment. |
+| 3 | Overlap, other-branch work, unanswered choice, headless wait and unchanged rerun observed; stale revision simulated with the CLI only. |
+| 4 | `check` OK and links resolve; the guide's return reports checkout, branch and commit with today's checkout-scoped board. |
+| 5 | Observed in both trials: status stayed `proposed`, no code, launch or merge. |
+
+**Next (owner):** in a fresh session on this branch, or after merging it, run
+`/grove-shape` with a real idea, judge the result, and record the verdict here.
+W-011 stays active until then. No commands are still running; the fixture
+clones were disposable and hold nothing to keep.

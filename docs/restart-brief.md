@@ -142,7 +142,9 @@ not silently rewrite acceptance or turn every observation into permanent policy.
 At main `c9904ea`, the Go CLI supports inspection, creation, safe field updates,
 versions, workspace resolution and staged context. The read-only Bubble Tea v2
 board and on-demand card history are integrated. W-010's work guide and local
-adapters are done and integrated; W-011 shaping is not implemented. Terms,
+adapters are done and integrated. W-011's shaping guide and `grove-shape`
+adapters exist on `worktree-W-011` with headless harness evidence; the owner's
+real shaping conversation and integration are outstanding. Terms,
 structured artifacts, Review status, portable setup, current-state projection,
 review actions and managed attempts are future work. `abandoned` already exists.
 
@@ -158,8 +160,8 @@ assignable work and later investments; the
 [evaluation](reviews/2026-09-20-direction-evaluation.md) retains findings,
 research and limits rather than another editable product direction.
 
-**Next:** integrate this documentation reconciliation, then assign
-[W-011](../grove/work/W-011-shaping-entrypoint.md). Follow with knowledge/artifact
+**Next:** the owner shapes one real idea with `/grove-shape` to complete
+[W-011](../grove/work/W-011-shaping-entrypoint.md), then integrates it. Follow with knowledge/artifact
 support and the review handoff, exercise a real Grove loop, package portable
 setup, and pilot one real nullsec change. Current-state and visual TUI work
 follow the pilot; durable execution follows that useful review experience.
