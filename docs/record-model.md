@@ -9,6 +9,18 @@ The first Go CLI now reads and validates this model; W-001 records its evidence.
 [The restart brief](restart-brief.md) owns product direction;
 `grove/` owns operational work, questions, and decision receipts.
 
+## Accepted extensions awaiting implementation
+
+On 2026-09-20 [D-004](../grove/decisions/D-004-interactive-adoption.md) selected
+terms and linked work artifacts ([W-019](../grove/work/W-019-knowledge-artifacts.md))
+and a Review stage with accepted-and-integrated implementation completion
+([W-020](../grove/work/W-020-review-lifecycle.md)). These are future contract
+changes; the schema documented below remains the implemented interface until
+those units deliver explicit compatibility and migration behavior. In particular,
+do not write `status: review`, new record types, or Markdown brief/artifact files
+under `grove/` outside the three supported type folders yet. Historical Done
+records retain their original branch-local acceptance meaning, not proof of merge.
+
 ## Minimum representation
 
 Use one Markdown file per record, with YAML frontmatter for facts that the

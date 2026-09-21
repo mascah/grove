@@ -12,13 +12,16 @@ read the brief when the record, a product question, or reconciliation needs it.
   required running service. The core record model in `docs/record-model.md`
   is accepted: Markdown with YAML frontmatter. Use Go for the first CLI.
   The starter file defaults use short sequential IDs, replacing the random-ID
-  trial. Future allocation coordinates across local worktrees through Git's
-  common metadata directory; reading records requires no allocator state.
+  trial. Allocation coordinates across local worktrees through Git's common
+  metadata directory; reading records requires no allocator state.
   W-001 implements the reader, W-002 record creation with shared allocation,
   and W-003 field updates with content revisions and a shared write lock.
   W-009 implements the read-only terminal board that bare `grove` opens, with
   Bubble Tea v2 in `internal/tui`; keep explicit subcommands noninteractive,
-  and the board's text escaping and explicit version selection intact. W-013
+  and the board's text escaping and exact source targeting intact. D-004 selects
+  a future project-wide current view; W-024 owns that projection and may replace
+  mandatory version picking in ordinary browsing, while retaining explicit source
+  inspection and freshness checks. The current board is still checkout-scoped. W-013
   reads every branch through one `git cat-file` process, scoped to what the
   project loader reads; do not add a Git process per branch. W-012 reads a
   record's Git history only while its card is open, as a read any key may
@@ -28,6 +31,10 @@ read the brief when the record, a product question, or reconciliation needs it.
   do not assume software can replace judgment instructions or prove acceptance.
 - Record settled choices and the concrete next action in the brief while it
   remains small. Do not create a second editable account of the same direction.
+  W-018 owns the selected interactive adoption milestone; its linked roadmap is
+  investment order, not a batch assignment. D-004's target lifecycle and knowledge
+  layout are not implemented schema: W-019/W-020 own their explicit migrations.
+  Until they ship, use the current record model and execution guide.
 - `../skills/` and `../nullsec/` are evidence and potential compatibility targets,
   not automatically part of an implementation's write scope. Follow their
   instructions; retrieve their Grove knowledge through `grove status`,

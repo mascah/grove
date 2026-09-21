@@ -4,10 +4,19 @@ type: question
 title: How should the board present differing versions of one record?
 status: resolved
 blocks: ["W-004", "W-005"]
-relates_to: ["W-001", "W-003"]
+relates_to: ["W-001", "W-003", "D-004", "W-024"]
 created: "2026-09-19T14:08:40Z"
-updated: "2026-09-19T17:54:10Z"
+updated: "2026-09-21T01:03:42Z"
 ---
+
+## Current disposition, 2026-09-20
+
+The owner approved [D-004](../decisions/D-004-interactive-adoption.md), replacing
+this question's explicit-versions-first presentation as the future default with
+a project-wide current view. Preserve the answer below as the authority behind
+the delivered CLI/board, not a constraint against that redesign. Exact source
+inspection and fresh workspace targeting remain required. W-024 owns unresolved
+projection details; current software still follows the earlier presentation.
 
 ## Question
 
@@ -17,10 +26,11 @@ each version without silently editing the wrong checkout?
 
 ## Constraints and evidence
 
-The [restart brief](../../docs/restart-brief.md#cross-branch-view-and-branch-context-editing-2026-09-18)
-owns the accepted branch-context direction and the earlier routing experiment.
-The answer below settles presentation and explicit version selection. Detailed
-source and routing contracts belong to W-004/W-005 and their coordination plan.
+The [restart brief](../../docs/restart-brief.md#current-view-and-tui)
+owns the current branch-context direction. The earlier routing experiment is
+preserved in Git at `c9904ea:docs/restart-brief.md`. The answer below records the
+original presentation choice. Detailed source and routing contracts belong to
+W-004/W-005 and their coordination plan.
 
 This question previously blocked W-004 and W-005. Its resolved status removes
 that policy blocker; it does not establish implementation readiness or completed
@@ -79,12 +89,12 @@ path, and detached state in
 These provide discovery inputs, not a transactional selection or a Grove claim.
 At that historical inspection the repository had only main and one checkout;
 it did not supply new evidence for conflicting branches. The earlier fixture
-in the brief establishes only basic routing feasibility.
+in the historical brief establishes only basic routing feasibility.
 
 ## Next
 
-Retain this accepted answer for all future workspace presentation. W-004/W-005
-are integrated at `5041ae1`; their CLI exposes explicit versions and resolves
-existing workspaces. The [integrated review](../../docs/reviews/2026-09-19-integrated-cli.md)
-records proposed reliability repairs before interactive actions. An interactive
-view, automatic checkout creation, and agent launching remain unimplemented.
+[W-024](../work/W-024-current-view.md) specifies the new default projection.
+W-004/W-005's explicit inspection/routing remain available; W-009/W-012's board
+and history are integrated. The earlier reliability repairs also shipped.
+Automatic checkout creation and managed agent launching remain future work.
+Historical reviews and completed records retain their original acceptance scope.

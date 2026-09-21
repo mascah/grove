@@ -19,6 +19,17 @@ the way those instructions say, and never assume that a `grove` on `PATH` is
 this project's CLI. Where the two disagree, repository and user instructions
 win.
 
+## Contract transition
+
+The owner selected a future Review lifecycle and revised completion meaning in
+[D-004](../grove/decisions/D-004-interactive-adoption.md).
+[W-020](../grove/work/W-020-review-lifecycle.md) owns implementing the transition
+and revising this guide. Until then follow the supported statuses and handoff
+below: report candidate readiness, human judgment and integration separately;
+do not write unsupported Review status or treat old Done records as merge proof.
+The [adoption roadmap](plans/W-018-adoption-roadmap.md) is not an assignment of
+all its members.
+
 ## Inputs
 
 - **Work IDs**, given explicitly, in the caller's order. Never choose work from

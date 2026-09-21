@@ -1,5 +1,12 @@
 # W-010/W-011 agent handoffs implementation plan
 
+**Historical handoff, superseded for new assignments on 2026-09-20:** W-010 is
+done and integrated. W-011's current scope and preparation instruction are in
+[its record](../../grove/work/W-011-shaping-entrypoint.md), revised under
+[D-004](../../grove/decisions/D-004-interactive-adoption.md). Do not execute this
+combined task list again or load its predecessor research by default. Retain it
+as evidence of the delivered W-010 design and the earlier W-011 proposal.
+
 > For Fable: execute serially in one isolated worktree, using this repository's
 > instructions and `superpowers:executing-plans` if available. No automatic merge.
 > This is an implementation handoff, not implementation or harness-test evidence.

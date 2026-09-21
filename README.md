@@ -8,10 +8,17 @@ locates the checkout holding a selected version. Run without a command, it
 opens a read-only terminal Kanban board over the same operations. `context`
 assembles staged context for selected work, and the `grove-work` skill carries it out.**
 
+The selected next milestone is a complete interactive shape → implement →
+review → integrate loop on real nullsec work. Start with
+[W-018's adoption roadmap](docs/plans/W-018-adoption-roadmap.md) for the ordered
+work. Its proposed capabilities are not commands available in this build:
+the current board remains checkout-scoped and the schema has no Review status.
+
 Start with [the restart brief](docs/restart-brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
-direction, the reasoning from the existing Grove skills and nullsec workflow,
-open design questions, and the next useful experiment. [grove.yaml](grove.yaml)
+direction and next investment. The
+[direction evaluation](docs/reviews/2026-09-20-direction-evaluation.md) retains
+research and evidence from Bench, the sibling skills and the current prototype. [grove.yaml](grove.yaml)
 configures the record tree. The completed first implementation is
 [CLI inspection](grove/work/W-001-inspect-records.md).
 The installed `grove` still belongs to the sibling skills project; it does not
