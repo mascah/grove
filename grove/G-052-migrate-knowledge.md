@@ -145,13 +145,22 @@ minor findings fixed. Not merged or pushed.
 Schemas 1 and 2 are deleted (`dd3a6f5`): `schema_version` must be 3, an ID is
 `G-NNN` only, one `neutral-ids` counter, no type folders, and `convert` takes
 only a document path. Verified uncached on the final revision: `gofmt -l .`
-and `go vet ./...` clean, `go test -count=1 ./...` and `go test -race
--count=1 -p 1 ./...` ok, `grove check` ok. Flakes seen and rerun green, both
+and `go vet ./...` clean, `go test -count=1 ./...` ok (four whole-suite runs
+in a row at `1a85fc7`), `grove check` ok. `go test -race -count=1 -p 1 ./...`
+at `1a85fc7`: seven packages ok, `internal/versions` failed
+`TestResolveFinalCheck` once and was NOT yet rerun or investigated; an earlier
+race run at `dd3a6f5` passed that package. Flakes seen and rerun green, both
 outside this change: `internal/tui` `TestTerminal` ("files in the repository
 changed") in whole-suite runs, and the system Git segfaulting once under a
 race run.
 
 ## Next
+
+Checkpoint 2026-09-21, session stopped for usage at `1a85fc7` plus this commit.
+First on resume: `go test -race -count=1 -run TestResolveFinalCheck -v
+./internal/versions`, then the package three times, to tell a flake from a
+regression of `dd3a6f5`; fix or record it, then correct the verification
+paragraph above. No command is still running. Everything else below stands.
 
 Implementation complete and independently reviewed; awaiting the owner's
 judgment of the flat tree and ordinary CLI and board browsing (acceptance 6):
