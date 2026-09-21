@@ -64,4 +64,20 @@ partial mapping, the deleted-neutral-work limit); one slug rule through
 exit 1; a document's leading BOM is dropped. Left as is: `.MD` is not a record
 extension and `history.go`'s permissive parse, both documented or harmless.
 The pre-existing maintenance-lock flake is outside W-030 and is reported, not
-fixed. Round 2 is recorded below when it returns.
+fixed.
+
+Round 2, same reviewer, commit `fffc374`: all seven findings closed, each
+reproduced against a binary from `fffc374` and, for wording, compared with the
+`bd6debe` binary; no regression found in `isWork`'s fallback (nil board source
+included), `EqualFold` reaching IDs, the CLI's partial-mapping path, or a
+re-run of the mixed-binary allocator probe. Its runs: vet, gofmt, `go test
+-count=1 ./...` (first attempt) and `grove check` pass; the whole-suite
+`-race` run fails `internal/tui TestTerminal` identically at base `bd6debe`
+(CPU contention; the package alone passes on both). Acceptance 6 and 7 judged
+met; no objection to acceptance. One new minor, from reading only: a failed
+write of the new file left it behind without the mapping the docs promised.
+Fixed after the review by removing that file, which `O_EXCL` proves is ours;
+that one-line change is self-checked, not independently reviewed. Left as
+noted: a group that is work in one source and a page in another, held by
+neither the board source, is shelved by ID; a hand-authored lowercase
+`formerly` of a live ID is not caught.

@@ -95,10 +95,45 @@ honest. W-013's batched Git reads and W-012's on-demand history remain constrain
    or silently remap identities. Relevant Go
    tests, uncached full/race suites, vet, formatting and `grove check` pass.
 
+## Evidence
+
+Branch `worktree-W-030` from main `bd6debe`. Plan
+[P-001](../plans/P-001-w-030-flexible-records.md); independent review
+[R-002](../reviews/R-002-w-030-flexible-records.md), two rounds, all findings
+fixed. Verified on the final revision, uncached: `gofmt -l .` and `go vet
+./...` clean, `go test -count=1 ./...` ok, `go test -race -count=1 -p 1 ./...`
+ok, `grove check` ok. Known flakes that predate this work:
+`TestContextLeavesEverythingUnchanged` against Git's maintenance lock, and
+`internal/tui TestTerminal` in a parallel whole-suite race run (R-002
+reproduced it at the base).
+
+1. `internal/cli/flexible_test.go` creates, shows, lists, updates and checks a
+   page; a related page is listed by `context` and read only by `--include`.
+2. `internal/project/project_test.go`: root, former type folder and nested
+   discovery, the brief beside them, and each page-boundary refusal by file
+   and field; schema 2 still refuses every schema-3 form in its old words.
+3. `internal/create/create_test.go`: separate `neutral-ids`, floor from a
+   nested record in a ref and in another worktree, 12 concurrent creations
+   across two worktrees. With a binary from `bd6debe` in a disposable clone,
+   the old CLI kept issuing `W-` IDs for a schema-2 worktree and never saw the
+   neutral counter; R-002 repeated this concurrently.
+4. `internal/update/convert_test.go` `TestReclassifyKeepsIdentityAndPath`.
+5. The record model's schema-3 section; the old CLI refuses a schema-3
+   checkout with "unsupported version 3; expected 1 or 2". No command edits
+   `schema_version`, and this repository is still schema 2.
+6. The CLI test reads a schema-1 branch beside schema 3 through `versions`
+   and `workspace`; `internal/tui` `TestBoardFollowsTypeNotIDOrPlacement`.
+   Limit: neutral-ID work deleted from every source is not shelved.
+7. `convert` tests cover cross-record and shared-plan references, `examined`,
+   CRLF/BOM, reruns (by another case too) and refusals that reserve nothing.
+   Rehearsed in a disposable clone on W-019, R-001, W-030, P-001, D-006 and
+   the legacy W-019 plan: mechanical diffs only, `check` ok, reruns refused.
+
 ## Next
 
-Ready for individual assignment. Prepare a concise linked plan using the
-current CLI, settle the minimal envelope and neutral namespace compatibility,
-then implement within D-006's bounds. Use disposable clones with explicit
-absolute project paths for creation fixtures. No further folder/taxonomy
-decision is required unless evidence defeats the selected contract.
+Implementation complete and independently reviewed; not merged or pushed. The
+owner's judgment of the page envelope, `G-NNN`, and `convert` as W-029's
+interface is theirs to give. Then merge `worktree-W-030` and assign W-029,
+which sets `schema_version: 3` here, converts every record and legacy document
+with `convert`, collects the mapping lines, moves the brief by hand and repairs
+body links, none of which `convert` does.

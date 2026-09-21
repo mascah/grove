@@ -157,7 +157,8 @@ func Convert(root string, req ConvertRequest, report io.Writer) (Conversion, err
 		err = closeErr
 	}
 	if err != nil {
-		return Conversion{}, fmt.Errorf("%s: %w", result.Path, err)
+		os.Remove(full) // O_EXCL made it ours, and nothing else has been touched yet
+		return reserved(fmt.Errorf("%s: %w", result.Path, err))
 	}
 	// The mapping is returned with the error: it is already true of the files.
 	partial := func(err error) (Conversion, error) {
