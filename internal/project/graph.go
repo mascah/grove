@@ -64,6 +64,23 @@ func Validate(records []*Record) []Diagnostic {
 			}
 		}
 	}
+	// formerly is what makes a conversion happen once: a second record claiming
+	// the source, or the source itself reappearing (say, through a merge from a
+	// branch that predates the conversion), would leave two editable owners.
+	former := map[string]*Record{}
+	for _, r := range records {
+		if r.Formerly == "" {
+			continue
+		}
+		if first := former[r.Formerly]; first != nil {
+			ds = append(ds, Diagnostic{Path: r.Path, Field: "formerly", Message: r.Formerly + " was already converted to " + first.ID + " in " + first.Path})
+		} else {
+			former[r.Formerly] = r
+		}
+		if len(index[r.Formerly]) != 0 {
+			ds = append(ds, Diagnostic{Path: r.Path, Field: "formerly", Message: r.Formerly + " still exists in " + index[r.Formerly][0].Path})
+		}
+	}
 	// A term's title is the term, so two records for one term are a conflict.
 	terms := map[string]*Record{}
 	for _, r := range records {

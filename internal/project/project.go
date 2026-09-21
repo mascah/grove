@@ -52,8 +52,8 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 	p.Config = source
 	config := parseMapping("grove.yaml", source, 0)
 	version, ok := config.integerField("schema_version", true)
-	if ok && version != 1 && version != 2 {
-		config.problem("schema_version", fmt.Sprintf("unsupported version %d; expected 1 or 2", version))
+	if ok && (version < 1 || version > 3) {
+		config.problem("schema_version", fmt.Sprintf("unsupported version %d; expected 1, 2, or 3", version))
 	}
 	recordDir := config.stringField("records", true)
 	for key := range config.fields {
@@ -77,10 +77,12 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 	}
 	p.RecordDir, p.Schema = recordDir, version
 	recordRoot := path.Clean(filepath.ToSlash(recordDir))
+	// From schema 3 no folder names a type, which also frees the brief to sit
+	// anywhere and leaves every check below that consults folders inert.
 	folders := map[string]string{}
 	var names []string
 	for _, t := range Types {
-		if t.Schema <= version {
+		if t.Schema <= version && version < 3 {
 			folders[t.Folder] = t.Name
 			names = append(names, t.Folder)
 		}
@@ -137,7 +139,7 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 			return nil
 		}
 		kind := folders[parts[0]]
-		if len(parts) < 2 || kind == "" {
+		if version < 3 && (len(parts) < 2 || kind == "") {
 			if version == 1 { // schema 1 keeps its wording as well as its rules
 				problem("Markdown record must be inside a work, questions, or decisions type folder")
 			} else {
@@ -150,7 +152,7 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 			problem(err.Error())
 			return nil
 		}
-		record, problems := ParseRecord(relative, kind, source)
+		record, problems := ParseRecord(relative, kind, version, source)
 		p.Records = append(p.Records, record)
 		ds = append(ds, problems...)
 		return nil

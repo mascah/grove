@@ -2,9 +2,9 @@
 id: "W-030"
 type: work
 title: "Decouple record identity and storage from knowledge classification"
-status: proposed
+status: active
 created: "2026-09-21T15:40:59Z"
-updated: "2026-09-21T15:45:38Z"
+updated: "2026-09-21T16:03:28Z"
 kind: feature
 size: medium
 priority: 1

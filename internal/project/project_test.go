@@ -101,7 +101,7 @@ func TestInvalidConfiguration(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct{ name, source, field string }{
 		{"version missing", "records: grove\n", "schema_version"},
-		{"unsupported", "schema_version: 3\nrecords: grove\n", "schema_version"},
+		{"unsupported", "schema_version: 4\nrecords: grove\n", "schema_version"},
 		{"brief before schema 2", "schema_version: 1\nrecords: grove\nbrief: docs/brief.md\n", "brief"},
 		{"quoted version", "schema_version: \"1\"\nrecords: grove\n", "schema_version"},
 		{"fractional version", "schema_version: 1.0\nrecords: grove\n", "schema_version"},
@@ -402,4 +402,88 @@ func TestBrief(t *testing.T) {
 			t.Fatalf("got %s", got)
 		}
 	})
+}
+
+func schema3(t *testing.T, config string) string {
+	t.Helper()
+	root := fixture(t)
+	put(t, root, "grove.yaml", "schema_version: 3\nrecords: grove\n"+config)
+	return root
+}
+
+const page = "---\nid: G-002\ntype: page\ntitle: Synthesis\nrelates_to: [\"G-001\"]\n---\nNotes.\n"
+
+// Location carries no meaning in schema 3: the root, a legacy type folder, and
+// an arbitrary nested folder all hold any type, under neutral or legacy IDs.
+func TestSchema3DiscoversByIdentityNotLocation(t *testing.T) {
+	t.Parallel()
+	root := schema3(t, "brief: grove/brief.md\n")
+	put(t, root, "grove/brief.md", "# Brief, not a record\n")
+	put(t, root, "grove/G-001-work.md", typed("G-001", "work", "proposed", ""))
+	put(t, root, "grove/G-002-synthesis.md", page)
+	put(t, root, "grove/decisions/deep/er/G-003.md", typed("G-003", "plan", "current", "work: [\"G-001\", \"W-001\"]\n"))
+	put(t, root, "grove/work/W-001-legacy.md", typed("W-001", "work", "done", "depends_on: [\"G-001\"]\n"))
+	put(t, root, "grove/D-001-reclassified.md", typed("D-001", "term", "settled", "formerly: \"docs/old.md\"\n"))
+	put(t, root, "grove/notes.txt", "ignored")
+	p, ds := Load(root, root)
+	if len(ds) != 0 {
+		t.Fatalf("unexpected diagnostics:\n%s", diagnostics(ds))
+	}
+	if len(p.Records) != 5 {
+		t.Fatalf("got %d records", len(p.Records))
+	}
+	for _, r := range p.Records {
+		if r.ID == "G-002" && (r.Type != "page" || r.Status != "" || r.Title != "Synthesis") {
+			t.Fatalf("page not read: %+v", r)
+		}
+	}
+}
+
+func TestSchema3RecordProblems(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ name, path, source, want string }{
+		{"page with a lifecycle", "grove/a.md", "---\nid: G-002\ntype: page\ntitle: T\nstatus: proposed\n---\n", "status: unknown field"},
+		{"page with a work field", "grove/a.md", "---\nid: G-002\ntype: page\ntitle: T\npriority: 1\n---\n", "priority: unknown field"},
+		{"no type is not a page", "grove/a.md", "---\nid: G-002\ntitle: T\n---\n", "type: required field is missing"},
+		{"unknown type", "grove/a.md", typed("G-002", "note", "open", ""), "type: unknown record type"},
+		{"work without status in a pages folder", "grove/pages/a.md", "---\nid: G-002\ntype: work\ntitle: T\n---\n", "status: required field is missing"},
+		{"work with a bad status", "grove/a.md", typed("G-002", "work", "settled", ""), "status: unsupported lifecycle value for work"},
+		{"plain Markdown", "grove/a.md", "# Just prose\n", "frontmatter: expected an opening --- line"},
+		{"uncanonical ID", "grove/a.md", typed("G-02", "work", "proposed", ""), "id: expected a canonical positive ID, e.g. G-001"},
+		{"unknown prefix", "grove/a.md", typed("X-002", "work", "proposed", ""), "id: expected a canonical positive ID"},
+		{"duplicate ID across folders", "grove/x/y/a.md", typed("G-001", "term", "settled", ""), "id: duplicate G-001 in grove/G-001.md, grove/x/y/a.md"},
+		{"non-work target", "grove/a.md", typed("G-002", "plan", "current", "work: [\"G-009\"]\n"), "work: target G-009 must be work"},
+		{"formerly twice", "grove/a.md", typed("G-002", "work", "done", "formerly: \"W-007\"\n"), "formerly: W-007 was already converted to G-001"},
+		{"formerly still present", "grove/a.md", typed("G-002", "work", "done", "formerly: \"G-009\"\n"), "formerly: G-009 still exists in grove/G-009.md"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			root := schema3(t, "")
+			put(t, root, "grove/G-001.md", typed("G-001", "work", "proposed", "formerly: \"W-007\"\n"))
+			put(t, root, "grove/G-009.md", "---\nid: G-009\ntype: page\ntitle: P\n---\n")
+			put(t, root, tc.path, tc.source)
+			_, ds := Load(root, root)
+			if got := diagnostics(ds); !strings.Contains(got, tc.path+":") && !strings.Contains(got, tc.path+": ") || !strings.Contains(got, tc.want) {
+				t.Fatalf("wanted %q naming %s; got:\n%s", tc.want, tc.path, got)
+			}
+		})
+	}
+}
+
+// Schema 2 must not learn schema 3's freedoms by accident.
+func TestSchema2RefusesSchema3Forms(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ path, source, want string }{
+		{"grove/G-002.md", page, "Markdown record must be inside a type folder: work, questions, decisions, terms, plans, reviews"},
+		{"grove/work/G-002.md", typed("G-002", "work", "proposed", ""), "id: expected a canonical positive ID with matching type prefix"},
+		{"grove/work/W-002.md", typed("W-002", "work", "proposed", "formerly: \"x\"\n"), "formerly: unknown field"},
+		{"grove/pages/G-002.md", page, "Markdown record must be inside a type folder"},
+	} {
+		root := schema2(t, "")
+		put(t, root, "grove/work/G-001.md", typed("W-009", "work", "proposed", ""))
+		put(t, root, tc.path, tc.source)
+		if _, ds := Load(root, root); !strings.Contains(diagnostics(ds), tc.want) {
+			t.Fatalf("%s: wanted %q; got:\n%s", tc.path, tc.want, diagnostics(ds))
+		}
+	}
 }

@@ -582,8 +582,8 @@ func TestUpdateRequiresGit(t *testing.T) {
 
 func TestUnchangedGuardCatchesEditorDrift(t *testing.T) {
 	t.Parallel()
-	before, _ := project.ParseRecord("w.md", "work", []byte(work))
-	after, _ := project.ParseRecord("w.md", "work", []byte(strings.Replace(work, "title: First", "title: Other", 1)))
+	before, _ := project.ParseRecord("w.md", "work", 2, []byte(work))
+	after, _ := project.ParseRecord("w.md", "work", 2, []byte(strings.Replace(work, "title: First", "title: Other", 1)))
 	if err := unchanged(before, after, []change{set("status", "active")}); err == nil || !strings.Contains(err.Error(), "title") {
 		t.Fatalf("an untouched field that differs must be refused: %v", err)
 	}

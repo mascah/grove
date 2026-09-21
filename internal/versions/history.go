@@ -76,7 +76,7 @@ func HistoryContext(ctx context.Context, root, commit, path string) ([]Commit, e
 		if err == nil {
 			// Today's validation may reject an old record; its status field
 			// is reported regardless.
-			r, _ := project.ParseRecord(path, "", data)
+			r, _ := project.ParseRecord(path, "", 3, data)
 			commits[i].Status = r.Status
 		}
 	}

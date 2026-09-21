@@ -84,7 +84,7 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 	if current != req.Expect {
 		return Result{}, fmt.Errorf("%s changed since the expected revision; its current revision is %s", r.ID, current)
 	}
-	changes, err := plan(r, req)
+	changes, err := plan(r, req, p.Schema)
 	if err != nil {
 		return Result{}, err
 	}
@@ -107,7 +107,7 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: %w", r.Path, err)
 	}
-	next, ds := project.ParseRecord(r.Path, r.Type, candidate)
+	next, ds := project.ParseRecord(r.Path, r.Type, p.Schema, candidate)
 	if len(ds) != 0 {
 		return Result{}, fmt.Errorf("the update would leave %s invalid:\n%s", r.ID, diagnostics(ds))
 	}
@@ -126,19 +126,34 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 
 // plan validates the request against the record's type and drops fields whose
 // parsed meaning already matches, so a no-op never rewrites the file.
-func plan(r *project.Record, req Request) ([]change, error) {
-	allowed := map[string][]string{
+func plan(r *project.Record, req Request, schema int) ([]change, error) {
+	fields := map[string][]string{
 		"work":     {"title", "status", "relates_to", "kind", "priority", "size", "members", "depends_on"},
 		"question": {"title", "status", "relates_to", "blocks"},
 		"decision": {"title", "status", "relates_to"},
 		"term":     {"title", "status", "relates_to"},
 		"plan":     {"title", "status", "relates_to", "work"},
 		"review":   {"title", "status", "relates_to", "work", "examined"},
-	}[r.Type]
+		"page":     {"title", "relates_to"},
+	}
+	allowed := fields[r.Type]
+	// Schema 3 lets classification change while ID and path stay. The request
+	// may then name the new type's fields too, and whatever the old type leaves
+	// behind; the candidate must still satisfy the new type's whole contract.
+	retype := false
+	if schema >= 3 {
+		allowed = append(slices.Clone(allowed), "type")
+		for _, f := range req.Set {
+			if f.Name == "type" {
+				retype = true
+				allowed = append(allowed, fields[f.Value]...)
+			}
+		}
+	}
 	lists := map[string][]string{"relates_to": r.RelatesTo, "members": r.Members, "depends_on": r.DependsOn, "blocks": r.Blocks, "work": r.Work}
-	strs := map[string]string{"title": r.Title, "status": r.Status, "kind": r.Kind, "size": r.Size, "examined": r.Examined}
+	strs := map[string]string{"title": r.Title, "status": r.Status, "kind": r.Kind, "size": r.Size, "examined": r.Examined, "type": r.Type}
 	check := func(name string) error {
-		if slices.Contains([]string{"id", "type", "created", "updated"}, name) {
+		if slices.Contains([]string{"id", "created", "updated", "formerly"}, name) || name == "type" && schema < 3 {
 			return fmt.Errorf("%s cannot be changed by update", name)
 		}
 		if !slices.Contains(allowed, name) {
@@ -201,7 +216,7 @@ func plan(r *project.Record, req Request) ([]change, error) {
 		if err := check(name); err != nil {
 			return nil, err
 		}
-		if name == "title" || name == "status" {
+		if name == "title" || name == "type" || name == "status" && !retype { // a page has no status to keep
 			return nil, fmt.Errorf("%s is required and cannot be unset", name)
 		}
 		present := false
@@ -251,7 +266,7 @@ func fields(r *project.Record) map[string]string {
 		"id": r.ID, "type": r.Type, "title": r.Title, "status": r.Status, "kind": r.Kind, "size": r.Size,
 		"priority": priority, "created": created,
 		"relates_to": list(r.RelatesTo), "members": list(r.Members), "depends_on": list(r.DependsOn), "blocks": list(r.Blocks),
-		"work": list(r.Work), "examined": r.Examined,
+		"work": list(r.Work), "examined": r.Examined, "formerly": r.Formerly,
 	}
 }
 

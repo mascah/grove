@@ -25,6 +25,7 @@ type Record struct {
 	Blocks, RelatesTo       []string
 	Work                    []string // plan and review: the work they belong to
 	Examined                string   // review: the Git commit it examined
+	Formerly                string   // schema 3: the ID or document path convert replaced
 	Path                    string
 	Source                  []byte
 }
@@ -160,8 +161,10 @@ func (m *metadata) listField(key string) []string {
 	return result
 }
 
-// TypeInfo is one record type. Statuses[0] is what new writes. Schema is the
-// schema_version that introduces the type; older projects refuse its folder.
+// TypeInfo is one record type. Statuses[0] is what new writes; a type without
+// statuses has no lifecycle. Schema is the schema_version that introduces the
+// type; older projects refuse it. Prefix and Folder bind identity and placement
+// only before schema 3, where every new ID takes NeutralPrefix instead.
 type TypeInfo struct {
 	Name, Prefix, Folder string
 	Statuses             []string
@@ -176,7 +179,11 @@ var Types = []TypeInfo{
 	{"term", "T", "terms", []string{"proposed", "settled"}, 2},
 	{"plan", "P", "plans", []string{"current", "superseded"}, 2},
 	{"review", "R", "reviews", []string{"current", "superseded"}, 2},
+	{"page", NeutralPrefix, "", nil, 3},
 }
+
+// NeutralPrefix starts every ID that schema 3 issues, whatever the type.
+const NeutralPrefix = "G"
 
 // Type returns the named type, or nil.
 func Type(name string) *TypeInfo {
@@ -188,7 +195,7 @@ func Type(name string) *TypeInfo {
 	return nil
 }
 
-// Prefixes is every ID prefix letter in display order, e.g. "WQDTPR".
+// Prefixes is every ID prefix letter in display order, e.g. "WQDTPRG".
 func Prefixes() string {
 	var b strings.Builder
 	for _, t := range Types {
@@ -203,9 +210,13 @@ var datePattern = regexp.MustCompile("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]
 var IDPattern = regexp.MustCompile("^[" + Prefixes() + "]-[0-9]{3,}$")
 var commitPattern = regexp.MustCompile("^[0-9a-f]{7,40}$")
 
-func validID(id, kind string) bool {
-	t := Type(kind)
-	if t == nil || !strings.HasPrefix(id, t.Prefix+"-") || !IDPattern.MatchString(id) {
+// validID ties the prefix to the type before schema 3; from schema 3 an ID is
+// an identity only, so a reclassified or converted record keeps its own.
+func validID(id, kind string, schema int) bool {
+	if !IDPattern.MatchString(id) {
+		return false
+	}
+	if t := Type(kind); schema < 3 && (t == nil || !strings.HasPrefix(id, t.Prefix+"-")) {
 		return false
 	}
 	number := id[2:]
@@ -236,10 +247,11 @@ func Revision(source []byte) string {
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
-// ParseRecord validates one record's source against the schema for the type
-// folder it sits in. Writers use it so the candidate they produce is judged by
-// the same rules the reader applies.
-func ParseRecord(path, folderType string, source []byte) (*Record, []Diagnostic) {
+// ParseRecord validates one record's source against the project's schema and,
+// before schema 3, the type folder it sits in; from schema 3 folderType is
+// ignored. Writers use it so the candidate they produce is judged by the same
+// rules the reader applies.
+func ParseRecord(path, folderType string, schema int, source []byte) (*Record, []Diagnostic) {
 	r := &Record{Path: path, Source: source}
 	fail := func(message string) (*Record, []Diagnostic) {
 		return r, []Diagnostic{{Path: path, Field: "frontmatter", Message: message}}
@@ -263,17 +275,34 @@ func ParseRecord(path, folderType string, source []byte) (*Record, []Diagnostic)
 	r.ID = m.stringField("id", true)
 	r.Type = m.stringField("type", true)
 	r.Title = m.stringField("title", true)
-	r.Status = m.stringField("status", true)
-	if r.Type != folderType {
-		m.problem("type", "must match type folder "+folderType)
+	t := Type(r.Type)
+	allowed := []string{"id", "type", "title", "status", "relates_to", "created", "updated"}
+	switch {
+	case schema < 3:
+		if r.Type != folderType {
+			m.problem("type", "must match type folder "+folderType)
+		}
+		if !validID(r.ID, r.Type, schema) {
+			m.problem("id", "expected a canonical positive ID with matching type prefix, e.g. W-001, Q-001, D-001, T-001")
+		}
+	default:
+		// The type field alone classifies a record, so an unknown or missing
+		// one is an error rather than a generic page.
+		if r.Type != "" && (t == nil || t.Schema > schema) {
+			m.problem("type", "unknown record type; expected work, question, decision, term, plan, review, or page")
+		}
+		if !validID(r.ID, r.Type, schema) {
+			m.problem("id", "expected a canonical positive ID, e.g. G-001")
+		}
+		allowed = append(allowed, "formerly")
+		r.Formerly = m.stringField("formerly", false)
 	}
-	if !validID(r.ID, r.Type) {
-		m.problem("id", "expected a canonical positive ID with matching type prefix, e.g. W-001, Q-001, D-001, T-001")
-	}
-	if t := Type(r.Type); t == nil || !slices.Contains(t.Statuses, r.Status) {
+	known := t != nil && t.Schema <= schema
+	if known && len(t.Statuses) == 0 { // a page has no lifecycle, so status is an unknown field on it
+		allowed = slices.DeleteFunc(allowed, func(key string) bool { return key == "status" })
+	} else if r.Status = m.stringField("status", true); (known || schema < 3) && (t == nil || !slices.Contains(t.Statuses, r.Status)) {
 		m.problem("status", "unsupported lifecycle value for "+r.Type)
 	}
-	allowed := []string{"id", "type", "title", "status", "relates_to", "created", "updated"}
 	if r.Type == "work" {
 		allowed = append(allowed, "kind", "size", "priority", "members", "depends_on")
 		r.Kind, r.Size = m.stringField("kind", false), m.stringField("size", false)
