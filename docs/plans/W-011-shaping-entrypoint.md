@@ -51,7 +51,8 @@ guide uses today's `list`, `show`, `check`, `new`, `update`, `versions`,
    pattern, explicit invocation only, pointing at `AGENTS.md` and the guide.
 3. Policy and contract owners: a short AGENTS.md shaping paragraph reusing the
    Assigned-work invocation bullets; a README paragraph beside the `grove-work`
-   one; the brief's Observed state and Next; W-011's Next and plan link.
+   one; W-011's Next and plan link. (The brief was first reconciled too; on the
+   owner's instruction of 2026-09-20 it no longer tracks progress or a Next.)
 
 ## Evidence (kept apart by kind, in `docs/reviews/2026-09-20-W-011-shaping.md`)
 

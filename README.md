@@ -280,8 +280,8 @@ Give a new agent this prompt:
 > Grove CLI and interactive workspace described there. The old application was
 > archived. The Go list/show/check/new/update CLI and its records now work
 > locally, as do versions and workspace; W-001 through W-005 record
-> verification. Follow the brief's
-> next action. Treat the brief's
+> verification. Find the next
+> action in W-018 and the work records' Next. Treat the brief's
 > remaining proposals as proposals. Inspect
 > the sibling skills and nullsec projects through their Grove CLI when evidence
 > is needed. Preserve this direction and update the brief as choices settle.

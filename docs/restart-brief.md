@@ -142,17 +142,17 @@ not silently rewrite acceptance or turn every observation into permanent policy.
 At main `c9904ea`, the Go CLI supports inspection, creation, safe field updates,
 versions, workspace resolution and staged context. The read-only Bubble Tea v2
 board and on-demand card history are integrated. W-010's work guide and local
-adapters are done and integrated. W-011's shaping guide and `grove-shape`
-adapters exist on `worktree-W-011` with headless harness evidence; the owner's
-real shaping conversation and integration are outstanding. Terms,
+adapters are done and integrated. Terms,
 structured artifacts, Review status, portable setup, current-state projection,
 review actions and managed attempts are future work. `abandoned` already exists.
+This is a dated observation, not a progress log: work records own what has
+changed since.
 
 The installed `grove` is still the sibling predecessor. Use `go run ./cmd/grove`
 here. The archived FastAPI/PostgreSQL application is historical, with no service,
 credential, deployment or backlog authority over this project.
 
-## Suggested sequence and current next action
+## Suggested sequence
 
 [W-018](../grove/work/W-018-interactive-adoption.md) owns the first adoption
 milestone. Its [roadmap](plans/W-018-adoption-roadmap.md) orders independently
@@ -160,11 +160,13 @@ assignable work and later investments; the
 [evaluation](reviews/2026-09-20-direction-evaluation.md) retains findings,
 research and limits rather than another editable product direction.
 
-**Next:** the owner integrates `worktree-W-011`, then shapes one real idea with
-`/grove-shape` from the main checkout to complete
-[W-011](../grove/work/W-011-shaping-entrypoint.md). Follow with knowledge/artifact
-support and the review handoff, exercise a real Grove loop, package portable
-setup, and pilot one real nullsec change. Current-state and visual TUI work
+Start with shaping ([W-011](../grove/work/W-011-shaping-entrypoint.md)), follow
+with knowledge/artifact support and the review handoff, exercise a real Grove
+loop, package portable setup, and pilot one real nullsec change. Current-state and visual TUI work
 follow the pilot; durable execution follows that useful review experience.
 Investment order alone is not a technical dependency or authority to execute
 the entire roadmap.
+
+The brief does not track progress or a current next action. Each work record's
+Next owns that, starting from W-018's; change this section only when the
+selected sequence itself changes.

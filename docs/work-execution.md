@@ -289,8 +289,8 @@ behaviour; stop that unit before implementation instead.
 
 Reconcile each assigned record's evidence and Next, its plan, the
 documentation that owns any contract the work changed, and the repository's
-direction document when it already speaks of this work; read the parts that
-mention the work now if you have not needed them before. Mark a
+direction document when the work changed the direction it records; progress
+and next actions stay in the record. Mark a
 record done through the CLI only when its acceptance is met. Automated checks
 and screenshots are not the owner's judgment: if required judgment is
 outstanding, record it and leave the work active. Commit evidence with the

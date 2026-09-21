@@ -68,8 +68,9 @@ superseded. The [roadmap](../../docs/plans/W-018-adoption-roadmap.md) holds
 coordination only.
 
 Delivered: [the shaping guide](../../docs/work-shaping.md), the `grove-shape`
-adapters for Claude and Codex, and the AGENTS.md, README and brief
-reconciliation. [Evidence](../../docs/reviews/2026-09-20-W-011-shaping.md)
+adapters for Claude and Codex, and the AGENTS.md and README sections. On the
+owner's instruction of 2026-09-20 the brief no longer tracks progress or a next
+action, so this record's Next is the only one. [Evidence](../../docs/reviews/2026-09-20-W-011-shaping.md)
 separates source checks, observed `claude -p` and `codex exec` trials in
 disposable clones, CLI simulation, and what was not exercised.
 

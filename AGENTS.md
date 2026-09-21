@@ -29,8 +29,9 @@ read the brief when the record, a product question, or reconciliation needs it.
   remains open.
 - Keep deterministic validation and state changes in software where useful;
   do not assume software can replace judgment instructions or prove acceptance.
-- Record settled choices and the concrete next action in the brief while it
-  remains small. Do not create a second editable account of the same direction.
+- Record settled choices in the brief while it remains small. Progress and the
+  concrete next action belong to each work record's Next, never the brief. Do
+  not create a second editable account of the same direction.
   W-018 owns the selected interactive adoption milestone; its linked roadmap is
   investment order, not a batch assignment. D-004's target lifecycle and knowledge
   layout are not implemented schema: W-019/W-020 own their explicit migrations.
@@ -84,8 +85,8 @@ adapters repeat it:
   when it does not. Do not merge or push unless the assignment says so.
 - Plans are `docs/plans/ID-slug.md` and review evidence is under
   `docs/reviews/`, linked from the owning record. Reconcile the README or
-  `docs/record-model.md` when their contract changes, and the brief's next
-  action when the brief already speaks of the work.
+  `docs/record-model.md` when their contract changes, and the brief only when
+  the work changes the direction it selects, not to report progress.
 - Fixtures that create records belong in a disposable clone reached by an
   explicit absolute `--project` path, never a `cd` that can fail: `new` in a
   worktree of this repository advances the shared ID counter.
