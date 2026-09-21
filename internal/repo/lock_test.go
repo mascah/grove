@@ -13,6 +13,7 @@ import (
 // The test re-executes itself as a helper that takes the lock and waits to be
 // killed; the parent must then acquire the lock without any cleanup step.
 func TestLockReleasedWhenHolderIsKilled(t *testing.T) {
+	t.Parallel()
 	if path := os.Getenv("GROVE_LOCK_HELPER"); path != "" {
 		if _, err := Lock(path); err != nil {
 			os.Exit(2)

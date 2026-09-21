@@ -27,6 +27,7 @@ func lineage(t *testing.T, root, commit, path string) string {
 }
 
 func TestHistoryFollowsOneLineOfCommits(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t) // W-001 proposed at "init"
 	first, renamed := "grove/work/W-001-first.md", "grove/work/W-001-[re]*named.md"
 	start := git(t, root, "rev-parse", "HEAD")

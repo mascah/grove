@@ -49,6 +49,7 @@ func diagnostics(ds []Diagnostic) string {
 }
 
 func TestLoadRenamedNestedRecordsAndPreserveSource(t *testing.T) {
+	t.Parallel()
 	root := fixture(t)
 	source := record("W-001", "work", "kind: investigation\npriority: 2\nsize: small\ncreated: \"2026-09-19T14:08:40Z\"\n")
 	source = "\ufeff" + strings.ReplaceAll(source, "\n", "\r\n")
@@ -71,6 +72,7 @@ func TestLoadRenamedNestedRecordsAndPreserveSource(t *testing.T) {
 }
 
 func TestDiscoveryAndExplicitProject(t *testing.T) {
+	t.Parallel()
 	root := fixture(t)
 	put(t, root, "nested/.git", "gitdir: unused-by-reader\n")
 	_, ds := Load(filepath.Join(root, "nested"), "")
@@ -96,6 +98,7 @@ func TestDiscoveryAndExplicitProject(t *testing.T) {
 }
 
 func TestInvalidConfiguration(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ name, source, field string }{
 		{"version missing", "records: grove\n", "schema_version"},
 		{"unsupported", "schema_version: 2\nrecords: grove\n", "schema_version"},
@@ -113,6 +116,7 @@ func TestInvalidConfiguration(t *testing.T) {
 		{"non mapping", "- records\n", "mapping"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			root := fixture(t)
 			put(t, root, "grove.yaml", tc.source)
 			_, ds := Load(root, "")
@@ -125,6 +129,7 @@ func TestInvalidConfiguration(t *testing.T) {
 }
 
 func TestStrictRecordMetadata(t *testing.T) {
+	t.Parallel()
 	base := record("W-001", "work", "")
 	for _, tc := range []struct{ name, source, field string }{
 		{"missing title", strings.Replace(base, "title: Example\n", "", 1), "title"},
@@ -160,6 +165,7 @@ func TestStrictRecordMetadata(t *testing.T) {
 		{"invalid utf8", base + "\xff", "UTF-8"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			root := fixture(t)
 			put(t, root, "grove/work/custom.md", tc.source)
 			_, ds := Load(root, "")
@@ -172,6 +178,7 @@ func TestStrictRecordMetadata(t *testing.T) {
 }
 
 func TestRejectSymlinksAndMisplacedMarkdown(t *testing.T) {
+	t.Parallel()
 	for _, target := range []string{"grove.yaml", "grove", "grove/work", "grove/work/link.md", "grove/link.txt"} {
 		t.Run(target, func(t *testing.T) {
 			root := fixture(t)
@@ -199,6 +206,7 @@ func TestRejectSymlinksAndMisplacedMarkdown(t *testing.T) {
 }
 
 func TestOrderUsesCreationThenNumericID(t *testing.T) {
+	t.Parallel()
 	root := fixture(t)
 	for _, id := range []string{"W-1000", "W-999", "W-002", "W-001"} {
 		extra := ""
@@ -221,6 +229,7 @@ func TestOrderUsesCreationThenNumericID(t *testing.T) {
 }
 
 func TestExplicitZeroTimeIsNotAnAbsentDate(t *testing.T) {
+	t.Parallel()
 	root := fixture(t)
 	put(t, root, "grove/work/undated.md", record("W-001", "work", ""))
 	put(t, root, "grove/work/dated.md", record("W-999", "work", "created: \"0001-01-01T00:00:00Z\"\n"))

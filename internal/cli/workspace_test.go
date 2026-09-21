@@ -16,6 +16,7 @@ import (
 const selector = "live:.:refs/heads/main@0123456789ab:W-001@0123456789ab:0123456789abcdef"
 
 func TestWorkspaceUsage(t *testing.T) {
+	t.Parallel()
 	for _, args := range [][]string{
 		{"workspace"}, {"workspace", "W-001", "--source", selector}, {"workspace", "--source"}, {"workspace", "--source", ""},
 		{"workspace", "--source", "W-001"}, {"workspace", "--source", selector, "--source", selector},
@@ -51,6 +52,7 @@ func versionSelector(t *testing.T, dir, id, where string) string {
 }
 
 func TestWorkspaceCLI(t *testing.T) {
+	t.Parallel()
 	root, wt := featureFixture(t)
 	odd := filepath.Join(filepath.Dir(root), "odd\nwt")
 	gitIn(t, root, "worktree", "add", "-q", "--detach", odd, "feature")
@@ -122,6 +124,7 @@ func TestWorkspaceCLI(t *testing.T) {
 // The joint W-004/W-005 fixture: list versions, select one explicitly,
 // resolve its workspace, and read exactly that version's bytes there.
 func TestJointWorkflow(t *testing.T) {
+	t.Parallel()
 	root, wt := featureFixture(t)
 	var out, errOut bytes.Buffer
 	if code := Run([]string{"versions", "W-001", "--json"}, root, &out, &errOut); code != 0 {
@@ -207,6 +210,7 @@ func TestWorkspaceCheckoutDeletedDuringInspection(t *testing.T) {
 // through versions, workspace, and update; JSON carries the raw path, text
 // output escapes it, and the write lock lands under the real common directory.
 func TestNewlineCheckoutCLI(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
@@ -256,6 +260,7 @@ func TestNewlineCheckoutCLI(t *testing.T) {
 // symlink to another repository's valid project contributes no version, makes
 // the result incomplete, and an earlier selection of it prints no workspace.
 func TestForeignProjectPrefixCLI(t *testing.T) {
+	t.Parallel()
 	root := gitFixture(t)
 	gitIn(t, root, "mv", "grove.yaml", "sub.yaml")
 	if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {

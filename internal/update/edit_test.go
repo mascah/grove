@@ -35,6 +35,7 @@ Body with --- inside.
 `
 
 func TestEditBlockForms(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name    string
 		changes []change
@@ -65,6 +66,7 @@ func TestEditBlockForms(t *testing.T) {
 				"# final comment\n---", "# final comment\nupdated: \"2026-09-19T13:00:00Z\"\n---").Replace(block)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := Edit([]byte(block), tc.changes)
 			if err != nil {
 				t.Fatal(err)
@@ -77,6 +79,7 @@ func TestEditBlockForms(t *testing.T) {
 }
 
 func TestEditPreservesBOMCRLFIndentationAndBody(t *testing.T) {
+	t.Parallel()
 	src := "\ufeff---\r\n  id: W-001\r\n  type: work\r\n  title: first\r\n    second\r\n\r\n    third\r\n  status: proposed\r\n---\r\nbody\r\nno final newline"
 	got, err := Edit([]byte(src), []change{set("title", `"one"`), set("status", "done"), set("updated", `"2026-09-19T13:00:00Z"`)})
 	if err != nil {
@@ -98,6 +101,7 @@ func TestEditPreservesBOMCRLFIndentationAndBody(t *testing.T) {
 }
 
 func TestEditFlowMapping(t *testing.T) {
+	t.Parallel()
 	src := "---\n{id: W-001, \"tïtle\": 'x', status: open, blocks: [a, \"b]\"],\n priority: 2 }\n---\nbody\n"
 	for _, tc := range []struct {
 		name    string
@@ -113,6 +117,7 @@ func TestEditFlowMapping(t *testing.T) {
 		{"unset last and append", []change{unset("priority"), set("size", "small")}, strings.Replace(src, ",\n priority: 2 }", ", size: small }", 1)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := Edit([]byte(src), tc.changes)
 			if err != nil {
 				t.Fatal(err)
@@ -125,6 +130,7 @@ func TestEditFlowMapping(t *testing.T) {
 }
 
 func TestEditTaggedAndAnchoredEntries(t *testing.T) {
+	t.Parallel()
 	// The reader accepts explicit standard tags and unreferenced anchors; a
 	// replaced value drops them, and an unrelated one stays untouched.
 	for _, tc := range []struct{ name, src, key, value, want string }{
@@ -138,6 +144,7 @@ func TestEditTaggedAndAnchoredEntries(t *testing.T) {
 		{"unset tagged", "---\nid: W-001\nsize: !!str small\nstatus: open\n---\n", "size", "", "---\nid: W-001\nstatus: open\n---\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			c := set(tc.key, tc.value)
 			if tc.value == "" {
 				c = unset(tc.key)
@@ -151,6 +158,7 @@ func TestEditTaggedAndAnchoredEntries(t *testing.T) {
 }
 
 func TestEditRefusesUnsupportedSpans(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ name, src, key string }{
 		{"mapping value", "---\nid: {a: 1}\nstatus: open\n---\n", "id"},
 		{"no closing delimiter", "---\nid: W-001\n", "id"},
@@ -190,6 +198,7 @@ func editTable(t *testing.T, cases []struct {
 	t.Helper()
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := Edit([]byte(tc.src), tc.changes)
 			if err != nil {
 				t.Fatal(err)
@@ -212,6 +221,7 @@ func editTable(t *testing.T, cases []struct {
 // A comment between a key's colon and a value that starts on a later line is
 // outside the value, so replacing the value keeps it.
 func TestEditKeepsCommentsBeforeLaterLineValues(t *testing.T) {
+	t.Parallel()
 	editTable(t, []struct {
 		name, src string
 		changes   []change
@@ -240,6 +250,7 @@ func TestEditKeepsCommentsBeforeLaterLineValues(t *testing.T) {
 
 // The reader accepts explicit keys, so the editor must edit them.
 func TestEditExplicitKeys(t *testing.T) {
+	t.Parallel()
 	editTable(t, []struct {
 		name, src string
 		changes   []change
@@ -268,6 +279,7 @@ func TestEditExplicitKeys(t *testing.T) {
 
 // Separators are planned for the whole request: each comma is removed once.
 func TestEditFlowRemovals(t *testing.T) {
+	t.Parallel()
 	const stamp = `"2026-09-19T13:00:00Z"`
 	line := "---\n{id: W-001, type: work, title: T, status: proposed, kind: fix, size: small}\n---\nBody\n"
 	trimmed := "---\n{id: W-001, type: work, title: T, status: proposed}\n---\nBody\n"
@@ -314,6 +326,7 @@ func TestEditFlowRemovals(t *testing.T) {
 // Every subset of removals, with and without an append, over several flow
 // layouts must leave valid YAML holding exactly the expected keys and values.
 func TestEditFlowRemovalsExhaustive(t *testing.T) {
+	t.Parallel()
 	keys := []string{"a", "b", "c", "d"}
 	for _, src := range []string{
 		"---\n{a: 1, b: 2, c: 3, d: 4}\n---\n",

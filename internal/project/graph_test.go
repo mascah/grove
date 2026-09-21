@@ -6,6 +6,7 @@ import (
 )
 
 func TestGraphErrors(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, first, second, want string
 	}{
@@ -16,6 +17,7 @@ func TestGraphErrors(t *testing.T) {
 		{"duplicate identity", record("W-001", "work", ""), record("W-001", "work", ""), "duplicate"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			root := fixture(t)
 			put(t, root, "grove/work/first.md", tc.first)
 			put(t, root, "grove/work/second.md", tc.second)
@@ -31,6 +33,7 @@ func TestGraphErrors(t *testing.T) {
 }
 
 func TestTypedTargetsAndAmbiguity(t *testing.T) {
+	t.Parallel()
 	root := fixture(t)
 	put(t, root, "grove/work/a.md", record("W-001", "work", "depends_on: [D-001]\nmembers: [Q-001]\n"))
 	put(t, root, "grove/questions/q.md", record("Q-001", "question", "blocks: [D-001]\n"))
@@ -52,6 +55,7 @@ func TestTypedTargetsAndAmbiguity(t *testing.T) {
 }
 
 func TestMembershipIsSeparateFromDependencyOrdering(t *testing.T) {
+	t.Parallel()
 	root := fixture(t)
 	put(t, root, "grove/work/a.md", record("W-001", "work", "members: [W-002, W-003]\ndepends_on: [W-002]\n"))
 	put(t, root, "grove/work/b.md", record("W-002", "work", "members: [W-003]\n"))
@@ -65,6 +69,7 @@ func TestMembershipIsSeparateFromDependencyOrdering(t *testing.T) {
 }
 
 func TestDuplicateIDsAreReportedEvenWhenARecordHasWrongType(t *testing.T) {
+	t.Parallel()
 	root := fixture(t)
 	put(t, root, "grove/work/work.md", record("W-001", "work", ""))
 	put(t, root, "grove/questions/question.md", record("W-001", "question", ""))

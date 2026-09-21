@@ -12,6 +12,7 @@ import (
 )
 
 func TestParse(t *testing.T) {
+	t.Parallel()
 	good := map[string]Selection{
 		"committed:refs/heads/main@0123456789ab:W-001@0123456789ab:0123456789abcdef":         {Kind: "committed", Ref: "refs/heads/main", Commit: "0123456789ab", ID: "W-001", Revision: "0123456789ab", Binding: "0123456789abcdef"},
 		"live:.:refs/heads/a@b@0123456789ab:Q-1000@0123456789ab:0123456789abcdef":            {Kind: "live", Locator: ".", Ref: "refs/heads/a@b", Commit: "0123456789ab", ID: "Q-1000", Revision: "0123456789ab", Binding: "0123456789abcdef"},
@@ -97,6 +98,7 @@ func nestedFixture(t *testing.T) (root, wt string) {
 }
 
 func TestWorkspaceLive(t *testing.T) {
+	t.Parallel()
 	root, wt := nestedFixture(t)
 	project := filepath.Join(root, "sub")
 	write(t, root, "sub/notes.txt", "dirty in main\n")
@@ -133,6 +135,7 @@ func TestWorkspaceLive(t *testing.T) {
 }
 
 func TestWorkspaceCommitted(t *testing.T) {
+	t.Parallel()
 	root, wt := nestedFixture(t)
 	project := filepath.Join(root, "sub")
 	committed := selectorFor(t, project, "W-001", "committed", "refs/heads/feature")
@@ -175,6 +178,7 @@ func TestWorkspaceCommitted(t *testing.T) {
 }
 
 func TestWorkspaceStale(t *testing.T) {
+	t.Parallel()
 	root, wt := nestedFixture(t)
 	project := filepath.Join(root, "sub")
 	live := selectorFor(t, project, "W-001", "live", "feature")
@@ -238,6 +242,7 @@ func TestWorkspaceStale(t *testing.T) {
 }
 
 func TestWorkspaceMissingAndAmbiguous(t *testing.T) {
+	t.Parallel()
 	root, wt := nestedFixture(t)
 	project := filepath.Join(root, "sub")
 	temp := addWorktree(t, root, "temp", "", "-b", "orphan")

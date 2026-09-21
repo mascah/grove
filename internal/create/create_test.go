@@ -74,6 +74,7 @@ func stateDir(t *testing.T, root string) string {
 }
 
 func TestAllocateFloorsFromRefsAndWorktrees(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
@@ -109,6 +110,7 @@ func TestAllocateFloorsFromRefsAndWorktrees(t *testing.T) {
 }
 
 func TestAllocateCorrectsCounterBelowFloor(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	write(t, root, "grove/work/W-004-later.md", record("W-004", "work", "proposed"))
 	dir := stateDir(t, root)
@@ -128,6 +130,7 @@ func TestAllocateCorrectsCounterBelowFloor(t *testing.T) {
 }
 
 func TestAllocateConcurrentAcrossWorktrees(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-odd\n\twt ") // W-008: a path Git quotes for display
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
@@ -159,6 +162,7 @@ func TestAllocateConcurrentAcrossWorktrees(t *testing.T) {
 }
 
 func TestAllocateRefusesWhenAWorktreeCannotBeScanned(t *testing.T) {
+	t.Parallel()
 	if os.Geteuid() == 0 {
 		t.Skip("permission checks do not apply to root")
 	}
@@ -180,6 +184,7 @@ func TestAllocateRefusesWhenAWorktreeCannotBeScanned(t *testing.T) {
 }
 
 func TestPersistenceFailureIssuesNoIDAndCreatesNoFile(t *testing.T) {
+	t.Parallel()
 	if os.Geteuid() == 0 {
 		t.Skip("permission checks do not apply to root")
 	}
@@ -200,6 +205,7 @@ func TestPersistenceFailureIssuesNoIDAndCreatesNoFile(t *testing.T) {
 }
 
 func TestAllocateRequiresGit(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	write(t, root, "grove.yaml", config)
 	if _, err := Allocate(root, "grove", "W", &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "Git") {
@@ -212,6 +218,7 @@ func TestAllocateRequiresGit(t *testing.T) {
 }
 
 func TestNewCreatesValidRecords(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	now := time.Date(2026, 9, 19, 16, 0, 0, 0, time.UTC)
 	var report bytes.Buffer
@@ -241,6 +248,7 @@ func TestNewCreatesValidRecords(t *testing.T) {
 }
 
 func TestNewNeverOverwritesAndConsumesReservation(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	// A directory at the target name makes O_EXCL creation fail while the
 	// reader (which skips directories) still sees a valid project.
@@ -259,6 +267,7 @@ func TestNewNeverOverwritesAndConsumesReservation(t *testing.T) {
 }
 
 func TestNewRejectsBadSlugAndKind(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	p := load(t, root)
 	for _, c := range [][2]string{{"work", "Bad Slug"}, {"work", "UPPER"}, {"release", "ok"}} {
@@ -272,6 +281,7 @@ func TestNewRejectsBadSlugAndKind(t *testing.T) {
 }
 
 func TestSlug(t *testing.T) {
+	t.Parallel()
 	cases := map[string]string{
 		"  Hello,   World!! 1234567890123456789012345678 ": "hello-world-12345678901234567890",
 		"Ünïcode ünd Emoji 🎉":                              "n-code-nd-emoji",
@@ -286,6 +296,7 @@ func TestSlug(t *testing.T) {
 }
 
 func TestNewRefusesWhenRecordRootChangedAfterLoad(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	p := load(t, root)
 	write(t, root, "other/work/W-001-first.md", record("W-001", "work", "done"))
@@ -308,6 +319,7 @@ func TestNewRefusesWhenRecordRootChangedAfterLoad(t *testing.T) {
 // A configuration edit that keeps the parsed meaning is still an observed
 // change between the loaded allocation input and publication.
 func TestNewRefusesWhenConfigurationBytesChangedAfterLoad(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	p := load(t, root)
 	write(t, root, "grove.yaml", "# concurrent edit\n"+config)
@@ -326,6 +338,7 @@ func TestNewRefusesWhenConfigurationBytesChangedAfterLoad(t *testing.T) {
 // W-008: a live ID in a checkout whose path Git would quote for display still
 // raises the floor, with no counter file, at the root and at a nested prefix.
 func TestAllocateScansOddlyNamedWorktrees(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}

@@ -28,6 +28,7 @@ func gitFixture(t *testing.T) string {
 }
 
 func TestNewCreatesRecordAndReadCommandsLeaveNoState(t *testing.T) {
+	t.Parallel()
 	root := gitFixture(t)
 	state := filepath.Join(root, ".git", "grove")
 	for _, args := range [][]string{{"list"}, {"show", "W-001"}, {"check"}} {
@@ -62,6 +63,7 @@ func TestNewCreatesRecordAndReadCommandsLeaveNoState(t *testing.T) {
 }
 
 func TestNewUsageAndFailures(t *testing.T) {
+	t.Parallel()
 	for _, args := range [][]string{{"new"}, {"new", "work"}, {"new", "work", "T", "extra"}, {"new", "work", "T", "--slug"}, {"list", "--slug", "x"}, {"new", "work", "T", "--slug=a", "--slug=b"}} {
 		var out, errOut bytes.Buffer
 		if code := Run(args, t.TempDir(), &out, &errOut); code != 2 || out.Len() != 0 {

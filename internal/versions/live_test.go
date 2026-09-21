@@ -40,6 +40,7 @@ func must(t *testing.T, err error) {
 }
 
 func TestInspectProjectLocation(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name   string
 		mutate func(t *testing.T, wt string)
@@ -87,6 +88,7 @@ func TestInspectProjectLocation(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
 			root, wt := deepFixture(t)
 			project := filepath.Join(root, "outer/sub")
 			earlier := selectorFor(t, project, "W-001", "live", "feature")
@@ -125,6 +127,7 @@ func TestInspectProjectLocation(t *testing.T) {
 // A directory that merely sits where a locked worktree used to be, inside
 // another checkout, is not that worktree.
 func TestInspectWorktreeReplacedByPlainDirectory(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	inner := filepath.Join(root, "inner")
 	git(t, root, "worktree", "add", "-q", "--lock", "-b", "inner", inner)
@@ -142,6 +145,7 @@ func TestInspectWorktreeReplacedByPlainDirectory(t *testing.T) {
 }
 
 func TestInspectPrunableDuringRead(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
 	res, err := inspect(t.Context(), root, "W-001", func() {
@@ -161,6 +165,7 @@ func TestInspectPrunableDuringRead(t *testing.T) {
 }
 
 func TestInspectForeignDuringRead(t *testing.T) {
+	t.Parallel()
 	root, wt := deepFixture(t)
 	project := filepath.Join(root, "outer/sub")
 	res, err := inspect(t.Context(), project, "W-001", func() {
@@ -179,6 +184,7 @@ func TestInspectForeignDuringRead(t *testing.T) {
 // prefix, and a linked checkout keep their exact identity through inspection
 // and both kinds of resolution, and reading creates no coordination state.
 func TestOddGitPathsRoundTrip(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
@@ -232,6 +238,7 @@ func TestOddGitPathsRoundTrip(t *testing.T) {
 }
 
 func TestInspectConfigurationRemovedDuringRead(t *testing.T) {
+	t.Parallel()
 	root, wt := deepFixture(t)
 	project := filepath.Join(root, "outer/sub")
 	res, err := inspect(t.Context(), project, "W-001", func() {
@@ -247,6 +254,7 @@ func TestInspectConfigurationRemovedDuringRead(t *testing.T) {
 // <common>/worktrees and register itself there. Its Git directory then has
 // the shape of a linked worktree's; only its common directory differs.
 func TestInspectForeignRepositoryRegisteredAsWorktree(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	evil := filepath.Join(filepath.Dir(root), "evil")
 	admin := filepath.Join(root, ".git", "worktrees", "evil")

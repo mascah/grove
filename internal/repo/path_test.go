@@ -45,6 +45,7 @@ func oddRepos(t *testing.T) (parent, main, linked, sep, sepGit string) {
 }
 
 func TestLocateExactPaths(t *testing.T) {
+	t.Parallel()
 	_, main, linked, sep, sepGit := oddRepos(t)
 	if err := os.MkdirAll(filepath.Join(linked, "sub\nproject"), 0o755); err != nil {
 		t.Fatal(err)
@@ -69,6 +70,7 @@ func TestLocateExactPaths(t *testing.T) {
 // Coordination state is created under the real common directory only; the
 // demonstrated stray sibling (".../new/grove") must not appear.
 func TestCommonDirCreatesStateOnlyUnderTheRealCommonDirectory(t *testing.T) {
+	t.Parallel()
 	parent, main, linked, sep, sepGit := oddRepos(t)
 	for _, root := range []string{main, linked, sep} {
 		if _, _, err := CommonDir(root); err != nil {
@@ -92,6 +94,7 @@ func TestCommonDirCreatesStateOnlyUnderTheRealCommonDirectory(t *testing.T) {
 }
 
 func TestParseWorktrees(t *testing.T) {
+	t.Parallel()
 	out := "worktree /r/new\nline\x00HEAD 1111\x00branch refs/heads/main\x00\x00" +
 		"worktree /r/tab\there \\ \"q\" \x00HEAD 2222\x00detached\x00locked why\nnot\x00\x00" +
 		"worktree /r/gone\x00HEAD 3333\x00branch refs/heads/gone\x00prunable gitdir file points to non-existent location\x00\x00" +
@@ -110,6 +113,7 @@ func TestParseWorktrees(t *testing.T) {
 }
 
 func TestWorktreesExactPaths(t *testing.T) {
+	t.Parallel()
 	_, main, linked, _, _ := oddRepos(t)
 	for _, root := range []string{main, linked} {
 		got, err := Worktrees(root)
@@ -122,6 +126,7 @@ func TestWorktreesExactPaths(t *testing.T) {
 // Several paths come from one process only when none holds a newline; the
 // answers are the same either way.
 func TestGitPathsMatchSingleAnswers(t *testing.T) {
+	t.Parallel()
 	_, main, linked, sep, _ := oddRepos(t)
 	for _, dir := range []string{main, sep, filepath.Join(main, "sub\nproject"), linked, t.TempDir()} {
 		options := []string{"--git-dir", "--show-prefix", "--git-common-dir"}

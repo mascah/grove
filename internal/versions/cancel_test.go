@@ -156,6 +156,7 @@ func TestCancellationKillsGitAndWritesNothing(t *testing.T) {
 }
 
 func TestCancelledBeforeStart(t *testing.T) {
+	t.Parallel()
 	root, _ := nestedFixture(t)
 	project := filepath.Join(root, "sub")
 	live := selectorFor(t, project, "W-001", "live", "feature")

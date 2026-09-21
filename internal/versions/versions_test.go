@@ -129,6 +129,7 @@ func source(t *testing.T, res *Result, kind, where string) *Source {
 }
 
 func TestInspectMainAndFeature(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
 	write(t, wt, "grove/work/W-001-first.md", record("W-001", "work", "active", "Feature body.\n"))
@@ -234,6 +235,7 @@ func selectorsOf(res *Result) []string {
 }
 
 func TestInspectBranchWithoutCheckoutAndDetached(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "temp", "", "-b", "orphan")
 	write(t, wt, "grove/work/W-001-first.md", record("W-001", "work", "done", "Orphan.\n"))
@@ -268,6 +270,7 @@ func TestInspectBranchWithoutCheckoutAndDetached(t *testing.T) {
 }
 
 func TestInspectLiveChanges(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
 	write(t, wt, "grove/work/W-002-second.md", record("W-002", "work", "proposed", "Two.\n"))
@@ -325,6 +328,7 @@ func TestInspectLiveChanges(t *testing.T) {
 }
 
 func TestInspectPrefixAndConfig(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	// Move the project below the repository root with a different record folder.
 	git(t, root, "rm", "-q", "-r", "grove.yaml", "grove")
@@ -364,6 +368,7 @@ func TestInspectPrefixAndConfig(t *testing.T) {
 }
 
 func TestInspectSourceLocalValidation(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "feature", "", "-b", "feature")
 	write(t, wt, "grove/work/W-002-second.md", "---\nid: \"W-002\"\ntype: work\ntitle: T\nstatus: proposed\ndepends_on: [\"W-009\"]\n---\n")
@@ -405,6 +410,7 @@ func lookup(res *Result, id string) (Group, bool) {
 }
 
 func TestInspectIncomplete(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	bad := addWorktree(t, root, "bad", "", "-b", "bad-yaml")
 	write(t, bad, "grove/work/W-002-second.md", "---\nid: \"W-002\"\ntype: work\ntitle: [unclosed\nstatus: proposed\n---\n")
@@ -468,6 +474,7 @@ func TestInspectIncomplete(t *testing.T) {
 }
 
 func TestInspectUnstable(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	moving := addWorktree(t, root, "moving", "", "-b", "moving")
 	leaving := addWorktree(t, root, "leaving", "", "-b", "leaving")
@@ -509,6 +516,7 @@ func TestInspectUnstable(t *testing.T) {
 }
 
 func TestInspectBytesAndSelectors(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	bom := "\ufeff---\r\nid: \"W-002\"\r\ntype: work\r\ntitle: \"Ünïcode\"\r\nstatus: proposed\r\n---\r\nBody without final newline"
 	write(t, root, "grove/work/W-002-bom.md", bom)
@@ -535,6 +543,7 @@ func TestInspectBytesAndSelectors(t *testing.T) {
 }
 
 func TestInspectPathsAndRepeatedReads(t *testing.T) {
+	t.Parallel()
 	root := repoFixture(t)
 	wt := addWorktree(t, root, "odd\nname\twith space", "", "-b", "odd")
 	write(t, wt, "grove/work/W-002-with space.md", record("W-002", "work", "proposed", "x\n"))
@@ -558,6 +567,7 @@ func TestInspectPathsAndRepeatedReads(t *testing.T) {
 }
 
 func TestInspectUnbornAndInvalidHEAD(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
@@ -601,6 +611,7 @@ func TestInspectUnbornAndInvalidHEAD(t *testing.T) {
 }
 
 func TestInspectRequiresGit(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	write(t, root, "grove.yaml", config)
 	write(t, root, "grove/work/W-001-first.md", record("W-001", "work", "proposed", "x\n"))

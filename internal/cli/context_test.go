@@ -25,6 +25,7 @@ func contextFixture(t *testing.T, root string) {
 }
 
 func TestContextUsage(t *testing.T) {
+	t.Parallel()
 	root := projectFixture(t)
 	for _, args := range [][]string{
 		{"context"}, {"context", "--json"},
@@ -52,6 +53,7 @@ func TestContextUsage(t *testing.T) {
 }
 
 func TestContextCLI(t *testing.T) {
+	t.Parallel()
 	root := projectFixture(t)
 	contextFixture(t, root)
 	var out, errOut bytes.Buffer
@@ -130,6 +132,7 @@ func TestContextCLI(t *testing.T) {
 }
 
 func TestContextRefusalsWriteNoResult(t *testing.T) {
+	t.Parallel()
 	root := projectFixture(t)
 	contextFixture(t, root)
 	os.Remove(filepath.Join(root, "docs/plans/W-002.md"))
@@ -149,6 +152,7 @@ func TestContextRefusalsWriteNoResult(t *testing.T) {
 }
 
 func TestContextLeavesEverythingUnchanged(t *testing.T) {
+	t.Parallel()
 	root, wt := featureFixture(t)
 	contextFixture(t, wt) // uncommitted files in the linked checkout
 	before := map[string]map[string][32]byte{root: hashes(t, root), wt: hashes(t, wt)}

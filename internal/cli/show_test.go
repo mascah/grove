@@ -15,6 +15,7 @@ import (
 )
 
 func TestShowJSONMatchesExactBytes(t *testing.T) {
+	t.Parallel()
 	root := projectFixture(t)
 	crlf := "\ufeff" + strings.ReplaceAll(strings.Replace(question, "Which version?", "\"Wh\\u00efch — 版本?\"", 1), "\n", "\r\n")
 	noFinalNewline := strings.TrimSuffix(crlf, "\r\n")
@@ -56,6 +57,7 @@ func TestShowJSONMatchesExactBytes(t *testing.T) {
 }
 
 func TestShowJSONUsage(t *testing.T) {
+	t.Parallel()
 	for _, args := range [][]string{{"list", "--json"}, {"check", "--json"}, {"show", "--json", "--json", "W-001"}, {"new", "work", "T", "--json"}} {
 		var out, errOut bytes.Buffer
 		if code := Run(args, t.TempDir(), &out, &errOut); code != 2 || out.Len() != 0 {

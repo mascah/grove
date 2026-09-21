@@ -74,6 +74,7 @@ func TestResolveFinalCheck(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
 			root, wt := nestedFixture(t)
 			project := filepath.Join(root, "sub")
 			where := "feature"
@@ -100,6 +101,7 @@ func TestResolveFinalCheck(t *testing.T) {
 // does not disturb an explicit live selection, unrelated invalid sources do
 // not block it, and nothing in any checkout or Git directory is written.
 func TestResolveFinalCheckAdmits(t *testing.T) {
+	t.Parallel()
 	root, wt := nestedFixture(t)
 	project := filepath.Join(root, "sub")
 	bad := addWorktree(t, root, "bad", "", "-b", "bad")

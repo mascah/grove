@@ -17,6 +17,7 @@ import (
 )
 
 func TestBoardInvocation(t *testing.T) {
+	t.Parallel()
 	// grove [--project DIR] [--json], in either order, and nothing else.
 	for _, args := range [][]string{nil, {"--project", "d"}, {"--project=d"}, {"--json"}, {"--project", "d", "--json"}, {"--json", "--project", "d"}, {"--"}} {
 		a, err := parseArgs(args)
@@ -46,6 +47,7 @@ func TestBoardInvocation(t *testing.T) {
 // other format, and the noninteractive commands named. It needs no project to
 // say so. A file that is not a terminal is refused like a buffer.
 func TestBoardRefusesWithoutTerminal(t *testing.T) {
+	t.Parallel()
 	file, err := os.Create(filepath.Join(t.TempDir(), "stderr"))
 	if err != nil {
 		t.Fatal(err)
@@ -148,8 +150,12 @@ func (s boardSession) lacks(parts ...string) {
 // changes before selection. Repeated with an unrelated invalid source. No file
 // anywhere, including Git's, changes because of the board.
 func TestBoardConnectedWorkflow(t *testing.T) {
+	t.Parallel()
 	for _, broken := range []bool{false, true} {
-		t.Run(fmt.Sprintf("invalid source %v", broken), func(t *testing.T) { boardWorkflow(t, broken) })
+		t.Run(fmt.Sprintf("invalid source %v", broken), func(t *testing.T) {
+			t.Parallel()
+			boardWorkflow(t, broken)
+		})
 	}
 }
 

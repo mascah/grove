@@ -200,6 +200,7 @@ func board(m *Model) string {
 // --- explicit selection
 
 func TestSelectionIsExplicit(t *testing.T) {
+	t.Parallel()
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches(), ws: &versions.Workspace{Project: "/repo/feat"}}
 	m := open(t, f, 120, 30)
@@ -264,6 +265,7 @@ func TestSelectionIsExplicit(t *testing.T) {
 }
 
 func TestRefusalStaysVisibleUntilRefresh(t *testing.T) {
+	t.Parallel()
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches(), refuse: errors.New("branch refs/heads/main moved from aaa to bbb; run versions and reselect")}
 	m := open(t, f, 120, 30)
@@ -289,6 +291,7 @@ func TestRefusalStaysVisibleUntilRefresh(t *testing.T) {
 }
 
 func TestDeletedRowCannotResolve(t *testing.T) {
+	t.Parallel()
 	fx := newFixture()
 	res := fx.twoBranches()
 	g := &res.Groups[slices.IndexFunc(res.Groups, func(g versions.Group) bool { return g.ID == "W-010" })]
@@ -308,6 +311,7 @@ func TestDeletedRowCannotResolve(t *testing.T) {
 }
 
 func TestStaleAndCancelledReplies(t *testing.T) {
+	t.Parallel()
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches(), ws: &versions.Workspace{Project: "/repo/."}}
 	m := open(t, f, 120, 30)
@@ -349,6 +353,7 @@ func TestStaleAndCancelledReplies(t *testing.T) {
 }
 
 func TestQuitAndInterruptCancelTheRead(t *testing.T) {
+	t.Parallel()
 	for key, want := range map[string]tea.Msg{"q": tea.QuitMsg{}, "ctrl+c": tea.InterruptMsg{}, "esc": tea.QuitMsg{}} {
 		started, stopped := make(chan struct{}), make(chan error, 1)
 		m := New(t.Context(), "/repo/.", Backend{Inspect: func(ctx context.Context, _, _ string) (*versions.Result, error) {
@@ -377,6 +382,7 @@ func TestQuitAndInterruptCancelTheRead(t *testing.T) {
 }
 
 func TestReadsNeverBeginAfterClose(t *testing.T) {
+	t.Parallel()
 	f := &fake{res: newFixture().twoBranches()}
 	m := New(t.Context(), "/repo/.", f.backend())
 	cmd := m.Init()
@@ -389,6 +395,7 @@ func TestReadsNeverBeginAfterClose(t *testing.T) {
 // --- board derivation
 
 func TestBoardComesFromOneLiveSource(t *testing.T) {
+	t.Parallel()
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches()}
 	m := open(t, f, 120, 30)
@@ -428,6 +435,7 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 }
 
 func TestContextStates(t *testing.T) {
+	t.Parallel()
 	fx := newFixture()
 	empty := result(fx.main, fx.sources(), version(fx.main, "Q-001", "Which version?", "resolved"))
 	m := open(t, &fake{res: empty}, 120, 30)
@@ -491,6 +499,7 @@ func TestContextStates(t *testing.T) {
 }
 
 func TestRefreshFollowsIdentityNotPosition(t *testing.T) {
+	t.Parallel()
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches()}
 	m := open(t, f, 120, 30)
@@ -529,6 +538,7 @@ func TestRefreshFollowsIdentityNotPosition(t *testing.T) {
 // --- rendering
 
 func TestLayoutAtEverySize(t *testing.T) {
+	t.Parallel()
 	fx := newFixture()
 	for _, size := range [][2]int{{120, 30}, {100, 24}, {99, 24}, {80, 24}, {40, 10}} {
 		w, h := size[0], size[1]
@@ -602,6 +612,7 @@ func TestLayoutAtEverySize(t *testing.T) {
 }
 
 func TestEverythingStaysReachable(t *testing.T) {
+	t.Parallel()
 	fx := newFixture()
 	var vs []versions.Version
 	for i := 1; i <= 30; i++ {
@@ -680,6 +691,7 @@ func TestEverythingStaysReachable(t *testing.T) {
 }
 
 func TestHostileTextIsInert(t *testing.T) {
+	t.Parallel()
 	const osc, erase, c1 = "\x1b]52;c;aGk=\x07", "\x1b[2J\x1b[H", "\u009b31m"
 	hostile := "T" + osc + erase + c1 + "\x9b\r\u202e日本語e\u0301\ttab"
 	fx := newFixture()
@@ -762,6 +774,7 @@ func TestHostileTextIsInert(t *testing.T) {
 
 // Review regressions: a refresh under an open chooser or sources screen.
 func TestRefreshUnderOverlays(t *testing.T) {
+	t.Parallel()
 	live := func(n int) *versions.Result {
 		var sources []*versions.Source
 		var vs []versions.Version

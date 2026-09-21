@@ -38,6 +38,7 @@ func lineageFixture() (fixture, *fake) {
 }
 
 func TestHistoryFollowsTheFocusedVersion(t *testing.T) {
+	t.Parallel()
 	_, f := lineageFixture()
 	m := open(t, f, 120, 30)
 	press(m, "right", "left", "right", "b", "esc", "s", "esc")
@@ -94,6 +95,7 @@ func TestHistoryFollowsTheFocusedVersion(t *testing.T) {
 // Merges are not listed, so the newest row may not be the record's status
 // here. The card says so rather than let the first row stand for it.
 func TestHistorySaysWhenTheNewestCommitIsNotTheRecord(t *testing.T) {
+	t.Parallel()
 	_, f := lineageFixture()
 	log := []versions.Commit{featLog[0], mainLog[0]} // newest: done; then active
 	f.history = func(context.Context, string, string) ([]versions.Commit, error) { return log, nil }
@@ -122,6 +124,7 @@ func deliverAll(m *Model, cmd tea.Cmd) *Model {
 }
 
 func TestHistoryOfUncommittedChanges(t *testing.T) {
+	t.Parallel()
 	fx, f := lineageFixture()
 	vs := f.res.Groups[0].Versions // W-001: branch main, checkout ., branch feature, checkout feat
 	vs[1].Change, vs[1].HeadPath = "renamed", "grove/work/W-001-old.md"
@@ -157,6 +160,7 @@ func TestHistoryOfUncommittedChanges(t *testing.T) {
 
 // A history read never makes a key wait: whatever comes next replaces it.
 func TestHistoryReadYieldsToEveryKey(t *testing.T) {
+	t.Parallel()
 	_, f := lineageFixture()
 	var cancelled []error
 	block := true

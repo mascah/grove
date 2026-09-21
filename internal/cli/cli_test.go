@@ -63,6 +63,7 @@ func hashes(t *testing.T, root string) map[string][32]byte {
 }
 
 func TestCommandsInspectWithoutChangingFiles(t *testing.T) {
+	t.Parallel()
 	root := projectFixture(t)
 	before := hashes(t, root)
 	for _, args := range [][]string{{"list"}, {"show", "W-001"}, {"check"}, {"list", "--project", root}, {"--project=" + root, "show", "Q-001"}} {
@@ -96,6 +97,7 @@ func TestCommandsInspectWithoutChangingFiles(t *testing.T) {
 }
 
 func TestInvalidNeighborPreventsPartialOutput(t *testing.T) {
+	t.Parallel()
 	root := projectFixture(t)
 	write(t, root, "docs/records/work/broken.md", "---\nid: W-002\ntype: work\ntitle: Broken\nstatus: imaginary\n---\n")
 	before := hashes(t, root)
@@ -114,6 +116,7 @@ func TestInvalidNeighborPreventsPartialOutput(t *testing.T) {
 }
 
 func TestUsageAndMissingID(t *testing.T) {
+	t.Parallel()
 	// No command at all selects the board; see TestBoardInvocation.
 	for _, args := range [][]string{{"unknown"}, {"show"}, {"show", "W-001", "extra"}, {"list", "extra"}, {"--project"}, {"list", "--wat"}, {"--project=", "list"}, {"--project", "a", "--project", "b", "list"}} {
 		var out, errOut bytes.Buffer
@@ -135,6 +138,7 @@ func TestUsageAndMissingID(t *testing.T) {
 }
 
 func TestEmptyProjectAndLiteralSource(t *testing.T) {
+	t.Parallel()
 	root := projectFixture(t)
 	if err := os.RemoveAll(filepath.Join(root, "docs", "records")); err != nil {
 		t.Fatal(err)
@@ -159,6 +163,7 @@ type brokenWriter struct{}
 func (brokenWriter) Write([]byte) (int, error) { return 0, errors.New("output unavailable") }
 
 func TestOutputFailureReturnsNonzero(t *testing.T) {
+	t.Parallel()
 	root := projectFixture(t)
 	for _, args := range [][]string{{"list"}, {"show", "W-001"}, {"check"}, {"--help"}} {
 		var errOut bytes.Buffer
@@ -173,6 +178,7 @@ func TestOutputFailureReturnsNonzero(t *testing.T) {
 }
 
 func TestListEscapesMultilineAndControlCharacters(t *testing.T) {
+	t.Parallel()
 	root := projectFixture(t)
 	write(t, root, "docs/records/questions/question.md", strings.Replace(question, "title: Which version?", "title: \"First\\nSecond\\t\\e[31m\"", 1))
 	var out, errOut bytes.Buffer

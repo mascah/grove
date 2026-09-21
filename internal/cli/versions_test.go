@@ -37,6 +37,7 @@ func featureFixture(t *testing.T) (root, wt string) {
 }
 
 func TestVersionsUsage(t *testing.T) {
+	t.Parallel()
 	for _, args := range [][]string{
 		{"versions", "W-001", "W-002"}, {"versions", "--slug", "x"}, {"list", "--json"}, {"versions", "--json", "--json"},
 		{"versions", "--expect", rev},
@@ -52,6 +53,7 @@ func TestVersionsUsage(t *testing.T) {
 // every file in both checkouts hashes identically after text and JSON reads,
 // and no coordination folder appears.
 func TestVersionsLeavesGitUnchanged(t *testing.T) {
+	t.Parallel()
 	root, wt := featureFixture(t)
 	write(t, wt, "docs/records/questions/dirty.md", strings.Replace(question, "Q-001", "Q-002", 1))
 	before := map[string]map[string][32]byte{root: hashes(t, root), wt: hashes(t, wt)}
@@ -70,6 +72,7 @@ func TestVersionsLeavesGitUnchanged(t *testing.T) {
 }
 
 func TestVersionsCLI(t *testing.T) {
+	t.Parallel()
 	root, wt := featureFixture(t)
 	var out, errOut bytes.Buffer
 	if code := Run([]string{"versions", "W-001"}, root, &out, &errOut); code != 0 {
@@ -171,6 +174,7 @@ func rowsOf(text string) [][]string {
 }
 
 func TestVersionsIncompleteAndNotFound(t *testing.T) {
+	t.Parallel()
 	root, wt := featureFixture(t)
 	write(t, wt, "docs/records/work/broken.md", "---\nid: W-001\ntype: work\ntitle: dup\nstatus: proposed\n---\n")
 	var out, errOut bytes.Buffer

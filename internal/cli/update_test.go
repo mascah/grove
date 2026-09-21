@@ -13,6 +13,7 @@ import (
 const rev = "sha256:" + "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 func TestUpdateUsage(t *testing.T) {
+	t.Parallel()
 	for _, args := range [][]string{
 		{"update"}, {"update", "W-001"}, {"update", "W-001", "extra", "--expect", rev, "--set", "status=done"},
 		{"update", "W-001", "--set", "status=done"}, {"update", "W-001", "--expect", rev},
@@ -51,6 +52,7 @@ func showJSON(t *testing.T, root, id string) map[string]any {
 }
 
 func TestUpdateWorkflowCreateUpdateCloseReopenCheck(t *testing.T) {
+	t.Parallel()
 	root := gitFixture(t)
 	var out, errOut bytes.Buffer
 	if code := Run([]string{"new", "work", "Workflow record", "--slug", "workflow"}, root, &out, &errOut); code != 0 {
@@ -119,6 +121,7 @@ func TestUpdateWorkflowCreateUpdateCloseReopenCheck(t *testing.T) {
 }
 
 func TestUpdateOperationErrorsAndOutputFailure(t *testing.T) {
+	t.Parallel()
 	root := gitFixture(t)
 	expect := showJSON(t, root, "W-001")["revision"].(string)
 	before := hashes(t, filepath.Join(root, "docs"))

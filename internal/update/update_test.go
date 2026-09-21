@@ -121,6 +121,7 @@ func tempFiles(t *testing.T, root string) []string {
 }
 
 func TestUpdateEveryFieldOnItsTypes(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	res := apply(t, root, "W-001", []Field{
 		{"title", ` "Quoted": ünïcode — 版本 #1 `}, {"status", "active"}, {"kind", "tooling"}, {"priority", "1"},
@@ -165,6 +166,7 @@ func TestUpdateEveryFieldOnItsTypes(t *testing.T) {
 }
 
 func TestUpdateLifecycleAndReopening(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	// Untouched optional fields, including the pointer-valued priority, must
 	// compare equal between the original and the candidate.
@@ -188,6 +190,7 @@ func TestUpdateLifecycleAndReopening(t *testing.T) {
 }
 
 func TestUpdateNoOpPreservesBytesAndRefusesStale(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	path := filepath.Join(root, "grove/work/W-001-first.md")
 	if err := os.Chmod(path, 0o600); err != nil {
@@ -233,6 +236,7 @@ func TestUpdateNoOpPreservesBytesAndRefusesStale(t *testing.T) {
 }
 
 func TestUpdateRejectsInvalidRequestsWithoutWriting(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	expect := revision(t, root, "grove/work/W-001-first.md")
 	for _, tc := range []struct {
@@ -284,6 +288,7 @@ func TestUpdateRejectsInvalidRequestsWithoutWriting(t *testing.T) {
 }
 
 func TestUpdateRejectsCyclesAndInvalidProjects(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	apply(t, root, "W-001", []Field{{"depends_on", `["W-002"]`}, {"members", `["W-002"]`}})
 	expect := revision(t, root, "grove/work/W-002-second.md")
@@ -306,6 +311,7 @@ func TestUpdateRejectsCyclesAndInvalidProjects(t *testing.T) {
 }
 
 func TestUpdateClockContract(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	expect := revision(t, root, "grove/work/W-001-first.md")
 	early := time.Date(2026, 9, 19, 11, 59, 59, 0, time.UTC)
@@ -335,6 +341,7 @@ func TestUpdateClockContract(t *testing.T) {
 }
 
 func TestUpdateStaleAfterBodyOnlyEdit(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	expect := revision(t, root, "grove/work/W-001-first.md")
 	write(t, root, "grove/work/W-001-first.md", work+"An appended paragraph with unchanged timestamps.\n")
@@ -345,6 +352,7 @@ func TestUpdateStaleAfterBodyOnlyEdit(t *testing.T) {
 }
 
 func TestUpdateDetectsChangesDuringPreparation(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name   string
 		change func(t *testing.T, root string)
@@ -367,6 +375,7 @@ func TestUpdateDetectsChangesDuringPreparation(t *testing.T) {
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			root := gitProject(t)
 			expect := revision(t, root, "grove/work/W-001-first.md")
 			fault := func(step string) error {
@@ -392,6 +401,7 @@ func TestUpdateDetectsChangesDuringPreparation(t *testing.T) {
 }
 
 func TestUpdateInjectedFailures(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	path := filepath.Join(root, "grove/work/W-001-first.md")
 	if err := os.Chmod(path, 0o640); err != nil {
@@ -445,6 +455,7 @@ func TestUpdateInjectedFailures(t *testing.T) {
 }
 
 func TestUpdateSameRevisionRace(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	expect := revision(t, root, "grove/work/W-001-first.md")
 	results := make(chan error, 2)
@@ -480,6 +491,7 @@ func TestUpdateSameRevisionRace(t *testing.T) {
 }
 
 func TestUpdateReciprocalDependenciesCannotFormACycle(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	pairs := [][2]string{{"W-001", "W-002"}, {"W-002", "W-001"}}
 	errs := make([]error, 2)
@@ -502,6 +514,7 @@ func TestUpdateReciprocalDependenciesCannotFormACycle(t *testing.T) {
 }
 
 func TestNewAndUpdateShareTheWriteLockAcrossWorktrees(t *testing.T) {
+	t.Parallel()
 	root := gitProject(t)
 	wt := filepath.Join(filepath.Dir(root), filepath.Base(root)+"-wt")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
@@ -556,6 +569,7 @@ func TestNewAndUpdateShareTheWriteLockAcrossWorktrees(t *testing.T) {
 }
 
 func TestUpdateRequiresGit(t *testing.T) {
+	t.Parallel()
 	root := t.TempDir()
 	write(t, root, "grove.yaml", "schema_version: 1\nrecords: grove\n")
 	write(t, root, "grove/work/W-001-first.md", work)
@@ -567,6 +581,7 @@ func TestUpdateRequiresGit(t *testing.T) {
 }
 
 func TestUnchangedGuardCatchesEditorDrift(t *testing.T) {
+	t.Parallel()
 	before, _ := project.ParseRecord("w.md", "work", []byte(work))
 	after, _ := project.ParseRecord("w.md", "work", []byte(strings.Replace(work, "title: First", "title: Other", 1)))
 	if err := unchanged(before, after, []change{set("status", "active")}); err == nil || !strings.Contains(err.Error(), "title") {
@@ -586,8 +601,10 @@ func TestUnchangedGuardCatchesEditorDrift(t *testing.T) {
 
 // W-007: the review's update reproducers, at the level a user reaches them.
 func TestUpdatePreservesAcceptedForms(t *testing.T) {
+	t.Parallel()
 	const stamped = "updated: \"2026-09-19T18:30:00Z\""
 	t.Run("comment before a later-line value", func(t *testing.T) {
+		t.Parallel()
 		root := gitProject(t)
 		write(t, root, "grove/work/W-001-first.md", strings.Replace(work, "title: First", "title: # retain\n  First", 1))
 		apply(t, root, "W-001", []Field{{"title", "New"}})
@@ -597,6 +614,7 @@ func TestUpdatePreservesAcceptedForms(t *testing.T) {
 		}
 	})
 	t.Run("final two flow entries", func(t *testing.T) {
+		t.Parallel()
 		for _, unsets := range [][]string{{"kind", "size"}, {"size", "kind"}} {
 			root := gitProject(t)
 			write(t, root, "grove/work/W-001-first.md", "---\n{id: W-001, type: work, title: T, status: proposed, kind: fix, size: small}\n---\nBody\n")
@@ -608,6 +626,7 @@ func TestUpdatePreservesAcceptedForms(t *testing.T) {
 		}
 	})
 	t.Run("explicit keys", func(t *testing.T) {
+		t.Parallel()
 		root := gitProject(t)
 		source := strings.NewReplacer("status: proposed", "? status\n: proposed", "relates_to: [\"Q-001\"]", "? relates_to\n: [\"Q-001\"] # why").Replace(work)
 		write(t, root, "grove/work/W-001-first.md", source)
@@ -623,6 +642,7 @@ func TestUpdatePreservesAcceptedForms(t *testing.T) {
 // sibling ".../new/grove". Locks and counters belong under the real common
 // directory, from the main and a linked checkout alike.
 func TestCoordinationStateStaysUnderTheCommonDirectory(t *testing.T) {
+	t.Parallel()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
