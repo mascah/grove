@@ -9,18 +9,115 @@ The first Go CLI now reads and validates this model; W-001 records its evidence.
 [The restart brief](restart-brief.md) owns product direction;
 `grove/` owns operational work, questions, and decision receipts.
 
-## Schema 2: knowledge records and the brief
+## Schema 3: identity and placement apart from classification
 
-**Selected future change, not implemented here:**
-[D-006](../grove/decisions/D-006-stable-knowledge.md) selects stable identity and
-placement, general knowledge pages, flat creation and recursive discovery
+[D-006](../grove/decisions/D-006-stable-knowledge.md) selected stable identity
+and placement, general knowledge pages, flat creation and recursive discovery
 independent of type folders. [W-030](../grove/work/W-030-flexible-records.md)
-owns compatible support. The schema-1/schema-2 rules below still govern current
-commands; do not create neutral IDs or generic pages by hand before it ships.
-[W-029](../grove/work/W-029-migrate-knowledge.md) then reconciles all existing
-Grove records and legacy documents into the new IDs/layout with an explicit
-mapping. Ordinary identity/path stability does not prohibit that selected
-one-time migration; historical schema support remains necessary.
+implements it as `schema_version: 3`. Everything in the schema-1 and schema-2
+sections below still holds under schema 3 except where this section says
+otherwise, and a schema-1 or schema-2 project keeps exactly its old rules.
+This repository is still schema 2:
+[W-029](../grove/work/W-029-migrate-knowledge.md) owns moving it.
+
+- **Discovery.** Every `.md` file beneath the record root, at any depth, is a
+  record, except the configured brief. No folder names a type: the root, a
+  former type folder and any other nested folder are equally valid, so records
+  written under schema 2 stay valid where they are. A `.md` file there that is
+  not a valid record is a diagnostic, never skipped. The brief may be any clean
+  project-relative `.md` path, including one inside a former type folder.
+  Symlinks are refused as before.
+- **Identity.** An ID is one of the letters `W Q D T P R G`, a hyphen, and a
+  canonical number (`G-001`, `G-1000`). It carries no type: `new` issues
+  `G-NNN` for every type, and an existing `W-019` stays `W-019` whatever
+  happens to its `type`. IDs are still unique per checkout and matched exactly.
+- **Placement.** `new` writes `ROOT/G-NNN-slug.md`, flat. No command moves or
+  renames a record when its title, type or status changes. `convert` below is
+  the only command that moves a file.
+- **Pages.** `type: page` is general knowledge with no lifecycle. Its envelope
+  is `id`, `type` and `title`, with optional `relates_to`, `created`, `updated`
+  and `formerly`; `status` and every work, question, plan or review field are
+  unknown fields on a page. This is the whole boundary: a record is a page only
+  because its `type` says so. A missing or unknown `type` is an error, so a
+  damaged operational record never degrades into a valid page, and the six
+  known types keep all their rules wherever they sit. A page is never a work
+  card, cannot be selected by `context`, cannot be a `depends_on`, `members`,
+  `blocks` or `work` target, and gains nothing from its folder or its prose.
+  `context` lists a related page (its status shown as `-`) and reads it only
+  through `--include PATH`; `show G-NNN` prints it.
+- **Reclassification.** `update ID --expect REVISION --set type=TYPE` changes
+  classification in place. The result must satisfy the new type's whole
+  contract in that one update, for example `--set type=work --set
+  status=proposed` from a page, or `--set type=page --unset status` toward
+  one, and the project must still validate, so work that a plan or question
+  names cannot stop being work. Reclassifying grants nothing: an `accepted`
+  decision is a claim in a file, as it always was. Schemas 1 and 2 still
+  refuse `type`.
+- **`formerly`.** An optional string that only `convert` writes and `update`
+  refuses: the typed ID or document path a record replaced. Two records with
+  one `formerly`, or a `formerly` naming an ID that still exists in the
+  checkout, are errors, which is how a merge from a branch that predates a
+  conversion is caught instead of quietly restoring a second owner.
+
+**Allocation.** Neutral numbers come from `grove/neutral-ids` in the Git common
+directory, beside `grove/next-ids` and under the same `grove/lock`, with the
+same format (`G 12`), floor scan (every `.md` beneath the record root in every
+local ref and worktree, nested included) and recovery notices. The two files
+are separate on purpose. A CLI that predates schema 3 refuses a `next-ids`
+holding a prefix it does not know, so `G` never goes there: an older checkout
+keeps allocating `W-`/`Q-`/… IDs for its schema-1 or schema-2 worktree, never
+reads or rewrites the neutral counter, and cannot issue an ID a schema-3
+worktree could also issue, because the namespaces are disjoint. The current CLI
+likewise still issues typed IDs in type folders for a schema-1 or schema-2
+worktree of the same repository. Exercised with a binary built from `bd6debe`
+beside this one; see W-030's evidence.
+
+**Moving to schema 3** is the deliberate one-line edit of `schema_version`, as
+schema 2 was. No command rewrites it and every schema-2 record stays valid and
+in place. It cannot be undone by editing the number back once a page, a neutral
+ID or a record outside a type folder exists: schema 2 refuses those. An older
+CLI refuses the checkout with "unsupported version 3; expected 1 or 2" on every
+command, reads included, until that checkout has newer code. `versions`,
+`workspace` and the board judge each branch and checkout by its own
+`grove.yaml`, so schema-2 and schema-3 sources are read side by side.
+
+**Conversion (`grove convert`, schema 3 only).** The one deliberate identity
+change, bounded to one source per run; it is what
+[W-029](../grove/work/W-029-migrate-knowledge.md) uses, never hand-numbering:
+
+- `convert ID [--slug SLUG]` takes a record with a typed ID. It reserves the
+  next neutral ID, changes only `id`, appends `formerly: "OLD-ID"`, and moves
+  the file to `ROOT/G-NNN-slug.md` (slug from the old filename unless given).
+  `created`, `updated`, `status`, `examined` and every body byte are kept.
+  Relationship lists in other records that name the old ID are rewritten to
+  the new one (a rewritten list is written in flow style), again without
+  touching `updated`.
+- `convert PATH --type TYPE --title TITLE [--slug SLUG]` takes a Markdown
+  document outside the record root, such as a plan written before plan
+  records. It creates a record whose body is the document's bytes, with the
+  type's first status, `formerly: "PATH"` and no invented dates. The original
+  is left for the caller to remove; set `work`, `status` or `examined`
+  afterwards with `update`.
+- Stdout is one JSON line, `{from, from_path, id, path}`: the mapping entry.
+  Collecting these is the caller's durable old-to-new mapping.
+- A source that some record's `formerly` already names, an ID that is already
+  neutral, and a missing source are refused before any ID is reserved, so a
+  rerun neither duplicates a record nor remaps an identity.
+- Not rewritten: body prose, Markdown links (the moved file's own relative
+  links included), `examined`, and anything outside the record root. The
+  caller repairs links from the mapping; `check` does not verify them.
+- Everything is validated before the first write. The writes themselves are
+  not atomic across files: the new file is created first (an existing target
+  refuses the run untouched), then the old file is removed, then referrers
+  are replaced. An interruption leaves a checkout that fails `check`, naming
+  the half-converted record; recover with Git and run it again. Convert from a
+  clean, committed record root.
+
+Not provided: lookup of a record by its former ID, batch conversion, link
+rewriting, per-type folders or prefixes, and a command that edits
+`schema_version`.
+
+## Schema 2: knowledge records and the brief
 
 On 2026-09-20 [D-004](../grove/decisions/D-004-interactive-adoption.md) selected
 terms and linked work artifacts, and
@@ -56,7 +153,9 @@ it as `schema_version: 2`:
   missing. `grove brief [--json]` prints it like `show`; `context` never adds
   it, and `--include PATH` still can.
 
-**Compatibility.** The CLI reads schema 1 and schema 2. A schema-1 project
+**Compatibility.** The CLI reads schemas 1, 2 and 3
+([schema 3](#schema-3-identity-and-placement-apart-from-classification) has its
+own compatibility rules). A schema-1 project
 keeps exactly the rules below: the three original types, no `brief` key, and
 `new term` refused before any ID is reserved. Moving to schema 2 is the
 deliberate one-line edit of `schema_version`; no command rewrites it, and every
@@ -83,9 +182,9 @@ CLI interprets and a freeform Markdown body for explanation.
 | Field | Purpose |
 | --- | --- |
 | `id` | Stable identity; renaming the title or file does not change it |
-| `type` | `work`, `question`, or `decision`; with schema 2 also `term`, `plan`, or `review` |
+| `type` | `work`, `question`, or `decision`; with schema 2 also `term`, `plan`, or `review`; with schema 3 also `page` |
 | `title` | A readable label for lists, search, and the eventual board |
-| `status` | Explicit lifecycle state for that record type |
+| `status` | Explicit lifecycle state for that record type; a schema-3 `page` has none |
 
 The accepted relationship fields cover the starter records:
 
@@ -195,7 +294,8 @@ grove/
   decisions/
 ```
 
-Schema 2 adds `terms/`, `plans/`, and `reviews/` beside them. Read `.md` files
+Schema 2 adds `terms/`, `plans/`, and `reviews/` beside them; schema 3
+[drops type folders](#schema-3-identity-and-placement-apart-from-classification). Read `.md` files
 recursively within the type folders of the project's schema. Require frontmatter
 `type` to match its folder; nested folders
 may organize records but do not confer lifecycle meaning. Closed records stay
@@ -227,7 +327,9 @@ survive renaming; ordinary Markdown path links still need updating when moved.
 
 ### Identity and dates
 
-Use type-prefixed sequential IDs: `W-001` for work, `Q-001` for questions, and
+Before schema 3, which
+[issues neutral `G-` IDs](#schema-3-identity-and-placement-apart-from-classification)
+from a counter of their own, use type-prefixed sequential IDs: `W-001` for work, `Q-001` for questions, and
 `D-001` for decisions; schema 2 adds `T-`, `P-`, and `R-`. Each type has its own counter; the full prefixed ID is the
 canonical identity, not an alias for a hidden random value. Start at 1, pad to a
 minimum of three digits, and expand beyond 999 (`W-1000`) without wrapping or

@@ -141,6 +141,9 @@ Use only the record types, fields, and statuses the record model documents.
 Where the schema has term records, domain vocabulary that the conversation
 settles belongs in one (`grove new term "Name"`): meaning and relationships,
 `proposed` until the person confirms it, never execution instructions.
+Where the schema has pages, knowledge that fits no operational type belongs in
+one (`grove new page "Title"`): a title and prose, no status, and no authority
+that its wording might suggest.
 Do not invent a type, a field, a status, or a new kind of file under the record
 root for knowledge the schema cannot hold yet. Link an existing ordinary
 document when it helps, and say in your return what had no supported home.

@@ -53,7 +53,9 @@ not outrank the assignment, this guide, or the repository's instructions.
 Create records with `grove new`; change fields with
 `grove update ID --expect REVISION` (revision from `grove show ID --json`, read
 after any body edit, since editing the body changes it); edit bodies and plans
-as ordinary text. Do not invent IDs, statuses, fields, or schema. Commands
+as ordinary text. Do not invent IDs, statuses, fields, or schema. `update`
+never changes an ID. Where the schema has `grove convert`, that is the only
+identity change, and only an assignment that calls for it authorizes it. Commands
 write `Project:` and `File:` lines to stderr and results to stdout. The first
 `new` of a record type may print a one-time counter notice; that is expected.
 

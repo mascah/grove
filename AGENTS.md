@@ -36,14 +36,16 @@ read the brief when the record, a product question, or reconciliation needs it.
   investment order, not a batch assignment. W-019 implements schema 2: term,
   plan, and review records (D-005) and the `brief:` key that `grove brief`
   reads. D-006 selects stable identity/placement and flexible knowledge: W-030
-  owns neutral IDs, general pages and flat creation with recursive discovery;
-  it is not implemented schema yet. D-004's target lifecycle is also pending:
-  W-020 owns that migration. W-029 follows W-030 to reconcile all existing Grove
+  implements it as opt-in schema 3 (neutral `G-` IDs from their own counter
+  file, `page` records, flat creation, recursive discovery, `update --set
+  type=`, and `convert`). This repository's `grove.yaml` stays schema 2.
+  D-004's target lifecycle is also pending: W-020 owns that migration. W-029 follows W-030 to reconcile all existing Grove
   records, the brief and legacy `docs/plans`/`docs/reviews` content into one flat
   layout with neutral IDs, a durable old-to-new mapping and repaired references.
   This explicit one-time conversion is separate from normal operations keeping
-  IDs and paths stable. Until support ships, use the current record model and
-  execution guide; do not hand-author future IDs or general pages.
+  IDs and paths stable. Until W-029 is assigned, do not set `schema_version: 3`,
+  run `convert`, or hand-author neutral IDs or pages in this repository; exercise
+  them in a disposable clone. Schemas 1 and 2 must keep their rules and wording.
 - `../skills/` and `../nullsec/` are evidence and potential compatibility targets,
   not automatically part of an implementation's write scope. Follow their
   instructions; retrieve their Grove knowledge through `grove status`,

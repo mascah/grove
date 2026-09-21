@@ -36,6 +36,8 @@ go run ./cmd/grove show W-001
 go run ./cmd/grove check
 go run ./cmd/grove new work "Title of the work" --slug short-name
 go run ./cmd/grove new term "Attempt"  # also plan and review; schema_version 2
+go run ./cmd/grove new page "Notes"     # general knowledge; schema_version 3
+go run ./cmd/grove convert W-001        # schema 3: neutral ID, prints the mapping
 go run ./cmd/grove brief               # the brief grove.yaml names
 go run ./cmd/grove show W-001 --json
 go run ./cmd/grove update W-001 --expect sha256:HEX --set status=active --unset size
@@ -69,6 +71,21 @@ project brief, which `brief` prints and `check` requires to exist. Schema-1
 projects keep working unchanged; the
 [record model](docs/record-model.md#schema-2-knowledge-records-and-the-brief)
 has the compatibility rules.
+
+With `schema_version: 3`, folders stop meaning anything: every `.md` beneath
+the record root is a record wherever it sits, `new` gives every type a neutral
+`G-NNN` ID in a flat `ROOT/G-NNN-slug.md`, and existing typed IDs and paths
+stay valid untouched. `new page "Title"` creates general knowledge with a title
+and no status; pages are never work cards and `context` reads one only through
+`--include`. `update --set type=...` reclassifies in place, keeping ID and path.
+`convert` is the one deliberate identity change, for a record with a typed ID
+or a legacy Markdown document, and prints the old-to-new mapping. Moving a
+project to schema 3 is a one-line edit of `grove.yaml` that no command makes
+for you; this repository is still schema 2 until
+[W-029](grove/work/W-029-migrate-knowledge.md). The
+[record model](docs/record-model.md#schema-3-identity-and-placement-apart-from-classification)
+has the page boundary, allocator compatibility with older checkouts, and
+conversion's limits.
 
 `new` and `update` require a Git checkout. `new` takes the next number for the
 record's prefix from a counter under the repository's common Git directory,
