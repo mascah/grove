@@ -89,3 +89,13 @@ adapters repeat it:
 - Fixtures that create records belong in a disposable clone reached by an
   explicit absolute `--project` path, never a `cd` that can fail: `new` in a
   worktree of this repository advances the shared ID counter.
+
+## Shaping work
+
+To turn an idea or existing records into proposed work, follow
+`docs/work-shaping.md`; the `grove-shape` adapters beside `grove-work` load it.
+The Assigned work policy above applies unchanged: `grove …` is
+`go run ./cmd/grove …`, predecessor skills such as `grove:shape` are not used
+here, and fixtures that create records use a disposable clone. A headless
+proposal branch is `worktree-shape-SLUG` in a linked worktree under
+`.claude/worktrees/`. Shaping never assigns, implements, or merges.

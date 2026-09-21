@@ -2,9 +2,9 @@
 id: "W-011"
 type: work
 title: "Shape project work through reusable agent instructions"
-status: proposed
+status: active
 created: "2026-09-19T21:20:41Z"
-updated: "2026-09-21T01:03:42Z"
+updated: "2026-09-21T02:53:09Z"
 kind: feature
 priority: 1
 size: small
