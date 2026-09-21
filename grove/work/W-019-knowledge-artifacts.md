@@ -83,11 +83,36 @@ whether new types and the key need `schema_version: 2`.
 7. The record model, CLI help, both guides and `AGENTS.md` describe the
    supported behavior, including the new locations, before anything uses them.
 
+## Evidence
+
+Branch `worktree-W-019` from main `d9fc2a5`; implementation through `fc9bef1`.
+[Plan](../../docs/plans/W-019-knowledge-artifacts.md);
+[R-001](../reviews/R-001-w-019-knowledge-records.md) is the independent
+review, with its findings and their fixes. Verified at `fc9bef1`, uncached:
+`gofmt -l .` and `go vet ./...` clean, `go test -count=1 ./...` ok, and
+`go test -race -count=1 -p 1` ok (the reviewer's run; in the implementer's
+run `internal/versions` flaked as R-001 describes and passed alone).
+`grove check` passes.
+
+1. `internal/cli/knowledge_test.go` creates, updates, lists and validates the
+   three types; `internal/project/project_test.go` covers schema-1 refusal and
+   each bad field with file and field; `versions` and `workspace` read a
+   committed schema-2 tree.
+2. `context W-019` in this checkout lists `R-001  review  current  listed
+   review of W-019`; a plan shared by two work items is listed for both.
+3. `examined` on R-001 names `fc9bef1`.
+4. `grove brief` prints `docs/restart-brief.md`; `TestBrief` covers both
+   locations, a missing file, and refused paths.
+5. Schema 1 is unchanged against a binary built from the base (R-001).
+6. Nine terms, `T-001` to `T-009`, all `proposed`: **awaiting the owner**.
+7. Record model, README, `AGENTS.md` and both guides reconciled in `4bfb5ff`.
+
 ## Preparation and next
 
-Plan: [W-019 plan](../../docs/plans/W-019-knowledge-artifacts.md), which settles
-the proposed items above (statuses, `examined`, `brief:` key, schema 2).
-Branch `worktree-W-019` from main `d9fc2a5`. Next: implement the plan's steps
-in order. Human judgment is needed only if the design changes D-005's
-representation or the brief's information ownership, and for the owner's
-reading of the starting terms. W-020 depends on this; W-029 follows it.
+Implementation complete and independently reviewed; not merged, not pushed.
+Next, for the owner: read the nine terms in `grove/terms/` (Candidate is an
+addition to the eight listed above) and judge them and the work. Then mark
+this done, settle the terms, and merge. Until the merge, older code in other
+checkouts refuses `grove new` on the shared counter file's `T` and `R` lines
+and reports this branch as unsupported schema 2. W-020 depends on this; W-029
+follows it.
