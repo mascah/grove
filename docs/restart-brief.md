@@ -160,8 +160,9 @@ assignable work and later investments; the
 [evaluation](reviews/2026-09-20-direction-evaluation.md) retains findings,
 research and limits rather than another editable product direction.
 
-**Next:** the owner shapes one real idea with `/grove-shape` to complete
-[W-011](../grove/work/W-011-shaping-entrypoint.md), then integrates it. Follow with knowledge/artifact
+**Next:** the owner integrates `worktree-W-011`, then shapes one real idea with
+`/grove-shape` from the main checkout to complete
+[W-011](../grove/work/W-011-shaping-entrypoint.md). Follow with knowledge/artifact
 support and the review handoff, exercise a real Grove loop, package portable
 setup, and pilot one real nullsec change. Current-state and visual TUI work
 follow the pilot; durable execution follows that useful review experience.
