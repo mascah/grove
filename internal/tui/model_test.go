@@ -837,11 +837,18 @@ func TestBoardFollowsTypeNotIDOrPlacement(t *testing.T) {
 			retype(version(s, "W-003", "A page under an old work ID", ""), "page", ""),
 			retype(version(s, "D-004", "Reclassified into work", "proposed"), "work", "proposed"))
 	}
+	// Sources may disagree about a type: the board source's own record decides,
+	// and committed main, which sorts first, must not. G-060 became work in the
+	// live checkout; G-061 became a page there; G-062 is work only on feature.
+	vs = append(vs,
+		retype(version(fx.cMain, "G-060", "Was a page", ""), "page", ""), retype(version(fx.main, "G-060", "Now work", "active"), "work", "active"),
+		retype(version(fx.cMain, "G-061", "Was work", "done"), "work", "done"), retype(version(fx.main, "G-061", "Now a page", ""), "page", ""),
+		retype(version(fx.cFeat, "G-062", "Work elsewhere", "proposed"), "work", "proposed"))
 	m := open(t, &fake{res: result(fx.main, fx.sources(), vs...)}, 120, 30)
-	if got, want := board(m), "proposed=D-004 active=G-001 done= abandoned= shelf="; got != want {
+	if got, want := board(m), "proposed=D-004 active=G-001,G-060 done= abandoned= shelf=G-062"; got != want {
 		t.Fatalf("board:\n got %s\nwant %s", got, want)
 	}
-	if screen := plain(m); strings.Contains(screen, "page") || strings.Contains(screen, "G-002") || strings.Contains(screen, "W-003") {
+	if screen := plain(m); strings.Contains(screen, "page") || strings.Contains(screen, "G-002") || strings.Contains(screen, "W-003") || strings.Contains(screen, "G-061") {
 		t.Fatalf("a page must not appear on the board:\n%s", screen)
 	}
 }

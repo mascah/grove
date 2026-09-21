@@ -72,10 +72,11 @@ func Validate(records []*Record) []Diagnostic {
 		if r.Formerly == "" {
 			continue
 		}
-		if first := former[r.Formerly]; first != nil {
+		key := strings.ToLower(r.Formerly) // a path, on a filesystem that may ignore case
+		if first := former[key]; first != nil {
 			ds = append(ds, Diagnostic{Path: r.Path, Field: "formerly", Message: r.Formerly + " was already converted to " + first.ID + " in " + first.Path})
 		} else {
-			former[r.Formerly] = r
+			former[key] = r
 		}
 		if len(index[r.Formerly]) != 0 {
 			ds = append(ds, Diagnostic{Path: r.Path, Field: "formerly", Message: r.Formerly + " still exists in " + index[r.Formerly][0].Path})

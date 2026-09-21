@@ -24,7 +24,8 @@ This repository is still schema 2:
   record, except the configured brief. No folder names a type: the root, a
   former type folder and any other nested folder are equally valid, so records
   written under schema 2 stay valid where they are. A `.md` file there that is
-  not a valid record is a diagnostic, never skipped. The brief may be any clean
+  not a valid record is a diagnostic, never skipped, dot folders included; only
+  the lowercase `.md` extension counts. The brief may be any clean
   project-relative `.md` path, including one inside a former type folder.
   Symlinks are refused as before.
 - **Identity.** An ID is one of the letters `W Q D T P R G`, a hyphen, and a
@@ -79,7 +80,11 @@ ID or a record outside a type folder exists: schema 2 refuses those. An older
 CLI refuses the checkout with "unsupported version 3; expected 1 or 2" on every
 command, reads included, until that checkout has newer code. `versions`,
 `workspace` and the board judge each branch and checkout by its own
-`grove.yaml`, so schema-2 and schema-3 sources are read side by side.
+`grove.yaml`, so schema-2 and schema-3 sources are read side by side. Where
+sources disagree about a record's type, the board follows the record in the
+checkout it is showing, and shelves work that checkout does not hold. One
+limit: a group deleted from every source carries no record, so only a typed
+`W-` ID can still say it was work; deleted neutral-ID work is not shelved.
 
 **Conversion (`grove convert`, schema 3 only).** The one deliberate identity
 change, bounded to one source per run; it is what
@@ -94,23 +99,30 @@ change, bounded to one source per run; it is what
   touching `updated`.
 - `convert PATH --type TYPE --title TITLE [--slug SLUG]` takes a Markdown
   document outside the record root, such as a plan written before plan
-  records. It creates a record whose body is the document's bytes, with the
-  type's first status, `formerly: "PATH"` and no invented dates. The original
+  records. It creates a record whose body is the document's bytes (less a
+  leading byte-order mark), with the type's first status, `formerly: "PATH"`
+  and no invented dates. The brief is refused: it is not a record, and moving
+  it is a file move plus an edit of `brief:` in `grove.yaml`. The original
   is left for the caller to remove; set `work`, `status` or `examined`
   afterwards with `update`.
 - Stdout is one JSON line, `{from, from_path, id, path}`: the mapping entry.
   Collecting these is the caller's durable old-to-new mapping.
-- A source that some record's `formerly` already names, an ID that is already
-  neutral, and a missing source are refused before any ID is reserved, so a
-  rerun neither duplicates a record nor remaps an identity.
+- A source that some record's `formerly` already names (compared without case,
+  since a case-insensitive filesystem opens `docs/Plan.md` as `docs/plan.md`),
+  an ID that is already neutral, and a missing source are refused before any
+  ID is reserved, so a rerun neither duplicates a record nor remaps an
+  identity. A refusal after the reservation, such as an existing target file,
+  consumes the number and says so; gaps are acceptable, as for `new`.
 - Not rewritten: body prose, Markdown links (the moved file's own relative
   links included), `examined`, and anything outside the record root. The
   caller repairs links from the mapping; `check` does not verify them.
 - Everything is validated before the first write. The writes themselves are
   not atomic across files: the new file is created first (an existing target
   refuses the run untouched), then the old file is removed, then referrers
-  are replaced. An interruption leaves a checkout that fails `check`, naming
-  the half-converted record; recover with Git and run it again. Convert from a
+  are replaced. A failure after the new file exists exits 1 but still prints
+  the mapping line, which is already true of the files. An interruption leaves
+  a checkout that fails `check`, naming the half-converted record; recover with
+  Git and run it again. Convert from a
   clean, committed record root.
 
 Not provided: lookup of a record by its former ID, batch conversion, link

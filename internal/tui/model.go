@@ -587,7 +587,7 @@ func (m *Model) cards() (columns [4][]card, shelf []card) {
 	}
 	src := m.boardSource()
 	for _, g := range m.res.Groups {
-		if !isWork(g) {
+		if !isWork(g, src) {
 			continue
 		}
 		placed := false
@@ -607,14 +607,25 @@ func (m *Model) cards() (columns [4][]card, shelf []card) {
 	return
 }
 
-// isWork reports a work group. A group of only deleted rows carries no record,
-// so the ID prefix decides: validation ties it to the type before schema 3. A
-// neutral ID says nothing, so work deleted in every source is not shelved.
-func isWork(g versions.Group) bool {
+// isWork reports a work group for the board of src. Schema 3 lets sources
+// disagree about a record's type, so src's own record decides; a group src does
+// not hold is work when any source says so, which is what the shelf is for. A
+// group of only deleted rows carries no record, so the ID prefix decides:
+// validation ties it to the type before schema 3. A neutral ID says nothing,
+// so neutral work deleted in every source is not shelved.
+func isWork(g versions.Group, src *versions.Source) bool {
+	elsewhere, read := false, false
 	for _, v := range g.Versions {
-		if v.Record != nil {
+		if v.Record == nil {
+			continue
+		}
+		if v.Source == src {
 			return v.Record.Type == "work"
 		}
+		elsewhere, read = elsewhere || v.Record.Type == "work", true
+	}
+	if read {
+		return elsewhere
 	}
 	return strings.HasPrefix(g.ID, "W-")
 }

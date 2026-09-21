@@ -137,15 +137,18 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		return 0
 	case "convert":
 		c, err := update.Convert(p.Root, a.convert, errOut)
+		code := 0
 		if err != nil {
 			report(errOut, err)
-			return 1
+			if code = 1; c.ID == "" {
+				return 1
+			} // an incomplete conversion still prints the mapping it made
 		}
 		if _, err := io.Copy(out, bytes.NewReader(marshal(map[string]any{"from": c.From, "from_path": c.FromPath, "id": c.ID, "path": c.Path}))); err != nil {
 			fmt.Fprintf(errOut, "grove: write output: %s (%s was converted to %s in %s)\n", err, visible(c.From), c.ID, visible(c.Path))
 			return 1
 		}
-		return 0
+		return code
 	case "new":
 		path, err := create.New(p, a.kind, a.title, a.slug, time.Now(), errOut)
 		if err != nil {

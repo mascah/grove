@@ -1,6 +1,7 @@
 package update
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -158,8 +159,9 @@ func Convert(root string, req ConvertRequest, report io.Writer) (Conversion, err
 	if err != nil {
 		return Conversion{}, fmt.Errorf("%s: %w", result.Path, err)
 	}
+	// The mapping is returned with the error: it is already true of the files.
 	partial := func(err error) (Conversion, error) {
-		return Conversion{}, fmt.Errorf("%w (%s was written as %s, so the conversion is incomplete; inspect with Git)", err, result.Path, id)
+		return result, fmt.Errorf("%w (%s was written as %s, so the conversion is incomplete; inspect with Git)", err, result.Path, id)
 	}
 	if old != nil {
 		if err := os.Remove(filepath.Join(p.Root, filepath.FromSlash(old.Path))); err != nil {
@@ -184,11 +186,13 @@ func source(p *project.Project, req ConvertRequest) (*project.Record, []byte, er
 	if p.Schema < 3 {
 		return nil, nil, fmt.Errorf("convert needs schema_version 3 in grove.yaml; this project is schema %d", p.Schema)
 	}
-	if req.Slug != "" && create.Slug(req.Slug) != req.Slug {
-		return nil, nil, fmt.Errorf("slug must contain only lowercase ASCII letters, digits, and single hyphens, at most 32 characters")
+	if req.Slug != "" && !create.ValidSlug(req.Slug) {
+		return nil, nil, fmt.Errorf("slug must contain only lowercase ASCII letters, digits, and hyphens")
 	}
 	for _, r := range p.Records {
-		if r.Formerly == req.Source {
+		// Without case, as the loader compares paths: a case-insensitive
+		// filesystem opens docs/Plan.md as docs/plan.md.
+		if strings.EqualFold(r.Formerly, req.Source) {
 			return nil, nil, fmt.Errorf("%s was already converted to %s in %s", req.Source, r.ID, r.Path)
 		}
 	}
@@ -222,7 +226,7 @@ func source(p *project.Project, req ConvertRequest) (*project.Record, []byte, er
 	if !utf8.Valid(document) {
 		return nil, nil, fmt.Errorf("%s is not valid UTF-8", req.Source)
 	}
-	return nil, document, nil
+	return nil, bytes.TrimPrefix(document, []byte("\ufeff")), nil // a BOM belongs at a file's start, not after frontmatter
 }
 
 // replace swaps a file's bytes through a synced temporary file beside it.

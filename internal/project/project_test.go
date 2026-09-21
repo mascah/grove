@@ -454,6 +454,7 @@ func TestSchema3RecordProblems(t *testing.T) {
 		{"duplicate ID across folders", "grove/x/y/a.md", typed("G-001", "term", "settled", ""), "id: duplicate G-001 in grove/G-001.md, grove/x/y/a.md"},
 		{"non-work target", "grove/a.md", typed("G-002", "plan", "current", "work: [\"G-009\"]\n"), "work: target G-009 must be work"},
 		{"formerly twice", "grove/a.md", typed("G-002", "work", "done", "formerly: \"W-007\"\n"), "formerly: W-007 was already converted to G-001"},
+		{"formerly twice by another case", "grove/a.md", typed("G-002", "work", "done", "formerly: \"w-007\"\n"), "formerly: w-007 was already converted to G-001"},
 		{"formerly still present", "grove/a.md", typed("G-002", "work", "done", "formerly: \"G-009\"\n"), "formerly: G-009 still exists in grove/G-009.md"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

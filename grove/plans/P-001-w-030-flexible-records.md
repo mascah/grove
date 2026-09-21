@@ -35,7 +35,8 @@ Envelope: `id`, `type`, `title`; optional `relates_to`, `created`, `updated`,
 missing or unknown `type` is an error, so a damaged operational record cannot
 fall through to a page. Known types keep every current rule. `grove new page
 TITLE`; list, versions and context print `-` for a page's status. Pages are
-never work cards (the board already selects `type == work`), cannot be selected
+never work cards (the board selects `type == work`; R-002 found it read the
+first source's type, now the board source's own), cannot be selected
 by `context`, and are listed when related and read only by `show` or
 `--include`.
 
@@ -70,9 +71,11 @@ worktree. An older CLI refuses a schema-3 checkout with "unsupported version 3".
   remaps. `formerly` must be unique across records.
 - Body prose and Markdown links are not rewritten: W-029 owns them and the
   durable mapping. The whole candidate set is validated in memory before the
-  first write; files are written by temp+rename, referrers first, then the new
-  file, then the old file is removed. It is not atomic across files: an
-  interruption leaves a project that fails `check`, recovered with Git.
+  first write. Adjusted during implementation: the new file is created first
+  (`O_EXCL`, the likeliest refusal, which then leaves everything untouched),
+  then the old file is removed, then referrers are replaced by temp+rename. It
+  is not atomic across files: an interruption leaves a project that fails
+  `check`, recovered with Git.
 
 Not built: alias lookup of old IDs, link rewriting, batch conversion, per-type
 settings, a schema-upgrade command.

@@ -152,8 +152,14 @@ func plan(r *project.Record, req Request, schema int) ([]change, error) {
 	}
 	lists := map[string][]string{"relates_to": r.RelatesTo, "members": r.Members, "depends_on": r.DependsOn, "blocks": r.Blocks, "work": r.Work}
 	strs := map[string]string{"title": r.Title, "status": r.Status, "kind": r.Kind, "size": r.Size, "examined": r.Examined, "type": r.Type}
+	// Schema 3 frees type and adds formerly, which only convert writes; earlier
+	// schemas have no formerly, so it keeps the unknown-field wording there.
+	fixed := []string{"id", "created", "updated", "type"}
+	if schema >= 3 {
+		fixed = []string{"id", "created", "updated", "formerly"}
+	}
 	check := func(name string) error {
-		if slices.Contains([]string{"id", "created", "updated", "formerly"}, name) || name == "type" && schema < 3 {
+		if slices.Contains(fixed, name) {
 			return fmt.Errorf("%s cannot be changed by update", name)
 		}
 		if !slices.Contains(allowed, name) {

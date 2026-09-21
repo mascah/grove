@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -96,6 +97,10 @@ func TestConvertDocument(t *testing.T) {
 	if got := read(t, root, c.Path); got != want {
 		t.Fatalf("got:\n%s", got)
 	}
+	write(t, root, "docs/bom.md", "\ufeff# BOM\r\n")
+	if c := convert(t, root, ConvertRequest{Source: "docs/bom.md", Type: "page", Title: "B", Slug: "a--b"}); c.Path != "grove/G-002-a--b.md" || !strings.HasSuffix(read(t, root, c.Path), "---\n\n# BOM\r\n") {
+		t.Fatalf("new and convert share one slug rule, and a BOM does not move mid-file: %+v\n%q", c, read(t, root, c.Path))
+	}
 	if read(t, root, "docs/plans/W-001-old.md") == "" {
 		t.Fatal("the original is the caller's to remove")
 	}
@@ -113,6 +118,8 @@ func TestConvertRefusals(t *testing.T) {
 	}{
 		{ConvertRequest{Source: "W-001"}, "W-001 was already converted to G-001 in grove/G-001-first.md"},
 		{ConvertRequest{Source: "docs/plans/W-001-old.md", Type: "plan", Title: "Again"}, "was already converted to G-002"},
+		{ConvertRequest{Source: "docs/Plans/w-001-OLD.md", Type: "plan", Title: "Again"}, "was already converted to G-002"}, // one file on macOS
+		{ConvertRequest{Source: "W-002", Slug: "a_b"}, "slug must contain only"},
 		{ConvertRequest{Source: "G-001"}, "G-001 already has a neutral ID"},
 		{ConvertRequest{Source: "W-404"}, "record W-404 not found"},
 		{ConvertRequest{Source: "W-002", Type: "page"}, "--type and --title apply only to converting a document"},
@@ -144,6 +151,11 @@ func TestConvertRefusals(t *testing.T) {
 func TestConvertNeedsSchema3(t *testing.T) {
 	t.Parallel()
 	root := gitProject(t)
+	// Earlier schemas have no formerly, and say so as they do of any unknown field.
+	p, _ := project.Load(root, root)
+	if _, err := Apply(root, Request{ID: "W-002", Expect: project.Revision(p.Records[slices.IndexFunc(p.Records, func(r *project.Record) bool { return r.ID == "W-002" })].Source), Set: []Field{{"formerly", "x"}}}, now, nil); err == nil || !strings.Contains(err.Error(), "formerly is not a field that update accepts on work records") {
+		t.Fatalf("err = %v", err)
+	}
 	if _, err := Convert(root, ConvertRequest{Source: "W-001"}, &bytes.Buffer{}); err == nil || !strings.Contains(err.Error(), "convert needs schema_version 3") {
 		t.Fatalf("err = %v", err)
 	}

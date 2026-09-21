@@ -45,6 +45,9 @@ var (
 func New(p *project.Project, kindName, title, slug string, now time.Time, report io.Writer) (string, error) {
 	k := project.Type(kindName)
 	if k == nil {
+		if p.Schema < 3 { // earlier schemas keep their wording
+			return "", fmt.Errorf("record type must be work, question, decision, term, plan, or review")
+		}
 		return "", fmt.Errorf("record type must be work, question, decision, term, plan, review, or page")
 	}
 	if k.Schema > p.Schema {
@@ -62,7 +65,7 @@ func New(p *project.Project, kindName, title, slug string, now time.Time, report
 	}
 	if slug == "" {
 		slug = Slug(title)
-	} else if !slugPattern.MatchString(slug) {
+	} else if !ValidSlug(slug) {
 		return "", fmt.Errorf("slug must contain only lowercase ASCII letters, digits, and hyphens")
 	}
 	common, showPrefix, err := repo.CommonDir(p.Root)
@@ -147,6 +150,9 @@ func diagnostics(ds []project.Diagnostic) string {
 	}
 	return strings.Join(lines, "\n")
 }
+
+// ValidSlug reports whether a caller-supplied slug is acceptable in a filename.
+func ValidSlug(slug string) bool { return slugPattern.MatchString(slug) }
 
 // Slug derives a short filename fragment from a title per the record model.
 func Slug(title string) string {
