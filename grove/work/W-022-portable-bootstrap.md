@@ -4,12 +4,12 @@ type: work
 title: "Bootstrap projects with portable Grove workflows"
 status: proposed
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-21T01:03:39Z"
+updated: "2026-09-21T15:45:41Z"
 kind: feature
 size: medium
 priority: 2
 depends_on: ["W-021"]
-relates_to: ["D-004", "W-018", "W-011", "W-019", "W-020"]
+relates_to: ["D-004", "W-018", "W-011", "W-019", "W-020", "D-006", "W-030"]
 ---
 
 ## Outcome
@@ -25,8 +25,11 @@ locations and harness entrypoints. Create directories as needed and preserve
 existing AGENTS/CLAUDE instructions. Setup can leave a clearly incomplete brief
 for an interactive shaping session; it must not invent project intent.
 
-The target default groups brief, work, questions, decisions, terms and artifacts
-under the configured Grove root once W-019 supports it. Keep shared workflow
+The target default uses W-030's one root, flat creation, neutral new IDs and
+general knowledge pages, as selected in
+[D-006](../decisions/D-006-stable-knowledge.md). Do not pre-create type folders,
+require knowledge classification, add per-type routing/prefix settings, or move
+existing records when setup is rerun. Keep shared workflow
 instructions versioned with Grove; adapters load one owner rather than divergent
 editable copies. Choose packaging/update behavior during preparation. A TUI
 setup wizard is optional later, not a prerequisite for this outcome.
@@ -47,8 +50,8 @@ setup wizard is optional later, not a prerequisite for this outcome.
 
 ## Preparation and next
 
-No implementation plan exists yet. Prepare `docs/plans/W-022-portable-bootstrap.md`
-from W-019/W-020 interfaces and W-021 trial feedback. Select a distribution and
+No implementation plan exists yet. Create a linked plan through the supported
+CLI from W-030/W-020 interfaces and W-021 trial feedback. Select a distribution and
 upgrade mechanism using installed harness capabilities. Test generated projects
 in disposable clones with explicit absolute project paths. Live sibling
 installation and migration belong to W-023, not this assignment.

@@ -49,7 +49,7 @@ and retries explicitly. Process exit and streamed claims are not acceptance.
 ## Preparation and next
 
 No implementation plan exists yet. Read the runner research linked by the
-roadmap at this boundary, inspect the current provider CLI, and prepare
-`docs/plans/W-027-durable-attempt.md`. Technical prerequisites are W-020/W-022;
+roadmap at this boundary, inspect the current provider CLI, and create a linked
+plan through the supported Grove CLI. Technical prerequisites are W-020/W-022;
 preferred investment is after the useful review experience in W-026. Worktree
 creation must have explicit destination, provenance and failure handling.

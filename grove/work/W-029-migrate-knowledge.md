@@ -1,59 +1,102 @@
 ---
 id: "W-029"
 type: work
-title: "Migrate the brief, plans and reviews into typed Grove records"
+title: "Reconcile all Grove content into neutral IDs and one flat layout"
 status: proposed
 created: "2026-09-21T04:37:58Z"
-updated: "2026-09-21T04:39:27Z"
+updated: "2026-09-21T15:52:56Z"
 kind: refactor
-size: medium
-depends_on: ["W-019"]
-relates_to: ["D-005", "W-018", "W-023"]
+size: large
+depends_on: ["W-030"]
+relates_to: ["D-005", "W-018", "W-023", "D-006"]
 ---
 
 ## Outcome
 
-This repository keeps one layout: the brief, every plan and every review live
-as typed records under the Grove root, and nothing editable remains in the old
-`docs/` locations. Owner's intent, 2026-09-20, recorded in
-[D-005](../decisions/D-005-typed-knowledge-records.md): "it will be weird to
-have [two] different layouts of things."
+Reconcile all existing Grove records, legacy plans/reviews and the brief into
+one flat layout under the configured Grove root using W-030's record contract.
+Every record uses the neutral ID/filename convention, with one editable owner
+per document. On 2026-09-21 the owner explicitly selected "Reconcile both IDs
+and file locations" because multiple conventions were already causing friction;
+[D-006](../decisions/D-006-stable-knowledge.md) records that authority and revises
+[D-005](../decisions/D-005-typed-knowledge-records.md). The brief remains a
+separate configured document, not a record.
 
 ## Constraints
 
-In: `docs/restart-brief.md` to the brief location W-019 supports under the
-record root; the plans in `docs/plans/` and reviews in `docs/reviews/` to `P-`
-and `R-` records created with `grove new`, each with its `work` list; every
-link to them rewritten. Out: changing what any document says, the guides
-(`docs/work-execution.md`, `docs/work-shaping.md`) and `docs/record-model.md`
-unless W-019 gives them a home, sibling repositories (nullsec's cutover is
-W-023), and `docs/prompts/`.
+In:
 
-Observed at main `42c077d`: 12 plans and 9 reviews; 66 Markdown links in 42
-files point into `docs/plans/` or `docs/reviews/`; 10 Markdown files link the
-brief, including `AGENTS.md`; 6 Go source lines mention these paths. Most done
-records' bodies, and so their content revisions, will change. Unmerged
-branches (`versions` lists them) still hold the old paths.
+- Convert every existing record under `grove/`, including done work, decisions,
+  questions, terms, plans and reviews, to a neutral ID and flat filename. Use
+  W-030's supported conversion/allocation path; never hand-number replacements.
+- Migrate all legacy documents in `docs/plans/` and `docs/reviews/` to the same
+  convention. Preserve plan/review roles, shared ownership and examined commits.
+- Move `docs/restart-brief.md` to `grove/brief.md` and update `grove.yaml`.
+- Rewrite current ID relationships, Markdown links and operational references
+  throughout records, README, guides, adapters, instructions and code where
+  they target migrated content. Retire superseded copies and empty type folders.
+- Retain one durable old-ID/path to new-ID/path mapping, including legacy files
+  that had no record ID. It must let a reader of an old commit locate the current
+  counterpart. No permanent duplicate records or compatibility symlink tree.
 
-Proposed, not decided: record the old-path to new-ID mapping in one place, as
-[D-002](../decisions/D-002-sequential-ids.md) did for the renumbering, and
-order IDs by each document's date. A review file covering several work items
-becomes one record listing them all.
+Preserve original timestamps, statuses, authority, historical conclusions and
+evidence. Only mechanical schema/identity/path transformations are in scope.
+Changing a reference does not make an old review examine the migration commit.
+Old identifiers or paths may remain in clearly marked historical quotations,
+evidence and the migration mapping; current instructions must use the new ones.
+
+Out: rewriting Git history, changing completed work's meaning, automatic filing
+on completion, sibling writes (nullsec is W-023), and relocating repository
+entrypoints or product/workflow documentation merely because they are Markdown.
+The README, AGENTS.md, adapters, `docs/work-execution.md`, `docs/work-shaping.md`
+and `docs/record-model.md` keep their functional homes with references updated.
+Inventory other documents, including any `docs/prompts/` sources, and account
+for their role rather than silently excluding project knowledge/evidence.
+
+Observed on 2026-09-21 in the shaping checkout based on main `76da081`: 43 Grove
+records, 13 legacy plans, nine legacy reviews and one brief. A scoped search
+found 407 directory-reference occurrences in 62 Markdown/Go files, including
+14 Go files; this is a search inventory, not an exact migration-edit count.
+Refresh the inventory after W-030: its own plan/review and new records also
+belong in the reconciliation. Unmerged branches retain old files and IDs.
+
+Preparation must produce the complete mapping before publication, verify a
+disposable rehearsal and define recovery/rerun behavior. Proposed ID order is
+document date with a stable tie-breaker; it conveys no authority or priority.
+Use one record for an artifact shared across work items. Address reintegration
+from old branches explicitly so a later merge cannot quietly restore duplicate
+old-layout records. Do not rewrite other sessions' worktrees.
 
 ## Acceptance
 
-1. `grove check` passes; a link check finds no Markdown link or Go path that
-   still targets the old locations, and the old files no longer exist.
-2. Every migrated document's body is byte-identical apart from rewritten
-   links; the mapping lets a reader of an old commit or branch find the record.
-3. `grove context` for a done work item lists its migrated plan and review
-   through the mechanism W-019 ships, without including them by default.
-4. `AGENTS.md`, the README, guides and adapters name the new locations, and
-   there is one editable brief.
-5. The owner judges the result browsable in the file tree and on the board.
+1. An inventory accounts for every prior record, plan, review and the brief.
+   All resulting records live directly under `grove/` with neutral IDs and
+   matching generated filenames. The former type folders and legacy plan/review
+   locations contain no remaining content; there is one configured brief.
+2. Every original document has exactly one mapped counterpart, including shared
+   artifacts. Bodies differ only by documented mechanical ID/path/schema edits;
+   metadata and historical evidence retain their meaning. The mapping resolves
+   old identities and paths without retaining a second editable authority.
+3. `grove check` and a repository-wide link/reference audit pass. No current
+   operational reference targets a removed path or obsolete ID. Historical
+   literals are explicitly accounted for. Check bare IDs and inline-code paths
+   as well as Markdown links; do not blindly replace historical evidence.
+4. Context, attachments, dependencies, explicit lookup, board/detail and history
+   are exercised on migrated proposed and done work. Relationships use the new
+   IDs; shared plans/reviews remain discoverable without preloading their bodies.
+   Historical branches remain inspectable and lineage limits are documented.
+5. README, instructions, guides and adapters use the reconciled convention;
+   no new authoring path produces the old layout. A disposable rehearsal checks
+   restart/rollback and reintegration from a branch containing old IDs/paths.
+6. The owner judges the flat file tree and normal CLI/board browsing coherent.
+   Subsequent title/type/status changes keep the new ID/path stable. No ongoing
+   archive or completion-driven move is introduced.
 
 ## Next
 
-Blocked on W-019 (`depends_on`). Then assign; it needs a short plan covering
-the mapping, ID order, and how unmerged branches are handled. Treat it as the
-rehearsal for W-023's nullsec migration.
+W-019 is delivered. Wait for W-030's foundation, then assign this complete
+one-time reconciliation. Prepare a linked plan covering full inventory and
+mapping, allocation, references/evidence, rehearsal, recovery and unmerged
+branches. Full ID and location reconciliation is already selected; do not ask
+again whether existing content should be included. W-023 can reuse the lessons
+but still owns its separate nullsec inventory and live-cutover authority.

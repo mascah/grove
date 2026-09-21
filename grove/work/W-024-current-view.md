@@ -4,12 +4,12 @@ type: work
 title: "Derive a project-wide current view of work"
 status: proposed
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-21T01:03:39Z"
+updated: "2026-09-21T15:45:42Z"
 kind: feature
 size: medium
 priority: 3
 depends_on: ["W-019", "W-020"]
-relates_to: ["D-004", "Q-001", "W-004", "W-005", "W-012", "W-013"]
+relates_to: ["D-004", "Q-001", "W-004", "W-005", "W-012", "W-013", "D-006", "W-030"]
 ---
 
 ## Outcome
@@ -26,6 +26,11 @@ Keep genuine competing changes visible. Never use the largest status, latest
 timestamp or newest branch tip as authority. A revert is a real change, not
 automatically an older state. Exact source routing and stale-selection checks
 remain intact; view selection does not merge content or grant write authority.
+
+Use W-030's stable identities and recursive discovery. Neither type prefixes
+nor a completed/history folder establish which record is current or integrated.
+"History" here is a view of evidence, not a filesystem move. Include supported
+old/new schema sources and legacy/new IDs in the projection fixtures.
 
 ## Acceptance
 
@@ -46,8 +51,8 @@ remain intact; view selection does not merge content or grant write authority.
 
 ## Preparation and next
 
-No implementation plan exists yet. Prepare `docs/plans/W-024-current-view.md`
-after the knowledge/lifecycle contracts. Resolve configured target, uncommitted
+No implementation plan exists yet. Create a linked plan through the supported
+CLI after W-030/W-020. Resolve configured target, uncommitted
 overlay precedence and divergent-card placement against concrete histories.
 Escalate ambiguous product precedence to the owner with examples. Preferred
 investment order is after W-023; that is not a technical dependency.

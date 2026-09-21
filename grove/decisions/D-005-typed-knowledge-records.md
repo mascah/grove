@@ -4,11 +4,17 @@ type: decision
 title: "Represent terms, plans and reviews as typed sequential-ID records"
 status: accepted
 created: "2026-09-21T04:37:58Z"
-updated: "2026-09-21T04:39:27Z"
-relates_to: ["D-002", "D-004", "W-019", "W-029"]
+updated: "2026-09-21T15:45:40Z"
+relates_to: ["D-002", "D-004", "W-019", "W-029", "D-006"]
 ---
 
 ## Decision
+
+**Later revision, 2026-09-21:**
+[D-006](D-006-stable-knowledge.md) replaces the required folder/type/prefix
+coupling for future support and revises W-029's target. The original decision
+and W-019's delivered schema 2 remain historical evidence. Stable identities,
+work-linked artifacts and the brief are retained.
 
 On 2026-09-20, in an interactive shaping session for
 [W-019](../work/W-019-knowledge-artifacts.md), the owner chose, one question at

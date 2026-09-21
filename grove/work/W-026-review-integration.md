@@ -4,12 +4,12 @@ type: work
 title: "Review candidates and integrate approved work locally"
 status: proposed
 created: "2026-09-21T00:54:16Z"
-updated: "2026-09-21T01:03:40Z"
+updated: "2026-09-21T15:45:43Z"
 kind: feature
 size: large
 priority: 3
 depends_on: ["W-020", "W-025"]
-relates_to: ["D-004", "W-028"]
+relates_to: ["D-004", "W-028", "D-006"]
 ---
 
 ## Outcome
@@ -30,6 +30,9 @@ outcomes. Preserve partial work and dirty worktrees. Only clean up branches or
 worktrees after integration is proven and retained files/evidence are safe.
 Local integration only; no remote PR/push/deployment requirement.
 
+Cleanup means safe branch/worktree cleanup, not moving completed records.
+D-006's stable identity and placement apply to integration and feedback too.
+
 ## Acceptance
 
 1. The owner can understand and judge a completed interactive candidate without
@@ -46,7 +49,7 @@ Local integration only; no remote PR/push/deployment requirement.
 
 ## Preparation and next
 
-No implementation plan exists yet. Prepare `docs/plans/W-026-review-integration.md`
-from W-020 and W-025. Resolve approval representation, supported merge strategy,
+No implementation plan exists yet. Create a linked plan through the supported
+CLI from W-020 and W-025. Resolve approval representation, supported merge strategy,
 post-merge status publication and safe cleanup policy before building commands.
 Human review is the default; autonomous judging needs a later explicit policy.

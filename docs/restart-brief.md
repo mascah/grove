@@ -1,10 +1,11 @@
 # Grove brief
 
-Direction reconciled 2026-09-20. This is the single current source of product
+Direction reconciled 2026-09-21. This is the single current source of product
 intent. The owner approved the evaluation and adoption sequence, then asked to
 persist them for execution without returning to the conversation.
 [D-004](../grove/decisions/D-004-interactive-adoption.md) records that authority
-and the policies it revises. Work records own acceptance; the
+and the policies it revises; [D-006](../grove/decisions/D-006-stable-knowledge.md)
+records the owner's later storage/identity decision. Work records own acceptance; the
 [record model](record-model.md) describes the currently implemented schema.
 
 ## Purpose
@@ -23,8 +24,11 @@ the second adoption test. Background execution follows the demonstrated loop.
 
 - Go CLI, ordinary Markdown with YAML frontmatter, `grove.yaml`, configurable
   record storage, and Git. Core inspection needs no running service.
-- Short sequential IDs coordinated across linked worktrees; revision-checked
-  mutations. Separate clones still require collision checks and reconciliation.
+- Stable sequential IDs coordinated across linked worktrees; revision-checked
+  mutations. New identity will use one neutral namespace independent of type;
+  ordinary edits preserve identity. W-029 explicitly reconciles this repo's
+  old IDs with a durable mapping. Separate clones still require collision
+  checks and reconciliation.
 - Humans and agents use the same records. Deterministic validation, retrieval,
   mutation and lifecycle mechanics belong in software; judgment belongs in
   instructions and attributable human or delegated decisions.
@@ -49,11 +53,25 @@ Keep their lifetimes and owners distinct:
 | Artifacts | Plans, implementation reports and reviews linked to work and relevant revisions |
 | Attempts | Particular executions, inputs, owner, progress, result and recovery state |
 
-Restore terms and discoverable artifacts early. Plans need not become an
+Retain terms and discoverable artifacts. Plans need not become an
 independent ticket lifecycle. Small work may carry its preparation in the work
 record; substantial work gets a concise linked plan. Designs, flows, systems,
-research, releases, builds and team definitions remain possible extensions,
-introduced when information needs their distinct home.
+research, releases, builds and team definitions can begin as general knowledge;
+new operational types are introduced when software needs distinct behavior.
+
+**Stable identity, stable placement, flexible content, multiple views.** One
+configured Grove root has a flat creation default and recursive discovery;
+folders do not determine validity or meaning. General knowledge needs no
+predefined semantic category or ticket lifecycle. Known operational records
+retain explicit contracts for the facts software acts on. Classification,
+title and status changes preserve identity and path. Completed records stay
+put; views bound everyday clutter. Per-type folder/prefix settings, automatic
+filing and a general schema-extension engine are not selected. This repo gets
+one deliberate reconciliation of all existing records, legacy plans/reviews
+and the brief into the flat layout, with neutral record IDs and an old-to-new
+mapping. Stable placement applies to normal operation after that migration;
+historical branches remain readable. This is selected direction pending
+W-030/W-029, not permission to bypass today's schema 2.
 
 Retrieve context by activity: shaping starts with the brief and relevant
 knowledge; preparation with selected work and affected interfaces; execution
@@ -116,9 +134,13 @@ visual quality requires the owner's judgment in an actual terminal.
 
 Bootstrap should create valid configuration and minimal harness entrypoints,
 preserve existing instructions, and create content directories as needed. A
-shaping session develops the brief. The target layout groups brief, knowledge
-and artifacts under the configured Grove root; schema support and migration
-must precede moving these files there.
+shaping session develops the brief. The target keeps brief, knowledge and
+artifacts under the configured Grove root with flat creation and stable paths.
+W-030 owns compatible support; W-029 reconciles all existing Grove records and
+legacy documents, including their IDs and file locations. Preserve provenance
+and repair current references; do not retain parallel editable layouts. Product
+and workflow instructions keep their functional homes. This repo's migration
+does not authorize sibling cutovers or rewrite Git history.
 
 Use one unambiguous binary/workflow version for the nullsec pilot, rehearse
 migration in a disposable copy, then make an explicit live cutover. Preserve
@@ -161,7 +183,8 @@ assignable work and later investments; the
 research and limits rather than another editable product direction.
 
 Start with shaping ([W-011](../grove/work/W-011-shaping-entrypoint.md)), follow
-with knowledge/artifact support and the review handoff, exercise a real Grove
+with knowledge/artifact support, flexible identity/storage (W-030), complete
+repository-content reconciliation (W-029), and the review handoff; exercise a real Grove
 loop, package portable setup, and pilot one real nullsec change. Current-state and visual TUI work
 follow the pilot; durable execution follows that useful review experience.
 Investment order alone is not a technical dependency or authority to execute

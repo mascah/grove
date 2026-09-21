@@ -4,12 +4,12 @@ type: work
 title: "Complete the interactive Grove adoption milestone in nullsec"
 status: proposed
 created: "2026-09-21T00:54:13Z"
-updated: "2026-09-21T01:03:37Z"
+updated: "2026-09-21T15:45:39Z"
 kind: release
 size: large
 priority: 1
-members: ["W-011", "W-019", "W-020", "W-021", "W-022", "W-023"]
-relates_to: ["D-004", "W-024", "W-025", "W-026", "W-027", "W-028"]
+members: ["W-011", "W-019", "W-030", "W-029", "W-020", "W-021", "W-022", "W-023"]
+relates_to: ["D-004", "W-024", "W-025", "W-026", "W-027", "W-028", "D-006", "W-030"]
 ---
 
 ## Outcome
@@ -21,8 +21,10 @@ by the owner in [D-004](../decisions/D-004-interactive-adoption.md).
 
 ## Scope and coordination
 
-Members own shaping, knowledge/artifacts, review handoff, native dogfooding,
-portable setup and the nullsec pilot. This record owns their connected result.
+Members own shaping, knowledge/artifacts, flexible storage and full reconciliation,
+review handoff, native dogfooding, portable setup and the nullsec pilot. This
+record owns their connected result. The storage direction was revised by the
+owner on 2026-09-21 in [D-006](../decisions/D-006-stable-knowledge.md).
 Membership is not a prerequisite that blocks implementing children.
 The [adoption roadmap](../../docs/plans/W-018-adoption-roadmap.md) is the current
 coordination plan, not a code-level implementation plan or batch assignment.
@@ -41,6 +43,9 @@ coordination plan, not a code-level implementation plan or batch assignment.
 
 ## Next
 
-Assign W-011 first, then use the roadmap's order. Do not invoke `/grove-work
-W-018` as an instruction to execute every member unattended. Select one bounded
-member or explicitly scoped set. W-023 owns the hobby-project completion evidence.
+W-011 and W-019 are delivered. Assign W-030 next, then W-029's full ID/layout
+reconciliation, followed by W-020, W-021, W-022 and W-023. W-020 needs W-030's
+contract, not the act of migrating this repo's documents; the order is a
+recommended sequence rather than an extra dependency. Do not invoke
+`/grove-work W-018` to execute every member unattended. Select one bounded member
+or explicitly scoped set. W-023 owns the hobby-project completion evidence.

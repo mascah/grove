@@ -11,6 +11,17 @@ The first Go CLI now reads and validates this model; W-001 records its evidence.
 
 ## Schema 2: knowledge records and the brief
 
+**Selected future change, not implemented here:**
+[D-006](../grove/decisions/D-006-stable-knowledge.md) selects stable identity and
+placement, general knowledge pages, flat creation and recursive discovery
+independent of type folders. [W-030](../grove/work/W-030-flexible-records.md)
+owns compatible support. The schema-1/schema-2 rules below still govern current
+commands; do not create neutral IDs or generic pages by hand before it ships.
+[W-029](../grove/work/W-029-migrate-knowledge.md) then reconciles all existing
+Grove records and legacy documents into the new IDs/layout with an explicit
+mapping. Ordinary identity/path stability does not prohibit that selected
+one-time migration; historical schema support remains necessary.
+
 On 2026-09-20 [D-004](../grove/decisions/D-004-interactive-adoption.md) selected
 terms and linked work artifacts, and
 [D-005](../grove/decisions/D-005-typed-knowledge-records.md) selected their

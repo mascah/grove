@@ -41,7 +41,7 @@ Retain the final report and reviews when ephemeral activity scrolls away.
 
 ## Preparation and next
 
-No implementation plan exists yet. Prepare `docs/plans/W-028-managed-runs.md`
-after W-027 and W-026. Decide whether attempt detail is a separate screen using
+No implementation plan exists yet. Create a linked plan through the supported
+CLI after W-027 and W-026. Decide whether attempt detail is a separate screen using
 the demonstrated workflow. Multi-selection, batch scheduling and dependency
 graphs remain later candidates with explicit budgets and dependency analysis.

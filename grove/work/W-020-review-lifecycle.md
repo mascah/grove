@@ -4,12 +4,12 @@ type: work
 title: "Hand implementation candidates into revision-bound human review"
 status: proposed
 created: "2026-09-21T00:54:14Z"
-updated: "2026-09-21T01:03:38Z"
+updated: "2026-09-21T15:45:40Z"
 kind: feature
 size: medium
 priority: 1
-depends_on: ["W-019"]
-relates_to: ["D-004", "W-018", "W-010"]
+depends_on: ["W-019", "W-030"]
+relates_to: ["D-004", "W-018", "W-010", "D-006"]
 ---
 
 ## Outcome
@@ -30,6 +30,12 @@ An explicit assignment authorizes bounded execution; a proposed record or
 status edit alone does not. Prepare missing plans within that mandate, preserve
 the small-work exception, and ask about consequential choices rather than routine
 technical steps. Keep interactive/headless instructions shared.
+
+Build on W-030's identity/storage contract, as selected in
+[D-006](../decisions/D-006-stable-knowledge.md). Review, approval and integration
+remain explicit operational facts; generic knowledge does not imply authority.
+Lifecycle transitions preserve IDs and paths, including Done. No completion
+folder or record-filing operation is part of integration cleanup.
 
 ## Acceptance
 
@@ -52,7 +58,8 @@ technical steps. Keep interactive/headless instructions shared.
 
 ## Preparation and next
 
-Depends on W-019's artifact contract. No implementation plan exists yet.
-Prepare `docs/plans/W-020-review-lifecycle.md`, resolving representation of
+W-019 is delivered; wait for W-030's compatible foundation. W-029's migration
+is preferred first but is not a technical dependency. No implementation plan
+exists yet. Create a linked plan record through the supported CLI, resolving representation of
 approval/integration evidence and a migration for branch-local historical Done.
 Keep lifecycle rules independent of any particular harness or subprocess.

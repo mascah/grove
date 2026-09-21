@@ -35,10 +35,15 @@ read the brief when the record, a product question, or reconciliation needs it.
   W-018 owns the selected interactive adoption milestone; its linked roadmap is
   investment order, not a batch assignment. W-019 implements schema 2: term,
   plan, and review records (D-005) and the `brief:` key that `grove brief`
-  reads. D-004's target lifecycle is not implemented schema: W-020 owns that
-  migration, and W-029 owns moving the brief and the existing `docs/plans` and
-  `docs/reviews` files. Until they ship, use the current record model and
-  execution guide.
+  reads. D-006 selects stable identity/placement and flexible knowledge: W-030
+  owns neutral IDs, general pages and flat creation with recursive discovery;
+  it is not implemented schema yet. D-004's target lifecycle is also pending:
+  W-020 owns that migration. W-029 follows W-030 to reconcile all existing Grove
+  records, the brief and legacy `docs/plans`/`docs/reviews` content into one flat
+  layout with neutral IDs, a durable old-to-new mapping and repaired references.
+  This explicit one-time conversion is separate from normal operations keeping
+  IDs and paths stable. Until support ships, use the current record model and
+  execution guide; do not hand-author future IDs or general pages.
 - `../skills/` and `../nullsec/` are evidence and potential compatibility targets,
   not automatically part of an implementation's write scope. Follow their
   instructions; retrieve their Grove knowledge through `grove status`,
