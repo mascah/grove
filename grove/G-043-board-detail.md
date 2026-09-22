@@ -59,7 +59,7 @@ started from this record at 8bf691b and plan
 the owner answered on 2026-09-22: implement as drawn, links as plain text.
 The plan's Adjustments section records what changed while implementing.
 The candidate is the commit that adds this evidence; `git log
-dc3b9b6..CANDIDATE` lists it all.
+dc3b9b6..178b305` lists it all.
 
 Behavior, against the acceptance:
 
@@ -125,7 +125,7 @@ The integrator judges the candidate in a terminal and, on acceptance,
 records the verdict and integrates. From the repository root:
 
 ```sh
-git -C .claude/worktrees/G-043 diff --stat CANDIDATE HEAD   # only this record
+git -C .claude/worktrees/G-043 diff --stat 178b305 HEAD   # only this record
 (cd .claude/worktrees/G-043 && go run ./cmd/grove)          # the board; Enter, Tab, v, /, a
 git merge worktree-G-043
 # edit grove/G-043-board-detail.md: add "Verdict: <the owner's words>" under Evidence
