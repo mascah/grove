@@ -2,12 +2,13 @@
 id: "G-076"
 type: work
 title: "Filter grove list by status"
-status: active
+status: review
 created: "2026-09-22T15:01:38Z"
-updated: "2026-09-22T15:13:02Z"
+updated: "2026-09-22T15:20:38Z"
 kind: feature
 size: small
 relates_to: ["G-039"]
+candidate: "840a78b"
 ---
 
 ## Outcome
