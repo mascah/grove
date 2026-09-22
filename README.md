@@ -150,27 +150,37 @@ GOBIN="$HOME/.local/grove/bin" go install github.com/mascah/grove/cmd/grove@COMM
 PATH="$HOME/.local/grove/bin:$PATH" grove version
 ```
 
-Codex runs each command through a login shell, so it sees the profile's
+`go install …@COMMIT` resolves only a pushed commit. Codex runs each command through a login shell, so it sees the profile's
 `PATH`, not the caller's: put the build directory on the login `PATH` ahead of
 the predecessor, or name the executable in the target's `AGENTS.md` or
 `CLAUDE.md`, which the entrypoints defer to for how the CLI is invoked. When
 the wrong `grove` answers, the entrypoints stop and say so rather than act.
+
 `grove version` prints the module version and, when the build stamped it, the
 VCS revision with `modified` for a dirty tree; `go run` prints `(devel)`, which
 means this checkout's files. Build from a primary checkout or a clone: for a
 linked worktree that lies inside its repository, Go only recognises the
 enclosing checkout's `.git` directory and stamps that checkout's revision and
 cleanliness instead (observed with go 1.26.2). The predecessor rejects
-`version` as an unknown command, so the line tells the two apart. The workflow guides travel inside the
-binary: `grove guide work` and `grove guide shape` print them, so the workflow
-version is the executable version and no copy is edited elsewhere.
+`version` as an unknown command, so the line tells the two apart, and the
+line ends with a digest of the embedded guides, which names the workflow even
+when no revision was stamped. The workflow guides travel inside the binary:
+`grove guide work` and `grove guide shape` print them, so the workflow version
+is the executable version and no copy is edited elsewhere.
 
-In the target checkout's top directory:
+In the target checkout's top directory, in one shell, check which `grove`
+answers before `init`: the predecessor also has an `init`, which would write
+its own scaffolding instead.
 
 ```sh
+grove version     # must print "grove v…"; a usage error means the predecessor answered
 grove init        # or: grove --project /absolute/path init
 grove check
 ```
+
+`init` ends with a note on stderr naming what the target's `AGENTS.md` or
+`CLAUDE.md` should say if the entrypoints' defaults are not wanted: how
+`grove` is invoked, and how work and proposal branches are named.
 
 `init` writes `grove.yaml` (`records: grove`, `brief: grove/brief.md`), the
 record root, a placeholder brief that states no intent, and the `grove-work`

@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -59,10 +60,30 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 			t.Fatalf("the Claude adapter lacks %q:\n%s", needle, adapter)
 		}
 	}
-	for _, forbidden := range []string{"go run", "AGENTS.md and", "docs/work-execution.md", "worktree-"} {
-		if strings.Contains(string(adapter), forbidden) {
-			t.Fatalf("the generated adapter must not depend on Grove's own repository: %q", forbidden)
+	portable := map[string]string{".claude/skills/grove-work/SKILL.md": string(adapter)}
+	for _, relative := range []string{".claude/skills/grove-shape/SKILL.md", ".agents/skills/grove-work/SKILL.md", ".agents/skills/grove-shape/SKILL.md", ".agents/skills/grove-work/agents/openai.yaml"} {
+		source, err := os.ReadFile(filepath.Join(root, relative))
+		if err != nil {
+			t.Fatal(err)
 		}
+		portable[relative] = string(source)
+	}
+	for _, name := range []string{"work", "shape"} {
+		var guide, guideErr bytes.Buffer
+		if code := Run([]string{"guide", name}, t.TempDir(), &guide, &guideErr); code != 0 {
+			t.Fatal(guideErr.String())
+		}
+		portable["guide "+name] = guide.String()
+	}
+	for name, text := range portable {
+		for _, forbidden := range []string{"go run", "docs/work-execution.md", "docs/work-shaping.md", "../grove/", "../.claude/", "../.agents/", ".claude/worktrees", "worktree-G-", "AGENTS.md` here"} {
+			if strings.Contains(text, forbidden) {
+				t.Fatalf("%s must not depend on Grove's own repository, but mentions %q", name, forbidden)
+			}
+		}
+	}
+	if !strings.Contains(errOut, "Next: grove check") {
+		t.Fatalf("init must say what the adopter's instructions may add: %q", errOut)
 	}
 	var checkOut, checkErr bytes.Buffer
 	if code := Run([]string{"--project", root, "check"}, t.TempDir(), &checkOut, &checkErr); code != 0 || checkOut.String() != "OK: 0 records\n" {
@@ -144,7 +165,7 @@ func TestInitRefusesConflictsWithoutWriting(t *testing.T) {
 			}
 		})
 	}
-	t.Run("below the checkout top", func(t *testing.T) {
+	t.Run("below the checkout top, from the working directory", func(t *testing.T) {
 		t.Parallel()
 		root := emptyRepo(t)
 		nested := filepath.Join(root, "sub")
@@ -152,9 +173,32 @@ func TestInitRefusesConflictsWithoutWriting(t *testing.T) {
 			t.Fatal(err)
 		}
 		before := hashes(t, root)
-		code, out, errOut := runInitAt(t, nested)
-		if code != 1 || out != "" || !strings.Contains(errOut, "below it") || !reflect.DeepEqual(before, hashes(t, root)) {
+		var out, errOut bytes.Buffer
+		if code := Run([]string{"init"}, nested, &out, &errOut); code != 1 || out.Len() != 0 || !strings.Contains(errOut.String(), "below it, at sub") || !reflect.DeepEqual(before, hashes(t, root)) {
+			t.Fatalf("code=%d stdout=%q stderr=%q", code, out.String(), errOut.String())
+		}
+		out.Reset()
+		errOut.Reset()
+		if code := Run([]string{"init"}, root, &out, &errOut); code != 0 || !strings.HasPrefix(out.String(), "created grove.yaml\n") {
+			t.Fatalf("init from the checkout top without --project: code=%d stdout=%q stderr=%q", code, out.String(), errOut.String())
+		}
+	})
+	t.Run("symlinked parent of a managed path", func(t *testing.T) {
+		t.Parallel()
+		root := emptyRepo(t)
+		elsewhere := t.TempDir()
+		if err := os.Symlink(elsewhere, filepath.Join(root, ".claude")); err != nil {
+			t.Skip("symlinks unavailable")
+		}
+		code, out, errOut := runInitAt(t, root)
+		if code != 1 || out != "" || !strings.Contains(errOut, ".claude is a symlink") {
 			t.Fatalf("code=%d stdout=%q stderr=%q", code, out, errOut)
+		}
+		if entries, _ := os.ReadDir(elsewhere); len(entries) != 0 {
+			t.Fatal("nothing may be written through the symlink")
+		}
+		if _, err := os.Stat(filepath.Join(root, "grove.yaml")); err == nil {
+			t.Fatal("a conflict must write nothing")
 		}
 	})
 	t.Run("outside Git", func(t *testing.T) {
@@ -174,12 +218,16 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 	}{
 		{[]string{"guide", "work"}, "# Executing assigned Grove work\n"},
 		{[]string{"guide", "shape"}, "# Shaping Grove work\n"},
-		{[]string{"version"}, "grove "},
+		{[]string{"version"}, "grove "}, // ends with the guide digest, checked below
 	} {
 		var out, errOut bytes.Buffer
 		if code := Run(c.args, t.TempDir(), &out, &errOut); code != 0 || !strings.HasPrefix(out.String(), c.prefix) {
 			t.Fatalf("%v: code=%d stdout=%q stderr=%q", c.args, code, out.String(), errOut.String())
 		}
+	}
+	var version, versionErr bytes.Buffer
+	if code := Run([]string{"version"}, t.TempDir(), &version, &versionErr); code != 0 || !regexp.MustCompile(`^grove \S.* guides sha256:[0-9a-f]{12}\n$`).MatchString(version.String()) {
+		t.Fatalf("version=%q", version.String())
 	}
 	for _, args := range [][]string{{"guide"}, {"guide", "both"}, {"guide", "work", "shape"}, {"version", "x"}, {"init", "here"}} {
 		var out, errOut bytes.Buffer

@@ -26,7 +26,8 @@ import (
 
 const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] list [--status VALUE]... | show ID [--json] | brief [--json] | check\n" +
-	"       grove [--project DIR] init | guide work|shape | version\n" +
+	"       grove [--project DIR] init\n" +
+	"       grove guide work|shape | version\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n" +
 	"       grove [--project DIR] convert PATH --type TYPE --title TITLE [--slug SLUG]\n" +
@@ -53,7 +54,8 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             per path; on any conflict nothing is written and the reasons are printed.\n" +
 	"  guide      Print the work or shaping guide this binary carries; the generated\n" +
 	"             entrypoints read it from here, so the workflow version is the binary's.\n" +
-	"  version    Print this binary's module version and, when stamped, its VCS revision.\n" +
+	"  version    Print this binary's module version, its VCS revision when stamped, and\n" +
+	"             a digest of the guides it carries.\n" +
 	"  new        Create a work, question, decision, term, plan, review, or page record with\n" +
 	"             the next shared ID, flat in the record root; a page is general knowledge\n" +
 	"             with a title and no status.\n" +

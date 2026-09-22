@@ -14,10 +14,11 @@ or assembling context, does not start work or authorize a launch, merge, or push
 **This guide is workflow, not repository policy.** How to invoke the CLI, which
 verification commands to run, where plans and reviews live, branch names, and
 anything else particular to one repository belong to that repository's agent
-instructions (`AGENTS.md` here). Commands below are written `grove …`: run them
-the way those instructions say, and never assume that a `grove` on `PATH` is
-this project's CLI. Where the two disagree, repository and user instructions
-win.
+instructions (its `AGENTS.md` or `CLAUDE.md`). Commands below are written
+`grove …`: run them the way those instructions say, or, where they say
+nothing, the way the entrypoint that loaded this guide says; never assume on
+your own that a `grove` on `PATH` is this project's CLI. Where the two
+disagree, repository and user instructions win.
 
 ## Lifecycle
 
@@ -318,8 +319,7 @@ candidate to human judgment:
    each review record with its findings and their dispositions; unresolved
    issues and limits; and the integrator's next action as runnable commands,
    including the edit that quotes the verdict in the record before `done`,
-   since the integrator runs them as given (G-078 found a done commit that
-   changed the status alone).
+   since the integrator runs them as given.
 2. Set the status with that commit as the candidate, and commit that change
    alone, so `git diff --stat CANDIDATE HEAD` shows one file:
    `grove update G-030 --expect REVISION --set status=review --set candidate=COMMIT`.

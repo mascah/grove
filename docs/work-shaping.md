@@ -16,10 +16,11 @@ an agent, a merge, or a push, and creating a proposal assigns it to nobody.
 
 **This guide is workflow, not repository policy.** How to invoke the CLI, where
 plans and reviews live, branch names, and commit conventions belong to the
-repository's agent instructions (`AGENTS.md` here). Commands below are written
-`grove …`: run them the way those instructions say, and never assume that a
-`grove` on `PATH` is this project's CLI. Where the two disagree, repository and
-user instructions win.
+repository's agent instructions (its `AGENTS.md` or `CLAUDE.md`). Commands
+below are written `grove …`: run them the way those instructions say, or,
+where they say nothing, the way the entrypoint that loaded this guide says;
+never assume on your own that a `grove` on `PATH` is this project's CLI. Where
+the two disagree, repository and user instructions win.
 
 ## Inputs
 
@@ -203,8 +204,7 @@ The same steps, with these bounds:
 - **Missing human choice.** Do not invent the answer or write acceptance that
   presumes it. A scope or design choice that the acceptance depends on is
   such a choice even when the proposal could be assigned without it; choices
-  "left for the owner" in Next are the interactive form, not this one
-  (G-078 saw a headless session settle three such choices itself). Create
+  "left for the owner" in Next are the interactive form, not this one. Create
   the question with `blocks`, note it in the affected work's Next, commit,
   and return the wait: the question ID, what it stops, and the branch and
   commit holding it.

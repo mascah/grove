@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/mascah/grove"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/repo"
 )
@@ -124,7 +126,7 @@ func runInit(cwd string, a invocation, out, errOut io.Writer) int {
 		return 1
 	}
 	if prefix != "" {
-		report(errOut, fmt.Errorf("init needs the top of a Git checkout, and %s is %s below it; a nested grove.yaml would end discovery there", visible(root), visible(strings.TrimSuffix(prefix, "/"))))
+		report(errOut, fmt.Errorf("init needs the top of a Git checkout, and %s is below it, at %s; a nested grove.yaml would end discovery there", visible(root), visible(strings.TrimSuffix(prefix, "/"))))
 		return 1
 	}
 	steps, conflicts := planInit(root)
@@ -135,7 +137,6 @@ func runInit(cwd string, a invocation, out, errOut io.Writer) int {
 		fmt.Fprintln(errOut, "grove: nothing was written; resolve the conflicts and run init again")
 		return 1
 	}
-	var lines strings.Builder
 	for _, s := range steps {
 		if s.dir && s.content == nil && s.verdict == "created" {
 			err = os.MkdirAll(filepath.Join(root, filepath.FromSlash(s.path)), 0o755)
@@ -149,13 +150,14 @@ func runInit(cwd string, a invocation, out, errOut io.Writer) int {
 			fmt.Fprintf(errOut, "grove: %s: %s (the paths above were written; run init again after fixing this)\n", visible(s.path), err)
 			return 1
 		}
-		fmt.Fprintf(&lines, "%s %s%s\n", s.verdict, visible(s.path), s.note)
-		if _, err := io.WriteString(out, lines.String()); err != nil {
+		if _, err := fmt.Fprintf(out, "%s %s%s\n", s.verdict, visible(s.path), s.note); err != nil {
 			fmt.Fprintf(errOut, "grove: write output: %s (init wrote through %s)\n", err, visible(s.path))
 			return 1
 		}
-		lines.Reset()
 	}
+	fmt.Fprintln(errOut, "Next: grove check. The entrypoints run `grove` from PATH and let the agent name its branches;\n"+
+		"say otherwise in AGENTS.md or CLAUDE.md, which they defer to for how grove is invoked and how\n"+
+		"work and proposal branches are named.")
 	return 0
 }
 
@@ -169,6 +171,14 @@ func planInit(root string) (steps []initStep, conflicts []string) {
 	// regular reports whether the path is absent (nil, false), a regular file
 	// (info, true), or something init cannot replace, which is a conflict.
 	regular := func(relative string) (os.FileInfo, bool) {
+		for i, c := range relative { // a symlinked parent would carry the write outside the checkout
+			if c == '/' {
+				if parent, err := lstat(relative[:i]); err == nil && parent.Mode()&fs.ModeSymlink != 0 {
+					conflict(relative, relative[:i]+" is a symlink")
+					return nil, false
+				}
+			}
+		}
 		info, err := lstat(relative)
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
@@ -271,5 +281,13 @@ func versionLine() string {
 		}
 		line += ")"
 	}
-	return line + "\n"
+	digest := sha256.New()
+	for _, name := range []string{"docs/work-execution.md", "docs/work-shaping.md"} {
+		source, err := fs.ReadFile(grove.Guides, name)
+		if err != nil {
+			panic(err) // both files are embedded
+		}
+		digest.Write(source)
+	}
+	return fmt.Sprintf("%s guides sha256:%x\n", line, digest.Sum(nil)[:6])
 }
