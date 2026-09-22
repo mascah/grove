@@ -2,9 +2,9 @@
 id: "G-041"
 type: work
 title: "Cut nullsec over to this Grove and uninstall the predecessor"
-status: proposed
+status: active
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-22T19:24:43Z"
+updated: "2026-09-22T19:40:45Z"
 kind: tooling
 size: large
 priority: 2
