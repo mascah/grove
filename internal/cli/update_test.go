@@ -16,7 +16,8 @@ func TestUpdateUsage(t *testing.T) {
 	t.Parallel()
 	for _, args := range [][]string{
 		{"update"}, {"update", "G-001"}, {"update", "G-001", "extra", "--expect", rev, "--set", "status=done"},
-		{"update", "G-001", "--set", "status=done"}, {"update", "G-001", "--expect", rev},
+		{"update", "G-001", "--expect", rev}, {"update", "G-001", "--commit"},
+		{"update", "G-001", "--commit", "--commit", "--set", "status=done"},
 		{"update", "G-001", "--expect", "abc", "--set", "status=done"},
 		{"update", "G-001", "--expect", strings.ToUpper(rev), "--set", "status=done"},
 		{"update", "G-001", "--expect", rev, "--expect", rev, "--set", "status=done"},
@@ -25,7 +26,7 @@ func TestUpdateUsage(t *testing.T) {
 		{"update", "G-001", "--expect", rev, "--unset", "size", "--unset", "size"},
 		{"update", "G-001", "--expect", rev, "--set", "status"}, {"update", "G-001", "--expect", rev, "--set", "=x"},
 		{"update", "G-001", "--expect", rev, "--set"}, {"update", "G-001", "--expect", rev, "--unset", ""},
-		{"list", "--expect", rev}, {"show", "G-001", "--set", "a=b"}, {"check", "--unset", "size"},
+		{"list", "--expect", rev}, {"show", "G-001", "--set", "a=b"}, {"check", "--unset", "size"}, {"list", "--commit"},
 	} {
 		var out, errOut bytes.Buffer
 		if code := Run(args, t.TempDir(), &out, &errOut); code != 2 || out.Len() != 0 || !strings.Contains(errOut.String(), "Usage:") {
@@ -33,7 +34,7 @@ func TestUpdateUsage(t *testing.T) {
 		}
 	}
 	var out, errOut bytes.Buffer
-	if code := Run([]string{"update", "--help"}, t.TempDir(), &out, &errOut); code != 0 || !strings.Contains(out.String(), "--expect") {
+	if code := Run([]string{"update", "--help"}, t.TempDir(), &out, &errOut); code != 0 || !strings.Contains(out.String(), "[--expect REVISION]") || !strings.Contains(out.String(), "[--commit]") {
 		t.Fatalf("help must work without a project: %d %s", code, out.String())
 	}
 }
@@ -161,5 +162,53 @@ func TestUpdateOperationErrorsAndOutputFailure(t *testing.T) {
 	var out bytes.Buffer
 	if code := Run([]string{"update", "G-001", "--expect", expect, "--set", "status=active"}, root, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "Git") {
 		t.Fatalf("outside Git: code=%d stderr=%s", code, errOut.String())
+	}
+}
+
+// TestUpdateCommitResultAndFailure covers the CLI side of G-079: no --expect,
+// commit in the result (null for a no-op), and a failed commit reported as an
+// applied update with exit 1.
+func TestUpdateCommitResultAndFailure(t *testing.T) {
+	t.Parallel()
+	root := gitFixture(t)
+	for _, kv := range [][2]string{{"user.name", "t"}, {"user.email", "t@t"}, {"commit.gpgsign", "false"}, {"maintenance.auto", "false"}} {
+		gitIn(t, root, "config", kv[0], kv[1])
+	}
+	run := func(args ...string) (int, map[string]any, string) {
+		t.Helper()
+		var out, errOut bytes.Buffer
+		code := Run(args, root, &out, &errOut)
+		var result map[string]any
+		if out.Len() != 0 {
+			if err := json.Unmarshal(out.Bytes(), &result); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return code, result, errOut.String()
+	}
+	code, result, stderr := run("update", "G-001", "--set", "status=active", "--commit")
+	if code != 0 || result["changed"] != true || result["commit"] != gitIn(t, root, "rev-parse", "HEAD") {
+		t.Fatalf("code=%d result=%v stderr=%s", code, result, stderr)
+	}
+	if files := gitIn(t, root, "show", "--format=", "--name-only", "HEAD"); files != "docs/records/work/renamed.md" {
+		t.Fatalf("commit must hold the record alone: %q", files)
+	}
+	code, result, _ = run("update", "G-001", "--set", "status=active", "--commit")
+	if commit, present := result["commit"]; code != 0 || result["changed"] != false || !present || commit != nil {
+		t.Fatalf("no-op: code=%d result=%v", code, result)
+	}
+	code, result, _ = run("update", "G-001", "--set", "status=proposed")
+	if _, present := result["commit"]; code != 0 || present || gitIn(t, root, "status", "--porcelain") != "M docs/records/work/renamed.md" { // gitIn trims the leading space
+		t.Fatalf("without --commit nothing is committed and no key is printed: %v", result)
+	}
+	hooks := filepath.Join(root, "hooks")
+	write(t, root, "hooks/pre-commit", "#!/bin/sh\nexit 1\n")
+	if err := os.Chmod(filepath.Join(hooks, "pre-commit"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, root, "config", "core.hooksPath", hooks)
+	code, result, stderr = run("update", "G-001", "--set", "status=active", "--commit")
+	if code != 1 || result != nil || !strings.Contains(stderr, "the file is staged but nothing was committed (the update was applied to docs/records/work/renamed.md; revision "+showJSON(t, root, "G-001")["revision"].(string)+")") {
+		t.Fatalf("failed commit: code=%d stderr=%s", code, stderr)
 	}
 }

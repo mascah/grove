@@ -21,20 +21,25 @@ import (
 	"github.com/mascah/grove/internal/repo"
 )
 
-// Request is one update to one record. Set entries keep request order.
+// Request is one update to one record. Set entries keep request order. An
+// empty Expect applies to whatever the file holds under the write lock; a
+// caller whose read may be old passes the revision it read. Commit commits
+// the record's file alone after a change.
 type Request struct {
 	ID, Expect string
 	Set        []Field
 	Unset      []string
+	Commit     bool
 }
 
 type Field struct{ Name, Value string }
 
 // Result describes the record after the request. Revision identifies the
-// resulting bytes; for a no-op it equals the expected revision.
+// resulting bytes; for a no-op it equals the expected revision. Commit is the
+// commit made for a changed record when the request asked for one.
 type Result struct {
-	ID, Path, Revision string
-	Changed            bool
+	ID, Path, Revision, Commit string
+	Changed                    bool
 }
 
 // Failure retains publication state when an error happens after the rename
@@ -82,7 +87,7 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 	}
 	r := p.Records[i]
 	current := project.Revision(r.Source)
-	if current != req.Expect {
+	if req.Expect != "" && current != req.Expect {
 		return Result{}, fmt.Errorf("%s changed since the expected revision; its current revision is %s", r.ID, current)
 	}
 	changes, err := plan(r, req)
@@ -125,7 +130,49 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 	}
 	result.Revision = project.Revision(candidate)
 	result.Changed = true
-	return result, publish(root, p, i, candidate, fault)
+	if err := publish(root, p, i, candidate, fault); err != nil {
+		return result, err
+	}
+	if req.Commit {
+		if result.Commit, err = commit(root, r.Path, message(r.ID, req)); err != nil {
+			return result, &Failure{Path: r.Path, Revision: result.Revision, Err: err}
+		}
+	}
+	return result, nil
+}
+
+// commit stages and commits the record's file alone, never the rest of the
+// index or work tree, and returns the commit. A failure after publication is
+// the caller's *Failure: the file holds the update either way.
+func commit(root, path, message string) (string, error) {
+	path = ":(literal)" + filepath.FromSlash(path) // a hand-made directory name must not become a glob
+	if _, err := repo.Git(root, "add", "--", path); err != nil {
+		return "", fmt.Errorf("%w; nothing was committed", err)
+	}
+	if _, err := repo.Git(root, "commit", "-q", "-m", message, "--", path); err != nil {
+		return "", fmt.Errorf("%w; the file is staged but nothing was committed", err)
+	}
+	head, err := repo.Git(root, "rev-parse", "HEAD")
+	if err != nil {
+		return "", fmt.Errorf("the commit was made but could not be read back: %w", err)
+	}
+	return strings.TrimSpace(head), nil
+}
+
+// message names the request, as in "docs(G-076): set status=done candidate=abc unset size",
+// on one line whatever a value holds.
+func message(id string, req Request) string {
+	var words []string
+	if len(req.Set) != 0 {
+		words = append(words, "set")
+		for _, f := range req.Set {
+			words = append(words, f.Name+"="+strings.NewReplacer("\r", " ", "\n", " ").Replace(f.Value))
+		}
+	}
+	if len(req.Unset) != 0 {
+		words = append(append(words, "unset"), req.Unset...)
+	}
+	return fmt.Sprintf("docs(%s): %s", id, strings.Join(words, " "))
 }
 
 // plan validates the request against the record's type and drops fields whose

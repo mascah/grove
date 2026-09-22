@@ -2,12 +2,13 @@
 id: "G-079"
 type: work
 title: "Update a record by hand without a lookup and commit it in one step"
-status: proposed
+status: review
 created: "2026-09-22T16:01:52Z"
-updated: "2026-09-22T16:02:26Z"
+updated: "2026-09-22T16:26:30Z"
 kind: tooling
 size: small
 relates_to: ["G-009", "G-044", "G-062"]
+candidate: "9eda6c6"
 ---
 
 ## Outcome
@@ -104,9 +105,82 @@ Design, proposed:
    checkout of `main` and judges that the lookup and the hand commit are
    gone.
 
+## Evidence
+
+Implemented on `worktree-G-079` (`.claude/worktrees/G-079`), base `main` at
+`17667d6`, from this record at revision `ada396e6…` with no plan, as Next
+said. Commits: `4ef3129` active, `713de02` the code and tests, `5e4b3a1` the
+four documents, `34ca80f` the review fixes, then this evidence. The
+candidate is the commit this record's frontmatter names.
+
+Behavior against the acceptance, at `34ca80f`:
+
+1. `update G-NNN --set status=done --set candidate=C --commit` with no
+   `--expect` writes the status, commits that one file, and prints
+   `{…, "commit": SHA}`. Fixture: `TestUpdateOptionalExpectAndCommit`
+   (`internal/update`) and `TestUpdateCommitResultAndFailure`
+   (`internal/cli`). Real use: in a disposable clone of this branch at
+   `5e4b3a1`, `update G-079 --set status=done --set candidate=5e4b3a1
+   --commit` made `e5e8c87` "docs(G-079): set status=done candidate=5e4b3a1"
+   whose `git show --stat` lists this record alone.
+2. A stale `--expect` is refused, exit 1, no write, with the unchanged
+   message (fixture and the same clone). The omitted form applied over a
+   body edited after the last commit (fixture).
+3. With another file modified and a third staged, the commit holds the
+   record alone and `git status --porcelain` is unchanged for the others
+   (fixture; the reviewer also tried a staged-plus-unstaged edit and a
+   staged deletion). A no-op with `--commit` makes no commit and prints
+   `"commit": null` (fixture and clone).
+4. A refusing `pre-commit` hook after publication returns the `*Failure`
+   with the applied revision, exit 1 through the CLI as
+   `… the file is staged but nothing was committed (the update was applied
+   to PATH; revision …)`, and the file holds the update (fixtures).
+5. README, `docs/record-model.md`, `docs/work-execution.md` and
+   `docs/work-shaping.md` say `--expect` is optional for a person and kept
+   by a session because its read may be old; every `update` example in the
+   two guides is unchanged and still runs (the reviewer checked each and
+   every link). G-009 and G-062 are history and were not rewritten.
+6. Open: the owner's own use from a checkout of `main`, at integration.
+
+Decisions taken: the message is `docs(ID): set a=b c=d unset e`, the
+request's fields in order, with `\r` and `\n` in values replaced by
+spaces; the JSON key is `commit`, present only when `--commit` was given,
+`null` when nothing changed. `--commit` outside Git is refused by `update`'s
+existing Git requirement, exit 1, not a usage error (review finding 1).
+`git add` precedes `git commit -- PATH` so a record `new` created and never
+committed can be committed too; the pathspec is `:(literal)`. The commit runs
+under the write lock, so a slow hook delays other Grove writes (finding 4).
+
+Verification at `34ca80f`: `go test -short -count=1 ./internal/update
+./internal/cli` ok; `go vet ./...`, `gofmt -l .` clean; `go run ./cmd/grove
+check` OK (80 records); `go test -count=1 -timeout 120s ./...` all ok.
+`versions` (8.0 s) exceeds the five-second budget under the parallel suite
+as before this change; `update` (3.5 s) and `cli` (4.6 s) stay under.
+
+Review: [G-083](G-083-g-079-review.md), independent, examined `5e4b3a1` and
+the fix `34ca80f`: no blocking findings; 2, 3, 5 fixed, 1, 4, 6 accepted.
+
 ## Next
 
-Assign. No plan is needed: the change is one parser flag, an optional
-comparison, and one Git call in `internal/update`, plus tests and the five
-documents named above. The implementer decides the exact message wording
-and the JSON key for the commit within the design here.
+Candidate awaits the owner's judgment. Runnable demo from any checkout of
+the branch, in a disposable clone so the ID counter and the branch stay
+clean:
+
+```sh
+git clone -q -b worktree-G-079 /Users/mascah/GitHub/mascah/grove /tmp/g079 && cd /tmp/g079
+go run ./cmd/grove update G-079 --set status=done --set candidate=$(git rev-parse --short HEAD~1) --commit
+git show --stat HEAD
+```
+
+To integrate (acceptance 6 is this very use): in the `main` checkout,
+
+```sh
+git merge --ff-only worktree-G-079
+# edit grove/G-079-update-a-record-by-hand-without.md: quote the verdict in this Next
+go run ./cmd/grove update G-079 --set status=done --commit
+```
+
+The candidate in the frontmatter is an ancestor of `main` after the
+fast-forward, so `done` needs no `--set candidate`; a squash or rebase that
+landed another commit names it with `--set candidate=COMMIT` in the same
+call.

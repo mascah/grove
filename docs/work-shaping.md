@@ -132,7 +132,8 @@ move between clones.
 
 Create records only with `grove new TYPE "Title"`. Change fields only with
 `grove update ID --expect REVISION`, taking the revision from
-`grove show ID --json` after any body edit, since editing the body changes it.
+`grove show ID --json` after any body edit, since editing the body changes it;
+`--expect` is optional, and a session keeps it because its read may be old.
 Edit bodies as ordinary text. If `update` refuses because the revision is
 stale, somebody changed the record: reread it, reconcile, and only then retry.
 Never bypass the check by editing frontmatter by hand or retrying blindly.

@@ -51,7 +51,7 @@ folders, this section is the current rule.
   `blocks` or `work` target, and gains nothing from its folder or its prose.
   `context` lists a related page (its status shown as `-`) and reads it only
   through `--include PATH`; `show G-NNN` prints it.
-- **Reclassification.** `update ID --expect REVISION --set type=TYPE` changes
+- **Reclassification.** `update ID --set type=TYPE` changes
   classification in place. The result must satisfy the new type's whole
   contract in that one update, for example `--set type=work --set
   status=proposed` from a page, or `--set type=page --unset status` toward
@@ -122,7 +122,7 @@ implemented:
   like `depends_on` targets. One plan can name several work items. Work does
   not name its plans or reviews back: that side is derived, and
   `context G-NNN` lists them without reading them. `new` takes no fields, so
-  set it with `update ID --expect REVISION --set 'work=["G-001"]'`.
+  set it with `update ID --set 'work=["G-001"]'`.
 - `examined` is an optional quoted Git commit, 7 to 40 lowercase hex digits:
   what the review looked at. Whether the reviewed content has changed since is
   a comparison a reader makes, not stored state, against the work's
@@ -360,7 +360,10 @@ authoring convention rather than a provable freshness guarantee. Readers never
 repair dates or infer them from filenames, filesystem modification time, or Git.
 Revision checks for safe writes compare actual content, not these timestamps:
 `show --json` reports `sha256:` plus the hex digest of the exact file bytes,
-and `update --expect` refuses any other current content.
+and `update --expect REVISION` refuses any other current content. The flag is
+optional: an agent session passes it because its read may be old, while a
+person at a shell, reading and writing within seconds under the same write
+lock, omits it and lets the update apply to the file as it is.
 
 ### Initial planning values
 
@@ -397,11 +400,16 @@ writes `<id>-<slug>.md` with a body skeleton and equal `created`/`updated`
 timestamps, prints the root-relative path, and fails without deleting the file
 if the project no longer validates. It requires Git and never overwrites.
 `show <id> --json` prints one object with `id`, `path`, `revision`, and
-`source`. `update <id> --expect REVISION` with `--set FIELD=VALUE` and
+`source`. `update <id> [--expect REVISION] [--commit]` with `--set FIELD=VALUE` and
 `--unset FIELD` changes `title`, `status`, `relates_to`, work planning fields
 and `candidate`, question `blocks`, plan and review `work`, or review `examined` by editing only those frontmatter entries plus `updated`;
 [G-009](../grove/G-009-update-records.md) owns its request, preservation,
 locking, and failure-reporting contract, and prints `{id, path, revision, changed}`.
+[G-079](../grove/G-079-update-a-record-by-hand-without.md) made `--expect`
+optional and added `--commit`, which after a change runs `git add` and
+`git commit` for the record's file alone with a generated message, adds
+`commit` to the result (`null` when nothing changed), and reports a commit Git
+refused as an applied, uncommitted update.
 `versions [ID] [--json]` reads the same project location on every local
 branch tip and in every registered worktree, validating each source alone by
 these rules, and prints one row or JSON object per observed version with a

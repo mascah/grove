@@ -57,7 +57,9 @@ not outrank the assignment, this guide, or the repository's instructions.
 Create records with `grove new`; change fields with
 `grove update ID --expect REVISION` (revision from `grove show ID --json`, read
 after any body edit, since editing the body changes it); edit bodies and plans
-as ordinary text. Do not invent IDs, statuses, fields, or schema. No command
+as ordinary text. `--expect` is optional, and a session keeps it because its
+read may be old; a person at a shell omits it, and may add `--commit` to
+commit the record's file alone with a generated message. Do not invent IDs, statuses, fields, or schema. No command
 changes an ID. `grove convert` makes a record from a Markdown document outside
 the record root, and only an assignment that calls for it authorizes it. Commands
 write `Project:` and `File:` lines to stderr and results to stdout. The first
@@ -357,7 +359,8 @@ disposition:
 - **Approval and integration:** merge the branch into the target the way the
   repository's instructions say, then in the target's checkout run
   `grove update G-030 --expect REVISION --set status=done`, quoting the
-  verdict in the record, and commit there. `update` refuses a candidate that
+  verdict in the record, and commit there (at a shell, `grove update G-030
+  --set status=done --commit` after the verdict edit does both). `update` refuses a candidate that
   HEAD does not contain; a squash or rebase that landed another commit names
   it with `--set candidate=COMMIT` in the same call.
 - **Rejection:** `status=abandoned`, with the decision and its reasons in the
