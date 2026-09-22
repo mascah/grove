@@ -2,9 +2,9 @@
 id: "G-038"
 type: work
 title: "Hand implementation candidates into revision-bound human review"
-status: proposed
+status: active
 created: "2026-09-21T00:54:14Z"
-updated: "2026-09-21T15:45:40Z"
+updated: "2026-09-22T04:13:00Z"
 kind: feature
 size: medium
 priority: 1
