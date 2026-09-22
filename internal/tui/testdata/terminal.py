@@ -185,7 +185,7 @@ def select_and_show(root, wt, base):
         check(flags or out == (wt + "\n").encode(), f"plain result is exactly the path and a newline: {out!r}")
         tail = s.screen[s.screen.rfind(ALT_OFF):]
         check(b"Checkout: " + wt.encode() in tail and b"refs/heads/feature" in tail, f"context belongs on stderr after the screen: {tail!r}")
-        shown = subprocess.run([GROVE, "--project", project, "show", "G-001"], capture_output=True, cwd=base)
+        shown = subprocess.run([GROVE, "--project", project, "show", "G-001"], capture_output=True, cwd=base, env=clean_env())
         with open(os.path.join(wt, "grove", "work", "G-001-first.md"), "rb") as f:
             check(shown.returncode == 0 and shown.stdout == f.read(), "show did not read the selected bytes")
 
