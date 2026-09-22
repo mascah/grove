@@ -227,13 +227,20 @@ func TestMergeBases(t *testing.T) {
 	}
 }
 
-// TestCurrentViewCycle: a revert carried across merges can make every
-// observation older than another. Nothing may vanish: no order is known, so
-// every content stands, with a note.
+// TestCurrentViewCycle: a revert carried across merges can make older a
+// cycle. Its states must not vanish, even while an unrelated branch that
+// cannot be ordered against them stays current: nothing outside the cycle is
+// newer, so each state in it is current, with a note.
 func TestCurrentViewCycle(t *testing.T) {
 	t.Parallel()
 	root := repoFixture(t)
 	rec := func(body string) { write(t, root, "grove/G-030.md", record("G-030", "work", "proposed", body)) }
+	rec("X0\n")
+	commit(t, root, "M0")
+	git(t, root, "checkout", "-q", "-b", "e")
+	rec("W\n")
+	commit(t, root, "unrelated edit on e")
+	git(t, root, "checkout", "-q", "main")
 	rec("X\n")
 	m1 := commit(t, root, "M1")
 	rec("Y\n")
@@ -254,11 +261,12 @@ func TestCurrentViewCycle(t *testing.T) {
 	git(t, root, "checkout", "-q", "main")
 
 	// a is older than b (base M1 has X), b than c (base M3 has Y), c than a
-	// (base D has Z).
+	// (base D has Z). d is older than a, which changed d's record, and
+	// outside the cycle. e meets every other at M0, holding neither's bytes.
 	expectStanding(t, mustInspect(t, root, ""), "G-030",
 		"branch a proposed current", "branch b proposed current", "branch c proposed current",
-		"branch d proposed current", "branch main proposed current", "checkout . proposed current",
-		"no version could be ordered: each is older than another, through changes and reverts that merges carried across branches")
+		"branch d proposed older", "branch e proposed current", "branch main proposed current", "checkout . proposed current",
+		"some versions could not be ordered: each is older than another, through changes and reverts that merges carried across branches")
 }
 
 // TestCurrentViewCancelled: a read failing during the projection, as a

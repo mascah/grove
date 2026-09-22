@@ -135,8 +135,9 @@ checkout's HEAD for its own uncommitted edit. A revert is a change like any
 other. Several current contents are a divergence, shown as they are. A pair
 whose common commit cannot be read, or whose several common commits hold
 different versions, stays unordered: both current, with a note on stderr.
-Reverts carried across merges can make every version older than another;
-then none is ordered, and each content is current, with a note. A branch whose current state removes the record gets a committed
+Reverts carried across merges can make versions older than each other in a
+cycle; then a version is current when everything newer than it, through any
+chain, is also older than it, and a note says so. A branch whose current state removes the record gets a committed
 `deleted` row. Dates, status order, and branch names never decide, so the
 answer is the same from every checkout, and no branch is special.
 [G-042](grove/G-042-current-view.md) owns this. `--json` adds each version's

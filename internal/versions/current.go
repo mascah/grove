@@ -31,6 +31,8 @@ type node struct {
 	path            string // where the record is, for reading it at a base
 	sources         []*Source
 	older           string // why another node is newer
+	by              *node  // that newer node
+	index           int    // in source order, which names pairs in notes
 }
 
 // project marks each group's versions current or older, adds a row for a
@@ -66,6 +68,7 @@ func (o *objects) projectGroup(res *Result, g *Group) {
 			i++
 		}
 		if i == len(nodes) {
+			n.index = i
 			nodes = append(nodes, &n)
 		}
 		nodes[i].sources = append(nodes[i].sources, s)
@@ -77,24 +80,39 @@ func (o *objects) projectGroup(res *Result, g *Group) {
 	// and drops those it is newer than. Then each remaining candidate meets
 	// every node, so nothing newer than a current node goes unseen, without
 	// assuming that older is transitive.
-	compared := map[[2]*node]bool{}
-	order := func(a, b *node) {
-		if a.content == b.content || a.older != "" && b.older != "" || compared[[2]*node{a, b}] || compared[[2]*node{b, a}] {
-			return
+	type pair struct{ older, newer *node }
+	rels := map[[2]*node]pair{}
+	// rel orders a pair once: the older node and the newer, or neither when
+	// their bytes match or their common commit cannot be read (a note).
+	rel := func(a, b *node) pair {
+		if a.content == b.content {
+			return pair{}
 		}
-		compared[[2]*node{a, b}] = true
+		if b.index < a.index {
+			a, b = b, a
+		}
+		if p, ok := rels[[2]*node{a, b}]; ok {
+			return p
+		}
+		var p pair
 		base, err := o.baseOf(a, b, g.ID)
 		switch {
 		case err != nil:
-			first, second := a, b
-			if slices.Index(nodes, b) < slices.Index(nodes, a) {
-				first, second = b, a
-			}
-			g.Notes = append(g.Notes, fmt.Sprintf("%s and %s could not be ordered: %v", name(first.sources[0]), name(second.sources[0]), err))
-		case base == a.content && a.older == "":
-			a.older = why(a, b)
-		case base == b.content && b.older == "":
-			b.older = why(b, a)
+			g.Notes = append(g.Notes, fmt.Sprintf("%s and %s could not be ordered: %v", name(a.sources[0]), name(b.sources[0]), err))
+		case base == a.content:
+			p = pair{a, b}
+		case base == b.content:
+			p = pair{b, a}
+		}
+		rels[[2]*node{a, b}] = p
+		return p
+	}
+	order := func(a, b *node) {
+		if a.older != "" && b.older != "" {
+			return
+		}
+		if p := rel(a, b); p.older != nil && p.older.older == "" {
+			p.older.older, p.older.by = why(p.older, p.newer), p.newer
 		}
 	}
 	// Newer commits tend to supersede, so meeting them first drops the rest
@@ -139,13 +157,60 @@ func (o *objects) projectGroup(res *Result, g *Group) {
 			}
 		}
 	}
-	// Reverts across merges can make older a cycle, leaving nothing current:
-	// then no order is known, and every content stands as a current state.
-	if !slices.ContainsFunc(nodes, func(n *node) bool { return n.older == "" }) {
-		for _, n := range nodes {
-			n.older = ""
+	// Reverts carried across merges can make older a cycle. A node whose
+	// reasons lead back to it rather than to a current node may belong to a
+	// cycle that nothing outside is newer than: then the whole relation
+	// decides, and a node is current when everything newer than it, through
+	// any chain, is also older than it.
+	loops := func(n *node) bool {
+		seen := map[*node]bool{}
+		for ; n.older != ""; n = n.by {
+			if seen[n] {
+				return true
+			}
+			seen[n] = true
 		}
-		g.Notes = append(g.Notes, "no version could be ordered: each is older than another, through changes and reverts that merges carried across branches")
+		return false
+	}
+	if slices.ContainsFunc(nodes, loops) {
+		// ponytail: orders every pair and walks each node's reach, O(n³) at
+		// worst; only records whose history holds such a cycle pay it.
+		newer := map[*node][]*node{}
+		for i, a := range nodes {
+			for _, b := range nodes[i+1:] {
+				if p := rel(a, b); p.older != nil {
+					newer[p.older] = append(newer[p.older], p.newer)
+				}
+			}
+		}
+		reach := map[*node]map[*node]bool{}
+		for _, n := range nodes {
+			r := map[*node]bool{}
+			for stack := []*node{n}; len(stack) != 0; {
+				x := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				for _, y := range newer[x] {
+					if !r[y] {
+						r[y] = true
+						stack = append(stack, y)
+					}
+				}
+			}
+			reach[n] = r
+		}
+		restored := false
+		for _, n := range nodes {
+			sink := true
+			for m := range reach[n] {
+				sink = sink && reach[m][n]
+			}
+			if sink && n.older != "" {
+				n.older, n.by, restored = "", nil, true
+			}
+		}
+		if restored {
+			g.Notes = append(g.Notes, "some versions could not be ordered: each is older than another, through changes and reverts that merges carried across branches")
+		}
 	}
 	var versions []Version
 	for _, s := range res.Sources {

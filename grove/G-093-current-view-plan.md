@@ -59,7 +59,7 @@ is that commit, so an uncommitted edit is newer than its own HEAD. Then:
 | Both sides changed since the split, different bytes | both current: divergence |
 | Revert | a change like any other: judged against the base, never by earlier bytes |
 | Record unreadable at the base, or several bases disagreeing | not ordered: both current, with a note naming the pair |
-| Older forms a cycle (reverts carried across merges), leaving nothing current | none ordered: every content current, with a note |
+| Older forms a cycle (reverts carried across merges) | current when everything newer, through any chain, is also older: a cycle nothing outside supersedes is current, with a note |
 | Invalid or unreadable source | contributes nothing; result incomplete, as today |
 
 **Current** states are the contents held by at least one observation that
