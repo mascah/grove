@@ -1,6 +1,7 @@
 package versions
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/mascah/grove/internal/project"
+	"github.com/mascah/grove/internal/repo"
 )
 
 const config = "schema_version: 3\nrecords: grove\n"
@@ -23,8 +25,8 @@ func record(id, kind, status, body string) string {
 
 func git(t *testing.T, dir string, args ...string) string {
 	t.Helper()
-	full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-C", dir}, args...)
-	out, err := exec.Command("git", full...).CombinedOutput()
+	full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false"}, args...)
+	out, err := repo.Command(context.Background(), dir, full...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}

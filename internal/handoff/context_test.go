@@ -6,13 +6,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
 	"syscall"
 	"testing"
+
+	"github.com/mascah/grove/internal/repo"
 )
 
 func write(t *testing.T, root, name, content string) {
@@ -388,8 +389,8 @@ func TestReadConfinedDoesNotBlockOnFIFO(t *testing.T) {
 func TestChangeBetweenReadsIsRefused(t *testing.T) {
 	git := func(t *testing.T, root string, args ...string) {
 		t.Helper()
-		full := append([]string{"-C", root, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false"}, args...)
-		if out, err := exec.Command("git", full...).CombinedOutput(); err != nil {
+		full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false"}, args...)
+		if out, err := repo.Command(context.Background(), root, full...).CombinedOutput(); err != nil {
 			t.Fatalf("git %v: %v\n%s", args, err, out)
 		}
 	}
@@ -469,8 +470,8 @@ func TestOutputIsStableExactAndInert(t *testing.T) {
 func TestGitIdentity(t *testing.T) {
 	git := func(dir string, args ...string) string {
 		t.Helper()
-		full := append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false"}, args...)
-		out, err := exec.Command("git", full...).CombinedOutput()
+		full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false"}, args...)
+		out, err := repo.Command(context.Background(), dir, full...).CombinedOutput()
 		if err != nil {
 			t.Fatalf("git %v: %v\n%s", args, err, out)
 		}

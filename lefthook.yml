@@ -1,3 +1,4 @@
+# pre-commit jobs inherit GIT_DIR and GIT_INDEX_FILE too; they start no Git fixtures, so they are not scrubbed (G-089).
 pre-commit:
   parallel: true
   jobs:
@@ -15,4 +16,5 @@ pre-commit:
 pre-push:
   jobs:
     - name: test
-      run: go test -timeout 120s ./...
+      # Git exports GIT_DIR to hooks; keep every repository variable from every child (G-089).
+      run: env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR -u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES -u GIT_NAMESPACE go test -timeout 120s ./...

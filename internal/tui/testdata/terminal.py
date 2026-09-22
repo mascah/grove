@@ -15,6 +15,8 @@ GROVE = os.path.abspath(sys.argv[1])
 ONLY = sys.argv[2:]
 TIMEOUT = 20  # failure detection only; nothing waits on a guessed delay
 GIT = shutil.which("git")
+# Variables through which Git takes a repository from its caller; a hook exports GIT_DIR (G-089).
+GIT_LOCATION = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE")
 ENTER, DOWN, ESC, CTRL_C = b"\r", b"\x1b[B", b"\x1b", b"\x03"
 ALT_ON, ALT_OFF = b"\x1b[?1049h", b"\x1b[?1049l"
 
@@ -23,7 +25,7 @@ WORK = "---\nid: G-001\ntype: work\ntitle: {title}\nstatus: {status}\n---\nAn ou
 
 def git(cwd, *args):
     subprocess.run([GIT, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-C", cwd, *args],
-                   check=True, capture_output=True)
+                   check=True, capture_output=True, env=clean_env())
 
 
 def fixture(base):
@@ -47,7 +49,7 @@ def fixture(base):
 
 def short(cwd, rev):
     """The seven-character commit ID a history row shows."""
-    out = subprocess.run([GIT, "-C", cwd, "rev-parse", rev], check=True, capture_output=True).stdout
+    out = subprocess.run([GIT, "-C", cwd, "rev-parse", rev], check=True, capture_output=True, env=clean_env()).stdout
     return out.decode()[:7]
 
 
@@ -141,7 +143,7 @@ def same_modes(a, b):
 
 
 def clean_env(**extra):
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("TEA_", "UV_"))}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("TEA_", "UV_")) and k not in GIT_LOCATION}
     env.update(TERM="xterm-256color", **extra)
     return env
 
@@ -183,7 +185,7 @@ def select_and_show(root, wt, base):
         check(flags or out == (wt + "\n").encode(), f"plain result is exactly the path and a newline: {out!r}")
         tail = s.screen[s.screen.rfind(ALT_OFF):]
         check(b"Checkout: " + wt.encode() in tail and b"refs/heads/feature" in tail, f"context belongs on stderr after the screen: {tail!r}")
-        shown = subprocess.run([GROVE, "--project", project, "show", "G-001"], capture_output=True, cwd=base)
+        shown = subprocess.run([GROVE, "--project", project, "show", "G-001"], capture_output=True, cwd=base, env=clean_env())
         with open(os.path.join(wt, "grove", "work", "G-001-first.md"), "rb") as f:
             check(shown.returncode == 0 and shown.stdout == f.read(), "show did not read the selected bytes")
 

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -125,7 +126,7 @@ var waitDelay = 2 * time.Second
 // GitContext is Git with cancellation: once ctx is done the process is killed
 // and collected, and the error is ctx.Err() instead of a Git diagnostic.
 func GitContext(ctx context.Context, dir string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...)
+	cmd := Command(ctx, dir, args...)
 	cmd.WaitDelay = WaitDelay(ctx)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
@@ -137,6 +138,33 @@ func GitContext(ctx context.Context, dir string, args ...string) (string, error)
 		return "", gitError(args[0], stderr.String(), err)
 	}
 	return string(out), nil
+}
+
+// Command builds `git -C dir args...` for the repository that dir names and
+// nothing else: the environment variables through which Git takes a
+// repository, work tree, or index from its caller are dropped, because a Git
+// hook exports GIT_DIR to what it runs, and a child that inherited it would
+// act on that repository instead of dir's (G-089 saw test fixtures commit into
+// the real repository that way). Every Git process Grove or its tests start
+// goes through here.
+func Command(ctx context.Context, dir string, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...)
+	cmd.Env = environWithoutGitLocation(os.Environ())
+	return cmd
+}
+
+// gitLocation names the variables that point Git at a repository or its parts.
+var gitLocation = []string{"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE"}
+
+func environWithoutGitLocation(env []string) []string {
+	kept := make([]string, 0, len(env))
+	for _, entry := range env {
+		name, _, _ := strings.Cut(entry, "=")
+		if !slices.Contains(gitLocation, name) {
+			kept = append(kept, entry)
+		}
+	}
+	return kept
 }
 
 // gitError reports Git's own words, or the failure itself when Git said nothing.

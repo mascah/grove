@@ -84,7 +84,7 @@ func (o *objects) close() {
 // a peeling suffix, never a path.
 func (o *objects) read(spec, kind string) ([]byte, error) {
 	if o.failed == nil && o.cmd == nil {
-		cmd := exec.CommandContext(o.ctx, "git", "-C", o.root, "cat-file", "--batch")
+		cmd := repo.Command(o.ctx, o.root, "cat-file", "--batch")
 		cmd.WaitDelay = repo.WaitDelay(o.ctx)
 		cmd.Stderr = &o.stderr
 		in, err := cmd.StdinPipe()

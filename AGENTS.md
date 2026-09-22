@@ -75,7 +75,8 @@ read the brief when the record, a product question, or reconciliation needs it.
   and consistency checks. For Go changes iterate with `go test -short
   ./<package>`, then run `go vet ./...`, `gofmt -l .`, `go run ./cmd/grove
   check`, and one `go test -count=1 -timeout 120s ./...` as final evidence.
-  Rerun a failed package, not the suite. Never `-p 1`, and never `-race`
+  Rerun a failed package, not the suite. Reproduce a Linux-only failure with
+  `docker run --rm -v "$PWD":/src -w /src -e GOFLAGS=-buildvcs=false golang:1.26 go test ./...`. Never `-p 1`, and never `-race`
   across the suite on macOS: the race runtime hangs in the forked child before
   `exec` there, and the test timeout leaves it behind at full CPU. Run `-race`
   only per package, only for a concurrency change, with `-timeout 120s`, and
@@ -84,6 +85,13 @@ read the brief when the record, a product question, or reconciliation needs it.
   seconds, and no test that builds, sleeps, or waits on a shim without a
   `-short` skip and a comment saying why. TUI work also needs terminal
   lifecycle and connected-workflow checks.
+- Every Git process Grove or its tests start goes through `repo.Command`,
+  never a bare `exec.Command("git", …)`: it drops `GIT_DIR` and the other
+  variables that name a repository, because Git exports `GIT_DIR` to hooks
+  and a child that inherits it acts on the real repository. G-089 records the
+  incident: test fixtures run by lefthook's pre-push hook from a linked
+  worktree committed into this repository. The hook also scrubs them; keep
+  both layers.
 
 ## Assigned work
 
