@@ -2,10 +2,11 @@
 id: "G-089"
 type: work
 title: "Ignore ambient Git environment when Grove and its tests run Git"
-status: active
+status: review
 created: "2026-09-22T17:11:12Z"
-updated: "2026-09-22T17:19:18Z"
+updated: "2026-09-22T17:28:11Z"
 size: small
+candidate: "50b0599"
 ---
 
 ## Outcome
