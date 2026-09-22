@@ -403,9 +403,10 @@ than act; Ctrl-C still interrupts.
 
 Record bodies are rendered by glamour after the same escaping as every other
 text, so a body's control sequences show as text; an HTML character reference
-such as `&#x1b;` or `&amp;` shows as typed, since Markdown would decode it
-after the escaping; and of what the renderer emits only its own styles reach
-the terminal. Links are shown as text, never as terminal hyperlinks, and a
+such as `&#x1b;` or `&amp;` is never decoded, since Markdown would decode it
+after the escaping, and shows as typed in prose and code spans, with an extra
+`&amp;` in code blocks and link targets; and of what the renderer emits only
+its own styles reach the terminal. Links are shown as text, never as terminal hyperlinks, and a
 relative target is shown root-relative (`/G-093-….md`). The render is cached
 per record content and width.
 
