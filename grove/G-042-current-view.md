@@ -2,9 +2,9 @@
 id: "G-042"
 type: work
 title: "Derive a project-wide current view of work"
-status: review
+status: done
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-22T22:49:29Z"
+updated: "2026-09-22T22:55:58Z"
 kind: feature
 size: medium
 priority: 3
@@ -246,5 +246,4 @@ go run ./cmd/grove update G-042 --set status=done --commit
 just install                  # older builds refuse the new target key
 ```
 
-On feedback, write it here and set `status=active` on the branch. The
-done-on-target check in `update` is open for shaping as its own work.
+Verdict: LGTM
