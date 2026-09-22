@@ -112,8 +112,8 @@ func ParseConfig(source []byte) (recordDir, brief string, ds []Diagnostic) {
 
 // parseConfig is the configuration half of LoadFS; checkRoot, when given,
 // inspects the record folder in the order LoadFS always has. The target is
-// only compared with branch names, never passed to Git, so any nonempty
-// string is accepted.
+// only compared with branch names, never passed to Git, so only likely
+// mistakes are refused: surrounding spaces and a full ref name.
 func parseConfig(source []byte, checkRoot func(string) error) (config *metadata, recordDir, brief, target string) {
 	config = parseMapping("grove.yaml", source, 0)
 	version, ok := config.integerField("schema_version", true)
@@ -128,6 +128,9 @@ func parseConfig(source []byte, checkRoot func(string) error) (config *metadata,
 	}
 	brief = config.stringField("brief", false)
 	target = config.stringField("target", false)
+	if target != "" && (strings.TrimSpace(target) != target || strings.HasPrefix(target, "refs/")) {
+		config.problem("target", "must name a local branch, such as main")
+	}
 	if recordDir != "" {
 		if !dedicated(recordDir) {
 			config.problem("records", "must name a dedicated relative subdirectory without .. components")

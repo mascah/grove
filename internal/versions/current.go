@@ -89,10 +89,12 @@ func (res *Result) target() *Source {
 	case i < 0:
 		res.Notes = append(res.Notes, "grove.yaml names target "+t+", which is not a local branch, so none is used")
 		return nil
-	case !res.Sources[i].Valid:
+	case len(res.Sources[i].Diagnostics) != 0:
 		res.Notes = append(res.Notes, "target branch "+t+" could not be read, so none is used")
 		return nil
 	}
+	// A target without a project yet, as while Grove is adopted on a branch,
+	// lacks every record.
 	res.Target = t
 	return res.Sources[i]
 }

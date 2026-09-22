@@ -249,10 +249,12 @@ Optional `target: BRANCH` names the integration target: the local branch that
 work is merged into, `main` in this repository. `init` does not write it.
 [G-042](../grove/G-042-current-view.md) uses it only to label the current view
 (on the target, or not), never to decide which state is current. It is
-compared with branch names and never passed to Git. Every valid source whose
-`grove.yaml` names a target must agree; a source that names none has no say.
-Conflicting names, or a branch that is missing or unreadable, leave no target
-and give a note.
+compared with branch names and never passed to Git; a value with surrounding
+spaces or a `refs/` prefix is refused as a likely mistake. Every valid source
+whose `grove.yaml` names a target must agree; a source that names none has no
+say. Conflicting names, or a branch that is missing or unreadable, leave no
+target and give a note. A target branch with no project yet, as while Grove
+is adopted on another branch, lacks every record.
 
 `schema_version` versions the configuration and record schema together. Require
 both keys, with `brief` and `target` optional; accept exactly 3 and refuse a missing or

@@ -45,7 +45,8 @@ it probably should be." They chose to add it within G-042. Having `update`
 refuse `done` off the target (G-038's "configured target") is separate work.
 
 - `grove.yaml` gains an optional `target: BRANCH`, `main` here. It is only
-  ever compared with local branch names, never passed to Git.
+  ever compared with local branch names, never passed to Git; surrounding
+  spaces or a `refs/` prefix are refused as likely mistakes.
 - Every valid source whose `grove.yaml` names a target must agree. A source
   that names none has no say, so the answer is the same from every checkout,
   and a branch that adds the key works before it merges. Conflicting names,

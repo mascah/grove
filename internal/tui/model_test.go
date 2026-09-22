@@ -978,7 +978,8 @@ func TestCurrentViewBoard(t *testing.T) {
 
 // TestCurrentViewTarget: with a target, a card none of whose current states
 // the target holds is marked, unless its only current state is uncommitted,
-// and the details say which state is on the target.
+// and the details say which state is on the target. A divergence that main
+// holds one side of is not marked; a branch's deletion of what main holds is.
 func TestCurrentViewTarget(t *testing.T) {
 	t.Parallel()
 	fx := newFixture()
@@ -989,8 +990,10 @@ func TestCurrentViewTarget(t *testing.T) {
 	var vs []versions.Version
 	for _, s := range []*versions.Source{fx.cMain, fx.main} {
 		vs = append(vs, older(version(s, "W-001", "Inspect records", "proposed")), version(s, "W-002", "Create records", "proposed"),
-			older(version(s, "W-003", "Edit records", "proposed")))
+			older(version(s, "W-003", "Edit records", "proposed")), version(s, "W-004", "Split records", "proposed"),
+			older(version(s, "W-005", "Drop records", "proposed")))
 	}
+	vs = append(vs, version(fx.cFeat, "W-004", "Split records", "active"), version(fx.feat, "W-004", "Split records", "active"))
 	vs = append(vs, version(fx.cFeat, "W-001", "Inspect records", "active"), version(fx.feat, "W-001", "Inspect records", "active"),
 		version(fx.cFeat, "W-002", "Create records", "proposed"), version(fx.feat, "W-002", "Create records", "proposed"),
 		older(version(fx.cFeat, "W-003", "Edit records", "proposed")))
@@ -999,6 +1002,8 @@ func TestCurrentViewTarget(t *testing.T) {
 	vs = append(vs, edited)
 	res := result(fx.main, fx.sources(), vs...)
 	res.Target = "main"
+	i := slices.IndexFunc(res.Groups, func(g versions.Group) bool { return g.ID == "W-005" })
+	res.Groups[i].Versions = append(res.Groups[i].Versions, versions.Version{Source: fx.cFeat, Change: "deleted"})
 	for _, g := range res.Groups { // as the projection marks them
 		i := slices.IndexFunc(g.Versions, func(v versions.Version) bool { return v.Source == fx.cMain })
 		for j := range g.Versions {
@@ -1008,12 +1013,12 @@ func TestCurrentViewTarget(t *testing.T) {
 
 	m := open(t, &fake{res: res}, 120, 30)
 	screen := plain(m)
-	for _, want := range []string{"Board: current view, target main", "W-001  not on main", "W-003  uncommitted"} {
+	for _, want := range []string{"Board: current view, target main", "W-001  not on main", "W-003  uncommitted", "W-004  ⑂ 2 states", "Tab): W-005 [not on main]"} {
 		if !strings.Contains(screen, want) {
 			t.Fatalf("board lacks %q:\n%s", want, screen)
 		}
 	}
-	if strings.Contains(screen, "W-002  not") || strings.Contains(screen, "uncommitted not on") {
+	if strings.Contains(screen, "W-002  not") || strings.Contains(screen, "uncommitted not on") || strings.Contains(screen, "states not on") {
 		t.Fatalf("W-002 is on main, and W-003's state is uncommitted only:\n%s", screen)
 	}
 	press(m, "right", "enter")

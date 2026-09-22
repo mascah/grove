@@ -317,6 +317,8 @@ func TestTarget(t *testing.T) {
 		{"a branch", "target: main\n", "main", ""},
 		{"empty", "target: \"\"\n", "", "target: expected a nonempty string"},
 		{"not a string", "target: [main]\n", "", "target: expected a nonempty string"},
+		{"a full ref", "target: refs/heads/main\n", "", "target: must name a local branch"},
+		{"spaced", "target: \" main\"\n", "", "target: must name a local branch"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()

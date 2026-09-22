@@ -344,6 +344,16 @@ func TestCurrentViewTarget(t *testing.T) {
 			t.Errorf("G-002 is the same everywhere, so on the target: %+v", v.Source)
 		}
 	}
+	// A deletion is on the target only where the target lacks the record too.
+	if err := os.Remove(filepath.Join(root, "grove/questions/G-002-q.md")); err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range group(t, mustInspect(t, root, ""), "G-002").Versions {
+		if v.OnTarget != (v.Record != nil) {
+			t.Errorf("G-002 deleted in the main checkout: %s:%s on=%t", v.Source.Kind, v.Source.Ref, v.OnTarget)
+		}
+	}
+	git(t, root, "checkout", "-q", "--", "grove/questions/G-002-q.md")
 
 	git(t, root, "checkout", "-q", "-b", "other")
 	target("trunk")
@@ -361,5 +371,27 @@ func TestCurrentViewTarget(t *testing.T) {
 	res = mustInspect(t, root, "")
 	if want := "grove.yaml names target trunk, which is not a local branch, so none is used"; res.Target != "" || !slices.Equal(res.Notes, []string{want}) {
 		t.Errorf("target %q, notes %q", res.Target, res.Notes)
+	}
+}
+
+// TestCurrentViewTargetBeforeAdoption: while a branch adopts Grove, the
+// target it names has no project yet. That is no error: the target lacks
+// every record, so nothing is on it.
+func TestCurrentViewTargetBeforeAdoption(t *testing.T) {
+	t.Parallel()
+	root := repoFixture(t)
+	git(t, root, "checkout", "-q", "-b", "adopt")
+	write(t, root, "grove.yaml", config+"target: main\n")
+	commit(t, root, "adopt Grove with a target")
+	git(t, root, "checkout", "-q", "main")
+	git(t, root, "rm", "-q", "grove.yaml")
+	commit(t, root, "main has no project yet")
+
+	res := mustInspect(t, root, "")
+	if res.Target != "main" || len(res.Notes) != 0 || !res.Complete {
+		t.Fatalf("target %q, notes %q, complete %t", res.Target, res.Notes, res.Complete)
+	}
+	if v := group(t, res, "G-001").Versions; len(v) != 1 || v[0].OnTarget {
+		t.Errorf("G-001 is only on adopt: %+v", v)
 	}
 }
