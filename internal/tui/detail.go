@@ -58,6 +58,8 @@ func (m *Model) detailKey(k string) {
 			m.side = linked
 		case m.side < 0 && timeline >= 0, m.side >= 0 && m.side < timeline:
 			m.side = timeline
+		case m.side < 0 && m.width < wideWidth:
+			m.side = 0 // a narrow terminal shows the sidebar even with nothing to select
 		default:
 			m.side = -1
 		}

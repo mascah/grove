@@ -332,6 +332,18 @@ Everything else above is a routine technical choice inside G-043's outcome.
   glamour, lipgloss, goldmark, goldmark-emoji and `golang.org/x/text`.
 - **Escaping is per line.** `safe` escapes newlines too, which flattened
   Markdown; the pipeline escapes each line and keeps the breaks.
+- **Two layers, not one.** The independent review found that Markdown
+  decodes HTML character references after the escaping: `&#x1b;` came out of
+  glamour as a real escape byte, in text, code spans, headings, HTML blocks
+  and table cells, and ultraviolet writes every non-SGR sequence to the
+  terminal. Now every reference is made literal before glamour (`&amp;` shows
+  as typed) and each rendered row is filtered afterwards: glamour's SGR
+  styles pass, everything else is escaped as `safe` does.
+- **A resize settles the focus**, so a Done card the smaller page hides is
+  not left focused; a record under the open one that vanishes on refresh
+  leaves the stack while the open one stays; and below 100 columns Tab
+  shows the sidebar even when nothing in it can be selected, so Sources and
+  a history error stay reachable.
 - **Relative link targets show root-relative.** glamour resolves every
   relative URL against its base and prints `/G-093-….md`; with hyperlinks
   stripped that text is what remains. Record links are relative to the

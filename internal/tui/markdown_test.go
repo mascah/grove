@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -24,15 +23,17 @@ func TestBodyDropsTheFrontmatter(t *testing.T) {
 	}
 }
 
-var sgr = regexp.MustCompile(`\x1b\[[0-9;]*m`)
-
 // Every byte from a record is escaped before glamour renders it, so the rows
 // carry glamour's styles and nothing a file could have planted.
 func TestRenderedRowsHoldOnlyGlamourStyles(t *testing.T) {
 	t.Parallel()
 	md := "## Outcome\n\nA **bold** claim with \x1b[31mred\x1b[m, a title \x1b]0;pwned\x07, C1 \u009b31m, " +
 		"an override \u202e and a [link](G-093-current-view-plan.md) to http://example.com/x.\n\n" +
-		"- one 日本語の長いタイトルがここにあります\n- two\n\n```sh\ngo run ./cmd/grove\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n"
+		"- one 日本語の長いタイトルがここにあります\n- two\n\n```sh\ngo run ./cmd/grove\n```\n\n| a | b |\n|---|---|\n| 1 | 2 |\n" +
+		// Character references decode after the escaping, in text, code
+		// spans, headings, HTML and cells: they must stay literal.
+		"\n&#27;]52;c;cHduZWQ=&#7; &#x1b;[8mhidden &#x202e;bidi &rlm;named a &amp; b\n\n`code &#x1b;[31m`\n\n" +
+		"### &#x1b;]2;title&#x7;\n\n<div>&#27;[31m</div>\n\n| &#x1b;x | &#X1B;y |\n|---|---|\n| &#7; | z |\n"
 	for _, w := range []int{20, 40, 80} {
 		rows := render(md, w)
 		if len(rows) < 8 {
@@ -46,13 +47,17 @@ func TestRenderedRowsHoldOnlyGlamourStyles(t *testing.T) {
 			if rest := sgr.ReplaceAllString(row, ""); strings.ContainsRune(rest, 0x1b) {
 				t.Errorf("width %d: a sequence besides a style: %q", w, row)
 			}
+			if strings.Contains(row, "\x1b[31m") || strings.Contains(row, "\x1b[8m") {
+				t.Errorf("width %d: a planted style: %q", w, row)
+			}
 			for _, r := range ansi.Strip(row) {
 				if !strconv.IsPrint(r) && r != ' ' {
 					t.Errorf("width %d: control %q in %q", w, r, row)
 				}
 			}
 		}
-		for _, want := range []string{"## Outcome", `\x1b[31mred`, `\x1b]0;pwned\a`, `\u009b31m`, `\u202e`, "link", "G-093-", "plan.md", "go run", "日本語"} {
+		for _, want := range []string{"## Outcome", `\x1b[31mred`, `\x1b]0;pwned\a`, `\u009b31m`, `\u202e`, "link", "G-093-", "plan.md", "go run", "日本語",
+			"&#27;]52;c;", "[8mhidden", "&#x202e;bidi", "&rlm;named", "&amp;", "code &#x1b;", "&#x1b;]2;title", "&#27;[31m", "&#x1b;x", "&#X1B;y"} {
 			if !strings.Contains(text, want) {
 				t.Errorf("width %d: %q missing from\n%s", w, want, text)
 			}

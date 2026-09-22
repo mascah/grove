@@ -191,6 +191,23 @@ func TestDetailFitsNarrowTerminals(t *testing.T) {
 			t.Fatalf("%v: Tab cycles back to the content", size)
 		}
 	}
+	// A lone record with no linked records and no commits still has its
+	// Sources: a narrow terminal reaches them with Tab.
+	fx = newFixture()
+	m := open(t, &fake{res: result(fx.main, fx.sources(), version(fx.main, "W-001", "Alone", "active"))}, 80, 24)
+	press(m, "right")
+	deliverAll(m, press(m, "enter"))
+	if s := plain(m); strings.Contains(s, "Sources") {
+		t.Fatalf("narrow: the content first:\n%s", s)
+	}
+	press(m, "tab", "down", "enter")
+	if s := plain(m); m.screen != detailScreen || !strings.Contains(s, "Linked") || !strings.Contains(s, "none") || !strings.Contains(s, "Sources") {
+		t.Fatalf("narrow: Tab shows the sidebar with nothing to select:\n%s", s)
+	}
+	press(m, "tab")
+	if s := plain(m); strings.Contains(s, "Sources") {
+		t.Fatalf("narrow: Tab returns to the content:\n%s", s)
+	}
 }
 
 // A refresh keeps the open detail while its record exists, drops the as-of
@@ -211,9 +228,26 @@ func TestDetailSurvivesRefresh(t *testing.T) {
 	if m.screen != detailScreen || m.openID() != "W-001" || m.asOf != "" || !strings.Contains(plain(m), "A **clear** board") {
 		t.Fatalf("refresh should keep the detail on now: screen %d open %s asOf %q", m.screen, m.openID(), m.asOf)
 	}
+	// A record under the open one vanishes: it leaves the stack, and the
+	// open one stays.
+	for m.openID() != "W-005" { // Tab to the linked records; the plan is first
+		press(m, "tab", "enter")
+	}
+	f.res = result(fx.main, fx.sources(), version(fx.main, "W-005", "W-001 plan", "current"), version(fx.main, "W-009", "Newcomer", "active"))
+	deliverAll(m, press(m, "r"))
+	if m.screen != detailScreen || m.openID() != "W-005" || len(m.stack) != 1 || !strings.Contains(plain(m), "W-001 is no longer on any readable branch or checkout") {
+		t.Fatalf("a vanished record under the open one: screen %d stack %v\n%s", m.screen, m.stack, plain(m))
+	}
+	press(m, "esc")
+	if m.screen != boardScreen {
+		t.Fatal("Esc from the last open record returns to the board")
+	}
+	press(m, "/")
+	typeText(m, "W-005")
+	deliverAll(m, press(m, "enter"))
 	f.res = result(fx.main, fx.sources(), version(fx.main, "W-009", "Newcomer", "active"))
 	deliverAll(m, press(m, "r"))
-	if m.screen != boardScreen || len(m.stack) != 0 || !strings.Contains(plain(m), "W-001 is no longer on any readable branch or checkout") {
+	if m.screen != boardScreen || len(m.stack) != 0 || !strings.Contains(plain(m), "W-005 is no longer on any readable branch or checkout") {
 		t.Fatalf("a vanished record closes its detail with the reason:\n%s", plain(m))
 	}
 	// A record whose current state is a deletion.

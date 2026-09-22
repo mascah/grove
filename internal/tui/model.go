@@ -329,6 +329,7 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
+		m.settleFocus() // the Done bound may have moved past the focused card
 		m.clampScroll()
 	case inspectMsg:
 		if msg.gen != m.gen || m.pending != "inspect" {
@@ -609,14 +610,17 @@ func (m *Model) current() bool { return !m.hasBoard && !m.lost }
 
 // settleFocus follows the focused card to wherever the new result places it.
 func (m *Model) settleFocus() {
-	// An open record that vanished closes its detail, and the versions or
-	// sources screen above it, with the reason.
-	if len(m.stack) != 0 && m.group() == nil {
-		m.notice = m.openID() + " is no longer on any readable branch or checkout"
-		m.stack = nil
-		m.leaveVersions()
-		if m.back = boardScreen; m.screen == detailScreen || m.screen == versionsScreen {
-			m.screen = boardScreen
+	// An open record that vanished leaves the stack, with the reason; when
+	// none is left, its detail closes, and the versions or sources screen
+	// above it.
+	if gone := slices.IndexFunc(m.stack, func(id string) bool { return m.groupOf(id) == nil }); gone >= 0 {
+		m.notice = m.stack[gone] + " is no longer on any readable branch or checkout"
+		m.stack = slices.DeleteFunc(slices.Clone(m.stack), func(id string) bool { return m.groupOf(id) == nil })
+		if len(m.stack) == 0 {
+			m.leaveVersions()
+			if m.back = boardScreen; m.screen == detailScreen || m.screen == versionsScreen {
+				m.screen = boardScreen
+			}
 		}
 	}
 	columns, shelf, _ := m.bounded()
@@ -876,10 +880,12 @@ func (m *Model) openID() string {
 	return m.cardID
 }
 
-func (m *Model) group() *versions.Group {
+func (m *Model) group() *versions.Group { return m.groupOf(m.openID()) }
+
+func (m *Model) groupOf(id string) *versions.Group {
 	if m.res != nil {
 		for i := range m.res.Groups {
-			if m.res.Groups[i].ID == m.openID() {
+			if m.res.Groups[i].ID == id {
 				return &m.res.Groups[i]
 			}
 		}

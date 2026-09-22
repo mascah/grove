@@ -54,6 +54,15 @@ func ptr(s string) *string { return &s }
 // osc8 matches the terminal hyperlinks glamour puts around links.
 var osc8 = regexp.MustCompile(`\x1b\]8;[^\x07\x1b]*(?:\x07|\x1b\\)`)
 
+// sgr matches one of glamour's own styles: the only sequences a rendered
+// row may hold.
+var sgr = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+// reference matches an HTML character reference, which Markdown decodes
+// after the text was escaped: `&#x1b;` would come out of glamour as a real
+// escape byte. escapeLines makes the ampersand literal instead.
+var reference = regexp.MustCompile(`&(#[0-9]+|#[xX][0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*);`)
+
 // render turns Markdown from a record into rows of exactly w cells. The text
 // is escaped before glamour sees it, so the only sequences in the rows are
 // glamour's own styles. Its terminal hyperlinks are removed: G-017 lets no
@@ -71,19 +80,34 @@ func render(markdown string, w int) []string {
 	}
 	rows := strings.Split(strings.Trim(osc8.ReplaceAllString(out, ""), "\n"), "\n")
 	for i := range rows {
-		rows[i] = clip(rows[i], w)
+		rows[i] = clip(styledOnly(rows[i]), w)
 	}
 	return rows
 }
 
 // escapeLines escapes each line of a text as safe does, keeping the line
-// breaks that give Markdown its structure. Tabs become spaces, as wrap does.
+// breaks that give Markdown its structure, and makes character references
+// literal. Tabs become spaces, as wrap does.
 func escapeLines(text string) string {
 	lines := strings.Split(strings.ReplaceAll(text, "\t", "    "), "\n")
 	for i, l := range lines {
-		lines[i] = safe(strings.TrimRight(l, "\r"))
+		lines[i] = reference.ReplaceAllString(safe(strings.TrimRight(l, "\r")), "&amp;$1;")
 	}
 	return strings.Join(lines, "\n")
+}
+
+// styledOnly is the second layer behind escapeLines: whatever the renderer
+// emits, only its styles pass, and every other byte is escaped as safe does.
+func styledOnly(s string) string {
+	var b strings.Builder
+	last := 0
+	for _, loc := range sgr.FindAllStringIndex(s, -1) {
+		b.WriteString(safe(s[last:loc[0]]))
+		b.WriteString(s[loc[0]:loc[1]])
+		last = loc[1]
+	}
+	b.WriteString(safe(s[last:]))
+	return b.String()
 }
 
 // clip fits an already styled row to w cells; line does the same for text

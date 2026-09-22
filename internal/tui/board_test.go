@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
+
 	"github.com/mascah/grove/internal/versions"
 )
 
@@ -62,6 +64,12 @@ func TestDoneIsBoundedToItsPageNewestFirst(t *testing.T) {
 		}
 		if size[0] >= wideWidth && !strings.Contains(s, "done 2026-09-11 · abcdef0") {
 			t.Fatalf("%v: a done card shows its date and candidate:\n%s", size, s)
+		}
+		// A smaller terminal shrinks the page: the focus stays on it.
+		m.Update(tea.WindowSizeMsg{Width: size[0], Height: 10})
+		columns, _, _ = m.bounded()
+		if m.cardID != columns[doneColumn][m.pageSize(doneColumn)-1].id || !strings.Contains(plain(m), "▶"+m.cardID) {
+			t.Fatalf("%v shrunk: focus stayed past the page on %s", size, m.cardID)
 		}
 	}
 }

@@ -402,10 +402,12 @@ move, Enter opens the detail, Esc closes. Letters typed there filter rather
 than act; Ctrl-C still interrupts.
 
 Record bodies are rendered by glamour after the same escaping as every other
-text, so a body's control sequences show as text and only the renderer's own
-styles reach the terminal. Links are shown as text, never as terminal
-hyperlinks, and a relative target is shown root-relative (`/G-093-….md`).
-The render is cached per record content and width.
+text, so a body's control sequences show as text; an HTML character reference
+such as `&#x1b;` or `&amp;` shows as typed, since Markdown would decode it
+after the escaping; and of what the renderer emits only its own styles reach
+the terminal. Links are shown as text, never as terminal hyperlinks, and a
+relative target is shown root-relative (`/G-093-….md`). The render is cached
+per record content and width.
 
 Keys: arrows or `h` `j` `k` `l` move; Tab switches between the columns and
 Deleted or Elsewhere, between the detail's panes, or between versions and

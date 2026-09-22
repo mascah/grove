@@ -22,7 +22,8 @@ read the brief when the record, a product question, or reconciliation needs it.
   it bordered cards, a Done column bounded to its page, Abandoned behind `a`,
   a record detail (glamour-rendered body behind the same escaping, linked
   records by field, the timeline) and `/` search; versions and workspace
-  selection sit behind `v`. Every rendered body goes through `safe` first. G-035 selects
+  selection sit behind `v`. A rendered body is escaped before glamour and
+  filtered to glamour's own styles after it; keep both layers. G-035 selects
   a project-wide current view, which G-042 derives from Git ancestry in
   `internal/versions/current.go`: the board opens on it, and `b` still chooses
   one checkout's own board, retaining explicit source inspection and freshness
