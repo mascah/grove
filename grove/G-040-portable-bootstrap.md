@@ -2,9 +2,9 @@
 id: "G-040"
 type: work
 title: "Bootstrap projects with portable Grove workflows"
-status: proposed
+status: active
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-21T15:45:41Z"
+updated: "2026-09-22T16:06:20Z"
 kind: feature
 size: medium
 priority: 2
@@ -51,8 +51,14 @@ setup wizard is optional later, not a prerequisite for this outcome.
 
 ## Preparation and next
 
-No implementation plan exists yet. Create a linked plan through the supported
-CLI from G-065/G-038 interfaces and G-039 trial feedback. Select a distribution and
-upgrade mechanism using installed harness capabilities. Test generated projects
-in disposable clones with explicit absolute project paths. Live sibling
-installation and migration belong to G-041, not this assignment.
+Assigned alone (`/grove-work G-040`, interactive) on 2026-09-22; branch
+`worktree-G-040` in `.claude/worktrees/G-040`, base main `ccdc92d`, this
+record at `sha256:5d171634…`. The plan is
+[G-080](G-080-portable-bootstrap-plan.md): the binary embeds the two guides
+and prints them (`grove guide`), `grove version` names the executable and so
+the workflow, and `grove init` writes `grove.yaml`, the record root, a
+placeholder brief and six marked adapters, keeping user files and reporting
+managed updates. Distribution is a build from a named commit; the predecessor
+stays installed. Test generated projects in disposable clones with explicit
+absolute project paths. Live sibling installation and migration belong to
+G-041, not this assignment.
