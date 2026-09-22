@@ -4,9 +4,9 @@ type: review
 title: "G-041 nullsec cutover review"
 status: current
 created: "2026-09-22T20:30:09Z"
-updated: "2026-09-22T20:30:27Z"
+updated: "2026-09-22T20:34:20Z"
 work: ["G-041"]
-examined: "db819bf"
+examined: "4b05447"
 ---
 
 Two independent readers, both Claude subagents of the implementing session
