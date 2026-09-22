@@ -2,9 +2,9 @@
 id: "G-081"
 type: work
 title: "Run secure CI and Dependabot on GitHub"
-status: review
+status: done
 created: "2026-09-22T16:10:10Z"
-updated: "2026-09-22T17:18:39Z"
+updated: "2026-09-22T18:01:37Z"
 kind: tooling
 size: medium
 relates_to: ["G-040", "G-044"]
@@ -248,3 +248,5 @@ integrator's steps, from the main checkout:
 4. Write the verdict into this record with the `gh api` output, then on
    `main`: `go run ./cmd/grove update G-081 --expect REVISION --set status=done`
    and commit. Acceptance 6 is recorded after the first week.
+
+Verdict: approved
