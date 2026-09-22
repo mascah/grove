@@ -25,8 +25,11 @@ read the brief when the record, a product question, or reconciliation needs it.
   reads every branch through one `git cat-file` process, scoped to what the
   project loader reads; do not add a Git process per branch. G-030 reads a
   record's Git history only while its card is open, as a read any key may
-  cancel; do not read history during the board load. The runner contract
-  remains open.
+  cancel; do not read history during the board load. G-040 added `init`,
+  `guide`, and `version`: the binary embeds both guides from `docs/`, `init`
+  writes a target's configuration and marked entrypoints, and this
+  repository's own adapters stay unmanaged on purpose, reading the guide
+  files that `go run` builds from. The runner contract remains open.
 - Keep deterministic validation and state changes in software where useful;
   do not assume software can replace judgment instructions or prove acceptance.
 - Record settled choices in the brief while it remains small. Progress and the

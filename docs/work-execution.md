@@ -3,10 +3,10 @@
 This is Grove's one work workflow: how to interpret an assignment, retrieve
 context, prepare, execute, review, checkpoint, handle blockers, and hand off.
 The `grove-work` skill adapters for
-[Claude](../.claude/skills/grove-work/SKILL.md) and
-[Codex](../.agents/skills/grove-work/SKILL.md) only load it; an interactive
-session, a headless `claude -p` call, and a person reading this file follow the
-same steps. There is no second work prompt to keep in step with it.
+Claude and Codex, which `grove init` writes, only load it, and `grove guide
+work` prints the copy the binary carries; an interactive session, a headless
+`claude -p` call, and a person reading this file follow the same steps. There
+is no second work prompt to keep in step with it.
 
 The caller's assignment supplies authorization and scope. Reading this guide,
 or assembling context, does not start work or authorize a launch, merge, or push.
@@ -14,16 +14,17 @@ or assembling context, does not start work or authorize a launch, merge, or push
 **This guide is workflow, not repository policy.** How to invoke the CLI, which
 verification commands to run, where plans and reviews live, branch names, and
 anything else particular to one repository belong to that repository's agent
-instructions (`AGENTS.md` here). Commands below are written `grove …`: run them
-the way those instructions say, and never assume that a `grove` on `PATH` is
-this project's CLI. Where the two disagree, repository and user instructions
-win.
+instructions (its `AGENTS.md` or `CLAUDE.md`). Commands below are written
+`grove …`: run them the way those instructions say, or, where they say
+nothing, the way the entrypoint that loaded this guide says; never assume on
+your own that a `grove` on `PATH` is this project's CLI. Where the two
+disagree, repository and user instructions win.
 
 ## Lifecycle
 
 Work runs Proposed → Active → Review → Done, with Abandoned only by an
-explicit human decision, as [G-035](../grove/G-035-interactive-adoption.md)
-selected and [G-038](../grove/G-038-review-lifecycle.md) implemented. An
+explicit human decision, as Grove's own records G-035 and G-038 selected and
+implemented. An
 assignment sets `active` when implementation starts (step 5) and ends by
 handing a candidate commit into `review` (step 8). Only the integrator writes
 `done`, on the target after the merge, since Done means accepted and merged.
@@ -31,8 +32,8 @@ The CLI refuses it where the candidate is not already in HEAD, which keeps a
 checkout without the code from closing the work; it cannot tell the target
 from the work branch, so writing done there is this guide's rule. Preparation,
 independent review, waiting and a failed attempt are facts recorded inside
-`active`, never statuses. The [adoption roadmap](../grove/G-047-adoption-roadmap-plan.md)
-is not an assignment of all its members.
+`active`, never statuses. A roadmap plan is not an assignment of all its
+members.
 
 ## Inputs
 
@@ -159,7 +160,8 @@ checkout.
 - **Reuse** an existing branch and worktree only when step 2 shows it is
   clearly this assignment's and reusing it preserves all concurrent work.
 - **Otherwise create** an isolated worktree on a new branch, named as the
-  repository's instructions say. Base it on the intended base from step 2. If
+  repository's instructions say; where they name nothing, choose a clear
+  name and state it in the handoff. Base it on the intended base from step 2. If
   none is named, use the repository's default base only when that base holds
   the selected records and their inputs. When `versions` shows the selected
   records only on another branch, base the work there, or stop and ask if that
@@ -320,8 +322,7 @@ candidate to human judgment:
    each review record with its findings and their dispositions; unresolved
    issues and limits; and the integrator's next action as runnable commands,
    including the edit that quotes the verdict in the record before `done`,
-   since the integrator runs them as given (G-078 found a done commit that
-   changed the status alone).
+   since the integrator runs them as given.
 2. Set the status with that commit as the candidate, and commit that change
    alone, so `git diff --stat CANDIDATE HEAD` shows one file:
    `grove update G-030 --expect REVISION --set status=review --set candidate=COMMIT`.
@@ -382,7 +383,7 @@ an untracked background agent running as an implied continuation.
 | Claude, interactive | `/grove-work G-030 G-031` |
 | Claude, headless | `claude -p "/grove-work G-030 --interaction headless"` |
 | Codex, interactive | `$grove-work G-030 G-031` |
-| Any agent without skills | "Read AGENTS.md and docs/work-execution.md, then follow the guide for `G-030 --interaction headless`." |
+| Any agent without skills | "Read the repository's agent instructions and the output of `grove guide work`, then follow that guide for `G-030 --interaction headless`." |
 | Inspect first, no agent | `grove context G-030` |
 
 Every row ends in this file and the same `context` command; the mode travels
@@ -392,6 +393,5 @@ the headless row is a command for a person or a future supervised runner, which
 must separately define authorization, workspace binding, attempt identity,
 logs, cancellation, and recovery. Which of these rows has been exercised in a
 real harness, and what this workflow keeps, adapts, and defers from the
-predecessor's `/work`, are recorded in the
-[dogfooding evidence](../grove/G-032-dogfood-review.md). That is history,
-not required reading for an assignment.
+predecessor's `/work`, are recorded in Grove's own repository (G-032). That is
+history, not required reading for an assignment.

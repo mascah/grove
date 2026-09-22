@@ -3,9 +3,9 @@
 This is Grove's one shaping workflow: how to turn a conversation about an idea,
 or about work that already exists, into useful proposed work and the knowledge
 that belongs with it. The `grove-shape` skill adapters for
-[Claude](../.claude/skills/grove-shape/SKILL.md) and
-[Codex](../.agents/skills/grove-shape/SKILL.md) only load it; an interactive
-session, a headless call, and a person reading this file follow the same steps.
+Claude and Codex, which `grove init` writes, only load it, and `grove guide
+shape` prints the copy the binary carries; an interactive session, a headless
+call, and a person reading this file follow the same steps.
 Carrying out assigned work is the [work guide](work-execution.md)'s job, not
 this one's.
 
@@ -16,10 +16,11 @@ an agent, a merge, or a push, and creating a proposal assigns it to nobody.
 
 **This guide is workflow, not repository policy.** How to invoke the CLI, where
 plans and reviews live, branch names, and commit conventions belong to the
-repository's agent instructions (`AGENTS.md` here). Commands below are written
-`grove …`: run them the way those instructions say, and never assume that a
-`grove` on `PATH` is this project's CLI. Where the two disagree, repository and
-user instructions win.
+repository's agent instructions (its `AGENTS.md` or `CLAUDE.md`). Commands
+below are written `grove …`: run them the way those instructions say, or,
+where they say nothing, the way the entrypoint that loaded this guide says;
+never assume on your own that a `grove` on `PATH` is this project's CLI. Where
+the two disagree, repository and user instructions win.
 
 ## Inputs
 
@@ -204,8 +205,7 @@ The same steps, with these bounds:
 - **Missing human choice.** Do not invent the answer or write acceptance that
   presumes it. A scope or design choice that the acceptance depends on is
   such a choice even when the proposal could be assigned without it; choices
-  "left for the owner" in Next are the interactive form, not this one
-  (G-078 saw a headless session settle three such choices itself). Create
+  "left for the owner" in Next are the interactive form, not this one. Create
   the question with `blocks`, note it in the affected work's Next, commit,
   and return the wait: the question ID, what it stops, and the branch and
   commit holding it.
@@ -228,9 +228,8 @@ define authorization, budgets, logs, and recovery.
 | Claude, interactive | `/grove-shape a way to archive finished work` or `/grove-shape G-037` |
 | Claude, headless | `claude -p "/grove-shape G-037 --interaction headless"` |
 | Codex, interactive | `$grove-shape a way to archive finished work` |
-| Any agent without skills | "Read AGENTS.md and docs/work-shaping.md, then follow the guide for: TOPIC." |
+| Any agent without skills | "Read the repository's agent instructions and the output of `grove guide shape`, then follow that guide for: TOPIC." |
 
 The skills are explicit-invocation only. Which rows have been exercised in a
-real harness is recorded in the
-[G-025 evidence](../grove/G-050-shaping-review.md); that is history, not
-required reading for a shaping session.
+real harness is recorded in Grove's own repository (G-050); that is history,
+not required reading for a shaping session.

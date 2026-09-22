@@ -241,6 +241,10 @@ records: grove
 brief: grove/brief.md
 ```
 
+`grove init` writes exactly this file when none exists, creates the record
+root and a placeholder brief, and keeps an existing configuration that
+validates, following its own `records` and `brief`.
+
 `schema_version` versions the configuration and record schema together. Require
 both keys, with `brief` optional; accept exactly 3 and refuse a missing or
 other version without guessing, migrating, or rewriting files. The number is
