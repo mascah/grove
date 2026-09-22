@@ -2,9 +2,9 @@
 id: "G-079"
 type: work
 title: "Update a record by hand without a lookup and commit it in one step"
-status: review
+status: done
 created: "2026-09-22T16:01:52Z"
-updated: "2026-09-22T16:26:30Z"
+updated: "2026-09-22T16:51:18Z"
 kind: tooling
 size: small
 relates_to: ["G-009", "G-044", "G-062"]
