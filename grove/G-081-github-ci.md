@@ -209,16 +209,31 @@ by the design's request. Round 2 confirmed the fixes with one accepted
 residual: a third push to `main` inside one run still cancels the pending
 middle run; a per-SHA group on push would close that if it ever matters.
 
+**Second candidate, 2026-09-22.** The owner asked for a pull request, so
+`worktree-G-081` was pushed and PR #2 opened. That push ran lefthook's
+pre-push hook, whose test fixtures inherited the `GIT_DIR` Git exports to
+hooks and committed into this repository: the branch tip, HEAD, four stray
+branches, two temp worktrees, and `core.bare` were damaged and the fixture
+tip reached origin. The owner repaired it by hand; the cause and fix are
+[G-089](G-089-ignore-ambient-git-environment-w.md). The repaired PR then ran
+CI for the first time: `check (macos-latest)` and `govulncheck` passed,
+`check (ubuntu-latest)` failed on two tests with macOS assumptions, fixed in
+d367972 and shown passing on Linux with the whole suite in
+`docker run golang:1.26` (git 2.47.3, go1.26.8) before pushing again. Until
+G-089 is merged, every push from a linked worktree must use `--no-verify`.
+
 ## Next
 
-In Review. The integrator's steps, from the main checkout:
+In Review, second candidate. PR #2 is open from `worktree-G-081`; its CI run
+on this candidate is the evidence for acceptance 1 (`gh pr checks 2`). The
+integrator's steps, from the main checkout:
 
-1. Optional, exercises the pull-request half of acceptance 1 before merging:
-   `git push origin worktree-G-081 && gh pr create --base main --head worktree-G-081 --fill`,
-   then `gh pr checks --watch`.
-2. Merge and push: `git merge --ff-only worktree-G-081 && git push origin main`,
-   then `gh run watch` until both `check` runners and `govulncheck` are green.
-3. Settings (acceptance 3), then read them back:
+1. Merge: `main` moved past the base, so `git merge worktree-G-081` makes a
+   merge commit, as today's G-079 and G-040 merges did; then
+   `git push --no-verify origin main` and `gh run watch` until green. Merge
+   [G-089](G-089-ignore-ambient-git-environment-w.md) next, so the hook is
+   safe again.
+2. Settings (acceptance 3), then read them back:
 
    ```sh
    gh api -X PUT repos/mascah/grove/actions/permissions -F enabled=true -f allowed_actions=selected -F sha_pinning_required=true
@@ -228,8 +243,8 @@ In Review. The integrator's steps, from the main checkout:
    gh api repos/mascah/grove/actions/permissions; gh api repos/mascah/grove/actions/permissions/selected-actions; gh api -i repos/mascah/grove/vulnerability-alerts | head -1
    ```
 
-4. Confirm the Claude Code GitHub App is gone at
+3. Confirm the Claude Code GitHub App is gone at
    https://github.com/settings/installations (acceptance 4).
-5. Write the verdict into this record with the `gh api` output, then on
+4. Write the verdict into this record with the `gh api` output, then on
    `main`: `go run ./cmd/grove update G-081 --expect REVISION --set status=done`
    and commit. Acceptance 6 is recorded after the first week.
