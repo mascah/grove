@@ -41,8 +41,8 @@ Nothing else in a body changes except the reference repair below.
 | Predecessor | Becomes |
 | --- | --- |
 | `work`, `decision`, `question`, `term` | the same type |
-| `capability`, `research`, frontmatter-less evidence, plan evidence `.md` | `page` |
-| `docs/plans/*.md` | `plan`, `work` from the IDs in the filename |
+| `capability`, `research`, frontmatter-less evidence, plan evidence `.md` | `page`; plan evidence relates to its work, since a page has no `work` |
+| `docs/plans/*.md` | `plan`, `work` from the IDs in the filename (`W-029-W-031` is the range G-072 to G-074, set after review) |
 | `history/README.md` | removed; its Bench provenance is quoted in the map page |
 | `brief.md` | `grove/brief.md` (a move over the placeholder), frontmatter removed |
 | `deliveries/*.json`, `.gitkeep`, `grove.toml` | removed, listed in the map page |
@@ -66,7 +66,8 @@ takes its first work's slug plus `-plan`. The rehearsal prints every title.
 | `plan` | dropped: the plan record's `work` names the work instead |
 | `created`, `updated` (day-only) | dropped; the map page shows the old day. `update` writes `updated` when it sets fields |
 | `id`, `type` | replaced by the new record's |
-| `focus` (brief), `project`, `url`, `sources`, `tags`, `started`, `unchanged`, `batch`, `batch_reason` | dropped |
+| `sources` | `relates_to` when every entry names a nullsec record (four decisions); otherwise dropped |
+| `focus` (brief), `project`, `url`, `tags`, `started`, `unchanged`, `batch`, `batch_reason` | dropped |
 
 Every dropped value is printed per record in the map page, so the page plus
 Git history at `formerly` accounts for all of it.
@@ -145,16 +146,30 @@ the integrator's step.
 record count through the CLI, and which `grove-*` skills they can see, changing
 nothing. Observed output is recorded apart from file existence.
 
+**Adjustments from evidence.** The rehearsal and the reader added: block
+YAML lists in the parser; `pre-W-036` rewritten; `W-019-T3` kept as a branch;
+`W-021/023/024` shorthands expanded; paths relative to the old root
+(`history/evidence/…`) rewritten; link labels that spelled the old filename
+renamed; the brief-Next lead-in reworded. The final review added G-121's range,
+a lead-in saying G-075's own Next supersedes the moved text, and three live
+instructions (`art/design/section-study-recipe.md`, G-059's Next,
+`docs/world/expedition-foundations.md`) moved to new CLI commands, which the
+plan had limited to the two instruction files.
+
 ## Steps
 
-1. [ ] Commit this plan; set G-041 active.
-2. [ ] `superseded` decision status: type table, record model, test.
-3. [ ] Script; rehearsal twice in a disposable clone with recovery between;
-   independent read of rewritten lines; exceptions settled.
-4. [ ] Live on `worktree-grove-cutover`; mapping equal; `npm test`; diff read.
-5. [ ] Machine: install the binary, uninstall the predecessor, `grove version`
-   from a login shell, Claude's Bash tool and Codex's shell.
-6. [ ] Fresh Claude and Codex sessions in the nullsec worktree.
-7. [ ] This repository's `AGENTS.md` and README coexistence section; rollback
-   written down.
-8. [ ] Independent review of both diffs; evidence and handoff into Review.
+1. [x] Commit this plan (`499f11e`); set G-041 active (`2c349bc`).
+2. [x] `superseded` decision status: type table, record model, test (`1452c6f`).
+3. [x] Script (`5ef2978`); rehearsal in a disposable clone; recovery by reset,
+   clean and deleting `neutral-ids` reproduced a byte-identical mapping and an
+   identical tree apart from timestamps; an independent reader read all
+   rewritten lines; exceptions settled.
+4. [x] Live on `worktree-grove-cutover` (`5381966`, `473529b`, `ecbb036`, review
+   fixes `3eb2785`); mapping and tree identical to the rehearsal; `npm test`
+   passes.
+5. [x] Machine: binary from `5ef2978` installed; predecessor removed; `grove
+   version` from a login shell, Claude's Bash tool and Codex's shell.
+6. [x] Fresh Claude and Codex sessions in the nullsec worktree.
+7. [x] This repository's `AGENTS.md` and README (`1dc3922` and after review);
+   rollback in G-041.
+8. [x] Independent review (G-092); evidence and handoff into Review.

@@ -389,8 +389,9 @@ commit was `be40e46`. Existing deployments and external data were not changed.
 The archive's instructions and service-based planning authority belong to that
 old application; they do not govern this restart.
 
-`../skills/` remains the working Grove skill suite and CLI. `../nullsec/` remains
-the real project providing workflow evidence. Neither is migrated by this reset.
+`../skills/` holds the predecessor Grove skill suite and CLI, uninstalled since
+G-041 and kept as files. `../nullsec/` remains the real project providing
+workflow evidence; G-041 cut it over to this CLI.
 
 ## Resume this conversation
 
@@ -403,5 +404,5 @@ Give a new agent this prompt:
 > verification. Find the next
 > action in G-036 and the work records' Next. Treat the brief's
 > remaining proposals as proposals. Inspect
-> the sibling skills and nullsec projects through their Grove CLI when evidence
-> is needed. Preserve this direction and update the brief as choices settle.
+> nullsec through the installed `grove`, and the sibling skills project as files,
+> when evidence is needed. Preserve this direction and update the brief as choices settle.

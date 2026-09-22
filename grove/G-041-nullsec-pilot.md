@@ -188,9 +188,150 @@ Keyborg is not migrated alongside nullsec.
 6. **The owner's judgment.** The owner judges the converted nullsec tree and
    its board in an actual terminal. No check substitutes for this.
 
+## Evidence
+
+Plan [G-091](G-091-nullsec-cutover-plan.md), review
+[G-092](G-092-nullsec-cutover-review.md). Grove branch `worktree-G-041` from
+`main` `77b4111`: plan `499f11e`, active `2c349bc`, `superseded` status
+`1452c6f`, the migration script `5ef2978` (removed in `db819bf`; read it with
+`git show 5ef2978:scripts/g041-nullsec-cutover.py`), docs `1dc3922`, then the
+review fixes and this evidence. Nullsec branch `worktree-grove-cutover` in
+`nullsec/.claude/worktrees/grove-cutover` from nullsec `main` `366b063`:
+`5381966` `grove init`, `473529b` conversion and rewrite, `ecbb036`
+instructions and settings, `3eb2785` review fixes.
+
+Owner choices during the session, 2026-09-22: install from the local branch
+commit, since pushing is the owner's step ("Local branch commit"), and
+uninstall in this session once the live migration passed ("Yes, this session").
+Decided in the plan: a `superseded` decision status (the record model's
+anticipated supersession; `accepted` or `rejected` would misstate the two
+replaced decisions), numbering by old ID within groups because nullsec's dates
+are day-only and Git has only the 2026-09-14 import, and historical `done`
+written directly without `candidate`, since `update` writes done only with one
+and AGENTS.md forbids backfilling.
+
+Against each acceptance item:
+
+1. **Rehearsal.** In a `git clone --no-hardlinks` of nullsec `366b063` under
+   the session scratchpad, reached by absolute path, the script ran with a
+   binary built from a clone of `1452c6f`: `check` `OK: 127 records` (126
+   converted plus the map page `G-127`), 0 broken links (the same 0 as before
+   the migration), and 5 remaining old-ID lines, each listed on the map page
+   (a verbatim builder quote, two `.grove-run/` artifact names never tracked,
+   the `W-019-T3` branch, one folder named as it was). Every predecessor file
+   is converted, moved (three non-Markdown evidence files to
+   `docs/evidence/`), or removed with a reason on the map page. Recovery
+   (`git reset --hard`, `git clean -fd`, deleting the clone's
+   `.git/grove/neutral-ids`) reproduced a byte-identical `mapping.json` and an
+   identical diff apart from timestamps, twice.
+2. **Live migration.** The same script and binary in the nullsec worktree
+   produced a byte-identical `mapping.json` and the same 694 files, hashed with
+   timestamps normalised, as the rehearsal. Nullsec now has `grove.yaml`, the
+   six entrypoints from `init`, 127 records under `grove/` with the map page,
+   and no `grove.toml`, `docs/grove/` or `docs/plans/`. Its `CLAUDE.md` and
+   `AGENTS.md` carry a `## Grove` section on the new CLI in place of the
+   `grove:begin` block. `npm test` at `ecbb036`: exit 0, cargo workspace ok,
+   405 vitest, 17 of 17 smoke. Earlier runs failed the smoke test
+   "pointer round trip" in two full-suite runs at `ecbb036`; it passed 5 of 5 alone at
+   both `366b063` and `ecbb036`, and a full smoke run at `366b063` also failed
+   one test in one of two runs, so it is an existing flake, not the migration
+   (load averages 3 to 4). The string changes were read line by line by the
+   first reviewer (G-092, round 1): test titles, assert messages and comments,
+   none compared by code. The review fixes `3eb2785` touch Markdown only;
+   `grove check` passes after them.
+3. **The predecessor is gone.** `uv tool uninstall grove`; `grove@mascah`
+   uninstalled at local scope in `skills`, `nullsec`, this repository and the
+   four vanished nullsec worktrees W-035, W-036, W-037 and W-039 (each through
+   an empty directory made for the command and removed after); the `mascah`
+   marketplace removed; nullsec's `settings.local.json` now enables none; the
+   orphaned caches `~/.claude/plugins/cache/{mascah,grove-local}` removed;
+   `codex plugin remove grove@grove-local` and `codex plugin marketplace
+   remove grove-local` removed both sections from `~/.codex/config.toml`, and
+   the empty Codex cache folder was removed. Nullsec's tracked
+   `.claude/settings.json`, which only enabled `grove@grove-local`, is deleted
+   on the branch. `~/.local/bin/grove` is built from a clone of `5ef2978`
+   (same Go code as `1452c6f`) and prints `grove
+   v0.0.0-20260922195818-5ef2978c9bf8 (5ef2978c…) guides sha256:99621fb54f05`
+   from a login shell (`zsh -lc`, only that `grove` on `PATH`), from Claude's
+   Bash tool, and from `codex exec`. `../skills` has no working-tree change.
+4. **Fresh sessions**, all in the nullsec worktree, observed from their tool
+   calls: a `claude -p` session ran `grove version`, `grove brief`, `grove
+   check` (`OK: 127 records`) and `grove list`; `/grove-work --interaction
+   headless` and `/grove-shape --interaction headless` ran `grove guide work`
+   and `grove guide shape` and returned the guides' no-assignment wait; their
+   skill list held `grove-shape` and `grove-work` and no `grove:*` skill. The
+   entrypoints are `disable-model-invocation`, so a model asked to list its
+   skills does not see them; a typed invocation does. `codex exec -s
+   read-only` with `$grove-work` and `$grove-shape` ran `grove guide work` and
+   `grove guide shape` and returned the same waits. No session wrote a file.
+5. **This repository.** `AGENTS.md` says the installed `grove` is a build of
+   this CLI that can lag the checkout, keeps `go run ./cmd/grove` for
+   development here, and reads nullsec through the installed CLI and
+   `../skills` as files; the README's adoption section, introduction and
+   reset notes match. The rollback is below.
+6. **The owner's judgment** of the converted tree and its board is open.
+
+**Rollback.** Revert nullsec's merge of `worktree-grove-cutover` (restoring
+`grove.toml`, `docs/grove/` and the tracked `grove@grove-local` setting), then:
+
+```sh
+rm ~/.local/bin/grove     # the Go build occupies the path the uv tool links
+uv tool install --editable ~/GitHub/mascah/skills/cli
+claude plugin marketplace add mascah/skills
+(cd ~/GitHub/mascah/skills && claude plugin install grove@mascah --scope local)
+(cd ~/GitHub/mascah/nullsec && claude plugin install grove@mascah --scope local)
+```
+
+and restore these two sections of `~/.codex/config.toml`, removed verbatim:
+
+```toml
+[marketplaces.grove-local]
+source_type = "local"
+source = "/Users/mascah/GitHub/mascah/skills"
+
+[plugins."grove@grove-local"]
+enabled = true
+```
+
+Before the cutover `grove@mascah` was also installed, disabled, at local scope
+for this repository and for four nullsec worktrees that no longer exist; those
+need no restoring.
+
+**Limits.** Nullsec `main` has no working `grove` until its branch merges: its
+committed instructions name the uninstalled predecessor. Nullsec's
+`.git/grove/claims.json`, the predecessor's local claim state, is left in
+place; the new CLI never reads it. The installed binary comes from an unpushed
+commit and should be rebuilt from `main` after the merge. Nullsec's old
+branches and worktrees are untouched. Grove verification at `db819bf`:
+`gofmt -l .` clean, `go vet ./...` ok, `check` `OK: 87 records`, `go test
+-count=1 -timeout 120s ./...` ok in every package; later commits change only
+records and the README.
+
 ## Next
 
-Assign with `/grove-work G-041`. Preparation writes a plan record with the
-field mapping, the superseded-decision choice and the script outline, then
-runs the rehearsal. After this is done, G-036's Next takes the first real
-nullsec change.
+In Review. To judge it:
+
+```sh
+cd ~/GitHub/mascah/grove/.claude/worktrees/G-041
+go run ./cmd/grove context G-041 --include grove/G-091-nullsec-cutover-plan.md
+go run ./cmd/grove show G-092
+git diff --stat CANDIDATE HEAD     # only this record
+cd ~/GitHub/mascah/nullsec/.claude/worktrees/grove-cutover
+grove check && grove show G-127 | less
+grove                              # the board, in a real terminal (acceptance 6)
+```
+
+Approve and integrate, nullsec first, since its `main` needs the new layout:
+
+```sh
+cd ~/GitHub/mascah/nullsec && git merge worktree-grove-cutover && grove check
+cd ~/GitHub/mascah/grove && git merge worktree-G-041
+# quote the verdict in this record's Evidence, then:
+go run ./cmd/grove update G-041 --set status=done --commit
+git push    # both repositories, when wanted
+rm -rf /tmp/grove-install && git clone -q --no-hardlinks . /tmp/grove-install && (cd /tmp/grove-install && go build -o ~/.local/bin/grove ./cmd/grove) && grove version
+```
+
+Feedback: write it here and `--set status=active` on `worktree-G-041`.
+Rejection: `status=abandoned` with the reasons, and the rollback above. After
+done, G-036's Next takes the first real nullsec change, shaped in nullsec.
