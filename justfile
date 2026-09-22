@@ -1,11 +1,26 @@
+set positional-arguments
+
 default:
     @just --list
 
-# Remove local branches merged into main, and their worktrees. Lists them and asks first.
-# Safe by construction: `git worktree remove` without --force refuses a worktree with
-# changes or untracked files, and `git branch -d` refuses a branch that is not merged.
+# Build ./bin/grove from this checkout.
+build:
+    go build -o bin/grove ./cmd/grove
+
+# Build and run: `just run list --status active`. Unlike `go run`, keeps grove's exit code.
+run *args: build
+    @bin/grove "$@"
+
+# Replace the installed ~/.local/bin/grove with a build of this checkout.
+install:
+    go build -o "$HOME/.local/bin/grove" ./cmd/grove
+    "$HOME/.local/bin/grove" version
+
+# Remove local branches merged into main, and their worktrees, after asking.
 clean-merged:
     #!/usr/bin/env bash
+    # Safe by construction: `git worktree remove` without --force refuses a worktree with
+    # changes or untracked files, and `git branch -d` refuses a branch that is not merged.
     set -euo pipefail
     git worktree prune
     current=$(git branch --show-current)
