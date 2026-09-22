@@ -23,7 +23,8 @@ type tree struct {
 	present bool // grove.yaml exists at the prefix
 	project *project.Project
 	ds      []project.Diagnostic
-	err     error // Git could not supply the tree
+	err     error             // Git could not supply the tree
+	ids     map[string]string // record ID to revision, filled by revisionOf
 }
 
 func (t *tree) valid() bool { return t.err == nil && t.present && len(t.ds) == 0 }
@@ -65,10 +66,14 @@ type objects struct {
 	projects map[string]*tree // by what the loader would read
 	trees    map[string][]entry
 	blobs    map[string][]byte
+
+	commitInfos map[string]commitInfo
+	bases       map[[2]string][]string // by the ordered pair of commits
 }
 
 func newObjects(ctx context.Context, root, prefix string) *objects {
-	return &objects{ctx: ctx, root: root, prefix: prefix, commits: map[string]*tree{}, projects: map[string]*tree{}, trees: map[string][]entry{}, blobs: map[string][]byte{}}
+	return &objects{ctx: ctx, root: root, prefix: prefix, commits: map[string]*tree{}, projects: map[string]*tree{}, trees: map[string][]entry{}, blobs: map[string][]byte{},
+		commitInfos: map[string]commitInfo{}, bases: map[[2]string][]string{}}
 }
 
 // close ends the process, if one was started. Closing its input is how

@@ -653,4 +653,8 @@ func TestCommittedReadIsScopedAndShared(t *testing.T) {
 	if n := strings.Count(string(log), "git cat-file"); err != nil || n != 1 || strings.Contains(string(log), "ls-tree") {
 		t.Errorf("three branches and a checkout should share one cat-file process and list no whole tree: %d, %v", n, err)
 	}
+	// G-001 differs on records, so the current view compared its histories.
+	if find(t, group(t, res, "G-001"), "committed", "refs/heads/main").Older == "" || strings.Contains(string(log), "merge-base") || strings.Contains(string(log), "rev-list") {
+		t.Error("the current view should order histories through the same cat-file process")
+	}
 }

@@ -53,12 +53,14 @@ type Version struct {
 	Change   string // live: unchanged, modified, renamed, added, deleted, unknown
 	HeadPath string // live: the record's path at HEAD when it differs
 	Selector string // "" for deleted rows, which cannot be opened
+	Older    string // why another observation is newer; "" when current (current.go)
 }
 
 // Group holds every observation of one record ID.
 type Group struct {
 	ID       string
 	Versions []Version
+	Notes    []string // pairs of observations that could not be ordered
 }
 
 // Result is the inventory and observations of one inspection.
@@ -214,6 +216,7 @@ func inspect(ctx context.Context, root, id string, between func()) (*Result, err
 		result.Groups = append(result.Groups, *g)
 	}
 	slices.SortFunc(result.Groups, func(a, b Group) int { return compareIDs(a.ID, b.ID) })
+	committed.project(result)
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
