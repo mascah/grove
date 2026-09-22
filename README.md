@@ -152,8 +152,11 @@ PATH="$HOME/.local/grove/bin:$PATH" grove version
 
 `grove version` prints the module version and, when the build stamped it, the
 VCS revision with `modified` for a dirty tree; `go run` prints `(devel)`, which
-means this checkout's files. The predecessor rejects `version` as an unknown
-command, so the line tells the two apart. The workflow guides travel inside the
+means this checkout's files. Build from a primary checkout or a clone: for a
+linked worktree that lies inside its repository, Go only recognises the
+enclosing checkout's `.git` directory and stamps that checkout's revision and
+cleanliness instead (observed with go 1.26.2). The predecessor rejects
+`version` as an unknown command, so the line tells the two apart. The workflow guides travel inside the
 binary: `grove guide work` and `grove guide shape` print them, so the workflow
 version is the executable version and no copy is edited elsewhere.
 

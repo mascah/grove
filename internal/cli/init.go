@@ -51,18 +51,18 @@ func loadGuide(name, what, extra string) string {
 		"(`AGENTS.md` or `CLAUDE.md`; read them if they are not already among yours) say\n" +
 		"how to invoke it: they are the repository's development policy. The guide is\n" +
 		"the whole workflow, including what to read and when. " + extra +
-		"If the command fails or prints anything other than that guide, another\n" +
+		"\nIf the command fails or prints anything other than that guide, another\n" +
 		"`grove` answered: stop and say so.\n"
 }
 
 var workLoad = loadGuide("work", "those IDs and that mode", "It starts from the\n"+
 	"selected records and reads plans, prerequisites, questions, and other documents\n"+
 	"at the step that needs them: do not preload what it schedules for later, and\n"+
-	"do not skip what a step requires. ")
+	"do not skip what a step requires.")
 
 var shapeLoad = loadGuide("shape", "that topic and mode", "Shaping writes proposals and\n"+
 	"knowledge only: it never implements, promotes status, launches an agent, or\n"+
-	"merges. ")
+	"merges.")
 
 // managedFiles are the harness entrypoints init owns, relative to the project.
 func managedFiles() map[string]string {
