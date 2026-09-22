@@ -121,9 +121,10 @@ status rankings, or the newest branch tip do not define authority.
 
 This supersedes G-002's explicit-versions-first presentation as the future
 default. Exact source inspection and fresh workspace binding remain available.
-G-042 implements this by merge bases. No integration target is chosen yet
-(owner, 2026-09-22), so the view labels uncommitted changes but cannot call a
-change unintegrated.
+Ancestry here means merge bases: a copy is superseded when, since it and
+another split, only the other changed the record. No integration target is
+chosen (owner, 2026-09-22), so uncommitted changes are labelled but no change
+is called unintegrated.
 
 Board columns follow the target lifecycle, with bounded recent Done items,
 searchable older work, and Abandoned hidden by default. Detail leads with

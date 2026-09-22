@@ -104,7 +104,10 @@ func (o *objects) projectGroup(res *Result, g *Group) {
 		if unborn(n.commit) {
 			return 0
 		}
-		c, _ := o.commit(n.commit)
+		c, err := o.commit(n.commit)
+		if err != nil { // a cancelled read; the result is discarded
+			return 0
+		}
 		return c.when
 	}
 	slices.SortStableFunc(byDate, func(a, b *node) int {
@@ -135,6 +138,14 @@ func (o *objects) projectGroup(res *Result, g *Group) {
 				order(c, n)
 			}
 		}
+	}
+	// Reverts across merges can make older a cycle, leaving nothing current:
+	// then no order is known, and every content stands as a current state.
+	if !slices.ContainsFunc(nodes, func(n *node) bool { return n.older == "" }) {
+		for _, n := range nodes {
+			n.older = ""
+		}
+		g.Notes = append(g.Notes, "no version could be ordered: each is older than another, through changes and reverts that merges carried across branches")
 	}
 	var versions []Version
 	for _, s := range res.Sources {
@@ -178,12 +189,15 @@ func name(s *Source) string {
 // common history means the record was absent there. Several bases that
 // disagree, or a base whose project cannot be read, are an error.
 func (o *objects) baseOf(a, b *node, id string) (string, error) {
-	bases := []string{a.commit}
-	if a.commit != b.commit {
+	var bases []string
+	switch {
+	case a.commit != b.commit:
 		var err error
 		if bases, err = o.mergeBases(a.commit, b.commit); err != nil {
 			return "", err
 		}
+	case !unborn(a.commit): // an unborn HEAD has no history
+		bases = []string{a.commit}
 	}
 	content := ""
 	for i, c := range bases {

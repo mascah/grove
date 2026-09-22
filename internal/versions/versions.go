@@ -50,7 +50,7 @@ type Version struct {
 	Record   *project.Record // nil for a record deleted from live files
 	Path     string
 	Revision string
-	Change   string // live: unchanged, modified, renamed, added, deleted, unknown
+	Change   string // live: unchanged, modified, renamed, added, deleted, unknown; committed: "" or deleted
 	HeadPath string // live: the record's path at HEAD when it differs
 	Selector string // "" for deleted rows, which cannot be opened
 	Older    string // why another observation is newer; "" when current (current.go)

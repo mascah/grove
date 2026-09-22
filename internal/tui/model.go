@@ -237,14 +237,18 @@ func (m *Model) historyOf() *versions.Version {
 			return v
 		}
 	}
+	if i := slices.IndexFunc(g.Versions, func(v versions.Version) bool { return m.current() && v.Older == "" }); i >= 0 {
+		return &g.Versions[i] // a current deletion
+	}
 	return &g.Versions[0]
 }
 
 // historyAt names the commit and the path there that a version's history
 // starts from. A checkout's record is followed from its HEAD, under the name
-// it has there; one added since HEAD has no commit to read.
+// it has there; one added since HEAD, or deleted on a branch, has no commit
+// to read.
 func historyAt(v *versions.Version) (commit, path string) {
-	if v == nil || v.Change == "added" {
+	if v == nil || v.Change == "added" || v.Path == "" {
 		return "", ""
 	}
 	if v.HeadPath != "" {
@@ -523,7 +527,7 @@ func (m *Model) settleBoard() {
 	}
 }
 
-// current reports the current view: no checkout chosen, or lost.
+// current reports the current view: no checkout chosen, and none lost.
 func (m *Model) current() bool { return !m.hasBoard && !m.lost }
 
 // settleFocus follows the focused card to wherever the new result places it.
@@ -626,6 +630,7 @@ func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
 		best, work, deleted, uncommitted := -1, false, false, false
 		var title string
 		for _, state := range states {
+			uncommitted = uncommitted || !slices.ContainsFunc(state, committed)
 			r := state[0].Record
 			if r == nil {
 				deleted = true
@@ -638,7 +643,6 @@ func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
 			if i := slices.Index(statuses[:], r.Status); i >= 0 && (best < 0 || i < best) {
 				best, title = i, r.Title
 			}
-			uncommitted = uncommitted || !slices.ContainsFunc(state, func(v *versions.Version) bool { return v.Change == "" || v.Change == "unchanged" })
 		}
 		var tags []string
 		if len(states) > 1 {
@@ -656,6 +660,12 @@ func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
 		}
 	}
 	return
+}
+
+// committed reports a version held by a commit: a branch's, or a checkout's
+// file that matches its HEAD.
+func committed(v *versions.Version) bool {
+	return v.Source.Kind == "committed" || v.Change == "unchanged"
 }
 
 // currentStates lists a group's current states: each distinct current content

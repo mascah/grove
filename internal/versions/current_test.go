@@ -1,6 +1,7 @@
 package versions
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -223,5 +224,70 @@ func TestMergeBases(t *testing.T) {
 		if !slices.Equal(got, want) {
 			t.Errorf("merge bases of %s and %s: got %v, want %v", pair[0], pair[1], got, want)
 		}
+	}
+}
+
+// TestCurrentViewCycle: a revert carried across merges can make every
+// observation older than another. Nothing may vanish: no order is known, so
+// every content stands, with a note.
+func TestCurrentViewCycle(t *testing.T) {
+	t.Parallel()
+	root := repoFixture(t)
+	rec := func(body string) { write(t, root, "grove/G-030.md", record("G-030", "work", "proposed", body)) }
+	rec("X\n")
+	m1 := commit(t, root, "M1")
+	rec("Y\n")
+	commit(t, root, "M3")
+	git(t, root, "checkout", "-q", "-b", "b")
+	write(t, root, "other.txt", "x\n")
+	commit(t, root, "unrelated on b")
+	git(t, root, "checkout", "-q", "-b", "d", m1)
+	rec("Z\n")
+	commit(t, root, "D")
+	git(t, root, "checkout", "-q", "-b", "c", "main")
+	git(t, root, "merge", "-q", "--no-ff", "-m", "merge d", "-s", "ours", "d")
+	rec("Z\n")
+	commit(t, root, "resolve to Z")
+	git(t, root, "checkout", "-q", "-b", "a", "d")
+	rec("X\n")
+	commit(t, root, "revert to X")
+	git(t, root, "checkout", "-q", "main")
+
+	// a is older than b (base M1 has X), b than c (base M3 has Y), c than a
+	// (base D has Z).
+	expectStanding(t, mustInspect(t, root, ""), "G-030",
+		"branch a proposed current", "branch b proposed current", "branch c proposed current",
+		"branch d proposed current", "branch main proposed current", "checkout . proposed current",
+		"no version could be ordered: each is older than another, through changes and reverts that merges carried across branches")
+}
+
+// TestCurrentViewCancelled: a read failing during the projection, as a
+// cancelled load's does, must not panic; the caller discards the result.
+func TestCurrentViewCancelled(t *testing.T) {
+	t.Parallel()
+	root := repoFixture(t)
+	git(t, root, "checkout", "-q", "-b", "f")
+	write(t, root, "grove/work/G-001-first.md", record("G-001", "work", "active", "x\n"))
+	commit(t, root, "f")
+	git(t, root, "checkout", "-q", "main")
+	res := mustInspect(t, root, "")
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	o := newObjects(ctx, root, "")
+	defer o.close()
+	o.project(res)
+}
+
+// TestBaseOfUnborn: two observations on one unborn HEAD share no history, so
+// the record was absent at their base rather than unreadable.
+func TestBaseOfUnborn(t *testing.T) {
+	t.Parallel()
+	root := repoFixture(t)
+	o := newObjects(t.Context(), root, "")
+	defer o.close()
+	zero := strings.Repeat("0", 40)
+	base, err := o.baseOf(&node{commit: zero, live: true, content: "a"}, &node{commit: zero, live: true, content: "b"}, "G-001")
+	if base != "" || err != nil {
+		t.Errorf("got %q, %v", base, err)
 	}
 }

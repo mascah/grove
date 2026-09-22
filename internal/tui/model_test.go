@@ -897,24 +897,30 @@ func TestCurrentViewBoard(t *testing.T) {
 		vs = append(vs, older(version(s, "W-001", "Inspect records", "active"), "branch feature changed it since their common history"),
 			version(s, "W-002", "Create records", "proposed"),
 			older(version(s, "W-003", "Edit records", "proposed"), "checkout feat (feature) has an uncommitted change to it on top of this commit"),
-			older(version(s, "W-004", "Drop records", "proposed"), "branch feature changed it since their common history"))
+			older(version(s, "W-004", "Drop records", "proposed"), "branch feature changed it since their common history"),
+			older(version(s, "W-005", "Shelve records", "proposed"), "checkout feat (feature) has an uncommitted change to it on top of this commit"))
 	}
 	vs = append(vs, version(fx.cFeat, "W-001", "Inspect records, finished", "done"), version(fx.feat, "W-001", "Inspect records, finished", "done"),
 		version(fx.cFeat, "W-002", "Create records, started", "active"), version(fx.feat, "W-002", "Create records, started", "active"),
 		older(version(fx.cFeat, "W-003", "Edit records", "proposed"), "checkout feat (feature) has an uncommitted change to it on top of this commit"))
 	edited := version(fx.feat, "W-003", "Edit records", "active")
 	edited.Change, edited.Record.Source, edited.Revision = "modified", []byte("edited"), "sha256:edited"
-	vs = append(vs, edited, versions.Version{Source: fx.cFeat, Path: "grove/work/W-004.md", Change: "deleted"})
+	vs = append(vs, edited,
+		older(version(fx.cFeat, "W-005", "Shelve records", "proposed"), "checkout feat (feature) has an uncommitted change to it on top of this commit"),
+		versions.Version{Source: fx.feat, Path: "grove/work/W-005.md", Change: "deleted"})
 	res := result(fx.main, fx.sources(), vs...)
 	res.Groups[1].Notes = []string{"branch main and branch feature could not be ordered: example"}
+	// The projection's row for a branch's deletion has no path; a checkout's
+	// has its HEAD's.
+	res.Groups[3].Versions = append(res.Groups[3].Versions, versions.Version{Source: fx.cFeat, Change: "deleted"})
 
 	m := open(t, &fake{res: res}, 120, 30)
-	want := "proposed=W-002 active=W-003 review= done=W-001 abandoned= shelf=W-004"
+	want := "proposed=W-002 active=W-003 review= done=W-001 abandoned= shelf=W-004,W-005"
 	if got := board(m); got != want {
 		t.Fatalf("current view:\n got %s\nwant %s", got, want)
 	}
 	screen := plain(m)
-	for _, want := range []string{"Board: current view", "W-002  ⑂ 2 states", "Create records", "W-003  uncommitted", "Inspect records, fin…", "Deleted (1, the current state removes the record; Tab): W-004"} {
+	for _, want := range []string{"Board: current view", "W-002  ⑂ 2 states", "Create records", "W-003  uncommitted", "Inspect records, fin…", "Deleted (2, the current state removes the record; Tab): W-004  W-005 [uncommitted]"} {
 		if !strings.Contains(screen, want) {
 			t.Fatalf("board lacks %q:\n%s", want, screen)
 		}
@@ -951,8 +957,20 @@ func TestCurrentViewBoard(t *testing.T) {
 			t.Fatalf("W-002 lacks %q:\n%s", want, screen)
 		}
 	}
-	// W-004's deletion on a branch is a row that opens nothing.
-	press(m, "esc", "tab", "enter", "down")
+	// Only W-005's deletion is uncommitted.
+	press(m, "esc", "tab")
+	if screen = plain(m); !strings.Contains(screen, "W-005   uncommitted") || strings.Contains(screen, "W-004   uncommitted") {
+		t.Fatalf("the shelf should mark W-005's uncommitted deletion alone:\n%s", screen)
+	}
+	// W-004's deletion on a branch has no history to read, and is a row that
+	// opens nothing.
+	h := &fake{res: res, history: func(context.Context, string, string) ([]versions.Commit, error) { return nil, nil }}
+	withHistory := open(t, h, 120, 30)
+	press(withHistory, "tab", "enter")
+	if rows := strings.Join(withHistory.historyRows(200), "\n"); withHistory.wantHistory() != nil || !strings.Contains(rows, "This branch deleted the record") {
+		t.Fatalf("a branch's deletion has no history:\n%s", rows)
+	}
+	press(m, "enter", "down")
 	if press(m, "enter") != nil || !strings.Contains(plain(m), "REFUSED: this record was deleted on that branch") {
 		t.Fatalf("a branch's deletion must not resolve:\n%s", plain(m))
 	}

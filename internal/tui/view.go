@@ -436,9 +436,9 @@ func (m *Model) historyRows(w int) []string {
 	if v.Record != nil {
 		status = v.Record.Status
 	}
-	switch v.Change {
-	case "", "unchanged":
-	case "unknown":
+	switch {
+	case committed(v):
+	case v.Change == "unknown":
 		entry("uncommitted?", status, "whether these files differ from the commit is unknown")
 	default:
 		entry("uncommitted", status, v.Change+" in this checkout's files")
@@ -446,6 +446,8 @@ func (m *Model) historyRows(w int) []string {
 	commit, path := historyAt(v)
 	read, held := m.hist[commit+"\x00"+path]
 	switch {
+	case commit == "" && v.Source.Kind == "committed":
+		rows = append(rows, wrap("This branch deleted the record; an older row has its history.", w)...)
 	case commit == "":
 		rows = append(rows, wrap("No commit of this checkout holds the record yet.", w)...)
 	case !held:
@@ -458,7 +460,7 @@ func (m *Model) historyRows(w int) []string {
 	// Merges are not listed, so the newest row need not be the record as it is
 	// here: a merge may have set the status, or combined it with a newer commit
 	// from another line. Say what is known, not which.
-	if committed := v.Change == "" || v.Change == "unchanged"; committed && len(read.commits) != 0 && read.commits[0].Status != status {
+	if committed(v) && len(read.commits) != 0 && read.commits[0].Status != status {
 		entry("here", status, "the record's status here; the newest commit below differs because merges are not listed")
 	}
 	for _, c := range read.commits {
@@ -569,7 +571,7 @@ func currentText(g *versions.Group) string {
 	if len(states) == 1 {
 		fmt.Fprintf(&b, "Current: %s.", stateText(states[0]))
 	} else {
-		fmt.Fprintf(&b, "Diverging: %d current states. Each changed this record after they split from a common commit, and none has the others' change, so none replaces the others. The card sits in the earliest status among them until one side takes the other's change, by a merge or an edit.", len(states))
+		fmt.Fprintf(&b, "Diverging: %d current states. None is known to replace the others: each changed this record since they split from a common commit, or their order could not be read (below). The card sits in the earliest status among them until one side takes the other's change, by a merge or an edit.", len(states))
 		for _, state := range states {
 			b.WriteString("\n  - " + stateText(state))
 		}
@@ -604,7 +606,7 @@ func stateText(state []*versions.Version) string {
 		names = strings.Join(labels, ", ")
 	}
 	text += " on " + names
-	if !slices.ContainsFunc(state, func(v *versions.Version) bool { return v.Change == "" || v.Change == "unchanged" }) {
+	if !slices.ContainsFunc(state, committed) {
 		text += ", uncommitted"
 	}
 	return text
