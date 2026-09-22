@@ -2,9 +2,9 @@
 id: "G-071"
 type: work
 title: "Spawn fewer Git processes per inspection"
-status: active
+status: done
 created: "2026-09-22T03:19:16Z"
-updated: "2026-09-22T03:28:39Z"
+updated: "2026-09-22T03:59:15Z"
 kind: refactor
 size: medium
 relates_to: ["G-030", "G-031", "G-052"]
@@ -130,7 +130,7 @@ counts all processes about 5% higher and agrees on `rev-parse`.
 
 ## Next
 
-Owner's judgment on acceptance 3: the cancellation scenario above could not
-pass unchanged once an unchanged checkout is not re-entered, which the
-proposed design asked for. If that reading is accepted, mark done; nothing
-else is open. Then integrate `worktree-G-071` (fast-forward onto main).
+Done. The owner accepted the acceptance-3 reading on 2026-09-21 (the
+cancellation scenario had to change once an unchanged checkout is not
+re-entered) and asked for the merge; `worktree-G-071` was fast-forwarded
+onto main.
