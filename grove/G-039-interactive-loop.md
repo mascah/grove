@@ -2,15 +2,16 @@
 id: "G-039"
 type: work
 title: "Prove the complete interactive workflow on real Grove work"
-status: active
+status: review
 created: "2026-09-21T00:54:14Z"
-updated: "2026-09-22T14:57:26Z"
+updated: "2026-09-22T15:37:15Z"
 kind: investigation
 size: small
 priority: 1
 depends_on: ["G-025", "G-037", "G-038"]
 relates_to: ["G-035", "G-036", "G-064", "G-065"]
 formerly: "W-021"
+candidate: "8569b4b"
 ---
 
 ## Outcome
