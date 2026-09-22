@@ -658,6 +658,11 @@ func TestLayoutAtEverySize(t *testing.T) {
 		check("sources")
 		press(m, "esc", "esc", "esc", "b")
 		check("chooser")
+		press(m, "esc", "/")
+		check("search")
+		typeText(m, "w")
+		check("search hits")
+		press(m, "esc")
 	}
 	m := open(t, &fake{res: fx.twoBranches()}, 39, 30)
 	if s := plain(m); !strings.Contains(s, "Grove needs 40x10; this is 39x30") || press(m, "q") == nil {

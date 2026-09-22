@@ -222,6 +222,8 @@ func (m *Model) render() string {
 			"Enter select  Tab  r  Esc back  q quit")
 	case m.screen == chooserScreen:
 		rows, hints = m.chooserBody(w, body), pick(w, "↑/↓ choices   Enter show it   Esc back   q quit", "Enter choose  Esc back  q quit")
+	case m.screen == searchScreen:
+		rows, hints = m.searchBody(w, body), pick(w, "type to filter   Backspace   ↑/↓ move   Enter open   Esc close   Ctrl-C quit", "type  ↑↓  Enter open  Esc close  ^C quit")
 	case m.screen == sourcesScreen:
 		rows, hints = m.scrolled(m.sourceRows(w), body, w), pick(w, "↑/↓ PgUp/PgDn scroll   r refresh   Esc back   q quit", "↑↓ scroll  Esc back  q quit")
 	default:

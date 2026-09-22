@@ -39,6 +39,7 @@ const (
 	versionsScreen
 	chooserScreen
 	sourcesScreen
+	searchScreen
 )
 
 var statuses = [5]string{"proposed", "active", "review", "done", "abandoned"}
@@ -182,6 +183,8 @@ type Model struct {
 	side         int      // the detail's sidebar cursor; -1 while the content has focus
 	dscroll      int      // the detail's content scroll
 	asOf         string   // a timeline commit whose content the detail shows; "" is now
+	query        string   // the search's text
+	hit          int      // the search's cursor
 	verKey       string   // a row's key; "" is the ID header, which selects nothing
 	unfolded     string   // the key of the one fold showing its members
 	detail       bool     // the detail pane has focus
@@ -364,6 +367,11 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		m.hist[msg.key] = lineage{msg.commits, msg.err}
 		m.clampScroll()
 	case tea.KeyPressMsg:
+		if m.screen == searchScreen && msg.String() != "ctrl+c" {
+			m.notice = ""
+			m.searchKey(msg)
+			return nil
+		}
 		return m.key(msg.String())
 	}
 	return nil
@@ -476,6 +484,10 @@ func (m *Model) boardKey(k string) tea.Cmd {
 	case "b":
 		if m.res != nil {
 			m.back, m.screen, m.choice = boardScreen, chooserScreen, 0
+		}
+	case "/":
+		if m.res != nil {
+			m.back, m.screen, m.query, m.hit = boardScreen, searchScreen, "", 0
 		}
 	case "enter":
 		// Opening a card shows its detail. It never resolves a workspace,
