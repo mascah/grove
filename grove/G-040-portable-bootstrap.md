@@ -4,14 +4,14 @@ type: work
 title: "Bootstrap projects with portable Grove workflows"
 status: review
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-22T16:28:27Z"
+updated: "2026-09-22T16:28:54Z"
 kind: feature
 size: medium
 priority: 2
 depends_on: ["G-039"]
 relates_to: ["G-035", "G-036", "G-025", "G-037", "G-038", "G-064", "G-065"]
 formerly: "W-022"
-candidate: "0ad7bd7"
+candidate: "4edd800"
 ---
 
 ## Outcome
