@@ -208,7 +208,7 @@ func TestUpdateCommitResultAndFailure(t *testing.T) {
 	}
 	gitIn(t, root, "config", "core.hooksPath", hooks)
 	code, result, stderr = run("update", "G-001", "--set", "status=active", "--commit")
-	if code != 1 || result != nil || !strings.Contains(stderr, "nothing was committed (the update was applied to docs/records/work/renamed.md; revision "+showJSON(t, root, "G-001")["revision"].(string)+")") {
+	if code != 1 || result != nil || !strings.Contains(stderr, "the file is staged but nothing was committed (the update was applied to docs/records/work/renamed.md; revision "+showJSON(t, root, "G-001")["revision"].(string)+")") {
 		t.Fatalf("failed commit: code=%d stderr=%s", code, stderr)
 	}
 }

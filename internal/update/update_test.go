@@ -846,7 +846,7 @@ func TestUpdateOptionalExpectAndCommit(t *testing.T) {
 	git(t, root, "config", "core.hooksPath", hooks)
 	res, err = Apply(root, Request{ID: "G-001", Set: []Field{{"title", "Renamed"}}, Commit: true}, now, nil)
 	var failure *Failure
-	if !errors.As(err, &failure) || failure.Revision != revision(t, root, "grove/work/G-001-first.md") || !strings.Contains(err.Error(), "refused by hook") || !strings.Contains(err.Error(), "nothing was committed") || !strings.Contains(err.Error(), "the update was applied to grove/work/G-001-first.md") {
+	if !errors.As(err, &failure) || failure.Revision != revision(t, root, "grove/work/G-001-first.md") || !strings.Contains(err.Error(), "refused by hook") || !strings.Contains(err.Error(), "the file is staged but nothing was committed") || !strings.Contains(err.Error(), "the update was applied to grove/work/G-001-first.md") {
 		t.Fatalf("failed commit: %+v %v", res, err)
 	}
 	if head() != done || record(t, root, "G-001").Title != "Renamed" {

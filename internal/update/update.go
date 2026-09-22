@@ -145,12 +145,12 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 // index or work tree, and returns the commit. A failure after publication is
 // the caller's *Failure: the file holds the update either way.
 func commit(root, path, message string) (string, error) {
-	path = filepath.FromSlash(path)
+	path = ":(literal)" + filepath.FromSlash(path) // a hand-made directory name must not become a glob
 	if _, err := repo.Git(root, "add", "--", path); err != nil {
 		return "", fmt.Errorf("%w; nothing was committed", err)
 	}
 	if _, err := repo.Git(root, "commit", "-q", "-m", message, "--", path); err != nil {
-		return "", fmt.Errorf("%w; nothing was committed", err)
+		return "", fmt.Errorf("%w; the file is staged but nothing was committed", err)
 	}
 	head, err := repo.Git(root, "rev-parse", "HEAD")
 	if err != nil {
@@ -159,13 +159,14 @@ func commit(root, path, message string) (string, error) {
 	return strings.TrimSpace(head), nil
 }
 
-// message names the request, as in "docs(G-076): set status=done candidate=abc unset size".
+// message names the request, as in "docs(G-076): set status=done candidate=abc unset size",
+// on one line whatever a value holds.
 func message(id string, req Request) string {
 	var words []string
 	if len(req.Set) != 0 {
 		words = append(words, "set")
 		for _, f := range req.Set {
-			words = append(words, f.Name+"="+f.Value)
+			words = append(words, f.Name+"="+strings.NewReplacer("\r", " ", "\n", " ").Replace(f.Value))
 		}
 	}
 	if len(req.Unset) != 0 {
