@@ -2,9 +2,9 @@
 id: "G-052"
 type: work
 title: "Reconcile all Grove content into neutral IDs and one flat layout"
-status: active
+status: done
 created: "2026-09-21T04:37:58Z"
-updated: "2026-09-21T21:00:42Z"
+updated: "2026-09-22T00:43:59Z"
 kind: refactor
 size: large
 depends_on: ["G-065"]
