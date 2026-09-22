@@ -499,8 +499,11 @@ Branch-context direction and its evidence remain in the restart brief.
   the rules are under [Work lifecycle](#work-lifecycle).
 - Question: `open`, `resolved`; retain the answer in its body or link to the
   durable decision instead of deleting the question's identity.
-- Decision: `proposed`, `accepted`, `rejected`. Supersession can be added when
-  an actual replacement needs it; prior versions remain available in Git.
+- Decision: `proposed`, `accepted`, `rejected`, `superseded`. `superseded`
+  is an accepted decision that a later one replaced: `relates_to` names the
+  replacement and the body says why, with no dedicated field.
+  [G-041](../grove/G-041-nullsec-pilot.md) added it for nullsec's two actual
+  replacements. Prior versions remain available in Git.
 
 Reopening changes status explicitly. Directory movement does not determine
 completion. A resolved question stops blocking named work; an abandoned

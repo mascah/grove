@@ -173,7 +173,7 @@ type TypeInfo struct {
 var Types = []TypeInfo{
 	{"work", []string{"proposed", "active", "review", "done", "abandoned"}},
 	{"question", []string{"open", "resolved"}},
-	{"decision", []string{"proposed", "accepted", "rejected"}},
+	{"decision", []string{"proposed", "accepted", "rejected", "superseded"}},
 	{"term", []string{"proposed", "settled"}},
 	{"plan", []string{"current", "superseded"}},
 	{"review", []string{"current", "superseded"}},

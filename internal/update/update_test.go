@@ -190,7 +190,7 @@ func TestUpdateLifecycleAndReopening(t *testing.T) {
 	for _, status := range []string{"resolved", "open"} {
 		apply(t, root, "G-003", []Field{{"status", status}})
 	}
-	for _, status := range []string{"accepted", "rejected", "proposed"} {
+	for _, status := range []string{"accepted", "superseded", "rejected", "proposed"} {
 		apply(t, root, "G-004", []Field{{"status", status}})
 	}
 	if entries, _ := os.ReadDir(filepath.Join(root, "grove/work")); len(entries) != 2 {
