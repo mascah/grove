@@ -2,9 +2,9 @@
 id: "G-089"
 type: work
 title: "Ignore ambient Git environment when Grove and its tests run Git"
-status: review
+status: done
 created: "2026-09-22T17:11:12Z"
-updated: "2026-09-22T17:40:11Z"
+updated: "2026-09-22T17:45:03Z"
 size: small
 candidate: "07a63d3"
 ---
@@ -128,3 +128,5 @@ CI on it. Integrator, from the main checkout:
    from this merge on, so plain `git push` works.
 2. Write the verdict here and `go run ./cmd/grove update G-089 --expect
    REVISION --set status=done`, committed on `main`.
+
+verdict: LGTM
