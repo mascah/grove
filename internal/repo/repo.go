@@ -38,20 +38,28 @@ func Locate(root string) (common, prefix string, err error) {
 
 // LocateContext is Locate with cancellation, reported as ctx.Err().
 func LocateContext(ctx context.Context, root string) (common, prefix string, err error) {
+	_, common, prefix, err = IdentifyContext(ctx, root)
+	return common, prefix, err
+}
+
+// IdentifyContext is LocateContext with root's own Git directory as well,
+// which is unique to one worktree of one repository, from the same one
+// process.
+func IdentifyContext(ctx context.Context, root string) (gitDir, common, prefix string, err error) {
 	if _, err := exec.LookPath("git"); err != nil {
-		return "", "", errors.New("this command requires Git on PATH; coordination state lives in the repository's common directory")
+		return "", "", "", errors.New("this command requires Git on PATH; coordination state lives in the repository's common directory")
 	}
 	var paths []string
-	if paths, err = GitPathsContext(ctx, root, "--git-common-dir", "--show-prefix"); err == nil {
-		common, prefix = paths[0], paths[1]
+	if paths, err = GitPathsContext(ctx, root, "--git-dir", "--git-common-dir", "--show-prefix"); err == nil {
+		gitDir, common, prefix = paths[0], paths[1], paths[2]
 	}
 	if ctx.Err() != nil {
-		return "", "", ctx.Err()
+		return "", "", "", ctx.Err()
 	}
 	if err != nil {
-		return "", "", fmt.Errorf("this command requires a Git repository; coordination state lives in its common directory (%w)", err)
+		return "", "", "", fmt.Errorf("this command requires a Git repository; coordination state lives in its common directory (%w)", err)
 	}
-	return common, prefix, nil
+	return gitDir, common, prefix, nil
 }
 
 // GitPath answers one path-producing rev-parse option for dir, such as

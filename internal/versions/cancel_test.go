@@ -89,7 +89,7 @@ func TestCancellationKillsGitAndWritesNothing(t *testing.T) {
 	if testing.Short() {
 		t.Skip("waits on a blocked git shim at eight stages")
 	}
-	root, _ := nestedFixture(t)
+	root, wt := nestedFixture(t)
 	project := filepath.Join(root, "sub")
 	live := selectorFor(t, project, "G-001", "live", "feature")
 	committed := selectorFor(t, project, "G-001", "committed", "refs/heads/feature")
@@ -124,8 +124,15 @@ func TestCancellationKillsGitAndWritesNothing(t *testing.T) {
 			return res != nil, err
 		}},
 		// Nothing after this re-entry would fail the inspection by itself.
+		// G-071: an unchanged checkout is not re-entered, so a HEAD file
+		// appears in the project directory, where Git discovery would look.
 		{"inspect re-entering a worktree after the second inventory", func(ctx context.Context) (bool, error) {
-			res, err := inspect(ctx, project, "", blockAt("--git-dir"))
+			marker := filepath.Join(wt, "sub", "HEAD")
+			defer os.Remove(marker)
+			res, err := inspect(ctx, project, "", func() {
+				must(t, os.WriteFile(marker, nil, 0o644))
+				blockAt("--git-dir")()
+			})
 			return res != nil, err
 		}},
 		{"resolve at the start", func(ctx context.Context) (bool, error) {

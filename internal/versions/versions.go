@@ -32,7 +32,8 @@ type Source struct {
 	Note           string // live: why changes against HEAD are unknown
 	Diagnostics    []string
 	project        *project.Project
-	baseline       *tree // live: the HEAD commit's project
+	baseline       *tree  // live: the HEAD commit's project
+	dotGit         string // live: the root's .git entry when read in one process, for unchanged
 }
 
 // Detached reports a live source with no branch.
@@ -86,11 +87,7 @@ func InspectContext(ctx context.Context, root, id string) (*Result, error) {
 // inspect is Inspect with a hook that runs after the reads and before the
 // worktree inventory is compared, so tests can change identities meanwhile.
 func inspect(ctx context.Context, root, id string, between func()) (*Result, error) {
-	common, prefix, err := repo.LocateContext(ctx, root)
-	if err != nil {
-		return nil, err
-	}
-	here, err := repo.GitPathContext(ctx, root, "--git-dir")
+	here, common, prefix, err := repo.IdentifyContext(ctx, root)
 	if err != nil {
 		return nil, err
 	}
@@ -122,9 +119,7 @@ func inspect(ctx context.Context, root, id string, between func()) (*Result, err
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		s := enterWorktree(ctx, w, common)
-		s.load(ctx, prefix, committed)
-		result.Sources = append(result.Sources, s)
+		result.Sources = append(result.Sources, readWorktree(ctx, w, common, prefix, committed))
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -147,7 +142,7 @@ func inspect(ctx context.Context, root, id string, between func()) (*Result, err
 			s.fail("worktree was removed while being read")
 		} else if w := second[i]; w.Head != s.Commit || w.Branch != s.Ref {
 			s.fail(fmt.Sprintf("worktree changed while being read: %s to %s", describe(s.Ref, s.Commit), describe(w.Branch, w.Head)))
-		} else if s.Locator != "" {
+		} else if s.Locator != "" && !s.unchanged(w, common, prefix) {
 			// The registration can stay put while the checkout is deleted
 			// (newly prunable), replaced, or its project location swapped.
 			again := enterWorktree(ctx, w, common)

@@ -77,9 +77,11 @@ type Workspace struct {
 // switching, claiming, or editing anything. A committed selection routes to
 // the one checkout of its branch whose live record still has the committed
 // bytes; otherwise the caller must refresh and select a live observation.
-// ponytail: re-runs the whole inspection (one ls-tree and one cat-file per
-// branch) to answer one selector; inspect only the selected source if
-// repositories with many branches make this slow.
+// ponytail: re-runs the whole inspection (one rev-parse for the root and
+// one per clean live checkout, plus one for-each-ref, two worktree lists
+// and one cat-file) to answer one selector, then the final check adds a
+// worktree list, a cat-file and one rev-parse for the target; inspect only
+// the selected source if repositories with many branches make this slow.
 func Resolve(root, selector string) (*Workspace, error) {
 	return ResolveContext(context.Background(), root, selector)
 }
@@ -246,9 +248,8 @@ func recheck(ctx context.Context, root string, res *Result, sel Selection, tip s
 		switch {
 		case w.Bare:
 		case w.Path == lv.Source.Worktree:
-			target = enterWorktree(ctx, w, res.Repository)
 			committed := newObjects(ctx, root, res.Prefix)
-			target.load(ctx, res.Prefix, committed)
+			target = readWorktree(ctx, w, res.Repository, res.Prefix, committed)
 			committed.close()
 		case sel.Kind == "committed" && w.Branch == sel.Ref:
 			if other := enterWorktree(ctx, w, res.Repository); other.Locator != "" {

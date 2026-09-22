@@ -144,6 +144,24 @@ func TestInspectWorktreeReplacedByPlainDirectory(t *testing.T) {
 	}
 }
 
+// G-071: Git answers through a symlink at the registered path exactly as it
+// does for the checkout itself, so only the path's own entry can refuse it.
+func TestInspectWorktreeReplacedBySymlink(t *testing.T) {
+	t.Parallel()
+	root, wt := deepFixture(t)
+	must(t, os.Rename(wt, wt+"-aside"))
+	must(t, os.Symlink(wt+"-aside", wt))
+	res := mustInspect(t, filepath.Join(root, "outer/sub"), "G-001")
+	for _, s := range res.Sources {
+		if s.Worktree == wt && (s.Valid || s.Locator != "" || !strings.Contains(strings.Join(s.Diagnostics, "\n"), "is a symlink or not a directory")) {
+			t.Fatalf("symlinked checkout admitted: %+v", s)
+		}
+	}
+	if res.Complete || len(group(t, res, "G-001").Versions) != 3 { // two committed, main live
+		t.Fatalf("incomplete, with nothing through the symlink: %s", dump(res))
+	}
+}
+
 func TestInspectPrunableDuringRead(t *testing.T) {
 	t.Parallel()
 	root := repoFixture(t)
@@ -282,5 +300,50 @@ func TestInspectForeignRepositoryRegisteredAsWorktree(t *testing.T) {
 		if v.Source.Worktree == evil {
 			t.Fatalf("the foreign record must not be a version: %+v", v)
 		}
+	}
+}
+
+// G-071: the second inventory re-enters a checkout through Git only when a
+// cheap read says something changed. Each change here leaves the inventory
+// row, the project location, and grove.yaml as they were, so only Git's
+// answer, asked again, can refuse the source.
+func TestInspectIdentityChangedDuringRead(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		name   string
+		mutate func(t *testing.T, root, wt string)
+		want   string
+	}{
+		{"repository begun in the project directory", func(t *testing.T, root, wt string) {
+			git(t, filepath.Join(wt, "outer/sub"), "init", "-q")
+		}, "belongs to another repository or worktree"},
+		{"checkout root symlinked", func(t *testing.T, root, wt string) {
+			must(t, os.Rename(wt, wt+"-aside"))
+			must(t, os.Symlink(wt+"-aside", wt))
+		}, "stopped being enterable while being read"},
+		{"checkout replaced by a foreign one", func(t *testing.T, root, wt string) {
+			must(t, os.RemoveAll(wt))
+			foreignRepo(t, wt, "outer/sub")
+		}, "stopped being enterable while being read"},
+		{"common directory repointed", func(t *testing.T, root, wt string) {
+			// The foreign repository holds the same branch at the same
+			// commit, so the inventory row does not give the change away.
+			outside := filepath.Join(filepath.Dir(root), "outside")
+			foreignRepo(t, outside, "")
+			git(t, outside, "fetch", "-q", root, "feature")
+			git(t, outside, "branch", "-q", "feature", "FETCH_HEAD")
+			write(t, root, ".git/worktrees/feature/commondir", filepath.Join(outside, ".git")+"\n")
+		}, "no longer belongs to this repository"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			root, wt := deepFixture(t)
+			res, err := inspect(t.Context(), filepath.Join(root, "outer/sub"), "G-001", func() { c.mutate(t, root, wt) })
+			must(t, err)
+			if s := source(t, res, "live", "feature"); res.Complete || s.Valid || !strings.Contains(strings.Join(s.Diagnostics, "\n"), c.want) {
+				t.Fatalf("expected %q: complete=%v %+v", c.want, res.Complete, s)
+			}
+		})
 	}
 }
