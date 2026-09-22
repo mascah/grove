@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -194,11 +195,12 @@ func TestListFiltersByStatus(t *testing.T) {
 	t.Parallel()
 	root := projectFixture(t)
 	write(t, root, "docs/records/G-003-page.md", "---\nid: G-003\ntype: page\ntitle: Notes\n---\nKnowledge.\n")
-	// rows returns each line as its fields: the tabwriter fits column widths
+	// rows returns each line as its columns: the tabwriter fits column widths
 	// to the rows it prints, so a filtered table is narrower, never reordered.
+	columns := regexp.MustCompile("  +")
 	rows := func(table string) (result [][]string) {
 		for _, line := range strings.Split(strings.TrimSuffix(table, "\n"), "\n") {
-			result = append(result, strings.Fields(line))
+			result = append(result, columns.Split(line, -1))
 		}
 		return result
 	}
