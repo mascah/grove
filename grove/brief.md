@@ -122,9 +122,10 @@ status rankings, or the newest branch tip do not define authority.
 This supersedes G-002's explicit-versions-first presentation as the future
 default. Exact source inspection and fresh workspace binding remain available.
 Ancestry here means merge bases: a copy is superseded when, since it and
-another split, only the other changed the record. No integration target is
-chosen (owner, 2026-09-22), so uncommitted changes are labelled but no change
-is called unintegrated.
+another split, only the other changed the record. The integration target is
+optional configuration (`target: main` in `grove.yaml`), chosen by the owner
+on 2026-09-22. It labels progress as not yet on the target and never decides
+which state is current.
 
 Board columns follow the target lifecycle, with bounded recent Done items,
 searchable older work, and Abandoned hidden by default. Detail leads with

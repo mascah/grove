@@ -140,9 +140,13 @@ cycle; then a version is current when everything newer than it, through any
 chain, is also older than it, and a note says so. A branch whose current state removes the record gets a committed
 `deleted` row. Dates, status order, and branch names never decide, so the
 answer is the same from every checkout, and no branch is special.
-[G-042](grove/G-042-current-view.md) owns this. `--json` adds each version's
-exact source text, `current`, and `older` (why it is older), and each record's
-`notes`. The command writes nothing: no refs, index, worktrees, records, or
+[G-042](grove/G-042-current-view.md) owns this. With an integration target
+named in `grove.yaml` (`target: main` here), stderr names it and the `TARGET`
+column says whether that branch holds the version's bytes (`yes`, `no`; `-`
+without a target). The target labels only and decides nothing.
+`--json` adds each version's exact source text, `current`, `older` (why it is
+older), and `on_target` (null without a target), each record's `notes`, and
+the result's `target` and target `notes`. The command writes nothing: no refs, index, worktrees, records, or
 coordination state.
 
 `workspace --source SELECTOR` takes one selector from `versions`, checks that
@@ -322,7 +326,9 @@ The columns (Proposed, Active, Review, Done, Abandoned) open on the current
 view: every work record in its current state across all local branches and
 checkouts, as `versions` decides it, the same from any checkout. An old copy
 on a stale branch does not hide a later status elsewhere. A card whose current
-state is only in a checkout's uncommitted files is marked `uncommitted`. Where
+state is only in a checkout's uncommitted files is marked `uncommitted`. With a
+target, a card none of whose committed current states is on it is marked
+`not on main`, and the header names the target. Where
 the current states diverge, one card sits in the earliest of their statuses,
 marked `⑂ 2 states`, and its details list each state and where it lives. Work
 whose current state removes its record is listed under Deleted.
