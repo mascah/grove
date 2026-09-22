@@ -49,7 +49,13 @@ reconciliation, followed by G-038, G-039, G-040 and G-041. G-038 needs G-065's
 contract, not the act of migrating this repo's documents; the order is a
 recommended sequence rather than an extra dependency. Do not invoke
 `/grove-work G-036` to execute every member unattended. Select one bounded member
-or explicitly scoped set. G-041 owns the hobby-project completion evidence.
+or explicitly scoped set.
+
+On 2026-09-22 the owner narrowed G-041 to nullsec's cutover and the
+predecessor's removal. The first real nullsec change (acceptance 4) and the
+owner's verdict (acceptance 5) belong to this record. That change is ordinary
+nullsec work, shaped in nullsec once G-041 is done. Its evidence and the
+verdict are recorded here.
 
 G-039's trial evidence is [G-078](G-078-g-039-trial-evidence-for-the-int.md),
 2026-09-22: the full loop ran on G-076 in 22 minutes. Improvements it left

@@ -53,13 +53,14 @@ prerequisites; order here also reflects product priorities.
 | [G-038](G-038-review-lifecycle.md) | Review lifecycle and durable candidate handoff | Revision-bound evidence, explicit completion migration, manual review/integration path |
 | [G-039](G-039-interactive-loop.md) | Complete loop on real Grove work | Fresh-session continuation, independent review, owner verdict and integration evidence |
 | [G-040](G-040-portable-bootstrap.md) | Minimal setup and versioned portable workflows | Disposable project adoption and observed Claude/Codex entrypoints |
-| [G-041](G-041-nullsec-pilot.md) | One real nullsec change using Grove | Rehearsal, authorized live cutover, full loop and owner's continue/revise verdict |
+| [G-041](G-041-nullsec-pilot.md) | Nullsec cut over to this Grove, predecessor uninstalled | Rehearsal, live migration, fresh-session discovery and the owner's judgment of the converted tree; the first real change and the verdict stay with G-036 (owner, 2026-09-22) |
 
 G-065 extends G-037 without reopening its completion. G-052 needs that support;
 G-038 also needs G-065's contract but does not technically depend on moving this
 repo's content. The preferred sequence performs the full reconciliation first.
 G-039 checks the connected shaping/knowledge/review result before
-G-040 carries it into another repository. G-041 completes G-036; member status
+G-040 carries it into another repository. G-041 cuts nullsec over, and the
+first real nullsec change completes G-036; member status
 alone cannot establish the milestone's human acceptance.
 
 For the initial loop, plans stay proportional and human review can read CLI/files.
