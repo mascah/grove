@@ -438,7 +438,7 @@ func (m *Model) sidebar(v *versions.Version, w, n int) []string {
 		if status == "" {
 			status = "-"
 		}
-		title := ansi.Truncate(safe(e.title), max(w-2-ansi.StringWidth(e.role)-2-len(e.id)-2-ansi.StringWidth(safe(status))-2, 8), "…")
+		title := ansi.Truncate(safe(e.title), max(w-2-max(10, ansi.StringWidth(e.role))-1-len(e.id)-2-ansi.StringWidth(safe(status))-2, 8), "…")
 		item(fmt.Sprintf("%-10s %s  %s  %s", e.role, e.id, title, status))
 		if e.note != "" {
 			rows = append(rows, line("             "+e.note, w))
