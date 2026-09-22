@@ -310,11 +310,17 @@ and worktrees are never written.
 
 ## Open choices
 
-Asked of the owner with this proposal on 2026-09-22:
+Asked of the owner with this proposal on 2026-09-22, and answered the same
+day:
 
-1. Implement the proposal as drawn, or adjust it first.
+1. Implement the proposal as drawn, or adjust it first. **Implement as
+   drawn.**
 2. Markdown links: plain text (default, G-017's wording) or OSC 8 terminal
-   hyperlinks that a terminal can open on click.
+   hyperlinks that a terminal can open on click. **Plain text.** The owner
+   asked why G-017 forbids them; the answer given: G-017's rule is that no
+   file-provided control sequence reaches the terminal, a hyperlink's URL is
+   file-provided, and record links are relative paths a terminal would
+   resolve nowhere. Switching later is a one-line change.
 
 Everything else above is a routine technical choice inside G-043's outcome.
 
