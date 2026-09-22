@@ -13,9 +13,9 @@ formerly: "T-001"
 
 An outcome someone wants, written so that another person or agent can pick it
 up: what will be true for whom, its bounds, observable acceptance, what it
-depends on, and its next action. Work is a record (`W-NNN`) and moves through
-proposed, active, done, or abandoned. Creating or editing work authorizes
-nothing; an assignment does.
+depends on, and its next action. Work is a record (`G-NNN`) and moves through
+proposed, active, review and done, or abandoned by an explicit human decision.
+Creating or editing work authorizes nothing; an assignment does.
 
 Not a plan (how the outcome will be built), not an [attempt](G-056-attempt.md)
 (one execution of it), and not a ticket for every step: small preparation lives

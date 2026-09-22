@@ -13,7 +13,9 @@ The selected next milestone is a complete interactive shape → implement →
 review → integrate loop on real nullsec work. Start with
 [G-036's adoption roadmap](grove/G-047-adoption-roadmap-plan.md) for the ordered
 work. Its proposed capabilities are not commands available in this build:
-the current board remains checkout-scoped and the schema has no Review status.
+the current board remains checkout-scoped. Work has the Review status:
+an implementation ends as a `review` record naming its `candidate` commit,
+and `done` is written where that candidate was merged.
 
 Start with [the restart brief](grove/brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
@@ -68,7 +70,12 @@ mean nothing: `new` gives every type a neutral `G-NNN` ID in a flat
 their own rules. A plan or review names its work in a `work` list, set with
 `update`, and `context G-NNN` lists the plans and reviews attached to the
 selected work without reading them; a review can record the Git commit it
-`examined`. `new page "Title"` creates general knowledge with a title and no
+`examined`. Work moves `proposed`, `active`, `review`, `done`, with
+`abandoned` for an explicit human decision. `review` requires `candidate`, the
+commit offered for judgment, and `update` writes `done` only with a candidate
+that the checkout's HEAD contains: Done means accepted and merged, and is
+written on the target after the merge. A `done` record without a candidate
+predates that meaning. `new page "Title"` creates general knowledge with a title and no
 status; pages are never work cards and `context` reads one only through
 `--include`. `update --set type=...` reclassifies in place, keeping ID and path.
 `convert` turns a Markdown document outside the record root into a record and
@@ -166,7 +173,8 @@ not UTF-8, a source that does not fit `--max-bytes` (default 262144, counting
 source bytes, at most 8388608), or a checkout that changed while it was read.
 Nothing is truncated or summarized to fit. A refusal prints nothing
 to stdout. Exit 0 means context was assembled, never that work is ready,
-authorized, or integrated: a prerequisite's `done` is its recorded status.
+authorized, or integrated: a prerequisite's `done` is its recorded status, and
+only one with a `candidate` claims a merge, where it was written.
 `--interaction` records whether a person can answer (default `interactive`);
 it is the caller's declaration, passed through for the guide to act on. The
 command writes nothing and starts nothing, and needs Git only inside a
@@ -218,7 +226,7 @@ checkout that is `go run ./cmd/grove`. There is no `board` subcommand and no
 work-ID argument; every command above stays noninteractive, and `--help`,
 `-h`, and `help` need neither a project nor a terminal.
 
-The columns (Proposed, Active, Done, Abandoned) show the live work records of
+The columns (Proposed, Active, Review, Done, Abandoned) show the live work records of
 one checkout, named in the header: at first the checkout the command ran in.
 `b` chooses another checkout's live files as the board; this changes what is
 displayed and switches no branch or directory. Work with no live record in

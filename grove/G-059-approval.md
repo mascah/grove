@@ -18,8 +18,9 @@ must be reconsidered.
 
 Not a [review](G-058-review.md), which informs it; not passing checks, which
 cannot supply judgment; and not [integration](G-060-integration.md), which
-follows it. Grove does not record approvals yet; today the owner's verdict is
-quoted in the work record.
+follows it. Grove has no approval field: the owner's verdict is quoted in the
+work record, naming the candidate, and the record reaches done only with that
+candidate merged.
 
 ## Relationships
 

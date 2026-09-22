@@ -15,11 +15,10 @@ An approved [candidate](G-057-candidate.md) becoming part of the project's
 configured target, such as a merge into the main branch, shown by Git
 ancestry rather than by a status.
 
-Not the same as done: today a work record marked done claims its outcome in
-that record's own branch, and may never have been merged. The selected
-direction makes done mean accepted and integrated for implementation work;
-that change is not implemented, and old done records keep their original
-meaning.
+Since G-038, done means exactly this for work with a `candidate`: `update`
+writes done only where that commit is already an ancestor of HEAD. A done
+record without a candidate is older and claims its outcome only in its own
+branch; it may never have been merged, and it keeps that meaning.
 
 ## Relationships
 

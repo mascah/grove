@@ -125,9 +125,10 @@ implemented:
   set it with `update ID --expect REVISION --set 'work=["G-001"]'`.
 - `examined` is an optional quoted Git commit, 7 to 40 lowercase hex digits:
   what the review looked at. Whether the reviewed content has changed since is
-  a comparison a reader makes, not stored state. Approval, candidates, and
-  dispositions belong to G-038, which may extend the review type. A `report`
-  type is not defined yet.
+  a comparison a reader makes, not stored state, against the work's
+  `candidate` ([Work lifecycle](#work-lifecycle)). A review record is
+  evidence, never approval; there is no disposition field and no `report`
+  type, since the work record's Evidence is the report.
 - Optional `brief: PATH` in `grove.yaml` names the one project brief: a clean
   project-relative `.md` path without `..`, anywhere in the project, including
   directly under the record root (`grove/brief.md`). It is not a record and
@@ -144,10 +145,9 @@ only a live checkout is required to hold the brief.
 Plans and reviews written before this support were ordinary files in
 `docs/plans/` and `docs/reviews/` until
 [G-052](../grove/G-052-migrate-knowledge.md) converted them and moved the
-brief. Not implemented: a Review work status and accepted-and-integrated
-completion ([G-038](../grove/G-038-review-lifecycle.md)). Do not write
-`status: review` yet. Historical Done records retain their original
-branch-local acceptance meaning, not proof of merge.
+brief. [G-038](../grove/G-038-review-lifecycle.md) added the Review work
+status and the `candidate` field, and made Done mean accepted and merged; see
+[Work lifecycle](#work-lifecycle) for the rule and the historical meaning.
 
 ## Minimum representation
 
@@ -398,8 +398,8 @@ timestamps, prints the root-relative path, and fails without deleting the file
 if the project no longer validates. It requires Git and never overwrites.
 `show <id> --json` prints one object with `id`, `path`, `revision`, and
 `source`. `update <id> --expect REVISION` with `--set FIELD=VALUE` and
-`--unset FIELD` changes `title`, `status`, `relates_to`, work planning fields,
-question `blocks`, plan and review `work`, or review `examined` by editing only those frontmatter entries plus `updated`;
+`--unset FIELD` changes `title`, `status`, `relates_to`, work planning fields
+and `candidate`, question `blocks`, plan and review `work`, or review `examined` by editing only those frontmatter entries plus `updated`;
 [G-009](../grove/G-009-update-records.md) owns its request, preservation,
 locking, and failure-reporting contract, and prints `{id, path, revision, changed}`.
 `versions [ID] [--json]` reads the same project location on every local
@@ -479,17 +479,64 @@ Branch-context direction and its evidence remain in the restart brief.
 
 ## Lifecycle and validation boundary
 
-- Work: `proposed`, `active`, `done`, `abandoned`.
+- Work: `proposed`, `active`, `review`, `done`, `abandoned`, in that order;
+  the rules are under [Work lifecycle](#work-lifecycle).
 - Question: `open`, `resolved`; retain the answer in its body or link to the
   durable decision instead of deleting the question's identity.
 - Decision: `proposed`, `accepted`, `rejected`. Supersession can be added when
   an actual replacement needs it; prior versions remain available in Git.
 
-A work item marked done asserts its intended outcome was achieved in that
-record's branch context. It does not establish integration into main or the
-truth of its evidence. Reopening changes status explicitly. Directory movement
-does not determine completion. A resolved question stops blocking named work;
-an abandoned prerequisite does not count as delivered.
+Reopening changes status explicitly. Directory movement does not determine
+completion. A resolved question stops blocking named work; an abandoned
+prerequisite does not count as delivered.
+
+### Work lifecycle
+
+[G-035](../grove/G-035-interactive-adoption.md) selected Proposed → Active →
+Review → Done, with Abandoned only through an explicit human decision;
+[G-038](../grove/G-038-review-lifecycle.md) implemented it on 2026-09-22
+with the plan [G-073](../grove/G-073-review-lifecycle-plan.md). Preparation,
+implementation, independent review and waiting are activities inside
+`active`, recorded in the body, never statuses. The settled terms
+[candidate](../grove/G-057-candidate.md), [review](../grove/G-058-review.md),
+[approval](../grove/G-059-approval.md) and
+[integration](../grove/G-060-integration.md) name the facts.
+
+- **`candidate`** is an optional work field: a quoted Git commit, the same
+  form as a review's `examined`, naming the commit offered for judgment
+  together with the evidence gathered at it. It is required while the status
+  is `review` and allowed on every other status. It names the last
+  implementation commit; the commit that sets `review` changes only the
+  record, so `git diff --stat CANDIDATE TIP` shows one file. A changed
+  candidate is a new value set through `update`, so the reviewed and the
+  approved commit can be compared to each review's `examined`; the earlier
+  value stays in Git history.
+- **Review** means a candidate awaits human judgment. The record's Evidence
+  and Next carry the handoff the work guide describes, so a new session can
+  judge it without the originating chat. A failed or interrupted attempt does
+  not enter Review: it stays `active` with a checkpoint.
+- **Approval** is the owner's verdict, quoted in the record and naming the
+  candidate. Feedback that asks for more implementation sets `active` with
+  the feedback in Next; nothing earlier is removed.
+- **Done** means the candidate was accepted and merged into the target, for
+  research and design deliverables too, since those are files. `update` writes
+  `done`, or changes a done record's candidate, only when the candidate is an
+  ancestor of the checkout's `HEAD` (`git merge-base --is-ancestor`), so Done
+  is written on the target after the merge and never on the work branch
+  before it. A squash or rebase that lands a different commit names that
+  commit as the candidate in the same update. The check needs Git, as
+  `update` already does; `check` verifies the form only.
+- **Historical Done.** A `done` work record without `candidate` was completed
+  before this rule and asserts only that its outcome was achieved in that
+  record's own branch context, as its Evidence says; it is not proof of a
+  merge. Nothing rewrites it, `check` accepts it, and its other fields stay
+  editable; `update` never writes a new one. Delivery of such a prerequisite
+  is established by Git ancestry or observed behavior, as before.
+- Not enforced by software: the order of transitions, that Abandoned needs a
+  human decision, and that a review record exists before Review. These are
+  guide rules, since software cannot verify a person and the owner edits by
+  hand. No `target` configuration, approval field or automatic merge exists;
+  [G-044](../grove/G-044-review-integration.md) owns integration actions.
 
 Body organization is for readers. The first CLI should not infer readiness or
 completion from exact headings, populated prose, or checked boxes. Validate

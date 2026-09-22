@@ -37,8 +37,12 @@ read the brief when the record, a product question, or reconciliation needs it.
   records (G-051) and the `brief:` key that `grove brief` reads. G-064 selected
   stable identity/placement and flexible knowledge, which G-065 implemented:
   neutral `G-` IDs from one counter, `page` records, flat creation, recursive
-  discovery, and `update --set type=`. G-035's target lifecycle is pending:
-  G-038 owns that migration. G-052 reconciled this repository on 2026-09-21:
+  discovery, and `update --set type=`. G-038 implemented G-035's lifecycle:
+  work runs `proposed`, `active`, `review`, `done`; an implementation ends in
+  `review` with its `candidate` commit, and `done` is written on `main` after
+  the merge, by `update`, which refuses a candidate HEAD does not contain. A
+  `done` record without a candidate predates that meaning; do not backfill
+  one. G-052 reconciled this repository on 2026-09-21:
   every record, former `docs/plans` and `docs/reviews` document included, has
   a neutral ID flat under `grove/`, the brief is `grove/brief.md`, and
   [G-069](grove/G-069-migration-map.md) maps each old ID and path to its

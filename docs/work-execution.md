@@ -19,16 +19,18 @@ the way those instructions say, and never assume that a `grove` on `PATH` is
 this project's CLI. Where the two disagree, repository and user instructions
 win.
 
-## Contract transition
+## Lifecycle
 
-The owner selected a future Review lifecycle and revised completion meaning in
-[G-035](../grove/G-035-interactive-adoption.md).
-[G-038](../grove/G-038-review-lifecycle.md) owns implementing the transition
-and revising this guide. Until then follow the supported statuses and handoff
-below: report candidate readiness, human judgment and integration separately;
-do not write unsupported Review status or treat old Done records as merge proof.
-The [adoption roadmap](../grove/G-047-adoption-roadmap-plan.md) is not an assignment of
-all its members.
+Work runs Proposed → Active → Review → Done, with Abandoned only by an
+explicit human decision, as [G-035](../grove/G-035-interactive-adoption.md)
+selected and [G-038](../grove/G-038-review-lifecycle.md) implemented. An
+assignment sets `active` when implementation starts (step 5) and ends by
+handing a candidate commit into `review` (step 8). Only the integrator writes
+`done`, on the target after the merge, since Done means accepted and merged;
+the CLI refuses it where the candidate is not already in HEAD. Preparation,
+independent review, waiting and a failed attempt are facts recorded inside
+`active`, never statuses. The [adoption roadmap](../grove/G-047-adoption-roadmap-plan.md)
+is not an assignment of all its members.
 
 ## Inputs
 
@@ -268,7 +270,8 @@ still-accurate wait checkpoint untouched.
 This applies to a consequential product choice, an incompatible scope or
 contract change, a required human judgment (such as usability acceptance), or
 an external blocker that someone must decide about. Routine technical choices
-are yours to make. Do not build the part that seems independent of the answer
+are yours to make. A finished candidate awaiting the owner's verdict is not a
+missing decision: that wait is Review status (step 8). Do not build the part that seems independent of the answer
 when shipping it would make the choice in practice, such as a default
 behaviour; stop that unit before implementation instead.
 
@@ -291,31 +294,75 @@ behaviour; stop that unit before implementation instead.
   limit. There is no waiting status: the work stays active or proposed, and the
   open question carries the wait.
 
-## 8. Reconcile and return
+## 8. Hand off into Review and return
 
 Reconcile each assigned record's evidence and Next, its plan, the
 documentation that owns any contract the work changed, and the repository's
 direction document when the work changed the direction it records; progress
-and next actions stay in the record. Mark a
-record done through the CLI only when its acceptance is met. Automated checks
-and screenshots are not the owner's judgment: if required judgment is
-outstanding, record it and leave the work active. Commit evidence with the
-code. Record review evidence where the repository keeps it: a review record
-with its `work` and the `examined` commit where the schema has them, otherwise
-prose and links. A review record holds evidence; it is not approval, and there
-is no run schema.
+and next actions stay in the record. Record review evidence where the
+repository keeps it: a review record with its `work` and the `examined`
+commit where the schema has them, otherwise prose and links. A review record
+holds evidence; it is not approval, and there is no run schema.
+
+An implementation session never writes `done`. When the evidence meets the
+acceptance and the review the record or plan requires has happened, hand the
+candidate to human judgment:
+
+1. Commit the evidence. The handoff lives in the record, so a new session can
+   judge it without this chat: in Evidence and Next, the branch, base and
+   candidate commit; the plan and record revisions it started from; the
+   changed behavior against each acceptance item; the decisions taken and
+   why; the verification commands, their results and the commit they ran at;
+   each review record with its findings and their dispositions; unresolved
+   issues and limits; and the integrator's next action as runnable commands.
+2. Set the status with that commit as the candidate, and commit that change
+   alone, so `git diff --stat CANDIDATE HEAD` shows one file:
+   `grove update G-030 --expect REVISION --set status=review --set candidate=COMMIT`.
+
+If the attempt failed or was interrupted, or a review the record demands is
+still missing, the work stays `active` with a checkpoint: a terminal attempt
+does not enter Review by itself. Automated checks and screenshots are not
+the owner's judgment.
 
 Unless the assignment says otherwise, do not merge, push, deploy, or remove
 worktrees. Implementation complete, reviewed, accepted by the owner, and
 integrated are four different facts; report each separately. Return:
 
-- The outcome: complete, awaiting a named human judgment, waiting on a named
+- The outcome: in review, awaiting a named human judgment, waiting on a named
   question or blocker, or stopped at the review cap with open findings.
-- Assigned IDs and order, branch/worktree, base and final commits.
+- Assigned IDs and order, branch/worktree, base, candidate and final commits.
 - Behavior changes and acceptance evidence per record.
 - Verification results, review findings and dispositions, unverified limits.
-- The exact next action for integration or judgment, with a runnable demo
+- The exact next action for judgment and integration, with a runnable demo
   command for interactive work.
+
+## Judging and integrating a candidate
+
+The owner, or a session asked to prepare their judgment, starts from
+`grove context G-030` in a checkout of the branch: the record in Review
+carries the handoff, and the listing names its reviews. Confirm that the
+candidate is what the branch holds (`git diff --stat CANDIDATE TIP` touches
+only the record) and that each review's `examined` is the candidate, or an
+earlier commit whose difference the handoff explains. Then record one honest
+disposition:
+
+- **Feedback that needs implementation:** write it into Next and set
+  `status=active` on the branch. Earlier evidence and reviews stay; the next
+  attempt produces a new candidate.
+- **Approval and integration:** merge the branch into the target the way the
+  repository's instructions say, then in the target's checkout run
+  `grove update G-030 --expect REVISION --set status=done`, quoting the
+  verdict in the record, and commit there. `update` refuses a candidate that
+  HEAD does not contain; a squash or rebase that landed another commit names
+  it with `--set candidate=COMMIT` in the same call.
+- **Rejection:** `status=abandoned`, with the decision and its reasons in the
+  record or a decision record it links.
+
+A further commit on the branch after the handoff is a new candidate: set
+`candidate` to it and reconsider before any approval, since approval is of
+one commit. A `done` record without a candidate predates this rule and claims
+only branch-local completion; delivery of such a prerequisite is established
+by ancestry, as step 2 says.
 
 Clean up only this assignment's disposable probes and processes. Never leave
 an untracked background agent running as an implied continuation.

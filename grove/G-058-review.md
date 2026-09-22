@@ -18,11 +18,12 @@ changed behavior, decisions, open issues, and checks before any diff.
 
 A review is evidence, never a verdict by itself: it is not
 [approval](G-059-approval.md), and a self-check is not an independent review.
-The word also names a selected future work status between active and done,
-which is not implemented; say "review record" or "Review status" when the
-difference matters.
+The word also names the work status between active and done, in which a
+candidate awaits human judgment; say "review record" or "Review status" when
+the difference matters.
 
 ## Relationships
 
-A review record (`R-NNN`) names its work and the commit it examined. Feedback
-that starts another [attempt](G-056-attempt.md) keeps earlier reviews.
+A review record names its work and the commit it examined; work in Review
+status names its `candidate`, so the two can be compared. Feedback that
+starts another [attempt](G-056-attempt.md) keeps earlier reviews.
