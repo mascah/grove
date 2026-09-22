@@ -34,6 +34,7 @@ Requires Go 1.26 or later. Run from this repository:
 ```sh
 go run ./cmd/grove                 # the terminal board; needs a terminal
 go run ./cmd/grove list
+go run ./cmd/grove list --status active --status review  # only records in those statuses
 go run ./cmd/grove show G-003
 go run ./cmd/grove check
 go run ./cmd/grove new work "Title of the work" --slug short-name
@@ -50,7 +51,9 @@ go run ./cmd/grove --project "$(go run ./cmd/grove workspace --source SELECTOR)"
 
 The first three commands read live files without modifying them; `new` adds
 one file and prints its path. `list` shows ID, type,
-status, and title; `show` prints the exact Markdown source, or with `--json`
+status, and title, and with `--status VALUE` (repeatable) only the records
+in any given status, refusing a value outside the record model's status
+vocabulary; `show` prints the exact Markdown source, or with `--json`
 one object holding the path, a `sha256:` content revision, and the source;
 `check` validates metadata and relationships. `update` changes frontmatter
 fields of one record when its file still hashes to `--expect`, keeps every

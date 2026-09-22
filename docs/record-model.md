@@ -414,7 +414,11 @@ refusal contract. Both require Git and read only.
 
 - `list`: show ID, type, status, and title, ordered by `created` ascending with
   undated records last, then the ID's number as the tie-breaker.
-  Do not infer urgency from that order.
+  Do not infer urgency from that order. `--status VALUE`, repeatable and only
+  on `list`, keeps the records whose status equals any given value; a value
+  outside the union of the status vocabularies above, or an empty one, is a
+  usage error (exit 2), and a status no record holds prints the header alone.
+  Without it, every record is printed as before.
 - `show <id>`: show the file path and complete Markdown source, including
   frontmatter and relationships. The original bytes go to stdout; project and
   file context go to stderr. Missing or ambiguous identity is an error.

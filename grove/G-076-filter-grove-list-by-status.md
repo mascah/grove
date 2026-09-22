@@ -2,9 +2,9 @@
 id: "G-076"
 type: work
 title: "Filter grove list by status"
-status: proposed
+status: active
 created: "2026-09-22T15:01:38Z"
-updated: "2026-09-22T15:02:11Z"
+updated: "2026-09-22T15:13:02Z"
 kind: feature
 size: small
 relates_to: ["G-039"]
@@ -69,5 +69,7 @@ model's `list` contract say so.
 
 ## Next
 
-Assign: `/grove-work G-076` in a fresh session, per G-075 step 2. No plan
-record is expected for a change of this size; say so in Next when preparing.
+Prepared 2026-09-22 on `worktree-G-076` from main `ff0f3e9`: no plan record
+needed, since the record's proposed design fixes every choice and the change
+is one option, one filter, one test and two documentation lines.
+Implementation in progress; the handoff is written here when it enters review.

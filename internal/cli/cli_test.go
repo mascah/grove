@@ -189,3 +189,46 @@ func TestListEscapesMultilineAndControlCharacters(t *testing.T) {
 		t.Fatalf("title broke the terminal table: %q", out.String())
 	}
 }
+
+func TestListFiltersByStatus(t *testing.T) {
+	t.Parallel()
+	root := projectFixture(t)
+	write(t, root, "docs/records/G-003-page.md", "---\nid: G-003\ntype: page\ntitle: Notes\n---\nKnowledge.\n")
+	// rows returns each line as its fields: the tabwriter fits column widths
+	// to the rows it prints, so a filtered table is narrower, never reordered.
+	rows := func(table string) (result [][]string) {
+		for _, line := range strings.Split(strings.TrimSuffix(table, "\n"), "\n") {
+			result = append(result, strings.Fields(line))
+		}
+		return result
+	}
+	code, all, errOut := run(t, root, "list")
+	lines := rows(all)
+	if code != 0 || len(lines) != 4 {
+		t.Fatalf("unfiltered list: code=%d stdout=%q stderr=%s", code, all, errOut)
+	}
+	for _, c := range []struct {
+		args []string
+		keep []int // indexes into the unfiltered lines that survive, in order
+	}{
+		{[]string{"--status", "proposed"}, []int{0, 1}},
+		{[]string{"--status=open"}, []int{0, 2}},
+		{[]string{"--status", "open", "--status", "proposed"}, []int{0, 1, 2}},
+		{[]string{"--status", "done"}, []int{0}}, // no record holds it: header only
+	} {
+		var want [][]string
+		for _, i := range c.keep {
+			want = append(want, lines[i])
+		}
+		if code, got, errOut := run(t, root, append([]string{"list"}, c.args...)...); code != 0 || !reflect.DeepEqual(rows(got), want) {
+			t.Fatalf("%v: code=%d got %q, want %q stderr=%s", c.args, code, got, want, errOut)
+		}
+	}
+	// Usage errors are refused before any project is read: an empty checkout suffices.
+	for _, args := range [][]string{{"list", "--status", "settledd"}, {"list", "--status="}, {"list", "--status"}, {"show", "G-001", "--status", "proposed"}, {"check", "--status=open"}} {
+		var out, errOut bytes.Buffer
+		if code := Run(args, t.TempDir(), &out, &errOut); code != 2 || out.Len() != 0 || !strings.Contains(errOut.String(), "--status") {
+			t.Fatalf("%v: code=%d stderr=%s", args, code, errOut.String())
+		}
+	}
+}

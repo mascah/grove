@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -22,7 +23,7 @@ import (
 )
 
 const usage = "Usage: grove [--project DIR] [--json]\n" +
-	"       grove [--project DIR] list | show ID [--json] | brief [--json] | check\n" +
+	"       grove [--project DIR] list [--status VALUE]... | show ID [--json] | brief [--json] | check\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n" +
 	"       grove [--project DIR] convert PATH --type TYPE --title TITLE [--slug SLUG]\n" +
@@ -34,7 +35,8 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             differing versions across branches and checkouts, and explicit selection of a\n" +
 	"             version's existing workspace, printed like workspace (--json likewise).\n" +
 	"             Needs a terminal on stdin and stderr; stdout may be redirected. Reads only.\n" +
-	"  list       List records in the selected checkout\n" +
+	"  list       List records in the selected checkout; --status VALUE, repeatable, keeps\n" +
+	"             only records in any given status (a value outside the vocabulary is refused)\n" +
 	"  show ID    Print the complete Markdown source for a record;\n" +
 	"             --json prints {id, path, revision, source} instead\n" +
 	"  brief      Print the project brief that grove.yaml names with brief: PATH;\n" +
@@ -158,6 +160,9 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		table := tabwriter.NewWriter(&buffer, 0, 4, 2, ' ', 0)
 		fmt.Fprintln(table, "ID\tTYPE\tSTATUS\tTITLE")
 		for _, r := range p.Records {
+			if a.statuses != nil && !slices.Contains(a.statuses, r.Status) {
+				continue
+			}
 			fmt.Fprintf(table, "%s\t%s\t%s\t%s\n", r.ID, r.Type, cmp.Or(r.Status, "-"), visible(r.Title)) // a page has no status
 		}
 		table.Flush() // The destination is a bytes.Buffer, whose writes cannot fail.
@@ -204,6 +209,7 @@ type invocation struct {
 	request                                         update.Request
 	convert                                         update.ConvertRequest
 	ids                                             []string // context
+	statuses                                        []string // list
 	options                                         handoff.Options
 }
 
@@ -274,6 +280,13 @@ func parseArgs(args []string) (a invocation, err error) {
 				return fmt.Errorf("must be an integer from 1 through %d", handoff.LimitMaxBytes)
 			}
 			a.options.MaxBytes = n
+			return nil
+		}},
+		{"--status", "status", func(value string) error {
+			if !slices.ContainsFunc(project.Types, func(t project.TypeInfo) bool { return slices.Contains(t.Statuses, value) }) {
+				return fmt.Errorf("is not a status of any record type: %s", visible(value))
+			}
+			a.statuses = append(a.statuses, value)
 			return nil
 		}},
 		{"--include", "project-relative path", func(value string) error {
@@ -367,6 +380,9 @@ func parseArgs(args []string) (a invocation, err error) {
 	}
 	if a.json && a.command != "" && a.command != "show" && a.command != "brief" && a.command != "versions" && a.command != "workspace" && a.command != "context" {
 		return a, fmt.Errorf("--json applies only to the board, show, brief, versions, workspace, and context")
+	}
+	if a.statuses != nil && a.command != "list" {
+		return a, fmt.Errorf("--status applies only to list")
 	}
 	if a.source != "" && a.command != "workspace" {
 		return a, fmt.Errorf("--source applies only to workspace")
