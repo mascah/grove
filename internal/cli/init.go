@@ -46,7 +46,7 @@ const workDescription = "Carry explicitly assigned Grove work IDs through prepar
 const shapeDescription = "Shape an idea or existing Grove records into proposed work, questions, and attributable decisions in this repository, without implementing anything."
 
 func loadGuide(name, what, extra string) string {
-	return "Run `grove guide " + name + "` and follow the guide it prints for " + what + ".\n" +
+	return "Run `grove guide " + name + "`, with no other argument, and follow the guide it prints for\n" + what + ".\n" +
 		"`grove` is the Grove CLI on PATH, unless this repository's agent instructions\n" +
 		"(`AGENTS.md` or `CLAUDE.md`; read them if they are not already among yours) say\n" +
 		"how to invoke it: they are the repository's development policy. The guide is\n" +
