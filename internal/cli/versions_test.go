@@ -82,17 +82,17 @@ func TestVersionsCLI(t *testing.T) {
 	}
 	rows := rowsOf(out.String())
 	want := [][]string{
-		{"ID", "STATUS", "SOURCE", "CHANGE", "SELECTOR"},
-		{"G-001", "active", "committed refs/heads/feature", "-", "committed:refs/heads/feature@"},
-		{"G-001", "proposed", "committed refs/heads/main", "-", "committed:refs/heads/main@"},
-		{"G-001", "proposed", "live . refs/heads/main", "unchanged", "live:.:refs/heads/main@"},
-		{"G-001", "active", "live feature-wt refs/heads/feature", "unchanged", "live:feature-wt:refs/heads/feature@"},
+		{"ID", "STATUS", "SOURCE", "CHANGE", "CURRENT", "SELECTOR"},
+		{"G-001", "active", "committed refs/heads/feature", "-", "yes", "committed:refs/heads/feature@"},
+		{"G-001", "proposed", "committed refs/heads/main", "-", "older", "committed:refs/heads/main@"},
+		{"G-001", "proposed", "live . refs/heads/main", "unchanged", "older", "live:.:refs/heads/main@"},
+		{"G-001", "active", "live feature-wt refs/heads/feature", "unchanged", "yes", "live:feature-wt:refs/heads/feature@"},
 	}
 	if len(rows) != len(want) {
 		t.Fatalf("stdout:\n%s", out.String())
 	}
 	for i, row := range rows {
-		if len(row) != 5 || !reflect.DeepEqual(row[:4], want[i][:4]) || !strings.HasPrefix(row[4], want[i][4]) {
+		if len(row) != 6 || !reflect.DeepEqual(row[:5], want[i][:5]) || !strings.HasPrefix(row[5], want[i][5]) {
 			t.Fatalf("row %d: %q, expected %q", i, row, want[i])
 		}
 	}
@@ -125,10 +125,12 @@ func TestVersionsCLI(t *testing.T) {
 	if live["kind"] != "live" || live["worktree"] != wt || live["locator"] != "feature-wt" || live["ref"] != "refs/heads/feature" || live["change"] != "unchanged" ||
 		live["path"] != "docs/records/work/renamed.md" || live["status"] != "active" || live["type"] != "work" || live["title"] != "Inspect records" ||
 		!strings.HasPrefix(live["selector"].(string), "live:feature-wt:refs/heads/feature@") || live["source"] != strings.Replace(work, "status: proposed", "status: active", 1) ||
-		!strings.HasPrefix(live["revision"].(string), "sha256:") || !strings.HasPrefix(live["config_revision"].(string), "sha256:") || live["detached"] != false {
+		!strings.HasPrefix(live["revision"].(string), "sha256:") || !strings.HasPrefix(live["config_revision"].(string), "sha256:") || live["detached"] != false ||
+		live["current"] != true || live["older"] != nil {
 		t.Fatalf("live version: %v", live)
 	}
-	if committed := got.Records[0].Versions[1]; committed["ref"] != "refs/heads/main" || committed["status"] != "proposed" || committed["change"] != nil || committed["worktree"] != nil {
+	if committed := got.Records[0].Versions[1]; committed["ref"] != "refs/heads/main" || committed["status"] != "proposed" || committed["change"] != nil || committed["worktree"] != nil ||
+		committed["current"] != false || committed["older"] != "branch feature changed it since their common history" {
 		t.Fatalf("committed version: %v", committed)
 	}
 	for _, s := range got.Sources {
@@ -155,7 +157,7 @@ func TestVersionsCLI(t *testing.T) {
 	rows = rowsOf(out.String())
 	last := rows[len(rows)-1]
 	revision := strings.TrimPrefix(showJSON(t, root, "G-002")["revision"].(string), "sha256:")[:12]
-	if !reflect.DeepEqual(last[:4], []string{"G-002", "open", "live odd-wt detached", "unchanged"}) || !strings.HasPrefix(last[4], "live:odd-wt:detached@"+gitIn(t, odd, "rev-parse", "HEAD")[:12]+":G-002@"+revision+":") {
+	if !reflect.DeepEqual(last[:5], []string{"G-002", "open", "live odd-wt detached", "unchanged", "yes"}) || !strings.HasPrefix(last[5], "live:odd-wt:detached@"+gitIn(t, odd, "rev-parse", "HEAD")[:12]+":G-002@"+revision+":") {
 		t.Fatalf("detached row: %q", last)
 	}
 }

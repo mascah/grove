@@ -29,6 +29,11 @@ func runVersions(root string, a invocation, out, errOut io.Writer) int {
 			fmt.Fprintf(errOut, "  %s\n", visible(d))
 		}
 	}
+	for _, g := range res.Groups {
+		for _, n := range g.Notes {
+			fmt.Fprintf(errOut, "%s: %s\n", g.ID, visible(n))
+		}
+	}
 	code := 0
 	if !res.Complete {
 		fmt.Fprintln(errOut, "grove: some sources could not be inspected; the result is incomplete")
@@ -44,7 +49,7 @@ func runVersions(root string, a invocation, out, errOut io.Writer) int {
 	} else {
 		var buffer bytes.Buffer
 		table := tabwriter.NewWriter(&buffer, 0, 4, 2, ' ', 0)
-		fmt.Fprintln(table, "ID\tSTATUS\tSOURCE\tCHANGE\tSELECTOR")
+		fmt.Fprintln(table, "ID\tSTATUS\tSOURCE\tCHANGE\tCURRENT\tSELECTOR")
 		for _, g := range res.Groups {
 			for _, v := range g.Versions {
 				status, change := "-", "-"
@@ -54,7 +59,11 @@ func runVersions(root string, a invocation, out, errOut io.Writer) int {
 				if v.Change != "" {
 					change = v.Change
 				}
-				fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%s\n", g.ID, visible(status), visible(sourceCell(v.Source)), change, v.Selector)
+				current := "yes"
+				if v.Older != "" {
+					current = "older"
+				}
+				fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%s\t%s\n", g.ID, visible(status), visible(sourceCell(v.Source)), change, current, cmp.Or(v.Selector, "-"))
 			}
 		}
 		table.Flush()
@@ -109,7 +118,10 @@ func versionsJSON(res *versions.Result) map[string]any {
 		vs := make([]any, 0, len(g.Versions))
 		for _, v := range g.Versions {
 			o := sourceJSON(v.Source, false)
-			o["path"] = v.Path
+			o["path"], o["current"] = v.Path, v.Older == ""
+			if v.Older != "" {
+				o["older"] = v.Older
+			}
 			if v.Change != "" {
 				o["change"] = v.Change
 			}
@@ -122,7 +134,8 @@ func versionsJSON(res *versions.Result) map[string]any {
 			}
 			vs = append(vs, o)
 		}
-		records = append(records, map[string]any{"id": g.ID, "versions": vs})
+		notes := make([]string, 0, len(g.Notes))
+		records = append(records, map[string]any{"id": g.ID, "versions": vs, "notes": append(notes, g.Notes...)})
 	}
 	return map[string]any{
 		"project": res.Project, "repository": res.Repository, "prefix": res.Prefix,
