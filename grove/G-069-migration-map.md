@@ -11,7 +11,8 @@ directly under `grove/` on 2026-09-21. This page is the one durable mapping
 from an old ID or path to its current counterpart. To read an old commit, use
 the old ID or path there with that commit's own CLI (`go run ./cmd/grove`);
 to find what it became, look it up here or search `formerly:`. Numbers follow
-document date (a record's `created`, a legacy document's first commit), ties
+document date (a record's `created`, a legacy document's first commit, which
+became its `created` on 2026-09-22), ties
 broken on the old ID or path; the order conveys no authority or priority.
 
 | Old ID | Old path | ID | Path | Document date |

@@ -5,6 +5,7 @@ title: "G-025 plan: shaping guide and `grove-shape` adapters"
 status: current
 formerly: "docs/plans/W-011-shaping-entrypoint.md"
 work: ["G-025"]
+created: "2026-09-21T02:53:09Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

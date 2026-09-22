@@ -5,6 +5,7 @@ title: "Integrated CLI review, 2026-09-19"
 status: current
 formerly: "docs/reviews/2026-09-19-integrated-cli.md"
 work: ["G-009", "G-010", "G-011", "G-014", "G-015", "G-016"]
+created: "2026-09-19T20:32:24Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

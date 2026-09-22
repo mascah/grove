@@ -5,6 +5,7 @@ title: "CLI repairs G-014 to G-016: evidence, 2026-09-19"
 status: current
 formerly: "docs/reviews/2026-09-19-repairs-W-006-W-008.md"
 work: ["G-014", "G-015", "G-016"]
+created: "2026-09-19T22:07:59Z"
 updated: "2026-09-21T21:23:30Z"
 ---
 

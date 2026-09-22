@@ -5,6 +5,7 @@ title: "G-025 shaping entrypoint: evidence"
 status: current
 formerly: "docs/reviews/2026-09-20-W-011-shaping.md"
 work: ["G-025"]
+created: "2026-09-21T03:02:56Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

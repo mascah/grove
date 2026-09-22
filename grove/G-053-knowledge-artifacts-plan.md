@@ -5,6 +5,7 @@ title: "G-037 plan: terms, plans, reviews, and a discoverable brief"
 status: current
 formerly: "docs/plans/W-019-knowledge-artifacts.md"
 work: ["G-037"]
+created: "2026-09-21T04:55:41Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

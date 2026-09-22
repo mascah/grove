@@ -5,6 +5,7 @@ title: "G-014 workspace provenance implementation plan"
 status: current
 formerly: "docs/plans/W-006-workspace-provenance.md"
 work: ["G-014"]
+created: "2026-09-19T20:32:24Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

@@ -5,6 +5,7 @@ title: "G-023/G-025 agent handoffs implementation plan"
 status: current
 formerly: "docs/plans/W-010-W-011-agent-handoffs.md"
 work: ["G-023", "G-025"]
+created: "2026-09-19T21:39:23Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

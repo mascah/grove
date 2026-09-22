@@ -115,8 +115,9 @@ minor findings fixed. Not merged or pushed.
    `docs/prompts/*.txt` stays as spent evidence, accounted for in G-069.
 2. G-069 has one row per source and each record's `formerly` matches its row.
    Round 1 diffed all 69 pairs: only mechanical ID, path and link edits, with
-   `created`, `updated`, `status` and `examined` byte-identical. Converted
-   legacy documents carry no `created`; their document dates are in G-069.
+   `created`, `updated`, `status` and `examined` byte-identical. The 22
+   converted legacy documents got `created` on 2026-09-22 at the owner's
+   request, each from the first commit of its original path, matching G-069.
 3. `grove check` OK at 70 records. Every relative link and anchor resolves
    (the reviewers' checkers and the migration script's audit). Remaining typed
    IDs and old folder names are the literals G-069 accounts for: fixtures,
@@ -167,18 +168,11 @@ seen and rerun green, likewise outside this change: `internal/tui`
 
 ## Next
 
-The race failure noted at the 2026-09-21 checkpoint is examined and recorded
-in Evidence as an environment flake; nothing else changed.
-
-Implementation complete and independently reviewed; awaiting the owner's
-judgment of the flat tree and ordinary CLI and board browsing (acceptance 6):
-`ls grove/` and `go run ./cmd/grove` in `.claude/worktrees/W-029`. Then mark
-this done and merge `worktree-W-029` (fast-forward from `70de539`). Open for
-the owner while browsing: the 22 converted legacy plans and reviews carry no
-`created`, because `convert` sets none and `update` keeps the field fixed, so
-`list` sorts them last and their document dates live only in G-069; say
-whether a follow-up should set them from Git history. The merged
-local branches `worktree-W-004-W-005`, `worktree-W-006-W-008`, `worktree-W-010`,
+Done and accepted by the owner on 2026-09-22; the race failure noted at the
+2026-09-21 checkpoint is recorded in Evidence as an environment flake, and the
+`created` dates the owner asked for are set. Remaining: merge `worktree-W-029`
+into main (fast-forward from `70de539`). The merged local branches
+`worktree-W-004-W-005`, `worktree-W-006-W-008`, `worktree-W-010`,
 `worktree-W-030` and `worktree-direction-reconciliation` still hold schema 1 or
 2, so `versions` exits 1 and the board says INCOMPLETE until the owner deletes
 them; they are all ancestors of main. G-041 reuses the script's approach from

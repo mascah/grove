@@ -5,6 +5,7 @@ title: "G-007 record creation implementation plan"
 status: current
 formerly: "docs/plans/W-002-create.md"
 work: ["G-007"]
+created: "2026-09-19T15:31:29Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

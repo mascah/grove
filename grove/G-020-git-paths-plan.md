@@ -5,6 +5,7 @@ title: "G-016 Git path identity implementation plan"
 status: current
 formerly: "docs/plans/W-008-git-paths.md"
 work: ["G-016"]
+created: "2026-09-19T20:32:24Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

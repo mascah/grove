@@ -5,6 +5,7 @@ title: "Card lineage G-030: evidence, 2026-09-20"
 status: current
 formerly: "docs/reviews/2026-09-20-card-lineage-W-012.md"
 work: ["G-030"]
+created: "2026-09-20T16:11:14Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

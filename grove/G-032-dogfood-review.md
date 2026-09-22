@@ -5,6 +5,7 @@ title: "G-023 dogfooding evidence"
 status: current
 formerly: "docs/reviews/2026-09-19-W-010-dogfood.md"
 work: ["G-023"]
+created: "2026-09-20T05:50:31Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

@@ -5,6 +5,7 @@ title: "Predecessor `/work` review for G-023"
 status: current
 formerly: "docs/reviews/2026-09-19-predecessor-work.md"
 work: ["G-023"]
+created: "2026-09-19T20:59:57Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

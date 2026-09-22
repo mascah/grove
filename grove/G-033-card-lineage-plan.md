@@ -5,6 +5,7 @@ title: "G-030 card lineage plan"
 status: current
 formerly: "docs/plans/W-012-card-lineage.md"
 work: ["G-030"]
+created: "2026-09-20T14:55:55Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

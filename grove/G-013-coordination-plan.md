@@ -5,6 +5,7 @@ title: "G-010 and G-011 coordination plan"
 status: current
 formerly: "docs/plans/W-004-W-005-coordination.md"
 work: ["G-010", "G-011"]
+created: "2026-09-19T19:28:26Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

@@ -5,6 +5,7 @@ title: "G-036 adoption roadmap"
 status: current
 formerly: "docs/plans/W-018-adoption-roadmap.md"
 work: ["G-036"]
+created: "2026-09-21T01:08:42Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

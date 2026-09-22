@@ -5,6 +5,7 @@ title: "First-days evaluation and research"
 status: current
 formerly: "docs/reviews/2026-09-20-direction-evaluation.md"
 relates_to: ["G-035"]
+created: "2026-09-21T01:08:42Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

@@ -5,6 +5,7 @@ title: "G-003 inspection implementation plan"
 status: current
 formerly: "docs/plans/W-001-inspection.md"
 work: ["G-003"]
+created: "2026-09-19T15:19:41Z"
 updated: "2026-09-21T21:11:15Z"
 ---
 

@@ -5,6 +5,7 @@ title: "G-009 record update implementation plan"
 status: current
 formerly: "docs/plans/W-003-update.md"
 work: ["G-009"]
+created: "2026-09-19T18:42:44Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 

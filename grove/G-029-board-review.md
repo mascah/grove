@@ -5,6 +5,7 @@ title: "Terminal board G-017: evidence, 2026-09-19"
 status: current
 formerly: "docs/reviews/2026-09-19-board-W-009.md"
 work: ["G-017"]
+created: "2026-09-19T23:28:01Z"
 updated: "2026-09-21T21:11:16Z"
 ---
 
