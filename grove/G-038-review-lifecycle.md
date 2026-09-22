@@ -2,15 +2,16 @@
 id: "G-038"
 type: work
 title: "Hand implementation candidates into revision-bound human review"
-status: active
+status: review
 created: "2026-09-21T00:54:14Z"
-updated: "2026-09-22T04:13:00Z"
+updated: "2026-09-22T04:45:35Z"
 kind: feature
 size: medium
 priority: 1
 depends_on: ["G-037", "G-065"]
 relates_to: ["G-035", "G-036", "G-023", "G-064"]
 formerly: "W-020"
+candidate: "fae1e4cce716836a3ffa6b0302f56ee2c4a173c3"
 ---
 
 ## Outcome
