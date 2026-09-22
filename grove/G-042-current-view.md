@@ -225,8 +225,8 @@ Decisions):** "I think I want to revisit the idea of an integration target.
 In my case that's main. During initial scoping I was asked if this should be a
 grove.yaml setting and I think it probably should be." Asked where it lands,
 the owner chose to reopen G-042 rather than merge first. They deferred to
-separate work having `update` refuse `done` off the target. That is now
-implemented, as recorded above.
+separate work having `update` refuse `done` off the target. The target
+itself is now implemented, as recorded above.
 
 Judge the candidate (the owner). Demo from the branch:
 
