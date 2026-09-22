@@ -52,8 +52,7 @@ old/new schema sources and legacy/new IDs in the projection fixtures.
 
 ## Preparation and next
 
-No implementation plan exists yet. Create a linked plan through the supported
-CLI after G-065/G-038. Resolve configured target, uncommitted
-overlay precedence and divergent-card placement against concrete histories.
-Escalate ambiguous product precedence to the owner with examples. Preferred
-investment order is after G-041; that is not a technical dependency.
+The [plan](G-093-current-view-plan.md) holds the projection, the owner's
+2026-09-22 decisions (uncommitted edits count, labelled; one card per
+divergence in its earliest status; no target), and the steps. Implementation
+is on branch `worktree-G-042` from `939d090`.
