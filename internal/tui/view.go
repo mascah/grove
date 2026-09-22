@@ -209,6 +209,11 @@ func (m *Model) render() string {
 	switch {
 	case m.res == nil:
 		rows, hints = m.emptyBody(w), "r retry   q quit"
+	case m.screen == detailScreen && m.group() != nil:
+		rows, hints = m.detailBody(w, body), pick(w,
+			"↑/↓ PgUp/PgDn scroll or move   Tab content, linked, timeline   Enter open   v versions and places   s sources   r refresh   Esc back   q quit",
+			"↑↓ PgUp/PgDn  Tab pane  Enter open  v versions  s  r  Esc back  q quit",
+			"↑↓  Tab  Enter open  v  Esc back  q quit")
 	case m.screen == versionsScreen && m.group() != nil:
 		rows, hints = m.versionsBody(w, body), pick(w,
 			"↑/↓ rows   Enter list places, or select a workspace   Tab details   PgUp/PgDn scroll   s what was read   r refresh   Esc board   q quit",
@@ -504,12 +509,14 @@ func (m *Model) historyRows(w int) []string {
 	for _, r := range wrap("History on "+label(v.Source)+": commits that changed this record's file, newest first", w) {
 		rows = append(rows, bold(r))
 	}
-	entry := func(when, status, rest string) {
+	items, message := m.historyItems(v)
+	for _, it := range items {
+		status := it.status
 		if status == "" {
 			status = "?"
 		}
 		// Continuation rows are indented under the first.
-		for i, r := range wrap(fmt.Sprintf("%-16s  %-9s  %s", when, status, rest), w-2) {
+		for i, r := range wrap(fmt.Sprintf("%-16s  %-9s  %s", it.when, status, it.rest), w-2) {
 			if i == 0 {
 				rows = append(rows, r+"  ")
 			} else {
@@ -517,39 +524,8 @@ func (m *Model) historyRows(w int) []string {
 			}
 		}
 	}
-	status := "-" // deleted from the checkout's files
-	if v.Record != nil {
-		status = v.Record.Status
-	}
-	switch {
-	case committed(v):
-	case v.Change == "unknown":
-		entry("uncommitted?", status, "whether these files differ from the commit is unknown")
-	default:
-		entry("uncommitted", status, v.Change+" in this checkout's files")
-	}
-	commit, path := historyAt(v)
-	read, held := m.hist[commit+"\x00"+path]
-	switch {
-	case commit == "" && v.Source.Kind == "committed":
-		rows = append(rows, wrap("This branch deleted the record; an older row has its history.", w)...)
-	case commit == "":
-		rows = append(rows, wrap("No commit of this checkout holds the record yet.", w)...)
-	case !held:
-		rows = append(rows, line("reading…", w))
-	case read.err != nil:
-		rows = append(rows, wrapAll("The history could not be read (r retries): "+read.err.Error(), w)...)
-	case len(read.commits) == 0:
-		rows = append(rows, wrap("No commit here changed this file.", w)...)
-	}
-	// Merges are not listed, so the newest row need not be the record as it is
-	// here: a merge may have set the status, or combined it with a newer commit
-	// from another line. Say what is known, not which.
-	if committed(v) && len(read.commits) != 0 && read.commits[0].Status != status {
-		entry("here", status, "the record's status here; the newest commit below differs because merges are not listed")
-	}
-	for _, c := range read.commits {
-		entry(c.When.Format("2006-01-02 15:04"), c.Status, c.ID[:min(len(c.ID), 7)]+"  "+c.Subject)
+	if message != "" {
+		rows = append(rows, wrapAll(message, w)...)
 	}
 	return rows
 }
@@ -774,6 +750,18 @@ func (m *Model) clampScroll() {
 			w -= w*2/5 + 3
 		}
 		rows, n = len(m.detailRows(w)), m.height-4-len(m.refusalRows(m.width, m.height-3))
+	case m.screen == detailScreen:
+		g := m.group()
+		if g == nil {
+			return
+		}
+		w, v := m.width, m.shown(g)
+		if w >= wideWidth {
+			w = w * 11 / 20
+		}
+		rows, n = len(m.contentRows(v, w)), m.height-3-len(m.detailHead(v, m.width))-1
+		m.dscroll = max(min(m.dscroll, rows-n), 0)
+		return
 	}
 	m.scroll = max(min(m.scroll, rows-n), 0)
 }

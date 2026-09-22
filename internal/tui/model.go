@@ -35,6 +35,7 @@ type screen int
 
 const (
 	boardScreen screen = iota
+	detailScreen
 	versionsScreen
 	chooserScreen
 	sourcesScreen
@@ -176,12 +177,16 @@ type Model struct {
 	screen, back screen
 	col          int
 	onShelf      bool
-	cardID       string
-	verKey       string // a row's key; "" is the ID header, which selects nothing
-	unfolded     string // the key of the one fold showing its members
-	detail       bool   // the detail pane has focus
-	scroll       int    // detail pane, or sources screen
-	choice       int    // chooser row
+	cardID       string   // the board's focus
+	stack        []string // open records, the last showing in the detail
+	side         int      // the detail's sidebar cursor; -1 while the content has focus
+	dscroll      int      // the detail's content scroll
+	asOf         string   // a timeline commit whose content the detail shows; "" is now
+	verKey       string   // a row's key; "" is the ID header, which selects nothing
+	unfolded     string   // the key of the one fold showing its members
+	detail       bool     // the detail pane has focus
+	scroll       int      // detail pane, or sources screen
+	choice       int      // chooser row
 	refusal      string
 
 	// Workspace is the explicitly selected, freshly resolved result, if any.
@@ -236,7 +241,7 @@ func (m *Model) busy() bool { return m.pending == "inspect" || m.pending == "res
 // showing, no other read is pending, and that history is not already held or
 // being read. The board never asks for one.
 func (m *Model) wantHistory() tea.Cmd {
-	if m.backend.History == nil || m.done || m.screen != versionsScreen || m.busy() {
+	if m.backend.History == nil || m.done || m.screen != versionsScreen && m.screen != detailScreen || m.busy() {
 		return nil
 	}
 	commit, path := historyAt(m.historyOf())
@@ -253,8 +258,7 @@ func (m *Model) wantHistory() tea.Cmd {
 }
 
 // historyOf returns the version whose history the details show: the focused
-// row's, a fold's first place, and under the ID header the board's checkout's
-// version, the current view's first current record, or the group's first.
+// row's, a fold's first place, and otherwise the group's shown version.
 func (m *Model) historyOf() *versions.Version {
 	g := m.group()
 	if g == nil || len(g.Versions) == 0 {
@@ -266,13 +270,23 @@ func (m *Model) historyOf() *versions.Version {
 		}
 		return r.v
 	}
+	return m.shown(g)
+}
+
+// shown returns the version that stands for a group on this board: the
+// board's checkout's version, the current view's first current record, a
+// current deletion, or the group's first.
+func (m *Model) shown(g *versions.Group) *versions.Version {
+	if len(g.Versions) == 0 {
+		return nil
+	}
 	for i := range g.Versions {
 		if v := &g.Versions[i]; m.hasBoard && v.Source == m.boardSource() || m.current() && v.Older == "" && v.Record != nil {
 			return v
 		}
 	}
 	if i := slices.IndexFunc(g.Versions, func(v versions.Version) bool { return m.current() && v.Older == "" }); i >= 0 {
-		return &g.Versions[i] // a current deletion
+		return &g.Versions[i]
 	}
 	return &g.Versions[0]
 }
@@ -317,7 +331,7 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		if msg.gen != m.gen || m.pending != "inspect" {
 			return nil
 		}
-		m.pending, m.cancel, m.hist, m.md = "", nil, map[string]lineage{}, nil
+		m.pending, m.cancel, m.hist, m.md, m.asOf = "", nil, map[string]lineage{}, nil, ""
 		if msg.err != nil {
 			m.res, m.failure = nil, msg.err.Error()
 			m.screen, m.cardID = boardScreen, ""
@@ -384,11 +398,18 @@ func (m *Model) key(k string) tea.Cmd {
 			m.stop()
 			m.done = true
 			return tea.Quit
+		case detailScreen:
+			// The board never reads history; whatever the detail returns to
+			// asks again for its own.
+			if m.pending == "history" {
+				m.stop()
+			}
+			m.leaveDetail()
 		case versionsScreen:
 			if m.pending != "inspect" {
 				m.stop()
 			}
-			m.screen = boardScreen
+			m.screen = detailScreen
 			m.leaveVersions()
 		default:
 			m.screen, m.scroll = m.back, 0
@@ -398,6 +419,8 @@ func (m *Model) key(k string) tea.Cmd {
 	switch m.screen {
 	case boardScreen:
 		return m.boardKey(k)
+	case detailScreen:
+		m.detailKey(k)
 	case versionsScreen:
 		return m.versionsKey(k)
 	case chooserScreen:
@@ -455,11 +478,10 @@ func (m *Model) boardKey(k string) tea.Cmd {
 			m.back, m.screen, m.choice = boardScreen, chooserScreen, 0
 		}
 	case "enter":
-		// Opening a card shows its versions. It never resolves a workspace,
+		// Opening a card shows its detail. It never resolves a workspace,
 		// even when only one version exists.
 		if at >= 0 {
-			m.screen = versionsScreen
-			m.leaveVersions()
+			m.openDetail(m.cardID)
 		}
 	}
 	return nil
@@ -575,6 +597,16 @@ func (m *Model) current() bool { return !m.hasBoard && !m.lost }
 
 // settleFocus follows the focused card to wherever the new result places it.
 func (m *Model) settleFocus() {
+	// An open record that vanished closes its detail, and the versions or
+	// sources screen above it, with the reason.
+	if len(m.stack) != 0 && m.group() == nil {
+		m.notice = m.openID() + " is no longer on any readable branch or checkout"
+		m.stack = nil
+		m.leaveVersions()
+		if m.back = boardScreen; m.screen == detailScreen || m.screen == versionsScreen {
+			m.screen = boardScreen
+		}
+	}
 	columns, shelf, _ := m.bounded()
 	if m.cardID != "" {
 		for _, i := range m.visible() {
@@ -586,13 +618,6 @@ func (m *Model) settleFocus() {
 		if slices.ContainsFunc(shelf, func(c card) bool { return c.id == m.cardID }) {
 			m.onShelf = true
 			return
-		}
-		// The versions may be open beneath the sources screen.
-		if m.screen == versionsScreen || m.back == versionsScreen {
-			m.notice = m.cardID + " is no longer on any readable branch or checkout"
-			if m.back = boardScreen; m.screen == versionsScreen {
-				m.screen = boardScreen
-			}
 		}
 	}
 	m.cardID, m.onShelf = "", m.onShelf && len(shelf) != 0
@@ -830,10 +855,19 @@ func isWork(g versions.Group, src *versions.Source) bool {
 	return elsewhere
 }
 
+// openID is the record the detail and versions screens are about: the open
+// detail's, or the board's focus.
+func (m *Model) openID() string {
+	if len(m.stack) != 0 {
+		return m.stack[len(m.stack)-1]
+	}
+	return m.cardID
+}
+
 func (m *Model) group() *versions.Group {
 	if m.res != nil {
 		for i := range m.res.Groups {
-			if m.res.Groups[i].ID == m.cardID {
+			if m.res.Groups[i].ID == m.openID() {
 				return &m.res.Groups[i]
 			}
 		}

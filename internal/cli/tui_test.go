@@ -211,7 +211,13 @@ func boardWorkflow(t *testing.T, broken bool) {
 		s.press("b", "down", "enter") // back to main's board
 		s.want("Board: checkout . (main)", "Active 0")
 
+		// Enter opens the record's detail: its content, rendered, its linked
+		// records and the timeline from real Git; v is the version list.
 		s.press("enter")
+		s.want("G-001 · proposed", "Inspect records", "▶ Content", "An outcome.", "Linked", "related    G-002", "Timeline on checkout . (main)", "  proposed   ", "  init", "Sources", "current: active \"Inspect records, on feature\"", "places hold an earlier state")
+		s.lacks("▸ proposed", "retitle and add")
+		incomplete(s)
+		s.press("v")
 		s.want("G-001   2 versions differ", "▸ proposed   older  same on ", "▸ active     same on 1 branch, 1 checkout")
 		s.lacks("checkout feature-wt (feature)  unchanged")
 		incomplete(s)
@@ -250,7 +256,7 @@ func boardWorkflow(t *testing.T, broken bool) {
 		// The same walk from the current view, where G-001 is active, but the
 		// target changes after it was displayed.
 		s = openBoard(t, root)
-		s.press("l", "enter")
+		s.press("l", "enter", "v")
 		s.focus("▸ active")
 		s.press("enter")
 		s.focus("checkout feature-wt (feature)")
@@ -280,7 +286,7 @@ func boardWorkflow(t *testing.T, broken bool) {
 		}
 		// A committed version routes only while its checkout still matches it.
 		s = openBoard(t, root)
-		s.press("l", "enter")
+		s.press("l", "enter", "v")
 		s.focus("branch feature")
 		if s.press("enter") || s.m.Workspace != nil {
 			t.Fatal("a committed version whose checkout differs must be refused")

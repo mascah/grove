@@ -235,8 +235,11 @@ func TestSelectionIsExplicit(t *testing.T) {
 		t.Fatalf("initial focus = column %d card %q, want the first proposed card", m.col, m.cardID)
 	}
 	press(m, "right") // W-001 is active on main
-	if cmd := press(m, "enter"); cmd != nil || m.screen != versionsScreen || m.verKey != "" || m.cardID != "W-001" {
-		t.Fatalf("Enter on a card must open its versions on the ID header: screen %d key %q cmd %v", m.screen, m.verKey, cmd != nil)
+	if cmd := press(m, "enter"); cmd != nil || m.screen != detailScreen || m.openID() != "W-001" {
+		t.Fatalf("Enter on a card must open its detail: screen %d open %q cmd %v", m.screen, m.openID(), cmd != nil)
+	}
+	if cmd := press(m, "v"); cmd != nil || m.screen != versionsScreen || m.verKey != "" || m.cardID != "W-001" {
+		t.Fatalf("v must open the versions on the ID header: screen %d key %q cmd %v", m.screen, m.verKey, cmd != nil)
 	}
 	if cmd := press(m, "enter"); cmd != nil {
 		t.Fatal("Enter on the ID header must not start anything")
@@ -296,7 +299,7 @@ func TestRefusalStaysVisibleUntilRefresh(t *testing.T) {
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches(), refuse: errors.New("branch refs/heads/main moved from aaa to bbb; run versions and reselect")}
 	m := open(t, f, 120, 30)
-	press(m, "right", "enter", "down", "enter", "down")
+	press(m, "right", "enter", "v", "down", "enter", "down")
 	if next := deliver(m, press(m, "enter")); next != nil || m.Workspace != nil || m.screen != versionsScreen {
 		t.Fatal("a refused resolution must stay in the version view without a workspace")
 	}
@@ -329,7 +332,7 @@ func TestDeletedRowCannotResolve(t *testing.T) {
 	if got := board(m); !strings.HasSuffix(got, "shelf=W-010") {
 		t.Fatalf("work deleted from the board's live files belongs on the shelf: %s", got)
 	}
-	press(m, "tab", "enter", "down", "down", "down")
+	press(m, "tab", "enter", "v", "down", "down", "down")
 	if v := m.focused(); v == nil || v.Record != nil {
 		t.Fatal("the deleted row should stay visible and focusable")
 	}
@@ -343,12 +346,12 @@ func TestStaleAndCancelledReplies(t *testing.T) {
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches(), ws: &versions.Workspace{Project: "/repo/."}}
 	m := open(t, f, 120, 30)
-	press(m, "right", "enter", "down", "enter", "down")
+	press(m, "right", "enter", "v", "down", "enter", "down")
 	old := press(m, "enter")
 	if old == nil {
 		t.Fatal("the fixture should start a resolve")
 	}
-	press(m, "esc") // leaves the versions and abandons the resolve
+	press(m, "esc", "esc") // leaves the versions and the detail, abandoning the resolve
 	if m.pending != "" || m.screen != boardScreen {
 		t.Fatal("Esc must cancel a pending resolve")
 	}
@@ -370,7 +373,7 @@ func TestStaleAndCancelledReplies(t *testing.T) {
 		t.Fatal("a late or unrequested reply changed state")
 	}
 	// Even a current, pending resolve accepts only the selector it asked for.
-	press(m, "enter", "down", "enter", "down") // still on W-001's column
+	press(m, "enter", "v", "down", "enter", "down") // still on W-001's column
 	press(m, "enter")
 	if m.pending != "resolve" || m.resolving == "" {
 		t.Fatal("expected a pending resolve")
@@ -457,7 +460,7 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 		t.Fatal("choosing a context must not call the backend")
 	}
 	// Each version keeps its own status in the card.
-	press(m, "right", "right", "right", "enter") // W-001 sits in Done, past Review
+	press(m, "right", "right", "right", "enter", "v") // W-001 sits in Done, past Review
 	screen = plain(m)
 	for _, want := range []string{"W-001   2 versions differ", "(2 branches, 2 checkouts)", "▸ active     same on 1 branch, 1 checkout", "▸ done       same on 1 branch, 1 checkout", "Diverging: 2 current states"} {
 		if !strings.Contains(screen, want) {
@@ -558,7 +561,7 @@ func TestRefreshFollowsIdentityNotPosition(t *testing.T) {
 		t.Fatalf("focus went to column %d card %q instead of following W-001", m.col, m.cardID)
 	}
 	// The open card disappears entirely.
-	press(m, "enter", "down")
+	press(m, "enter", "v", "down")
 	f.res = result(next.main, next.sources(), version(next.main, "W-003", "Newcomer", "active"))
 	deliver(m, press(m, "r"))
 	if m.screen != boardScreen || m.verKey != "" || !strings.Contains(plain(m), "W-001 is no longer on any readable branch or checkout") {
@@ -633,7 +636,11 @@ func TestLayoutAtEverySize(t *testing.T) {
 		}
 		press(m, "tab")
 		check("shelf")
-		press(m, "tab", "enter", "down")
+		press(m, "tab", "enter")
+		check("detail")
+		press(m, "tab")
+		check("detail sidebar")
+		press(m, "v", "down")
 		check("versions")
 		press(m, "enter", "down")
 		check("open fold")
@@ -649,7 +656,7 @@ func TestLayoutAtEverySize(t *testing.T) {
 		}
 		press(m, "s")
 		check("sources")
-		press(m, "esc", "esc", "b")
+		press(m, "esc", "esc", "esc", "b")
 		check("chooser")
 	}
 	m := open(t, &fake{res: fx.twoBranches()}, 39, 30)
@@ -711,7 +718,7 @@ func TestEverythingStaysReachable(t *testing.T) {
 			}
 			press(m, "down")
 		}
-		press(m, "tab", "enter")
+		press(m, "tab", "enter", "v")
 		// main's own content, then one fold of 25 branches, opened.
 		if press(m, "down"); !focusedRow("  proposed   checkout . (main)") {
 			t.Fatalf("%v: the differing version is not visible:\n%s", size, plain(m))
@@ -726,7 +733,7 @@ func TestEverythingStaysReachable(t *testing.T) {
 				t.Fatalf("%v: place %d (%s) not focused and visible:\n%s", size, i, want, plain(m))
 			}
 		}
-		press(m, "esc", "enter", "down", "tab")
+		press(m, "esc", "v", "down", "tab")
 		for range 300 {
 			press(m, "pgdown")
 		}
@@ -787,7 +794,11 @@ func TestHostileTextIsInert(t *testing.T) {
 			}
 		}
 		check("board")
-		press(m, "right", "enter", "down")
+		press(m, "right", "enter")
+		check("detail")
+		press(m, "tab")
+		check("detail sidebar")
+		press(m, "v", "down")
 		check("versions")
 		deliver(m, press(m, "enter"))
 		check("refusal")
@@ -803,7 +814,7 @@ func TestHostileTextIsInert(t *testing.T) {
 		}
 		press(m, "s")
 		check("sources")
-		press(m, "esc", "esc", "b")
+		press(m, "esc", "esc", "esc", "b")
 		check("chooser")
 		m.notice = hostile
 		check("notice")
@@ -852,7 +863,7 @@ func TestRefreshUnderOverlays(t *testing.T) {
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches()}
 	m := open(t, f, 120, 30)
-	press(m, "right", "enter", "down", "s")
+	press(m, "right", "enter", "v", "down", "s")
 	f.res = result(fx.main, fx.sources(), version(fx.main, "W-003", "Newcomer", "active"))
 	deliver(m, press(m, "r"))
 	if !strings.Contains(plain(m), "W-001 is no longer on any readable branch or checkout") {
@@ -866,7 +877,7 @@ func TestRefreshUnderOverlays(t *testing.T) {
 	bad := newFixture()
 	bad.cFeat.Valid, bad.cFeat.Diagnostics = false, []string{"broken"}
 	m = open(t, &fake{res: result(bad.main, bad.sources(), version(bad.main, "W-001", "Card", "active"))}, 40, 10)
-	press(m, "right", "enter", "down")
+	press(m, "right", "enter", "v", "down")
 	if press(m, "enter"); !strings.Contains(plain(m), "INCOMPLETE: 1 of 4") {
 		t.Fatalf("the warning was clipped by the pending read:\n%s", plain(m))
 	}
@@ -961,7 +972,7 @@ func TestCurrentViewBoard(t *testing.T) {
 	}
 
 	// W-001's current state leads its versions; main's copy is marked older.
-	press(m, "right", "right", "right", "enter")
+	press(m, "right", "right", "right", "enter", "v")
 	screen = plain(m)
 	text := currentText(m.group(), "") // the details wrap it
 	for _, want := range []string{"▸ done       same on 1 branch, 1 checkout", "▸ active     older  same on 1 branch",
@@ -978,7 +989,7 @@ func TestCurrentViewBoard(t *testing.T) {
 		t.Fatalf("an older row should say why:\n%s", screen)
 	}
 	// W-002 explains its divergence and the pair it could not order.
-	press(m, "esc", "left", "left", "left", "enter")
+	press(m, "esc", "esc", "left", "left", "left", "enter")
 	screen = currentText(m.group(), "")
 	for _, want := range []string{"Diverging: 2 current states.", `- proposed "Create records" on branch main, checkout . (main)`,
 		`- active "Create records, started" on branch feature, checkout feat (feature)`, "Could not order: branch main and branch feature could not be ordered: example"} {
@@ -999,7 +1010,7 @@ func TestCurrentViewBoard(t *testing.T) {
 	if rows := strings.Join(withHistory.historyRows(200), "\n"); withHistory.wantHistory() != nil || !strings.Contains(rows, "This branch deleted the record") {
 		t.Fatalf("a branch's deletion has no history:\n%s", rows)
 	}
-	press(m, "enter", "down")
+	press(m, "enter", "v", "down")
 	if press(m, "enter") != nil || !strings.Contains(plain(m), "REFUSED: this record was deleted on that branch") {
 		t.Fatalf("a branch's deletion must not resolve:\n%s", plain(m))
 	}

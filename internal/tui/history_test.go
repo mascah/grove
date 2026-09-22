@@ -53,6 +53,7 @@ func TestHistoryFollowsTheFocusedVersion(t *testing.T) {
 	if next := deliver(m, cmd); next != nil || m.pending != "" {
 		t.Fatal("a delivered history must not start another read")
 	}
+	press(m, "v")
 	screen := plain(m)
 	for _, want := range []string{
 		"History on checkout . (main): commits that changed",
@@ -102,7 +103,9 @@ func TestHistorySaysWhenTheNewestCommitIsNotTheRecord(t *testing.T) {
 	f.history = func(context.Context, string, string) ([]versions.Commit, error) { return log, nil }
 	m := open(t, f, 120, 30)
 	chooseCheckout(m, 0)
-	screen := plain(deliverAll(m, press(m, "right", "enter"))) // W-001 is active here
+	deliverAll(m, press(m, "right", "enter")) // W-001 is active here
+	press(m, "v")
+	screen := plain(m)
 	note, newest := strings.Index(screen, "here              active     the record's status here"), strings.Index(screen, "done       4444444")
 	if note < 0 || newest < note {
 		t.Fatalf("expected the record's status above the newest commit:\n%s", screen)
@@ -136,7 +139,9 @@ func TestHistoryOfUncommittedChanges(t *testing.T) {
 	}
 	m := deliverAll(open(t, f, 120, 40), nil)
 	chooseCheckout(m, 0)
-	screen := plain(deliverAll(m, press(m, "right", "enter")))
+	deliverAll(m, press(m, "right", "enter"))
+	press(m, "v")
+	screen := plain(m)
 	for _, want := range []string{"uncommitted       active     renamed in this checkout's files", "could not be read (r retries): git log: \\x1b[31mbroken"} {
 		if !strings.Contains(screen, want) {
 			t.Fatalf("a renamed checkout lacks %q:\n%s", want, screen)
@@ -146,7 +151,7 @@ func TestHistoryOfUncommittedChanges(t *testing.T) {
 		t.Fatalf("a checkout is followed from its path at HEAD: %s", got)
 	}
 	// An added record has no commit to read. feat is the last row.
-	press(m, "esc")
+	press(m, "esc", "esc")
 	chooseCheckout(m, 1) // the feature checkout's board
 	if fx.feat != m.boardSource() {
 		t.Fatal("expected the feature board")
@@ -156,6 +161,7 @@ func TestHistoryOfUncommittedChanges(t *testing.T) {
 	for cmd != nil {
 		cmd = deliver(m, cmd)
 	}
+	press(m, "v")
 	if screen = plain(m); len(f.histories) != before || !strings.Contains(screen, "uncommitted       done       added in this checkout's files") ||
 		!strings.Contains(screen, "No commit of this checkout holds the record yet.") {
 		t.Fatalf("an added record: reads %v\n%s", f.histories[before:], screen)
@@ -184,6 +190,7 @@ func TestHistoryReadYieldsToEveryKey(t *testing.T) {
 	}
 	// Moving to another version's history cancels the first and ignores its reply.
 	first := run(press(m, "right", "enter"))
+	press(m, "v")
 	second := press(m, "down", "down")
 	if second == nil || m.pending != "history" {
 		t.Fatal("moving to another history should start its read")
@@ -220,6 +227,9 @@ func TestHistoryReadYieldsToEveryKey(t *testing.T) {
 			history = deliver(m, refresh) // the refreshed card
 		}
 		reply = run(history)
+		if key == "esc" {
+			press(m, "esc") // the versions close onto the detail, which asks for its history again
+		}
 		end := press(m, key)
 		if _, cmd := m.Update(<-reply); cmd != nil || m.pending != "" || len(cancelled) != 4+i || len(m.hist) != 0 {
 			t.Fatalf("%s during a history read: pending %q cancelled %d", key, m.pending, len(cancelled))

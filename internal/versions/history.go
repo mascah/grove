@@ -17,6 +17,7 @@ type Commit struct {
 	ID, Subject string
 	Status      string // "-" where the commit deleted the file, "" when unreadable
 	When        time.Time
+	Source      []byte // the record's bytes at that commit; nil where deleted or unreadable
 }
 
 // HistoryContext lists the commits reachable from commit that changed the
@@ -77,7 +78,7 @@ func HistoryContext(ctx context.Context, root, commit, path string) ([]Commit, e
 			// Today's validation may reject an old record; its status field
 			// is reported regardless.
 			r, _ := project.ParseRecord(path, data)
-			commits[i].Status = r.Status
+			commits[i].Status, commits[i].Source = r.Status, data
 		}
 	}
 	if err := ctx.Err(); err != nil {
