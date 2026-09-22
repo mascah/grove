@@ -2,12 +2,13 @@
 id: "G-081"
 type: work
 title: "Run secure CI and Dependabot on GitHub"
-status: active
+status: review
 created: "2026-09-22T16:10:10Z"
-updated: "2026-09-22T16:26:44Z"
+updated: "2026-09-22T16:42:40Z"
 kind: tooling
 size: medium
 relates_to: ["G-040", "G-044"]
+candidate: "a080d81"
 ---
 
 ## Outcome
