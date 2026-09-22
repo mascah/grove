@@ -506,7 +506,7 @@ func TestUpdateReciprocalDependenciesCannotFormACycle(t *testing.T) {
 	var wg sync.WaitGroup
 	for i, pair := range pairs {
 		wg.Add(1)
-		expect := revision(t, root, "grove/work/"+strings.ToLower(pair[0])+"-"+map[string]string{"G-001": "first", "G-002": "second"}[pair[0]]+".md")
+		expect := revision(t, root, "grove/work/"+pair[0]+"-"+map[string]string{"G-001": "first", "G-002": "second"}[pair[0]]+".md")
 		go func() {
 			defer wg.Done()
 			_, errs[i] = Apply(root, Request{ID: pair[0], Expect: expect, Set: []Field{{"depends_on", `["` + pair[1] + `"]`}}}, now, nil)

@@ -1,0 +1,18 @@
+# Weekly grouped update PRs for Go modules and pinned actions (G-081).
+# Dependabot applies its default "dependencies" label.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      gomod:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
