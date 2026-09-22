@@ -287,10 +287,11 @@ drives the built binary through a pseudo-terminal with
 `python3` and under `-short`).
 Run `lefthook install` once per clone: pre-commit formats staged Go files and
 runs `go vet` and `go mod tidy -diff`; pre-push runs `go test ./...`.
-GitHub Actions runs the same checks, plus `go build ./...` and `govulncheck`, on
-every push to `main` and every pull request, on Ubuntu and macOS
-(`.github/workflows/ci.yml`); it is a signal, not a gate, and Dependabot opens
-weekly grouped update PRs for Go modules and actions.
+GitHub Actions runs the same checks plus `go run ./cmd/grove check` and
+`go build ./...` on Ubuntu and macOS, and `govulncheck` on Ubuntu, for every
+push to `main` and every pull request (`.github/workflows/ci.yml`); it is a
+signal, not a gate, and Dependabot opens weekly grouped update PRs for Go
+modules and actions.
 Agent execution remains future work. The
 [integrated CLI review](grove/G-022-integrated-cli-review.md) found
 workspace-provenance, update-preservation, and Git-path defects; G-014 through
