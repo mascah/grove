@@ -59,13 +59,17 @@ read the brief when the record, a product question, or reconciliation needs it.
   record root.
 - `../skills/` and `../nullsec/` are evidence and potential compatibility targets,
   not automatically part of an implementation's write scope. Follow their
-  instructions; retrieve their Grove knowledge through `grove status`,
-  `grove find`, and `grove context` from the relevant repository.
-- The installed `grove` command currently belongs to the sibling skills project.
-  Use `go run ./cmd/grove` for this restart's `grove.yaml` and `grove/` records;
+  instructions. Nullsec runs on this Grove since G-041: read its records with
+  the installed `grove` from nullsec's checkout (`grove brief`, `grove list`,
+  `grove context G-NNN`). Its `G-` numbers are its own, so name the repository
+  when an ID could be either. `../skills/` keeps the predecessor's files, whose
+  CLI and plugins are uninstalled; read them as files.
+- The installed `grove` (`~/.local/bin/grove`) is a build of this CLI from a
+  named commit, which `grove version` prints; it can lag this checkout. Use
+  `go run ./cmd/grove` for this repository's `grove.yaml` and `grove/` records;
   create records with `go run ./cmd/grove new`, never by hand-numbering, and
-  change status or fields with `go run ./cmd/grove update`.
-  Do not use the predecessor's initialization or validation commands here.
+  change status or fields with `go run ./cmd/grove update`. G-041 records how
+  the predecessor was removed and how to restore it.
 - The archived application's service authority, architecture, credentials,
   deployment procedures, and backlog are historical. Do not revive them as
   requirements for this project or copy private local data into this repository.
@@ -103,7 +107,7 @@ this repository's policy for it, kept here so that neither the guide nor the
 adapters repeat it:
 
 - Every `grove …` in the guide is `go run ./cmd/grove …` in the selected
-  checkout, because the installed `grove` is the predecessor's (above).
+  checkout, because the installed `grove` can lag the checkout (above).
   `go run` reports every failure as exit 1 and prints the command's own code as `exit status N` on
   stderr; to tell a usage error (2) from a failure (1), build once with
   `go build -o <temp path> ./cmd/grove` and run that.

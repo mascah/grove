@@ -25,8 +25,9 @@ direction and next investment. The
 research and evidence from Bench, the sibling skills and the current prototype. [grove.yaml](grove.yaml)
 configures the record tree. The completed first implementation is
 [CLI inspection](grove/G-003-inspect-records.md).
-The installed `grove` still belongs to the sibling skills project; it does not
-read this new format.
+The predecessor `grove` from the sibling skills project is uninstalled; an
+installed `grove` is a build of this CLI ([Adopt Grove in another
+repository](#adopt-grove-in-another-repository)).
 
 ## Use the CLI
 
@@ -147,21 +148,22 @@ remains future work.
 
 ### Adopt Grove in another repository
 
-Build one binary from a named commit and put it first on `PATH` only in the
-shells that use the new Grove; the predecessor `grove` stays installed for the
-sibling projects, and nothing here replaces it:
+Build one binary from a named commit and put it on `PATH`. On the owner's
+machine it is `~/.local/bin/grove`, which replaced the predecessor on
+2026-09-22 ([G-041](grove/G-041-nullsec-pilot.md) records the rollback);
+rebuilding is manual, and `grove version` names what is installed:
 
 ```sh
-go build -o "$HOME/.local/grove/bin/grove" ./cmd/grove   # from this checkout
-GOBIN="$HOME/.local/grove/bin" go install github.com/mascah/grove/cmd/grove@COMMIT  # or from the module
-PATH="$HOME/.local/grove/bin:$PATH" grove version
+go build -o "$HOME/.local/bin/grove" ./cmd/grove   # from a clone at that commit
+GOBIN="$HOME/.local/bin" go install github.com/mascah/grove/cmd/grove@COMMIT  # or from the module
+grove version
 ```
 
 `go install …@COMMIT` resolves only a pushed commit.
 
 Codex runs each command through a login shell, so it sees the profile's
 `PATH`, not the caller's: put the build directory on the login `PATH` ahead of
-the predecessor, or name the executable in the target's `AGENTS.md` or
+any other `grove`, or name the executable in the target's `AGENTS.md` or
 `CLAUDE.md`, which the entrypoints defer to for how the CLI is invoked. When
 the wrong `grove` answers, the entrypoints stop and say so rather than act.
 
