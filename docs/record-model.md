@@ -418,7 +418,9 @@ refused as an applied, uncommitted update.
 branch tip and in every registered worktree, validating each source alone by
 these rules, and prints one row or JSON object per observed version with a
 selector; [G-010](../grove/G-010-record-versions.md) owns its source,
-output, incomplete-result, and selector contract. `workspace --source
+output, incomplete-result, and selector contract, and
+[G-042](../grove/G-042-current-view.md) marks each version current or older
+by Git ancestry, which the board's default view shows. `workspace --source
 SELECTOR [--json]` re-inspects that selection and prints the project
 directory of the existing checkout that still holds exactly that version;
 [G-011](../grove/G-011-record-workspace.md) owns its resolution and

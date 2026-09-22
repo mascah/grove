@@ -13,8 +13,8 @@ out, and the `grove-shape` skill shapes proposals.**
 The selected next milestone is a complete interactive shape → implement →
 review → integrate loop on real nullsec work. Start with
 [G-036's adoption roadmap](grove/G-047-adoption-roadmap-plan.md) for the ordered
-work. Its proposed capabilities are not commands available in this build:
-the current board remains checkout-scoped. Work has the Review status: an
+work. Its proposed capabilities are not commands available in this build.
+The board opens on a project-wide current view of work. Work has the Review status: an
 implementation ends with its work record in Review, naming its `candidate`
 commit, and `done` is written where that candidate was merged.
 
@@ -125,9 +125,22 @@ diagnostics; an invalid or unreadable source makes the result incomplete and
 the exit code 1 while valid sources still print. A live project must be
 inside its registered checkout: a project location reached through a symlink,
 or belonging to another nested repository, is invalid, while a missing one is
-simply absent. `--json` adds each version's
-exact source text. No status is chosen as authoritative, and the command
-writes nothing: no refs, index, worktrees, records, or coordination state.
+simply absent.
+
+The `CURRENT` column says whether a version is `yes`, current, or `older`.
+A version is older when another has different bytes and the record at their
+common commit has the older one's bytes, so only the other side changed it
+since they split. The common commit is the two commits' merge base, or a
+checkout's HEAD for its own uncommitted edit. A revert is a change like any
+other. Several current contents are a divergence, shown as they are. A pair
+whose common commit cannot be read, or whose several common commits hold
+different versions, stays unordered: both current, with a note on stderr. A branch whose current state removes the record gets a committed
+`deleted` row. Dates, status order, and branch names never decide, so the
+answer is the same from every checkout, and no branch is special.
+[G-042](grove/G-042-current-view.md) owns this. `--json` adds each version's
+exact source text, `current`, and `older` (why it is older), and each record's
+`notes`. The command writes nothing: no refs, index, worktrees, records, or
+coordination state.
 
 `workspace --source SELECTOR` takes one selector from `versions`, checks that
 the version is still exactly what was selected, and prints the absolute
@@ -302,16 +315,24 @@ checkout that is `go run ./cmd/grove`. There is no `board` subcommand and no
 work-ID argument; every command above stays noninteractive, and `--help`,
 `-h`, and `help` need neither a project nor a terminal.
 
-The columns (Proposed, Active, Review, Done, Abandoned) show the live work records of
-one checkout, named in the header: at first the checkout the command ran in.
-`b` chooses another checkout's live files as the board; this changes what is
-displayed and switches no branch or directory. Work with no live record in
-that checkout is listed under Elsewhere without a status. Questions and
-decisions are not on the board. No status is combined across branches.
+The columns (Proposed, Active, Review, Done, Abandoned) open on the current
+view: every work record in its current state across all local branches and
+checkouts, as `versions` decides it, the same from any checkout. An old copy
+on a stale branch does not hide a later status elsewhere. A card whose current
+state is only in a checkout's uncommitted files is marked `uncommitted`. Where
+the current states diverge, one card sits in the earliest of their statuses,
+marked `⑂ 2 states`, and its details list each state and where it lives. Work
+whose current state removes its record is listed under Deleted.
+
+`b` chooses between the current view and one checkout's own live files, as
+before; this changes what is displayed and switches no branch or directory.
+On a checkout's board, work with no live record there is listed under
+Elsewhere without a status. Questions and decisions are not on the board.
 
 Enter on a card opens that record's versions. A version is the record's exact
 content; the board read it at every local branch's tip and in every checkout's
-files, and lists each differing content once with its own title and status.
+files, and lists each differing content once with its own title and status,
+current ones first. An older one is marked `older`, and its details say why.
 Where several branches and checkouts hold the same content the row is a fold
 (`▸ done  same on 4 branches, 4 checkouts`): Enter lists those places, and
 selects nothing. Opening a card selects nothing either. Moving to one branch
@@ -327,9 +348,9 @@ record, or starts an editor, shell, or agent.
 The card's details begin with History: the commits that changed the record's
 file, newest first, each with its date, the status the record held at that
 commit, its short ID, and its subject, following renames. It is the history of
-whichever row has focus, named in its heading: the board's checkout while the
-card's first line has focus, otherwise that branch's tip or that checkout's
-HEAD. A checkout whose files differ from its HEAD gets a first `uncommitted`
+whichever row has focus, named in its heading: while the card's first line
+has focus, the first current version's place (the board's checkout on a
+checkout's board), otherwise that branch's tip or that checkout's HEAD. A checkout whose files differ from its HEAD gets a first `uncommitted`
 row. Merges are not listed, so where the record's status is not the newest
 listed commit's, a first `here` row gives it and says why. History is read from
 Git when a card is open, never while the board loads, and no key waits for a
@@ -338,7 +359,7 @@ whether another branch contains it. [G-030](grove/G-030-card-lineage.md)
 owns this.
 
 Keys: arrows or `h` `j` `k` `l` move; Tab switches between the columns and
-Elsewhere, or between versions and details; PgUp/PgDn scroll details; `s`
+Deleted or Elsewhere, or between versions and details; PgUp/PgDn scroll details; `s`
 lists every branch and checkout read with its diagnostics, which stay reachable while a banner
 marks an incomplete result; `r` re-reads; Esc goes back, and quits from the
 board; `q` quits. Below 100 columns one status column shows at a time; below

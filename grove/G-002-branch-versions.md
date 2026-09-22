@@ -16,8 +16,11 @@ The owner approved [G-035](G-035-interactive-adoption.md), replacing
 this question's explicit-versions-first presentation as the future default with
 a project-wide current view. Preserve the answer below as the authority behind
 the delivered CLI/board, not a constraint against that redesign. Exact source
-inspection and fresh workspace targeting remain required. G-042 owns unresolved
-projection details; current software still follows the earlier presentation.
+inspection and fresh workspace targeting remain required.
+[G-042](G-042-current-view.md) implements that view: the board opens on each
+record's current state derived from Git ancestry, `versions` marks every
+observation current or older, and the explicit versions below remain the
+evidence behind a card and the only way to select a checkout.
 
 ## Question
 
@@ -94,7 +97,8 @@ in the historical brief establishes only basic routing feasibility.
 
 ## Next
 
-[G-042](G-042-current-view.md) specifies the new default projection.
+[G-042](G-042-current-view.md) specifies and implements the new default
+projection.
 G-010/G-011's explicit inspection/routing remain available; G-017/G-030's board
 and history are integrated. The earlier reliability repairs also shipped.
 Automatic checkout creation and managed agent launching remain future work.

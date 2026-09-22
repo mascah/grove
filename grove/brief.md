@@ -121,8 +121,9 @@ status rankings, or the newest branch tip do not define authority.
 
 This supersedes G-002's explicit-versions-first presentation as the future
 default. Exact source inspection and fresh workspace binding remain available.
-G-042 owns the resolution policy before implementation; the current board is
-still checkout-scoped until that work ships.
+G-042 implements this by merge bases. No integration target is chosen yet
+(owner, 2026-09-22), so the view labels uncommitted changes but cannot call a
+change unintegrated.
 
 Board columns follow the target lifecycle, with bounded recent Done items,
 searchable older work, and Abandoned hidden by default. Detail leads with

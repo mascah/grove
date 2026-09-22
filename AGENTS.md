@@ -19,9 +19,10 @@ read the brief when the record, a product question, or reconciliation needs it.
   G-017 implements the read-only terminal board that bare `grove` opens, with
   Bubble Tea v2 in `internal/tui`; keep explicit subcommands noninteractive,
   and the board's text escaping and exact source targeting intact. G-035 selects
-  a future project-wide current view; G-042 owns that projection and may replace
-  mandatory version picking in ordinary browsing, while retaining explicit source
-  inspection and freshness checks. The current board is still checkout-scoped. G-031
+  a project-wide current view, which G-042 derives from Git ancestry in
+  `internal/versions/current.go`: the board opens on it, and `b` still chooses
+  one checkout's own board, retaining explicit source inspection and freshness
+  checks. Merge bases are read through the same `cat-file` process. G-031
   reads every branch through one `git cat-file` process, scoped to what the
   project loader reads; do not add a Git process per branch. G-030 reads a
   record's Git history only while its card is open, as a read any key may
