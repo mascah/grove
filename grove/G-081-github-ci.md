@@ -4,11 +4,11 @@ type: work
 title: "Run secure CI and Dependabot on GitHub"
 status: review
 created: "2026-09-22T16:10:10Z"
-updated: "2026-09-22T16:42:40Z"
+updated: "2026-09-22T17:18:39Z"
 kind: tooling
 size: medium
 relates_to: ["G-040", "G-044"]
-candidate: "a080d81"
+candidate: "81cd0c0"
 ---
 
 ## Outcome
