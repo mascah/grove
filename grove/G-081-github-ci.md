@@ -1,10 +1,10 @@
 ---
 id: "G-081"
 type: work
-title: "Run secure CI, Dependabot, and Claude review on GitHub"
+title: "Run secure CI and Dependabot on GitHub"
 status: proposed
 created: "2026-09-22T16:10:10Z"
-updated: "2026-09-22T16:11:18Z"
+updated: "2026-09-22T16:18:32Z"
 kind: tooling
 size: medium
 relates_to: ["G-040", "G-044"]
@@ -14,10 +14,9 @@ relates_to: ["G-040", "G-044"]
 
 Every push to `main` and every pull request on the public
 `github.com/mascah/grove` repository gets the same checks the owner runs
-locally, run by GitHub Actions under a hardened configuration; dependency and
-action updates arrive as Dependabot pull requests; and the Claude Code
-workflows from [PR #1](https://github.com/mascah/grove/pull/1) run with
-bounded triggers and permissions. The owner asked for this on 2026-09-22,
+locally, run by GitHub Actions under a hardened configuration, and dependency
+and action updates arrive as Dependabot pull requests. The owner asked for
+this on 2026-09-22,
 citing the comprehensive CI suites of their professional projects (the sibling
 `xfer` repository's `.github` is the example) and the repository being public.
 
@@ -31,10 +30,14 @@ citing the comprehensive CI suites of their professional projects (the sibling
   requests into `main` supported as a second path. Grove itself has no support
   for the pull-request path; that is a gap for [G-044](G-044-review-integration.md)'s
   neighbourhood, not this work.
-- The automatic Claude review runs only for pull requests from this
-  repository, only when a PR is opened or marked ready for review, never on
-  every push and never for fork PRs. The `@claude` mention workflow keeps the
-  action's default of write-access actors only.
+- The Claude Code GitHub App and its two workflows in
+  [PR #1](https://github.com/mascah/grove/pull/1) are dropped for now: the
+  owner will close the PR unmerged and uninstall the App. They first chose a
+  hardened same-repo, open-only review, then on reading the risk assessment
+  below chose to drop it, because the App holds standing write access to a
+  public repository and an `@claude` on an outsider's issue or PR reads that
+  untrusted text, while every change here is integrated and reviewed locally.
+  Revisit when Grove's own pull-request path exists.
 - A LICENSE file is out of scope. The owner chose to leave the repository
   unlicensed for now; this is an open item, not a question record.
 
@@ -42,7 +45,7 @@ citing the comprehensive CI suites of their professional projects (the sibling
 
 - No `.github` directory exists on `main`. PR #1 adds `claude.yml` and
   `claude-code-review.yml` and nothing else; the `CLAUDE_CODE_OAUTH_TOKEN`
-  secret is set (`gh secret list`).
+  secret is set (`gh secret list`) and becomes unused once the App goes.
 - Repository settings (`gh api repos/mascah/grove`, `.../actions/permissions`,
   `.../branches/main/protection`): public, no branch protection or rulesets,
   default workflow token read-only, any action allowed, SHA pinning not
@@ -60,15 +63,17 @@ citing the comprehensive CI suites of their professional projects (the sibling
   pseudo-terminal, which Ubuntu and macOS hosted runners provide.
 - `go.mod` declares `go 1.26.0`; `actions/setup-go` reads it with
   `go-version-file`.
-- PR #1 as generated: both workflows use floating action tags, the review
-  triggers on `synchronize` (every push) and on fork PRs, and neither has
-  `timeout-minutes` or `concurrency`. The action's security documentation
-  (`anthropics/claude-code-action/docs/security.md`) says it checks write
-  access on the triggering actor by default, warns against checking out an
-  untrusted ref at the workspace root, and that `pull_request_target` runs
-  with the base repository's secrets. PR #1's body claims Claude can create
-  branches and commits while the job grants `contents: read`; whether the
-  Claude GitHub App's own token bypasses the job permissions is unverified.
+- The risk assessment the owner decided on, from
+  `anthropics/claude-code-action` at `main` on 2026-09-22: only write-access
+  actors can trigger it (`docs/security.md`), so here only the owner; its
+  default Bash allowlist is `git add`, `git commit`, a push wrapper and
+  `git rm` (`src/modes/tag/index.ts`), so a prompt injection cannot reach the
+  network or the OAuth token through Claude's tools; it cannot approve PRs or
+  submit reviews (`docs/capabilities-and-limitations.md`). Its reach is
+  therefore commits and pushes to branches and comments, through the App's
+  standing write access, whenever the owner tags it on untrusted content. PR
+  #1 as generated also used floating action tags, reviewed on every push and
+  on fork PRs, and set no `timeout-minutes` or `concurrency`.
 - No existing record mentions CI, GitHub Actions, or Dependabot.
   [G-040](G-040-portable-bootstrap.md) owns selecting a distribution and
   upgrade mechanism, so a release workflow (goreleaser or similar) belongs to
@@ -95,18 +100,16 @@ citing the comprehensive CI suites of their professional projects (the sibling
 - `dependabot.yml` for `gomod` and `github-actions`, weekly, each grouped into
   one PR like `xfer`'s, with the `dependencies` label. No Docker, npm, or
   Terraform ecosystems exist here.
-- PR #1: keep both workflows, but restrict `claude-code-review.yml` to
-  `types: [opened, ready_for_review]` with
-  `if: github.event.pull_request.head.repo.full_name == github.repository`,
-  pin the action and checkout to SHAs, add timeouts and concurrency, and
-  merge it once hardened. The `xfer` review workflow's prompt shape
-  (`gh pr diff`, one `gh pr comment`) is a reference, not a requirement:
-  PR #1 uses the `code-review` plugin with inline comments instead.
 - Not carried over from `xfer`, and why: labeler, stale, PR-title, and
   CODEOWNERS serve a team; release-please and any release build belong to
   G-040; the scheduled security audits that open issues are covered for Go by
-  `govulncheck` plus Dependabot alerts; the scheduled codebase reviews are a
-  later candidate once the loop has evidence they pay for themselves.
+  `govulncheck` plus Dependabot alerts; the Claude review and codebase-review
+  workflows are dropped by the decision above. If the App returns, the
+  hardening that was shaped and then dropped is: `claude-code-review.yml` on
+  `types: [opened, ready_for_review]` guarded by
+  `if: github.event.pull_request.head.repo.full_name == github.repository`,
+  SHA-pinned, with timeouts and concurrency, `contents: read`, and
+  `include_comments_by_actor` limited to the owner.
 
 ## Acceptance
 
@@ -121,12 +124,10 @@ citing the comprehensive CI suites of their professional projects (the sibling
 3. The repository settings for SHA pinning, allowed actions, and Dependabot
    alerts are on, shown by `gh api` output in the evidence, and Dependabot
    has opened or would open grouped `gomod` and `github-actions` PRs.
-4. The Claude review workflow does not run for fork PRs or for pushes to an
-   open PR, and the `@claude` workflow runs only for write-access actors;
-   the evidence shows the trigger conditions and, where a real run exists,
-   the run. The unverified claim about the App token's write reach is either
-   verified with a citation or the workflow's permissions are documented as
-   the only guard.
+4. PR #1 is closed unmerged, the Claude Code GitHub App is no longer
+   installed on the repository, and the `CLAUDE_CODE_OAUTH_TOKEN` secret is
+   removed; `gh pr view 1`, the repository's installed-apps settings, and
+   `gh secret list` show it. These are the owner's own steps.
 5. `README.md`'s testing section says that CI runs the same checks, so a
    contributor reading it does not learn two contracts.
 6. The owner judges the setup useful and not noisy after the first week of
@@ -135,9 +136,9 @@ citing the comprehensive CI suites of their professional projects (the sibling
 ## Next
 
 Assign. No plan is needed: the design above and `xfer`'s `.github` are enough
-for one implementation. The assignee should start from PR #1's branch or
-cherry-pick its two files, since merging it as-is would put unpinned,
-every-push workflows on `main`. The owner's own steps are the repository
-settings and merging the result; both stay theirs. When G-040 selects a
-distribution mechanism, its release workflow should reuse this work's
-hardening pattern rather than restart it.
+for one implementation. The owner's own steps, in any order: close PR #1
+unmerged (`gh pr close 1`), uninstall the Claude Code GitHub App and delete
+the `CLAUDE_CODE_OAUTH_TOKEN` secret, change the repository settings in
+acceptance 3, and merge the result. When G-040 selects a distribution
+mechanism, its release workflow should reuse this work's hardening pattern
+rather than restart it.
