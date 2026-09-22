@@ -1,14 +1,17 @@
-// Package tui is Grove's terminal interface: a Kanban board scoped to one live
-// checkout, whose cards open a record's differing versions with the branches
-// and checkouts holding each, the focused one's history of commits, and
-// explicit selection of one existing workspace. It reads through Backend and
-// changes nothing but the terminal: no records, refs, index, or worktrees.
+// Package tui is Grove's terminal interface: a Kanban board of the project's
+// current work across every branch and checkout (G-042), or of one checkout's
+// files, whose cards open a record's differing versions with the branches and
+// checkouts holding each, the focused one's history of commits, and explicit
+// selection of one existing workspace. It reads through Backend and changes
+// nothing but the terminal: no records, refs, index, or worktrees.
 package tui
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
+	"strings"
 	"sync"
 
 	tea "charm.land/bubbletea/v2"
@@ -45,7 +48,8 @@ func keyOf(s *versions.Source) sourceKey { return sourceKey{s.Locator, s.Worktre
 
 type card struct {
 	id, title string
-	versions  int // distinct contents, not the places holding them
+	versions  int    // distinct contents, not the places holding them
+	tag       string // what the card notes beside its ID
 }
 
 // row is one line of a card's version list: a fold standing for several
@@ -132,8 +136,8 @@ type Model struct {
 	done      bool               // the session is ending: start nothing more
 
 	board    sourceKey
-	hasBoard bool
-	lost     bool // the chosen context changed identity; b must choose again
+	hasBoard bool // a checkout's own board; otherwise the current view
+	lost     bool // the chosen checkout changed identity; b must choose again
 
 	screen, back screen
 	col          int
@@ -216,7 +220,7 @@ func (m *Model) wantHistory() tea.Cmd {
 
 // historyOf returns the version whose history the details show: the focused
 // row's, a fold's first place, and under the ID header the board's checkout's
-// version, or the group's first where that checkout lacks the record.
+// version, the current view's first current record, or the group's first.
 func (m *Model) historyOf() *versions.Version {
 	g := m.group()
 	if g == nil || len(g.Versions) == 0 {
@@ -228,11 +232,9 @@ func (m *Model) historyOf() *versions.Version {
 		}
 		return r.v
 	}
-	if src := m.boardSource(); src != nil {
-		for i := range g.Versions {
-			if g.Versions[i].Source == src {
-				return &g.Versions[i]
-			}
+	for i := range g.Versions {
+		if v := &g.Versions[i]; m.hasBoard && v.Source == m.boardSource() || m.current() && v.Older == "" && v.Record != nil {
+			return v
 		}
 	}
 	return &g.Versions[0]
@@ -285,7 +287,7 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 		m.res, m.failure = msg.res, ""
-		m.choice = min(m.choice, max(len(m.live())-1, 0))
+		m.choice = min(m.choice, len(m.live()))
 		m.settleBoard()
 		m.settleFocus()
 	case resolveMsg:
@@ -456,6 +458,8 @@ func (m *Model) versionsKey(k string) tea.Cmd {
 			}
 		case m.busy():
 			m.notice = "a read is in progress; wait for it before selecting"
+		case rows[at].v.Selector == "" && rows[at].v.Source.Kind == "committed":
+			m.refusal = "this record was deleted on that branch, so there is nothing to open there"
 		case rows[at].v.Selector == "":
 			m.refusal = "this record was deleted from that checkout's live files, so there is nothing to open there"
 		default:
@@ -472,14 +476,20 @@ func (m *Model) chooserKey(k string) {
 	case "up", "k":
 		m.choice = max(m.choice-1, 0)
 	case "down", "j":
-		m.choice = min(m.choice+1, max(len(live)-1, 0))
+		m.choice = min(m.choice+1, len(live)) // the current view comes first
 	case "enter":
-		if m.choice >= len(live) {
-			return
-		}
 		// Choosing a context changes what the board displays. It switches no
 		// branch and no directory.
-		if s := live[m.choice]; s.Valid {
+		if m.choice == 0 {
+			m.hasBoard, m.lost = false, false
+			m.screen, m.col, m.onShelf, m.cardID = boardScreen, 0, false, ""
+			m.settleFocus()
+			return
+		}
+		if m.choice > len(live) {
+			return
+		}
+		if s := live[m.choice-1]; s.Valid {
 			m.board, m.hasBoard, m.lost = keyOf(s), true, false
 			m.screen, m.col, m.onShelf, m.cardID = boardScreen, 0, false, ""
 			m.settleFocus()
@@ -504,24 +514,17 @@ func (m *Model) scrollKey(k string) {
 	m.clampScroll()
 }
 
-// settleBoard keeps the board context only while its identity is unchanged.
-// Before any choice it is the invocation's own checkout.
+// settleBoard keeps a chosen checkout's board only while its identity is
+// unchanged. Before any choice the board is the current view, which is the
+// same from every checkout.
 func (m *Model) settleBoard() {
-	if m.hasBoard {
-		if m.boardSource() == nil {
-			m.hasBoard, m.lost = false, true
-		}
-		return
-	}
-	if m.lost {
-		return
-	}
-	for _, s := range m.live() {
-		if s.GitDir != "" && s.GitDir == m.res.GitDir {
-			m.board, m.hasBoard = keyOf(s), true
-		}
+	if m.hasBoard && m.boardSource() == nil {
+		m.hasBoard, m.lost = false, true
 	}
 }
+
+// current reports the current view: no checkout chosen, or lost.
+func (m *Model) current() bool { return !m.hasBoard && !m.lost }
 
 // settleFocus follows the focused card to wherever the new result places it.
 func (m *Model) settleFocus() {
@@ -576,13 +579,18 @@ func (m *Model) boardSource() *versions.Source {
 	return nil
 }
 
-// cards derives the board from the current result: one card per work record
-// live in the board source, in that source's own status, and a shelf of work
-// groups with no live record there. No status is combined across sources.
+// cards derives the board from the current result. In the current view each
+// work record is one card, placed by its current state; see currentCards. A
+// checkout's board has one card per work record live there, in that source's
+// own status, and a shelf of work groups with no live record there. No status
+// is combined across sources.
 // ponytail: recomputed per key and frame; cache per result if boards grow large.
 func (m *Model) cards() (columns [len(statuses)][]card, shelf []card) {
 	if m.res == nil {
 		return
+	}
+	if m.current() {
+		return m.currentCards()
 	}
 	src := m.boardSource()
 	for _, g := range m.res.Groups {
@@ -595,15 +603,78 @@ func (m *Model) cards() (columns [len(statuses)][]card, shelf []card) {
 				continue
 			}
 			if i := slices.Index(statuses[:], v.Record.Status); i >= 0 {
-				columns[i] = append(columns[i], card{g.ID, v.Record.Title, distinct(g)})
+				columns[i] = append(columns[i], card{g.ID, v.Record.Title, distinct(g), count("", distinct(g), "")})
 				placed = true
 			}
 		}
 		if !placed {
-			shelf = append(shelf, card{id: g.ID, versions: distinct(g)})
+			shelf = append(shelf, card{id: g.ID, versions: distinct(g), tag: count("", distinct(g), "")})
 		}
 	}
 	return
+}
+
+// currentCards places each work record by its current states (G-042). One
+// state puts the card in its status. Diverging states make one card, marked,
+// in the earliest status among them: the owner's choice, so that work is not
+// shown further along until its branches agree. A state held only by
+// uncommitted files is marked. The shelf holds work whose current state
+// deletes it. A group is work when a current record says so.
+func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
+	for _, g := range m.res.Groups {
+		states := currentStates(g)
+		best, work, deleted, uncommitted := -1, false, false, false
+		var title string
+		for _, state := range states {
+			r := state[0].Record
+			if r == nil {
+				deleted = true
+				continue
+			}
+			if r.Type != "work" {
+				continue
+			}
+			work = true
+			if i := slices.Index(statuses[:], r.Status); i >= 0 && (best < 0 || i < best) {
+				best, title = i, r.Title
+			}
+			uncommitted = uncommitted || !slices.ContainsFunc(state, func(v *versions.Version) bool { return v.Change == "" || v.Change == "unchanged" })
+		}
+		var tags []string
+		if len(states) > 1 {
+			tags = append(tags, fmt.Sprintf("⑂ %d states", len(states)))
+		}
+		if uncommitted {
+			tags = append(tags, "uncommitted")
+		}
+		tag := strings.Join(tags, " ")
+		switch {
+		case best >= 0:
+			columns[best] = append(columns[best], card{g.ID, title, len(states), tag})
+		case !work && deleted && isWork(g, nil):
+			shelf = append(shelf, card{id: g.ID, versions: len(states), tag: tag})
+		}
+	}
+	return
+}
+
+// currentStates lists a group's current states: each distinct current content
+// once, with the current versions holding it, in the group's order. Every
+// current deletion is one state, whose versions have no record.
+func currentStates(g versions.Group) [][]*versions.Version {
+	var states [][]*versions.Version
+	for i := range g.Versions {
+		v := &g.Versions[i]
+		if v.Older != "" {
+			continue
+		}
+		if at := slices.IndexFunc(states, func(s []*versions.Version) bool { return contentKey(s[0]) == contentKey(v) }); at >= 0 {
+			states[at] = append(states[at], v)
+		} else {
+			states = append(states, []*versions.Version{v})
+		}
+	}
+	return states
 }
 
 // isWork reports a work group for the board of src. Sources can disagree
@@ -665,22 +736,30 @@ func distinct(g versions.Group) int {
 	return n
 }
 
-// rows lists the open card: one row per distinct content in the inspection's
-// order, a fold where several places hold it, and the open fold's members.
+// rows lists the open card: one row per distinct content, current contents
+// first and otherwise in the inspection's order, a fold where several places
+// hold it, and the open fold's members.
 func (m *Model) rows() []row {
 	g := m.group()
 	if g == nil {
 		return nil
 	}
+	var order []*versions.Version
+	for _, older := range []bool{false, true} {
+		for i := range g.Versions {
+			if v := &g.Versions[i]; (v.Older != "") == older {
+				order = append(order, v)
+			}
+		}
+	}
 	same := map[string][]*versions.Version{}
-	for i := range g.Versions {
-		if v := &g.Versions[i]; contentKey(v) != "" {
+	for _, v := range order {
+		if contentKey(v) != "" {
 			same[contentKey(v)] = append(same[contentKey(v)], v)
 		}
 	}
 	var rows []row
-	for i := range g.Versions {
-		v := &g.Versions[i]
+	for _, v := range order {
 		members := same[contentKey(v)]
 		switch {
 		case len(members) < 2:
@@ -718,13 +797,13 @@ func (m *Model) focused() *versions.Version {
 	return nil
 }
 
-// rowKey identifies a version row. A deleted row has no selector; a checkout
-// contributes at most one to a group.
+// rowKey identifies a version row. A deleted row has no selector; a branch or
+// checkout contributes at most one to a group.
 func rowKey(v versions.Version) string {
 	if v.Selector != "" {
 		return v.Selector
 	}
-	return "deleted\x00" + v.Source.Worktree
+	return "deleted\x00" + v.Source.Kind + "\x00" + v.Source.Ref + "\x00" + v.Source.Worktree
 }
 
 // interrupted reports the ways a session ends without the person's consent to

@@ -153,22 +153,29 @@ def check(condition, message):
         raise AssertionError(message)
 
 
+def main_board(s):
+    """Leave the current view for main's own board, which the lifecycle checks drive."""
+    s.expect("Board: current view")
+    s.send(b"b" + DOWN + ENTER)
+    s.expect("First on main")
+
+
 # --- scenarios ---------------------------------------------------------------
 
 def select_and_show(root, wt, base):
-    """board -> card -> version -> resolve -> show reads the selected bytes."""
+    """current view -> card -> version -> resolve -> show reads the selected bytes."""
     for flags in ([], ["--json"]):
         s = Session(root, flags)
-        s.expect("Board: checkout . (main)")
-        s.expect("First on main")
-        s.send(ENTER)
+        s.expect("Board: current view")
+        s.expect("First on feature")  # feature changed G-001 after main: its state is current
+        s.send(b"l" + ENTER)  # the card is Active
         mark = s.expect("versions differ")
         check(s.proc.poll() is None, "opening a card must not resolve or exit")
-        # The card opens on the history of the board's checkout, read from Git.
-        s.expect("History on checkout . (main)")
-        s.expect(f"proposed   {short(root, 'main')}  main")
-        # Rows fold by content: feature's (branch, checkout), then main's.
-        # Enter on a fold only lists its places.
+        # The card opens on the history of its current state, read from Git.
+        s.expect("History on branch feature")
+        s.expect(f"active     {short(root, 'feature')}  feature")
+        # Rows fold by content, current first: feature's (branch, checkout),
+        # then main's older one. Enter on a fold only lists its places.
         s.send(DOWN + ENTER)
         s.expect("checkout feature-wt (feature)", mark)
         check(s.proc.poll() is None, "opening a fold must not resolve or exit")
@@ -194,7 +201,7 @@ def leave_without_selecting(root, wt, base):
     """q and Esc exit 0 with no output; Ctrl-C exits 1 with no output."""
     for keys, want, where in ((b"q", 0, "board"), (ESC, 0, "board"), (CTRL_C, 1, "board"), (b"q", 0, "versions"), (CTRL_C, 1, "versions")):
         s = Session(root)
-        s.expect("First on main")
+        main_board(s)
         if where == "versions":
             s.send(ENTER)
             s.expect("versions differ")
@@ -252,7 +259,7 @@ def blocked_git(root, wt, base):
             open(flag, "w").close()
         s = Session(root, env=env)
         if stage != "start":
-            s.expect("First on main")
+            main_board(s)
             if stage == "resolve":
                 # Each history is on screen before the next key, so that the
                 # only Git left to block is the resolution's.
@@ -312,7 +319,7 @@ def hangup(root, wt, base):
     os.chmod(os.path.join(tools, "git"), 0o755)
     os.mkfifo(fifo)
     s = Session(root, env=clean_env(PATH=tools + os.pathsep + os.environ["PATH"]))
-    s.expect("First on main")
+    main_board(s)
     open(flag, "w").close()
     s.send(b"r")
     reader = os.open(fifo, os.O_RDONLY | os.O_NONBLOCK)
@@ -340,7 +347,7 @@ def hangup(root, wt, base):
 def output_failure(root, wt, base):
     """The screen goes away mid-session: exit 1, no result, input modes restored."""
     s = Session(root, stderr="pty2")
-    s.expect("First on main")
+    main_board(s)
     os.close(s.master2)
     s.master2 = None
     s.send(ENTER)  # forces a redraw onto the dead screen
@@ -352,13 +359,13 @@ def output_failure(root, wt, base):
 
 def resize(root, wt, base):
     s = Session(root)
-    mark = s.expect("Proposed (1)")
+    mark = s.expect("Active (1)")
     s.resize(24, 80)
-    mark = s.expect("[Proposed 1]", mark)
+    mark = s.expect("[Proposed 0] Active 1", mark)
     s.resize(8, 30)
     mark = s.expect("Grove needs 40x10", mark)
     s.resize(30, 120)
-    s.expect("Proposed (1)", mark)
+    s.expect("Active (1)", mark)
     s.send(b"q")
     code, out = s.finish()
     s.restored()
@@ -371,7 +378,7 @@ def writes_no_logs(root, wt, base):
     os.makedirs(logs, exist_ok=True)
     env = clean_env(TEA_DEBUG="true", TEA_TRACE=os.path.join(logs, "trace.log"), UV_DEBUG=os.path.join(logs, "uv.log"))
     s = Session(root, env=env)
-    s.expect("First on main")
+    main_board(s)
     s.send(ENTER + DOWN + b"q")
     code, _ = s.finish()
     s.restored()

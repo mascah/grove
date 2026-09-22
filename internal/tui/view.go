@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -158,14 +159,18 @@ func (m *Model) render() string {
 			"↑↓  Enter list or select  Tab details  r  Esc  q quit",
 			"Enter select  Tab  r  Esc back  q quit")
 	case m.screen == chooserScreen:
-		rows, hints = m.chooserBody(w, body), pick(w, "↑/↓ checkouts   Enter show its board   Esc back   q quit", "Enter choose  Esc back  q quit")
+		rows, hints = m.chooserBody(w, body), pick(w, "↑/↓ choices   Enter show it   Esc back   q quit", "Enter choose  Esc back  q quit")
 	case m.screen == sourcesScreen:
 		rows, hints = m.scrolled(m.sourceRows(w), body, w), pick(w, "↑/↓ PgUp/PgDn scroll   r refresh   Esc back   q quit", "↑↓ scroll  Esc back  q quit")
 	default:
+		shelf := "elsewhere"
+		if m.current() {
+			shelf = "deleted"
+		}
 		rows, hints = m.boardBody(w, body), pick(w,
-			"←/→ columns   ↑/↓ cards   Enter open card   Tab elsewhere   b view another checkout   s what was read   r refresh   q quit",
-			"←→↑↓ move  Enter open card  Tab elsewhere  b view another checkout  s  r refresh  q quit",
-			"←→↑↓  Enter open  Tab elsewhere  b other checkout  r  q quit",
+			"←/→ columns   ↑/↓ cards   Enter open card   Tab "+shelf+"   b view or checkout   s what was read   r refresh   q quit",
+			"←→↑↓ move  Enter open card  Tab "+shelf+"  b view or checkout  s  r refresh  q quit",
+			"←→↑↓  Enter open  Tab "+shelf+"  b view  r  q quit",
 			"Enter open  Tab b s r  q quit")
 	}
 	out := append([]string{bold(line(m.header(), w)), line(m.banner(), w)}, fit(rows, body, w)...)
@@ -178,6 +183,8 @@ func (m *Model) header() string {
 	switch s := m.boardSource(); {
 	case m.res == nil:
 		return "Grove    " + m.root
+	case m.current():
+		text += "current view"
 	case s == nil:
 		text += "no checkout selected"
 	case !s.Valid:
@@ -224,6 +231,10 @@ func (m *Model) emptyBody(w int) []string {
 
 func (m *Model) boardBody(w, n int) []string {
 	columns, shelf := m.cards()
+	shelfName, shelfWhy := "Elsewhere", "not in this checkout"
+	if m.current() {
+		shelfName, shelfWhy = "Deleted", "the current state removes the record"
+	}
 	if m.onShelf {
 		rows := make([]string, len(shelf))
 		at := -1
@@ -231,22 +242,29 @@ func (m *Model) boardBody(w, n int) []string {
 			if c.id == m.cardID {
 				at = i
 			}
-			rows[i] = mark(c.id == m.cardID, c.id+count("   ", c.versions, ""), w)
+			rows[i] = mark(c.id == m.cardID, strings.TrimRight(c.id+"   "+c.tag, " "), w)
 		}
-		head := bold(line("Elsewhere: work on other branches or checkouts that this board's checkout lacks, so no status here", w))
-		return append([]string{head}, window(rows, at, n-3, 1, n-1, w)...)
+		head := "Elsewhere: work on other branches or checkouts that this board's checkout lacks, so no status here"
+		if m.current() {
+			head = "Deleted: work whose current state removes its record; older copies remain on other branches or checkouts"
+		}
+		return append([]string{bold(line(head, w))}, window(rows, at, n-3, 1, n-1, w)...)
 	}
-	shelfRow := "Elsewhere: none"
+	shelfRow := shelfName + ": none"
 	if len(shelf) != 0 {
 		var items []string
 		for _, c := range shelf {
-			items = append(items, c.id+count(" [", c.versions, "]"))
+			item := c.id
+			if c.tag != "" {
+				item += " [" + c.tag + "]"
+			}
+			items = append(items, item)
 		}
-		shelfRow = fmt.Sprintf("Elsewhere (%d, not in this checkout; Tab): %s", len(shelf), strings.Join(items, "  "))
+		shelfRow = fmt.Sprintf("%s (%d, %s; Tab): %s", shelfName, len(shelf), shelfWhy, strings.Join(items, "  "))
 	}
 	area := n - 2 // a heading row above, the shelf row below
 	var rows []string
-	if s := m.boardSource(); s == nil || !s.Valid {
+	if s := m.boardSource(); !m.current() && (s == nil || !s.Valid) {
 		rows = append([]string{bold(line("No board: "+m.contextProblem(s), w))}, wrapAll("This is not an empty board. Press b to view another checkout, or s for what went wrong in each branch and checkout.", w)...)
 		if s != nil {
 			for _, d := range s.Diagnostics {
@@ -306,7 +324,7 @@ func (m *Model) column(cards []card, focused bool, w, n int) []string {
 		if on {
 			at = i
 		}
-		rows = append(rows, mark(on, c.id+count("  ", c.versions, ""), w), mark(on, c.title, w), line("", w))
+		rows = append(rows, mark(on, strings.TrimRight(c.id+"  "+c.tag, " "), w), mark(on, c.title, w), line("", w))
 	}
 	return window(rows, at, (n-2)/cardRows, cardRows, n, w)
 }
@@ -321,15 +339,15 @@ func (m *Model) versionsBody(w, n int) []string {
 			var text string
 			switch {
 			case r.fold != nil && m.unfolded == r.key:
-				text = fmt.Sprintf("▾ %-9s  same on %s", r.fold[0].Record.Status, held(r.fold))
+				text = fmt.Sprintf("▾ %-9s  %ssame on %s", r.fold[0].Record.Status, older(r.fold...), held(r.fold))
 			case r.fold != nil:
-				text = fmt.Sprintf("▸ %-9s  same on %s", r.fold[0].Record.Status, held(r.fold))
+				text = fmt.Sprintf("▸ %-9s  %ssame on %s", r.fold[0].Record.Status, older(r.fold...), held(r.fold))
 			case r.inFold:
-				text = fmt.Sprintf("      %s  %s", label(r.v.Source), r.v.Change)
+				text = fmt.Sprintf("      %s%s  %s", older(r.v), label(r.v.Source), r.v.Change)
 			case r.v.Record == nil:
-				text = fmt.Sprintf("  %-9s  %s  %s", "-", label(r.v.Source), r.v.Change)
+				text = fmt.Sprintf("  %-9s  %s%s  %s", "-", older(r.v), label(r.v.Source), r.v.Change)
 			default:
-				text = fmt.Sprintf("  %-9s  %s  %s", r.v.Record.Status, label(r.v.Source), r.v.Change)
+				text = fmt.Sprintf("  %-9s  %s%s  %s", r.v.Record.Status, older(r.v), label(r.v.Source), r.v.Change)
 			}
 			if r.key == m.verKey {
 				at = i + 1
@@ -479,19 +497,20 @@ func (m *Model) describeRows(w int) []string {
 	}
 	switch {
 	case r == nil:
-		text := "A version is this record's exact content. Grove read it on every local branch (its committed tip) and in every checkout (its files on disk, committed or not) and lists each differing content once."
-		if distinct(*g) > 1 {
-			text += " Each keeps its own title and status; none is authoritative, and nothing here says a branch was integrated."
-		}
 		all := make([]*versions.Version, len(g.Versions))
 		for i := range g.Versions {
 			all[i] = &g.Versions[i]
 		}
-		return wrapAll(g.ID+": "+summary(g)+" ("+held(all)+").\n\n"+text+"\n\nMove to a row. Enter on ▸ lists the branches and checkouts holding that content; Enter on one of them, or on a row naming a single place, returns the path of the existing checkout to work in.", w)
+		return wrapAll(g.ID+": "+summary(g)+" ("+held(all)+").\n\n"+currentText(g)+"\n\nA version is this record's exact content. Grove read it on every local branch (its committed tip) and in every checkout (its files on disk, committed or not) and lists each differing content once, current ones first.\n\nMove to a row. Enter on ▸ lists the branches and checkouts holding that content; Enter on one of them, or on a row naming a single place, returns the path of the existing checkout to work in.", w)
 	case r.fold != nil:
 		first := r.fold[0]
 		add("Title", first.Record.Title)
 		add("Status", first.Record.Status)
+		standing := "current"
+		if older(r.fold...) != "" {
+			standing = "older: " + first.Older
+		}
+		add("Standing", standing)
 		add("Revision", first.Revision)
 		for i, v := range r.fold {
 			name := ""
@@ -508,9 +527,16 @@ func (m *Model) describeRows(w int) []string {
 	if v.Record != nil {
 		add("Title", v.Record.Title)
 		add("Status", v.Record.Status)
+	} else if s.Kind == "committed" {
+		add("Status", "deleted on this branch; cannot be opened")
 	} else {
 		add("Status", "deleted from this checkout's live files; cannot be opened")
 	}
+	standing := "current"
+	if v.Older != "" {
+		standing = "older: " + v.Older
+	}
+	add("Standing", standing)
 	if s.Kind == "live" {
 		add("Seen in", "a checkout's files on disk")
 	} else {
@@ -535,17 +561,73 @@ func (m *Model) describeRows(w int) []string {
 	return finish(v.Record.Source)
 }
 
+// currentText describes a record's current state or states, how many places
+// hold an older copy, and any pair that could not be ordered.
+func currentText(g *versions.Group) string {
+	states := currentStates(*g)
+	var b strings.Builder
+	if len(states) == 1 {
+		fmt.Fprintf(&b, "Current: %s.", stateText(states[0]))
+	} else {
+		fmt.Fprintf(&b, "Diverging: %d current states. Each changed this record after they split from a common commit, and none has the others' change, so none replaces the others. The card sits in the earliest status among them until one side takes the other's change, by a merge or an edit.", len(states))
+		for _, state := range states {
+			b.WriteString("\n  - " + stateText(state))
+		}
+	}
+	n := 0
+	for _, v := range g.Versions {
+		if v.Older != "" {
+			n++
+		}
+	}
+	if n != 0 {
+		fmt.Fprintf(&b, "\nOlder: %d %s an earlier state that another place has changed since (marked older below).", n, plural(n, "place holds", "places hold"))
+	}
+	for _, note := range g.Notes {
+		b.WriteString("\nCould not order: " + note)
+	}
+	return b.String()
+}
+
+// stateText names one current state and where it is held.
+func stateText(state []*versions.Version) string {
+	text := "deleted"
+	if r := state[0].Record; r != nil {
+		text = r.Status + " \"" + r.Title + "\""
+	}
+	names := held(state)
+	if len(state) <= 3 {
+		var labels []string
+		for _, v := range state {
+			labels = append(labels, label(v.Source))
+		}
+		names = strings.Join(labels, ", ")
+	}
+	text += " on " + names
+	if !slices.ContainsFunc(state, func(v *versions.Version) bool { return v.Change == "" || v.Change == "unchanged" }) {
+		text += ", uncommitted"
+	}
+	return text
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return one
+	}
+	return many
+}
+
 func (m *Model) chooserBody(w, n int) []string {
-	rows := []string{}
+	rows := []string{mark(m.choice == 0, "current view   every branch and checkout, each record in its current state", w)}
 	for i, s := range m.live() {
 		state := "valid"
 		if !s.Valid {
 			state = "UNAVAILABLE: " + sourceProblem(s)
 		}
 		// The path comes last: clipping a long one must not hide the state.
-		rows = append(rows, mark(i == m.choice, fmt.Sprintf("%s   %s   %s", label(s), state, s.Worktree), w))
+		rows = append(rows, mark(i+1 == m.choice, fmt.Sprintf("%s   %s   %s", label(s), state, s.Worktree), w))
 	}
-	head := wrapAll("The board's columns show one checkout's files. Choose which checkout to look at. Only this display changes: Git switches no branch, and your shell stays where it is.", w)
+	head := wrapAll("Choose what the board shows: the current view, or one checkout's own files. Only this display changes: Git switches no branch, and your shell stays where it is.", w)
 	for i := range head {
 		head[i] = bold(head[i])
 	}
@@ -600,10 +682,8 @@ func (m *Model) contextProblem(s *versions.Source) string {
 	switch {
 	case s != nil:
 		return label(s) + " is not usable: " + sourceProblem(s)
-	case m.lost:
-		return "the chosen checkout changed branch, moved, or was removed"
 	}
-	return "this directory is not one of the repository's readable checkouts"
+	return "the chosen checkout changed branch, moved, or was removed"
 }
 
 func sourceProblem(s *versions.Source) string {
@@ -649,6 +729,17 @@ func places(sources []*versions.Source) string {
 		}
 	}
 	return strings.Join(parts, ", ")
+}
+
+// older marks versions that another is newer than (G-042): a fold only when
+// every place in it holds an older copy.
+func older(vs ...*versions.Version) string {
+	for _, v := range vs {
+		if v.Older == "" {
+			return ""
+		}
+	}
+	return "older  "
 }
 
 func held(vs []*versions.Version) string {

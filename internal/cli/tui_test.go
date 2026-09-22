@@ -144,8 +144,8 @@ func (s boardSession) lacks(parts ...string) {
 	}
 }
 
-// The connected workflow on a real main/feature repository: scoped columns,
-// another checkout through b, a card's differing versions, an explicit
+// The connected workflow on a real main/feature repository: the current view,
+// a checkout's own columns through b, a card's differing versions, an explicit
 // selection, and show reading exactly the selected bytes; then a target that
 // changes before selection. Repeated with an unrelated invalid source. No file
 // anywhere, including Git's, changes because of the board.
@@ -185,26 +185,34 @@ func boardWorkflow(t *testing.T, broken bool) {
 		}
 		before := all()
 
+		// The current view: feature changed G-001 after main, and G-003 is
+		// only there, so both show in feature's state.
 		s := openBoard(t, root)
+		s.want("Board: current view", "Proposed (1)", "Active (1)", "Inspect records, on feature", "Only on feature", "Deleted: none")
+		s.lacks("G-002", "⑂", "uncommitted")
+		incomplete(s)
+
+		s.press("b")
+		s.want("current view", "checkout . (main)", "checkout feature-wt (feature)")
+		s.press("down", "enter")
 		s.want("Board: checkout . (main)", "Proposed (1)", "Active (0)", "Inspect records", "G-001  2 versions", "Elsewhere (1", "): G-003 ")
 		s.lacks("on feature", "Only on feature", "G-002")
 		incomplete(s)
 
-		s.press("b")
-		s.want("checkout . (main)", "checkout feature-wt (feature)")
+		s.press("b", "down")
 		if broken { // sorted between main and feature-wt, and not choosable
 			s.want("checkout broken-wt (broken)   UNAVAILABLE: invalid:")
 			s.press("down", "enter")
-			s.want("cannot fill the board", "Choose which checkout")
+			s.want("cannot fill the board", "Choose what the board shows")
 		}
 		s.press("down", "enter")
 		s.want("Board: checkout feature-wt (feature)", "Proposed (1)", "Active (1)", "Inspect records, on feature", "Only on feature", "Elsewhere: none")
 		incomplete(s)
-		s.press("b", "enter") // back to main's board
+		s.press("b", "down", "enter") // back to main's board
 		s.want("Board: checkout . (main)", "Active (0)")
 
 		s.press("enter")
-		s.want("G-001   2 versions differ", "▸ proposed   same on ", "▸ active     same on 1 branch, 1 checkout")
+		s.want("G-001   2 versions differ", "▸ proposed   older  same on ", "▸ active     same on 1 branch, 1 checkout")
 		s.lacks("checkout feature-wt (feature)  unchanged")
 		incomplete(s)
 		// The card opens on the lineage of the board's checkout, from real Git.
@@ -239,9 +247,10 @@ func boardWorkflow(t *testing.T, broken bool) {
 			t.Fatal("browsing and selecting changed files")
 		}
 
-		// The same walk, but the target changes after it was displayed.
+		// The same walk from the current view, where G-001 is active, but the
+		// target changes after it was displayed.
 		s = openBoard(t, root)
-		s.press("enter")
+		s.press("l", "enter")
 		s.focus("▸ active")
 		s.press("enter")
 		s.focus("checkout feature-wt (feature)")
@@ -271,7 +280,7 @@ func boardWorkflow(t *testing.T, broken bool) {
 		}
 		// A committed version routes only while its checkout still matches it.
 		s = openBoard(t, root)
-		s.press("enter")
+		s.press("l", "enter")
 		s.focus("branch feature")
 		if s.press("enter") || s.m.Workspace != nil {
 			t.Fatal("a committed version whose checkout differs must be refused")

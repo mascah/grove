@@ -180,6 +180,16 @@ func open(t *testing.T, f *fake, w, h int) *Model {
 
 func plain(m *Model) string { return ansi.Strip(m.render()) }
 
+// chooseCheckout shows the i-th live checkout's own board; the chooser lists
+// the current view first.
+func chooseCheckout(m *Model, i int) {
+	press(m, "b")
+	for range i + 1 {
+		press(m, "down")
+	}
+	press(m, "enter")
+}
+
 func ids(cards []card) string {
 	var out []string
 	for _, c := range cards {
@@ -298,6 +308,7 @@ func TestDeletedRowCannotResolve(t *testing.T) {
 	g.Versions = append(g.Versions, versions.Version{Source: fx.main, Path: "grove/work/W-010.md", Change: "deleted"})
 	f := &fake{res: res}
 	m := open(t, f, 120, 30)
+	chooseCheckout(m, 0)
 	if got := board(m); !strings.HasSuffix(got, "shelf=W-010") {
 		t.Fatalf("work deleted from the board's live files belongs on the shelf: %s", got)
 	}
@@ -399,6 +410,7 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches()}
 	m := open(t, f, 120, 30)
+	chooseCheckout(m, 0)
 	if got, want := board(m), "proposed=W-002 active=W-001 review= done= abandoned= shelf=W-010"; got != want {
 		t.Fatalf("main board:\n got %s\nwant %s", got, want)
 	}
@@ -414,7 +426,7 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 		}
 	}
 	// b lists live checkouts; choosing one changes only what is displayed.
-	press(m, "b", "down", "enter")
+	chooseCheckout(m, 1)
 	if got, want := board(m), "proposed=W-002,W-010 active= review= done=W-001 abandoned= shelf="; got != want {
 		t.Fatalf("feature board:\n got %s\nwant %s", got, want)
 	}
@@ -427,7 +439,7 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 	// Each version keeps its own status in the card.
 	press(m, "right", "right", "right", "enter") // W-001 sits in Done, past Review
 	screen = plain(m)
-	for _, want := range []string{"W-001   2 versions differ", "(2 branches, 2 checkouts)", "▸ active     same on 1 branch, 1 checkout", "▸ done       same on 1 branch, 1 checkout", "none is authoritative"} {
+	for _, want := range []string{"W-001   2 versions differ", "(2 branches, 2 checkouts)", "▸ active     same on 1 branch, 1 checkout", "▸ done       same on 1 branch, 1 checkout", "Diverging: 2 current states"} {
 		if !strings.Contains(screen, want) {
 			t.Fatalf("versions lack %q:\n%s", want, screen)
 		}
@@ -443,11 +455,16 @@ func TestContextStates(t *testing.T) {
 		t.Fatalf("a valid checkout without work is an empty board:\n%s", s)
 	}
 
+	// A chosen checkout that stops validating is not an empty board.
 	bad := newFixture()
 	bad.main.Valid = false
 	bad.main.Diagnostics = []string{"grove/work/W-001.md: status: expected one of proposed, active"}
 	res := result(bad.main, bad.sources(), version(bad.feat, "W-010", "Only on feature", "proposed"))
-	m = open(t, &fake{res: res}, 120, 30)
+	f := &fake{res: fx.twoBranches()}
+	m = open(t, f, 120, 30)
+	chooseCheckout(m, 0)
+	f.res = res
+	deliver(m, press(m, "r"))
 	s := plain(m)
 	for _, want := range []string{"[INVALID]", "No board: checkout . (main) is not usable", "not an empty board", "expected one of proposed", "INCOMPLETE: 1 of 4", "): W-010"} {
 		if !strings.Contains(s, want) {
@@ -458,7 +475,7 @@ func TestContextStates(t *testing.T) {
 		t.Fatalf("an invalid context must not draw columns:\n%s", s)
 	}
 	// The valid subset stays selectable, and the invalid source cannot be chosen.
-	press(m, "b", "enter")
+	press(m, "b", "down", "enter")
 	if m.screen != chooserScreen || !strings.Contains(plain(m), "cannot fill the board") {
 		t.Fatalf("an invalid checkout was accepted:\n%s", plain(m))
 	}
@@ -467,23 +484,31 @@ func TestContextStates(t *testing.T) {
 		t.Fatalf("valid subset: %s\n%s", got, plain(m))
 	}
 
+	// The current view still shows the valid sources, with the warning.
+	press(m, "b", "enter")
+	if got := board(m); got != "proposed=W-010 active= review= done= abandoned= shelf=" || !strings.Contains(plain(m), "Board: current view") || !strings.Contains(plain(m), "INCOMPLETE") {
+		t.Fatalf("current view of a valid subset: %s\n%s", got, plain(m))
+	}
+
 	// Detached checkouts are contexts too, named by commit.
 	det := newFixture()
 	det.main.Ref = ""
 	m = open(t, &fake{res: result(det.main, det.sources(), version(det.main, "W-001", "Detached work", "active"))}, 120, 30)
+	chooseCheckout(m, 0)
 	if s := plain(m); !strings.Contains(s, "Board: checkout . (detached at aaaaaaaaaaaa)") || !strings.Contains(s, "Detached work") {
 		t.Fatalf("detached context:\n%s", s)
 	}
 
-	// The invocation's checkout may not be a source at all.
+	// The invoking checkout plays no part in the current view, even when it
+	// is not a source at all.
 	none := newFixture()
 	m = open(t, &fake{res: result(nil, none.sources(), version(none.feat, "W-010", "Only on feature", "proposed"))}, 120, 30)
-	if s := plain(m); !strings.Contains(s, "no checkout selected") || !strings.Contains(s, "not one of the repository's readable checkouts") {
-		t.Fatalf("missing context:\n%s", s)
+	if s := plain(m); !strings.Contains(s, "Board: current view") || board(m) != "proposed=W-010 active= review= done= abandoned= shelf=" {
+		t.Fatalf("current view without an invoking checkout:\n%s", s)
 	}
 
 	// A failed inventory is not an empty board and offers nothing to select.
-	f := &fake{err: errors.New("git worktree: fatal: not a git repository")}
+	f = &fake{err: errors.New("git worktree: fatal: not a git repository")}
 	m = open(t, f, 120, 30)
 	if s := plain(m); !strings.Contains(s, "could not be listed") || !strings.Contains(s, "fatal: not a git repository") || !strings.Contains(s, "r retry") {
 		t.Fatalf("inventory failure:\n%s", s)
@@ -503,6 +528,7 @@ func TestRefreshFollowsIdentityNotPosition(t *testing.T) {
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches()}
 	m := open(t, f, 120, 30)
+	chooseCheckout(m, 0)
 	press(m, "right") // W-001, active
 	// W-001 moves to done and a new card takes its old place.
 	next := newFixture()
@@ -529,7 +555,7 @@ func TestRefreshFollowsIdentityNotPosition(t *testing.T) {
 	if deliver(m, press(m, "r")); m.hasBoard {
 		t.Fatal("a lost context must not be re-adopted silently")
 	}
-	press(m, "b", "enter")
+	chooseCheckout(m, 0)
 	if !m.hasBoard || board(m) != "proposed= active=W-003 review= done= abandoned= shelf=" {
 		t.Fatalf("after choosing again: %s", board(m))
 	}
@@ -560,13 +586,13 @@ func TestLayoutAtEverySize(t *testing.T) {
 		}
 		check("board")
 		s := plain(m)
-		if wide := strings.Contains(s, "Proposed (1)") && strings.Contains(s, "Abandoned (0)"); wide != (w >= wideWidth) {
+		if wide := strings.Contains(s, "Proposed (2)") && strings.Contains(s, "Abandoned (0)"); wide != (w >= wideWidth) {
 			t.Fatalf("%dx%d: five columns = %v:\n%s", w, h, wide, s)
 		}
 		if w < wideWidth {
-			tabs := "[Proposed 1] Active 1 Review 0 Done 0 Abandoned 0"
+			tabs := "[Proposed 2] Active 1 Review 0 Done 0 Abandoned 0"
 			if w < 60 {
-				tabs = "[Prop 1] Act 1 Rev 0 Done 0 Aban 0"
+				tabs = "[Prop 2] Act 1 Rev 0 Done 0 Aban 0"
 			}
 			if !strings.Contains(s, tabs) || strings.Contains(s, "Inspect records") {
 				t.Fatalf("%dx%d: want tabs %q and only the focused column:\n%s", w, h, tabs, s)
@@ -606,7 +632,7 @@ func TestLayoutAtEverySize(t *testing.T) {
 		t.Fatalf("below the minimum height:\n%s", s)
 	}
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
-	if s := plain(m); !strings.Contains(s, "Proposed (1)") {
+	if s := plain(m); !strings.Contains(s, "Proposed (2)") {
 		t.Fatalf("resizing back should redraw the board:\n%s", s)
 	}
 }
@@ -634,6 +660,7 @@ func TestEverythingStaysReachable(t *testing.T) {
 
 	for _, size := range [][2]int{{120, 30}, {80, 24}, {40, 10}} {
 		m := open(t, &fake{res: res}, size[0], size[1])
+		chooseCheckout(m, 0) // the shelf of a checkout's board
 		focusedRow := func(id string) bool {
 			for _, r := range strings.Split(plain(m), "\n") {
 				if strings.Contains(r, "> "+id) {
@@ -790,7 +817,7 @@ func TestRefreshUnderOverlays(t *testing.T) {
 		press(m, "b", "down", "down", "down", "down", "down")
 		f.res = live(left)
 		deliver(m, press(m, "r"))
-		if s := plain(m); m.choice != left-1 || !strings.Contains(s, fmt.Sprintf("> checkout wt%d", left-1)) {
+		if s := plain(m); m.choice != left || !strings.Contains(s, fmt.Sprintf("> checkout wt%d", left-1)) {
 			t.Fatalf("%d checkouts left: choice %d:\n%s", left, m.choice, s)
 		}
 	}
@@ -847,10 +874,86 @@ func TestBoardFollowsTypeNotIDOrPlacement(t *testing.T) {
 	// G-063 is deleted everywhere it is seen, so no record says it was work.
 	vs = append(vs, versions.Version{Source: fx.main, Path: "grove/G-063.md", Change: "deleted"})
 	m := open(t, &fake{res: result(fx.main, fx.sources(), vs...)}, 120, 30)
+	chooseCheckout(m, 0)
 	if got, want := board(m), "proposed=D-004 active=G-001,G-060 review= done= abandoned= shelf=G-062"; got != want {
 		t.Fatalf("board:\n got %s\nwant %s", got, want)
 	}
 	if screen := plain(m); strings.Contains(screen, "page") || strings.Contains(screen, "G-002") || strings.Contains(screen, "W-003") || strings.Contains(screen, "G-061") || strings.Contains(screen, "G-063") {
 		t.Fatalf("a page must not appear on the board:\n%s", screen)
+	}
+}
+
+// TestCurrentViewBoard: the board opens on the current view (G-042), the same
+// whichever checkout invoked it. W-001 is done on feature, which main's older
+// active copy does not obscure; W-002 diverges, so it is one marked card in
+// the earlier of its statuses; W-003's current state is an uncommitted edit;
+// W-004's is a deletion on feature.
+func TestCurrentViewBoard(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	older := func(v versions.Version, why string) versions.Version { v.Older = why; return v }
+	var vs []versions.Version
+	for _, s := range []*versions.Source{fx.cMain, fx.main} {
+		vs = append(vs, older(version(s, "W-001", "Inspect records", "active"), "branch feature changed it since their common history"),
+			version(s, "W-002", "Create records", "proposed"),
+			older(version(s, "W-003", "Edit records", "proposed"), "checkout feat (feature) has an uncommitted change to it on top of this commit"),
+			older(version(s, "W-004", "Drop records", "proposed"), "branch feature changed it since their common history"))
+	}
+	vs = append(vs, version(fx.cFeat, "W-001", "Inspect records, finished", "done"), version(fx.feat, "W-001", "Inspect records, finished", "done"),
+		version(fx.cFeat, "W-002", "Create records, started", "active"), version(fx.feat, "W-002", "Create records, started", "active"),
+		older(version(fx.cFeat, "W-003", "Edit records", "proposed"), "checkout feat (feature) has an uncommitted change to it on top of this commit"))
+	edited := version(fx.feat, "W-003", "Edit records", "active")
+	edited.Change, edited.Record.Source, edited.Revision = "modified", []byte("edited"), "sha256:edited"
+	vs = append(vs, edited, versions.Version{Source: fx.cFeat, Path: "grove/work/W-004.md", Change: "deleted"})
+	res := result(fx.main, fx.sources(), vs...)
+	res.Groups[1].Notes = []string{"branch main and branch feature could not be ordered: example"}
+
+	m := open(t, &fake{res: res}, 120, 30)
+	want := "proposed=W-002 active=W-003 review= done=W-001 abandoned= shelf=W-004"
+	if got := board(m); got != want {
+		t.Fatalf("current view:\n got %s\nwant %s", got, want)
+	}
+	screen := plain(m)
+	for _, want := range []string{"Board: current view", "W-002  ⑂ 2 states", "Create records", "W-003  uncommitted", "Inspect records, fin…", "Deleted (1, the current state removes the record; Tab): W-004"} {
+		if !strings.Contains(screen, want) {
+			t.Fatalf("board lacks %q:\n%s", want, screen)
+		}
+	}
+	other := *res
+	other.GitDir = fx.feat.GitDir
+	if got := board(open(t, &fake{res: &other}, 120, 30)); got != want {
+		t.Fatalf("another invoking checkout sees %s", got)
+	}
+
+	// W-001's current state leads its versions; main's copy is marked older.
+	press(m, "right", "right", "right", "enter")
+	screen = plain(m)
+	text := currentText(m.group()) // the details wrap it
+	for _, want := range []string{"▸ done       same on 1 branch, 1 checkout", "▸ active     older  same on 1 branch",
+		`Current: done "Inspect records, finished" on branch feature, checkout feat (feature).`, "Older: 2 places hold an earlier state"} {
+		if !strings.Contains(screen, want) && !strings.Contains(text, want) {
+			t.Fatalf("W-001 lacks %q:\n%s", want, screen)
+		}
+	}
+	if strings.Index(screen, "▸ done") > strings.Index(screen, "▸ active") {
+		t.Fatalf("the current state should come first:\n%s", screen)
+	}
+	press(m, "down", "down")
+	if screen = strings.Join(m.describeRows(200), "\n"); !strings.Contains(screen, "Standing: older: branch feature changed it since their common history") {
+		t.Fatalf("an older row should say why:\n%s", screen)
+	}
+	// W-002 explains its divergence and the pair it could not order.
+	press(m, "esc", "left", "left", "left", "enter")
+	screen = currentText(m.group())
+	for _, want := range []string{"Diverging: 2 current states.", `- proposed "Create records" on branch main, checkout . (main)`,
+		`- active "Create records, started" on branch feature, checkout feat (feature)`, "Could not order: branch main and branch feature could not be ordered: example"} {
+		if !strings.Contains(screen, want) {
+			t.Fatalf("W-002 lacks %q:\n%s", want, screen)
+		}
+	}
+	// W-004's deletion on a branch is a row that opens nothing.
+	press(m, "esc", "tab", "enter", "down")
+	if press(m, "enter") != nil || !strings.Contains(plain(m), "REFUSED: this record was deleted on that branch") {
+		t.Fatalf("a branch's deletion must not resolve:\n%s", plain(m))
 	}
 }

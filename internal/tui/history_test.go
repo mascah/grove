@@ -41,6 +41,7 @@ func TestHistoryFollowsTheFocusedVersion(t *testing.T) {
 	t.Parallel()
 	_, f := lineageFixture()
 	m := open(t, f, 120, 30)
+	chooseCheckout(m, 0) // under the ID header, history follows the board's checkout
 	press(m, "right", "left", "right", "b", "esc", "s", "esc")
 	if len(f.histories) != 0 || m.pending != "" {
 		t.Fatalf("the board read histories: %v", f.histories)
@@ -100,6 +101,7 @@ func TestHistorySaysWhenTheNewestCommitIsNotTheRecord(t *testing.T) {
 	log := []versions.Commit{featLog[0], mainLog[0]} // newest: done; then active
 	f.history = func(context.Context, string, string) ([]versions.Commit, error) { return log, nil }
 	m := open(t, f, 120, 30)
+	chooseCheckout(m, 0)
 	screen := plain(deliverAll(m, press(m, "right", "enter"))) // W-001 is active here
 	note, newest := strings.Index(screen, "here              active     the record's status here"), strings.Index(screen, "done       4444444")
 	if note < 0 || newest < note {
@@ -133,6 +135,7 @@ func TestHistoryOfUncommittedChanges(t *testing.T) {
 		return nil, errors.New("git log: \x1b[31mbroken")
 	}
 	m := deliverAll(open(t, f, 120, 40), nil)
+	chooseCheckout(m, 0)
 	screen := plain(deliverAll(m, press(m, "right", "enter")))
 	for _, want := range []string{"uncommitted       active     renamed in this checkout's files", "could not be read (r retries): git log: \\x1b[31mbroken"} {
 		if !strings.Contains(screen, want) {
@@ -143,7 +146,8 @@ func TestHistoryOfUncommittedChanges(t *testing.T) {
 		t.Fatalf("a checkout is followed from its path at HEAD: %s", got)
 	}
 	// An added record has no commit to read. feat is the last row.
-	press(m, "esc", "b", "down", "enter") // the feature checkout's board
+	press(m, "esc")
+	chooseCheckout(m, 1) // the feature checkout's board
 	if fx.feat != m.boardSource() {
 		t.Fatal("expected the feature board")
 	}
