@@ -34,7 +34,7 @@ const (
 	sourcesScreen
 )
 
-var statuses = [4]string{"proposed", "active", "done", "abandoned"}
+var statuses = [5]string{"proposed", "active", "review", "done", "abandoned"}
 
 // sourceKey identifies the board's checkout across refreshes. A checkout that
 // moved, was re-registered, or switched branch is a different context, which
@@ -580,7 +580,7 @@ func (m *Model) boardSource() *versions.Source {
 // live in the board source, in that source's own status, and a shelf of work
 // groups with no live record there. No status is combined across sources.
 // ponytail: recomputed per key and frame; cache per result if boards grow large.
-func (m *Model) cards() (columns [4][]card, shelf []card) {
+func (m *Model) cards() (columns [len(statuses)][]card, shelf []card) {
 	if m.res == nil {
 		return
 	}

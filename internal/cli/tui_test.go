@@ -80,7 +80,7 @@ type boardSession struct {
 func openBoard(t *testing.T, root string) boardSession {
 	t.Helper()
 	m := tui.New(t.Context(), root, tui.Backend{Inspect: versions.InspectContext, Resolve: versions.ResolveContext, History: versions.HistoryContext})
-	m.Update(tea.WindowSizeMsg{Width: 140, Height: 40})
+	m.Update(tea.WindowSizeMsg{Width: 160, Height: 40}) // five columns: 27-character titles need 32 cells each
 	s := boardSession{t, m}
 	s.run(m.Init())
 	return s

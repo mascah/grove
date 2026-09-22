@@ -25,6 +25,7 @@ type Record struct {
 	Blocks, RelatesTo       []string
 	Work                    []string // plan and review: the work they belong to
 	Examined                string   // review: the Git commit it examined
+	Candidate               string   // work: the commit offered for judgment; required in review
 	Formerly                string   // the ID or document path convert replaced
 	Path                    string
 	Source                  []byte
@@ -170,7 +171,7 @@ type TypeInfo struct {
 
 // Types is the whole record vocabulary, in ID display order.
 var Types = []TypeInfo{
-	{"work", []string{"proposed", "active", "done", "abandoned"}},
+	{"work", []string{"proposed", "active", "review", "done", "abandoned"}},
 	{"question", []string{"open", "resolved"}},
 	{"decision", []string{"proposed", "accepted", "rejected"}},
 	{"term", []string{"proposed", "settled"}},
@@ -290,6 +291,16 @@ func ParseRecord(path string, source []byte) (*Record, []Diagnostic) {
 			}
 		}
 		r.Members, r.DependsOn = m.listField("members"), m.listField("depends_on")
+		// A candidate is one commit, so what a review examined and what Done
+		// integrated can be compared to it. Its absence on a done record means
+		// the record predates the review lifecycle and claims only branch-local
+		// completion; the reader never rewrites that.
+		allowed = append(allowed, "candidate")
+		if r.Candidate = m.stringField("candidate", false); r.Candidate != "" && !commitPattern.MatchString(r.Candidate) {
+			m.problem("candidate", "expected a quoted Git commit of 7 to 40 lowercase hex digits")
+		} else if r.Candidate == "" && r.Status == "review" {
+			m.problem("candidate", "required while status is review: the commit offered for judgment")
+		}
 	}
 	if r.Type == "question" {
 		allowed = append(allowed, "blocks")

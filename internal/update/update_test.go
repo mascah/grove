@@ -171,11 +171,19 @@ func TestUpdateLifecycleAndReopening(t *testing.T) {
 	// Untouched optional fields, including the pointer-valued priority, must
 	// compare equal between the original and the candidate.
 	apply(t, root, "G-001", []Field{{"priority", "2"}, {"size", "small"}, {"members", `["G-002"]`}})
-	for _, status := range []string{"active", "done", "proposed", "abandoned", "done"} {
-		apply(t, root, "G-001", []Field{{"status", status}})
+	head := git(t, root, "rev-parse", "HEAD")
+	for _, status := range []string{"active", "review", "done", "proposed", "abandoned", "done"} {
+		sets := []Field{{"status", status}}
+		if status == "review" { // review needs the candidate, and done keeps it
+			sets = append(sets, Field{"candidate", head})
+		}
+		apply(t, root, "G-001", sets)
 		r := record(t, root, "G-001")
 		if r.Status != status || *r.Priority != 2 || r.Size != "small" || r.Created.Format(time.RFC3339) != "2026-09-19T12:00:00Z" || !strings.HasSuffix(string(r.Source), "\n---\n\n## Outcome\n\nBody --- stays.\n") {
 			t.Fatalf("%s: %+v", status, r)
+		}
+		if status != "active" && (r.Candidate != head || !strings.Contains(string(r.Source), "candidate: \""+head+"\"")) {
+			t.Fatalf("%s: candidate must stay and stay quoted: %+v", status, r)
 		}
 	}
 	for _, status := range []string{"resolved", "open"} {
@@ -324,7 +332,7 @@ func TestUpdateClockContract(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	secondRes, err := Apply(root, Request{ID: "G-001", Expect: first.Revision, Set: []Field{{"status", "done"}}}, same, nil)
+	secondRes, err := Apply(root, Request{ID: "G-001", Expect: first.Revision, Set: []Field{{"status", "abandoned"}}}, same, nil)
 	if err != nil || secondRes.Revision == first.Revision {
 		t.Fatalf("same-second change: %+v %v", secondRes, err)
 	}
@@ -659,7 +667,7 @@ func TestCoordinationStateStaysUnderTheCommonDirectory(t *testing.T) {
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
 
 	apply(t, root, "G-001", []Field{{"status", "active"}})
-	apply(t, wt, "G-001", []Field{{"status", "done"}})
+	apply(t, wt, "G-001", []Field{{"status", "abandoned"}})
 	for _, dir := range []string{root, wt} {
 		p, ds := project.Load(dir, dir)
 		if len(ds) != 0 {
@@ -687,5 +695,48 @@ func TestCoordinationStateStaysUnderTheCommonDirectory(t *testing.T) {
 	}
 	if entries, _ := os.ReadDir(parent); len(entries) != 2 {
 		t.Fatalf("nothing may appear beside the checkouts: %q", entries)
+	}
+}
+
+// TestUpdateDoneMeansAnIntegratedCandidate covers the review lifecycle's one
+// write-side rule: done needs a candidate that HEAD contains, so it is written
+// on the target after the merge, while a done record from before the rule
+// stays editable without one.
+func TestUpdateDoneMeansAnIntegratedCandidate(t *testing.T) {
+	t.Parallel()
+	root := gitProject(t)
+	base := git(t, root, "rev-parse", "HEAD")
+	refuse := func(id, want string, sets ...Field) {
+		t.Helper()
+		r := record(t, root, id)
+		_, err := Apply(root, Request{ID: id, Expect: project.Revision(r.Source), Set: sets}, now, nil)
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Fatalf("%s %v: got %v, want %q", id, sets, err, want)
+		}
+		if after := record(t, root, id); !bytes.Equal(after.Source, r.Source) {
+			t.Fatalf("%s was written despite the refusal", id)
+		}
+	}
+	refuse("G-001", "candidate: required while status is review", Field{"status", "review"})
+	refuse("G-001", "set candidate=COMMIT", Field{"status", "done"})
+	refuse("G-001", "is not an ancestor of this checkout's HEAD", Field{"status", "done"}, Field{"candidate", strings.Repeat("a", 40)})
+	// A candidate on an unmerged branch is refused on main until it is merged.
+	git(t, root, "checkout", "-q", "-b", "feature")
+	write(t, root, "grove/work/G-001-first.md", strings.Replace(work, "status: proposed", "status: active", 1))
+	git(t, root, "commit", "-qam", "implement")
+	candidate := git(t, root, "rev-parse", "HEAD")
+	git(t, root, "checkout", "-q", "main")
+	refuse("G-001", "is not an ancestor of this checkout's HEAD", Field{"status", "done"}, Field{"candidate", candidate})
+	git(t, root, "merge", "-q", "--ff-only", "feature")
+	apply(t, root, "G-001", []Field{{"status", "done"}, {"candidate", candidate}})
+	// Changing a done record's candidate is judged again; its other fields are not.
+	refuse("G-001", "is not an ancestor", Field{"candidate", strings.Repeat("b", 40)})
+	apply(t, root, "G-001", []Field{{"candidate", base}, {"title", "Renamed"}})
+	// A historical done record has no candidate: editable, and never given one that HEAD lacks.
+	write(t, root, "grove/work/G-002-second.md", strings.Replace(second, "status: proposed", "status: done", 1))
+	apply(t, root, "G-002", []Field{{"title", "Still done"}})
+	refuse("G-002", "is not an ancestor", Field{"candidate", strings.Repeat("c", 40)})
+	if r := record(t, root, "G-002"); r.Candidate != "" || r.Title != "Still done" {
+		t.Fatalf("historical done: %+v", r)
 	}
 }

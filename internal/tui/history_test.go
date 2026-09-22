@@ -148,7 +148,7 @@ func TestHistoryOfUncommittedChanges(t *testing.T) {
 		t.Fatal("expected the feature board")
 	}
 	before := len(f.histories)
-	cmd := press(m, "right", "right", "enter")
+	cmd := press(m, "right", "right", "right", "enter") // past Active and Review to Done
 	for cmd != nil {
 		cmd = deliver(m, cmd)
 	}

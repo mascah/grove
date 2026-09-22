@@ -68,7 +68,8 @@ func TestUpdateWorkflowCreateUpdateCloseReopenCheck(t *testing.T) {
 	}{
 		{[]string{"--set", "status=active", "--set", "kind=feature", "--set=priority=2", "--set", `depends_on=["G-001"]`, "--set", "title=Renamed: 版本 \"quoted\""}, true, "active"},
 		{[]string{"--set", "status=active", "--unset", "size"}, false, "active"},
-		{[]string{"--set", "status=done", "--unset", "priority"}, true, "done"},
+		{[]string{"--set", "status=review", "--set", "candidate=" + gitIn(t, root, "rev-parse", "HEAD"), "--unset", "priority"}, true, "review"},
+		{[]string{"--set", "status=done"}, true, "done"}, // HEAD contains the candidate, so this checkout may close it
 		{[]string{"--set", "status=active"}, true, "active"},
 	}
 	for _, step := range steps {

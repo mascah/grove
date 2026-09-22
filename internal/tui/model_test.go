@@ -399,7 +399,7 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches()}
 	m := open(t, f, 120, 30)
-	if got, want := board(m), "proposed=W-002 active=W-001 done= abandoned= shelf=W-010"; got != want {
+	if got, want := board(m), "proposed=W-002 active=W-001 review= done= abandoned= shelf=W-010"; got != want {
 		t.Fatalf("main board:\n got %s\nwant %s", got, want)
 	}
 	screen := plain(m)
@@ -415,17 +415,17 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 	}
 	// b lists live checkouts; choosing one changes only what is displayed.
 	press(m, "b", "down", "enter")
-	if got, want := board(m), "proposed=W-002,W-010 active= done=W-001 abandoned= shelf="; got != want {
+	if got, want := board(m), "proposed=W-002,W-010 active= review= done=W-001 abandoned= shelf="; got != want {
 		t.Fatalf("feature board:\n got %s\nwant %s", got, want)
 	}
-	if screen = plain(m); !strings.Contains(screen, "Board: checkout feat (feature)") || !strings.Contains(screen, "Inspect records, finished") {
+	if screen = plain(m); !strings.Contains(screen, "Board: checkout feat (feature)") || !strings.Contains(screen, "Inspect records, fin…") { // five columns at 120 cells leave 23 for a title
 		t.Fatalf("the feature board should carry feature's label and titles:\n%s", screen)
 	}
 	if f.inspects != 1 || len(f.resolved) != 0 {
 		t.Fatal("choosing a context must not call the backend")
 	}
 	// Each version keeps its own status in the card.
-	press(m, "right", "right", "enter")
+	press(m, "right", "right", "right", "enter") // W-001 sits in Done, past Review
 	screen = plain(m)
 	for _, want := range []string{"W-001   2 versions differ", "(2 branches, 2 checkouts)", "▸ active     same on 1 branch, 1 checkout", "▸ done       same on 1 branch, 1 checkout", "none is authoritative"} {
 		if !strings.Contains(screen, want) {
@@ -463,7 +463,7 @@ func TestContextStates(t *testing.T) {
 		t.Fatalf("an invalid checkout was accepted:\n%s", plain(m))
 	}
 	press(m, "down", "enter")
-	if got := board(m); got != "proposed=W-010 active= done= abandoned= shelf=" || !strings.Contains(plain(m), "INCOMPLETE") {
+	if got := board(m); got != "proposed=W-010 active= review= done= abandoned= shelf=" || !strings.Contains(plain(m), "INCOMPLETE") {
 		t.Fatalf("valid subset: %s\n%s", got, plain(m))
 	}
 
@@ -508,7 +508,7 @@ func TestRefreshFollowsIdentityNotPosition(t *testing.T) {
 	next := newFixture()
 	f.res = result(next.main, next.sources(), version(next.main, "W-001", "Inspect records", "done"), version(next.main, "W-003", "Newcomer", "active"))
 	deliver(m, press(m, "r"))
-	if m.cardID != "W-001" || m.col != 2 {
+	if m.cardID != "W-001" || m.col != 3 {
 		t.Fatalf("focus went to column %d card %q instead of following W-001", m.col, m.cardID)
 	}
 	// The open card disappears entirely.
@@ -530,7 +530,7 @@ func TestRefreshFollowsIdentityNotPosition(t *testing.T) {
 		t.Fatal("a lost context must not be re-adopted silently")
 	}
 	press(m, "b", "enter")
-	if !m.hasBoard || board(m) != "proposed= active=W-003 done= abandoned= shelf=" {
+	if !m.hasBoard || board(m) != "proposed= active=W-003 review= done= abandoned= shelf=" {
 		t.Fatalf("after choosing again: %s", board(m))
 	}
 }
@@ -561,12 +561,12 @@ func TestLayoutAtEverySize(t *testing.T) {
 		check("board")
 		s := plain(m)
 		if wide := strings.Contains(s, "Proposed (1)") && strings.Contains(s, "Abandoned (0)"); wide != (w >= wideWidth) {
-			t.Fatalf("%dx%d: four columns = %v:\n%s", w, h, wide, s)
+			t.Fatalf("%dx%d: five columns = %v:\n%s", w, h, wide, s)
 		}
 		if w < wideWidth {
-			tabs := "[Proposed 1] Active 1 Done 0 Abandoned 0"
+			tabs := "[Proposed 1] Active 1 Review 0 Done 0 Abandoned 0"
 			if w < 60 {
-				tabs = "[Prop 1] Act 1 Done 0 Aban 0"
+				tabs = "[Prop 1] Act 1 Rev 0 Done 0 Aban 0"
 			}
 			if !strings.Contains(s, tabs) || strings.Contains(s, "Inspect records") {
 				t.Fatalf("%dx%d: want tabs %q and only the focused column:\n%s", w, h, tabs, s)
@@ -847,7 +847,7 @@ func TestBoardFollowsTypeNotIDOrPlacement(t *testing.T) {
 	// G-063 is deleted everywhere it is seen, so no record says it was work.
 	vs = append(vs, versions.Version{Source: fx.main, Path: "grove/G-063.md", Change: "deleted"})
 	m := open(t, &fake{res: result(fx.main, fx.sources(), vs...)}, 120, 30)
-	if got, want := board(m), "proposed=D-004 active=G-001,G-060 done= abandoned= shelf=G-062"; got != want {
+	if got, want := board(m), "proposed=D-004 active=G-001,G-060 review= done= abandoned= shelf=G-062"; got != want {
 		t.Fatalf("board:\n got %s\nwant %s", got, want)
 	}
 	if screen := plain(m); strings.Contains(screen, "page") || strings.Contains(screen, "G-002") || strings.Contains(screen, "W-003") || strings.Contains(screen, "G-061") || strings.Contains(screen, "G-063") {

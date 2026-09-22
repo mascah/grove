@@ -14,7 +14,7 @@ import (
 
 const (
 	minWidth, minHeight = 40, 10
-	wideWidth           = 100 // four columns, and rows beside details
+	wideWidth           = 100 // five columns, and rows beside details
 	cardRows            = 3   // ID, title, gap
 )
 
@@ -278,7 +278,7 @@ func (m *Model) boardBody(w, n int) []string {
 		for i, status := range statuses {
 			name := title(status)
 			if w < 60 {
-				name = [...]string{"Prop", "Act", "Done", "Aban"}[i]
+				name = [...]string{"Prop", "Act", "Rev", "Done", "Aban"}[i]
 			}
 			tab := fmt.Sprintf("%s %d", name, len(columns[i]))
 			if i == m.col {

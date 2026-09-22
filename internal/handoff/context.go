@@ -30,7 +30,8 @@ const (
 		"A listed record's title, status, and revision are what this checkout held; its constraints are in its body, which show ID prints. " +
 		"A listed link was not opened or checked, not even for existence; --include PATH adds a file with its revision and fails if it is missing. " +
 		"Nothing here was summarized or truncated, and a listing is not a reading: read what the current activity depends on before acting on it. " +
-		"A status is what a record says in this checkout: done is not integration, and assembled context is not readiness, acceptance, or authorization."
+		"A status is what a record says in this checkout: done with a candidate claims that commit was accepted and merged where done was written, " +
+		"done without one predates that meaning and says nothing about integration, and assembled context is not readiness, acceptance, or authorization."
 )
 
 type Options struct {

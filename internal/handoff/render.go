@@ -47,7 +47,7 @@ func Text(b *Bundle) []byte {
 		line("      %s", inert(strings.Join([]string{strconv.Quote(r.Title), r.Path, r.Revision}, "  "), false))
 	}
 	if len(b.Requirements) != 0 {
-		line("\nRequirements (status as recorded here; done is not integration):")
+		line("\nRequirements (status as recorded here; done without a candidate is not integration):")
 		for _, r := range b.Requirements {
 			selected := "not selected"
 			if r.Selected {

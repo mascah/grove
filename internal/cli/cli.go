@@ -47,7 +47,8 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"  update ID  Change frontmatter fields when the file still matches --expect\n" +
 	"             (the revision from show --json); prints {id, path, revision, changed}.\n" +
 	"             Lists are JSON arrays such as '[\"G-001\"]'; priority is 1-5. A plan or\n" +
-	"             review names its work with work=[...]; a review's examined is a Git commit.\n" +
+	"             review names its work with work=[...]; a review's examined is a Git commit,\n" +
+	"             as is work's candidate, required in review and, reachable from HEAD, for done.\n" +
 	"             update accepts type=TYPE with whatever else the new type requires in the\n" +
 	"             same update; the ID and path never change.\n" +
 	"  convert    The one deliberate identity change. A Markdown document outside the record\n" +

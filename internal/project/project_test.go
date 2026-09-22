@@ -442,3 +442,31 @@ func TestRecordProblems(t *testing.T) {
 		})
 	}
 }
+
+func TestReviewLifecycleAndCandidate(t *testing.T) {
+	t.Parallel()
+	commit := "candidate: \"0123456789abcdef0123456789abcdef01234567\"\n"
+	for _, tc := range []struct{ name, source, want string }{
+		{"review needs a candidate", typed("G-002", "work", "review", ""), "grove/G-002.md: candidate: required while status is review"},
+		{"review with one", typed("G-002", "work", "review", commit), ""},
+		{"historical done keeps validating", typed("G-002", "work", "done", ""), ""},
+		{"done with one", typed("G-002", "work", "done", commit), ""},
+		{"not a commit", typed("G-002", "work", "active", "candidate: \"main\"\n"), "candidate: expected a quoted Git commit"},
+		{"unquoted", typed("G-002", "work", "active", "candidate: 1234567\n"), "candidate: expected a nonempty string"},
+		{"only on work", typed("G-002", "plan", "current", commit), "candidate: unknown field"},
+		{"review is a work status only", typed("G-002", "plan", "review", ""), "status: unsupported lifecycle value for plan"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			root := schema3(t, "")
+			put(t, root, "grove/G-002.md", tc.source)
+			p, ds := Load(root, root)
+			if got := diagnostics(ds); tc.want == "" && got != "" || tc.want != "" && !strings.Contains(got, tc.want) {
+				t.Fatalf("wanted %q; got %q", tc.want, got)
+			}
+			if tc.want == "" && strings.Contains(tc.source, "candidate:") && p.Records[0].Candidate != "0123456789abcdef0123456789abcdef01234567" {
+				t.Fatalf("candidate not read: %+v", p.Records[0])
+			}
+		})
+	}
+}
