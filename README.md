@@ -44,6 +44,7 @@ go run ./cmd/grove convert notes/old-plan.md --type plan --title "Old plan"  # p
 go run ./cmd/grove brief               # the brief grove.yaml names
 go run ./cmd/grove show G-003 --json
 go run ./cmd/grove update G-003 --expect sha256:HEX --set status=active --unset size
+go run ./cmd/grove update G-003 --set status=done --commit  # at a shell: no lookup, one commit
 go run ./cmd/grove versions G-003 --json
 go run ./cmd/grove workspace --source SELECTOR --json
 go run ./cmd/grove --project "$(go run ./cmd/grove workspace --source SELECTOR)" show G-003
@@ -56,10 +57,14 @@ in any given status, refusing a value outside the record model's status
 vocabulary; `show` prints the exact Markdown source, or with `--json`
 one object holding the path, a `sha256:` content revision, and the source;
 `check` validates metadata and relationships. `update` changes frontmatter
-fields of one record when its file still hashes to `--expect`, keeps every
-other byte of the file, sets `updated`, and prints the resulting revision.
-Lists are JSON arrays such as `'["G-003"]'`; `--unset` removes an optional
-field. Project/file context and errors go to stderr, so
+fields of one record, keeps every other byte of the file, sets `updated`, and
+prints the resulting revision. `--expect REVISION` is optional: it refuses a
+file that no longer hashes to it, which an agent session passes because its
+read may be old, while a person at a shell omits it. `--commit` then commits
+that one file with a generated message such as `docs(G-003): set
+status=done`, leaving every other path as it was, and adds `commit` to the
+result. Lists are JSON arrays such as `'["G-003"]'`; `--unset` removes an
+optional field. Project/file context and errors go to stderr, so
 stdout can be redirected. Exit codes are 0 for success, 1 for inspection/output
 errors, and 2 for invalid command usage.
 
@@ -102,7 +107,8 @@ shared by every linked worktree, and floors it by the highest ID on any local
 ref or worktree. Never number new records by hand. Both commands serialize
 through a write lock in that same directory; `update` refuses a stale
 `--expect`, an invalid project, or any change it observes while preparing the
-write, and reports when a failure happened after the file was replaced.
+write, and reports when a failure happened after the file was replaced,
+including a `--commit` that Git refused.
 
 `versions [ID]` shows one row per version of each record: its committed
 version on every local branch tip and its live version in every registered
