@@ -54,9 +54,10 @@ func Text(b *Bundle) []byte {
 				selected = "selected"
 			}
 			status := r.Status
-			if r.Status == "done" {
-				status = cmp.Or(r.Candidate, "no candidate")
-				status = "done, " + strings.TrimPrefix("candidate "+status, "candidate no ")
+			if r.Status == "done" && r.Candidate != "" {
+				status = "done, candidate " + r.Candidate
+			} else if r.Status == "done" {
+				status = "done, no candidate"
 			}
 			line("  %s", inert(fmt.Sprintf("%s depends on %s: %s, %s", r.Work, r.Prerequisite, status, selected), false))
 		}

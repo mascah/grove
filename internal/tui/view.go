@@ -291,7 +291,7 @@ func (m *Model) boardBody(w, n int) []string {
 	return append(rows, line(shelfRow, w))
 }
 
-// short abbreviates the column names for narrow terminals, one per status.
+// shortNames abbreviates the column names for narrow terminals, one per status.
 var shortNames = [len(statuses)]string{"Prop", "Act", "Rev", "Done", "Aban"}
 
 // column renders one status column to exactly n rows.

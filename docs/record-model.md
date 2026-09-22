@@ -522,8 +522,8 @@ implementation, independent review and waiting are activities inside
   research and design deliverables too, since those are files. `update` writes
   `done`, or changes a done record's candidate, only when the candidate is an
   ancestor of the checkout's `HEAD` (`git merge-base --is-ancestor`), so a
-  checkout that lacks the code cannot close the work; a done record's
-  candidate cannot be removed. The integrator writes done in the target's
+  checkout that lacks the code cannot close the work; a record that stays
+  done cannot lose its candidate. The integrator writes done in the target's
   checkout after the merge. A squash or rebase that lands a different commit
   names that commit as the candidate in the same update. The check needs Git,
   as `update` already does; `check` verifies the form only.

@@ -742,9 +742,10 @@ func TestUpdateDoneMeansAnIntegratedCandidate(t *testing.T) {
 	// Changing a done record's candidate is judged again; its other fields are
 	// not, and the candidate cannot be dropped.
 	refuse("G-001", "could not be checked against this checkout's HEAD", Field{"candidate", strings.Repeat("b", 40)})
-	if r := record(t, root, "G-001"); true {
+	{
+		r := record(t, root, "G-001")
 		_, err := Apply(root, Request{ID: "G-001", Expect: project.Revision(r.Source), Unset: []string{"candidate"}}, now, nil)
-		if err == nil || !strings.Contains(err.Error(), "candidate cannot be removed") {
+		if err == nil || !strings.Contains(err.Error(), "stays done cannot lose its candidate") {
 			t.Fatalf("unset candidate on a done record: %v", err)
 		}
 	}
@@ -752,6 +753,20 @@ func TestUpdateDoneMeansAnIntegratedCandidate(t *testing.T) {
 		t.Fatalf("candidate changed: %+v", r)
 	}
 	apply(t, root, "G-001", []Field{{"candidate", base}, {"title", "Renamed"}})
+	// Reopening may drop the candidate; closing from review while dropping it
+	// gets the advice to set one, not the removal refusal.
+	apply(t, root, "G-001", []Field{{"status", "review"}})
+	{
+		r := record(t, root, "G-001")
+		_, err := Apply(root, Request{ID: "G-001", Expect: project.Revision(r.Source), Set: []Field{{"status", "done"}}, Unset: []string{"candidate"}}, now, nil)
+		if err == nil || !strings.Contains(err.Error(), "set candidate=COMMIT") {
+			t.Fatalf("done while dropping the candidate: %v", err)
+		}
+	}
+	apply(t, root, "G-001", []Field{{"status", "active"}}, "candidate")
+	if r := record(t, root, "G-001"); r.Candidate != "" || r.Status != "active" {
+		t.Fatalf("reopening may drop the candidate: %+v", r)
+	}
 	// A historical done record has no candidate: editable, and never given one that HEAD lacks.
 	write(t, root, "grove/work/G-002-second.md", strings.Replace(second, "status: proposed", "status: done", 1))
 	apply(t, root, "G-002", []Field{{"title", "Still done"}})

@@ -251,8 +251,8 @@ func integrated(root string, before, after *project.Record) error {
 		return nil
 	}
 	if after.Candidate == "" {
-		if before.Candidate != "" {
-			return fmt.Errorf("a done record's candidate cannot be removed: it is the commit that was accepted and merged")
+		if before.Status == "done" && before.Candidate != "" {
+			return fmt.Errorf("a record that stays done cannot lose its candidate: it is the commit that was accepted and merged")
 		}
 		return fmt.Errorf("done means accepted and integrated: set candidate=COMMIT, the commit that was accepted and merged, in the same update")
 	}
