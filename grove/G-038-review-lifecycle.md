@@ -2,9 +2,9 @@
 id: "G-038"
 type: work
 title: "Hand implementation candidates into revision-bound human review"
-status: review
+status: done
 created: "2026-09-21T00:54:14Z"
-updated: "2026-09-22T04:45:35Z"
+updated: "2026-09-22T05:04:26Z"
 kind: feature
 size: medium
 priority: 1
@@ -127,9 +127,14 @@ Review (0) Done (17) Abandoned (0)` (five tabs at 80), and exited 0 on `q`.
 
 ## Next
 
-In Review: the candidate is the evidence commit named in `candidate`, and
-the branch tip adds only this status change. To judge it, from a checkout
-of `worktree-G-038`:
+Done on 2026-09-22: the owner fast-forwarded `worktree-G-038` onto `main`
+(`b8fb232`) and said "Ok I merged it. Mark it as done." The candidate
+`fae1e4c` is an ancestor of main, and this status was written there. The
+handoff below is kept as the first use of the mechanism it describes.
+
+In Review it read: the candidate is the evidence commit named in
+`candidate`, and the branch tip adds only this status change. To judge it,
+from a checkout of `worktree-G-038`:
 
 ```sh
 go run ./cmd/grove context G-038          # this record and G-073, G-074 listed
