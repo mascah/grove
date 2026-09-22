@@ -15,7 +15,8 @@ with read-only instructions; neither edited anything.
 ## Round 1: rewritten lines, in the rehearsal
 
 Examined: the disposable clone of nullsec `366b063` after the script (the tree
-later reproduced live), all 1,368 rewritten lines, and every converted body
+later reproduced live), all 1,368 rewritten lines of that run (the final run,
+after the fixes below, rewrote 1,374), and every converted body
 against its `formerly` original.
 
 | Finding | Disposition |
@@ -26,7 +27,7 @@ against its `formerly` original.
 | `W-019-T3` is a branch name (merge `a6c37b9`) | Kept: IDs followed by `-T<digit>` are not rewritten |
 | `W-021/023/024` and `D-0034/0035` shorthands half-rewritten | Expanded to full IDs before rewriting |
 | `history/evidence/…` paths relative to the old root no longer resolved | Rewritten through aliases |
-| Predecessor commands such as `grove close W-001` in done records | Rewritten like other IDs, as G-052 did; history |
+| Predecessor commands such as `grove close W-001` in done records | Rewritten like other IDs, as G-052 did; history, as is the finished study brief `art/design/w039-crew-hull-test.md` |
 | Code risk | None: non-comment rewrites are test titles, assert messages, a `console.log` label and trace headers no code compares; the retrospective generator and `docs/RETROSPECTIVE.md` stay consistent |
 
 ## Round 2: final, both branches and the machine
@@ -49,3 +50,15 @@ links resolve; all 146 predecessor paths appear on the map page.
 No findings for the `superseded` status, frontmatter values, bodies, links,
 map completeness, nullsec's Grove section, or the machine state. The reviewer
 did not rerun `npm test` or compare the mapping files.
+
+## Round 3: the fixes and the evidence
+
+The same reviewer, at Grove `4b05447` and nullsec `3eb2785`: every disposition
+above holds, both `check` runs pass, and the Evidence's commits, uninstall
+steps and session results match the files, Git and the session's recorded
+tool output. It could not observe the 694-file comparison, the base-commit
+smoke failure or `go test` at `db819bf`. Fixed after it: the Codex rollback
+also re-adds the plugin (its cache was emptied), the plugin version is named,
+the `codex exec` stdin detail and the branch-name exclusion are stated, and
+the line counts name their runs. Its note that status was still `active` is
+the handoff's own last commit.

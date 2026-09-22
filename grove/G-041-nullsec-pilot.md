@@ -216,7 +216,8 @@ Against each acceptance item:
    the session scratchpad, reached by absolute path, the script ran with a
    binary built from a clone of `1452c6f`: `check` `OK: 127 records` (126
    converted plus the map page `G-127`), 0 broken links (the same 0 as before
-   the migration), and 5 remaining old-ID lines, each listed on the map page
+   the migration), and 5 remaining old-ID lines outside branch and worktree names (which the
+   map page's branch rule covers), each listed on the map page
    (a verbatim builder quote, two `.grove-run/` artifact names never tracked,
    the `W-019-T3` branch, one folder named as it was). Every predecessor file
    is converted, moved (three non-Markdown evidence files to
@@ -263,7 +264,9 @@ Against each acceptance item:
    entrypoints are `disable-model-invocation`, so a model asked to list its
    skills does not see them; a typed invocation does. `codex exec -s
    read-only` with `$grove-work` and `$grove-shape` ran `grove guide work` and
-   `grove guide shape` and returned the same waits. No session wrote a file.
+   `grove guide shape` and returned the same waits; `codex exec` waits on
+   stdin until closed, so it ran with `< /dev/null` after a first attempt
+   timed out. No session wrote a file.
 5. **This repository.** `AGENTS.md` says the installed `grove` is a build of
    this CLI that can lag the checkout, keeps `go run ./cmd/grove` for
    development here, and reads nullsec through the installed CLI and
@@ -292,6 +295,11 @@ source = "/Users/mascah/GitHub/mascah/skills"
 [plugins."grove@grove-local"]
 enabled = true
 ```
+
+then run `codex plugin add grove@grove-local`, since `codex plugin remove`
+also emptied its cache. The removed Claude plugin was `grove` 0.2.0 at skills
+commit `3877d116`; `marketplace add` installs whatever `mascah/skills` holds
+now, so compare the version.
 
 Before the cutover `grove@mascah` was also installed, disabled, at local scope
 for this repository and for four nullsec worktrees that no longer exist; those
