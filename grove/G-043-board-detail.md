@@ -2,15 +2,16 @@
 id: "G-043"
 type: work
 title: "Make the board and item detail clear and visually polished"
-status: active
+status: review
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-22T23:13:02Z"
+updated: "2026-09-22T23:58:51Z"
 kind: feature
 size: medium
 priority: 3
 depends_on: ["G-042"]
 relates_to: ["G-035", "G-017", "G-030", "G-041", "G-044", "G-064", "G-065"]
 formerly: "W-025"
+candidate: "178b305"
 ---
 
 ## Outcome
