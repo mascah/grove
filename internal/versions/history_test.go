@@ -111,8 +111,12 @@ func TestHistoryAcrossMergesAndDates(t *testing.T) {
 	t.Setenv("GIT_COMMITTER_DATE", "1700000200 +0000")
 	write(t, root, renamed, record("G-001", "work", "abandoned", "Main body.\n"))
 	commit(t, root, "abandon on main")
-	if out, err := exec.Command("git", "-C", root, "merge", "-q", "feature").CombinedOutput(); err == nil {
+	out, err := exec.Command("git", "-C", root, "-c", "user.name=t", "-c", "user.email=t@t", "merge", "-q", "feature").CombinedOutput()
+	if err == nil {
 		t.Fatalf("expected a conflict: %s", out)
+	}
+	if _, statErr := os.Stat(filepath.Join(root, ".git", "MERGE_HEAD")); statErr != nil {
+		t.Fatalf("the merge failed without a conflict to resolve: %v\n%s", err, out)
 	}
 	write(t, root, renamed, record("G-001", "work", "proposed", "Resolved.\n"))
 	resolved := commit(t, root, "resolve by reopening")
