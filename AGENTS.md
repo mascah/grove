@@ -64,11 +64,18 @@ read the brief when the record, a product question, or reconciliation needs it.
 - Use focused Conventional Commits. Preserve unrelated work and isolate
   concurrent implementation in separate worktrees.
 - Verify claims against actual results. Documentation-only changes need link
-  and consistency checks. For Go changes run the relevant tests, the full suite
-  (`go test ./...`), `go vet ./...`, `gofmt -l .`, and
-  `go run ./cmd/grove check`; use race tests (`go test -race ./...`) for
-  relevant changes and uncached runs (`-count=1`) for final evidence. TUI work
-  also needs terminal lifecycle and connected-workflow checks.
+  and consistency checks. For Go changes iterate with `go test -short
+  ./<package>`, then run `go vet ./...`, `gofmt -l .`, `go run ./cmd/grove
+  check`, and one `go test -count=1 -timeout 120s ./...` as final evidence.
+  Rerun a failed package, not the suite. Never `-p 1`, and never `-race`
+  across the suite on macOS: the race runtime hangs in the forked child before
+  `exec` there, and the test timeout leaves it behind at full CPU. Run `-race`
+  only per package, only for a concurrency change, with `-timeout 120s`, and
+  treat a hang in `syscall.forkExec` as that toolchain bug, not evidence; kill
+  any `*.test` process a timeout leaves behind. Budget: no package over five
+  seconds, and no test that builds, sleeps, or waits on a shim without a
+  `-short` skip and a comment saying why. TUI work also needs terminal
+  lifecycle and connected-workflow checks.
 
 ## Assigned work
 

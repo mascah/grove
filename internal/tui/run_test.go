@@ -15,6 +15,9 @@ import (
 // child dies with the session. Under -race the binary is built with it too.
 func TestTerminal(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("builds the binary and drives eight pseudo-terminal sessions")
+	}
 	python, err := exec.LookPath("python3")
 	if err != nil || runtime.GOOS == "windows" {
 		t.Skip("needs python3 with the Unix pty and termios modules")

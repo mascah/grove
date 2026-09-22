@@ -388,7 +388,7 @@ func TestReadConfinedDoesNotBlockOnFIFO(t *testing.T) {
 func TestChangeBetweenReadsIsRefused(t *testing.T) {
 	git := func(t *testing.T, root string, args ...string) {
 		t.Helper()
-		full := append([]string{"-C", root, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"}, args...)
+		full := append([]string{"-C", root, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false"}, args...)
 		if out, err := exec.Command("git", full...).CombinedOutput(); err != nil {
 			t.Fatalf("git %v: %v\n%s", args, err, out)
 		}
@@ -469,7 +469,7 @@ func TestOutputIsStableExactAndInert(t *testing.T) {
 func TestGitIdentity(t *testing.T) {
 	git := func(dir string, args ...string) string {
 		t.Helper()
-		full := append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false"}, args...)
+		full := append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false"}, args...)
 		out, err := exec.Command("git", full...).CombinedOutput()
 		if err != nil {
 			t.Fatalf("git %v: %v\n%s", args, err, out)

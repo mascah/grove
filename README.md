@@ -267,10 +267,12 @@ refuses at once with exit 1 and names the noninteractive commands. Text from
 records, paths, and Git is shown with control characters escaped. It writes no
 files, including the framework's debug logs.
 
-Use `go test ./...`, `go test -race ./...`, and `go vet ./...` for verification;
-`internal/tui` also drives the built binary through a pseudo-terminal with
+Use `go test -short ./...` while iterating and `go test -count=1 -timeout 120s
+./...` plus `go vet ./...` as evidence; `-race` is per package only, since a
+whole-suite race run hangs in the Go toolchain on macOS. `internal/tui` also
+drives the built binary through a pseudo-terminal with
 `python3 internal/tui/testdata/terminal.py BINARY` (Unix; skipped without
-`python3`).
+`python3` and under `-short`).
 Run `lefthook install` once per clone: pre-commit formats staged Go files and
 runs `go vet` and `go mod tidy -diff`; pre-push runs `go test ./...`.
 Agent execution remains future work. The

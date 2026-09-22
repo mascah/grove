@@ -140,7 +140,7 @@ func TestVersionsReadsCommittedKnowledgeRecords(t *testing.T) {
 		}
 	}
 	gitIn(t, root, "add", "-A")
-	gitIn(t, root, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "commit", "-q", "-m", "knowledge records")
+	gitIn(t, root, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "commit", "-q", "-m", "knowledge records")
 	code, out, errOut := run(t, root, "versions")
 	if code != 0 || strings.Contains(errOut, "invalid") {
 		t.Fatalf("code=%d stderr=%s", code, errOut)

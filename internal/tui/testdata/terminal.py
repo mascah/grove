@@ -5,7 +5,8 @@ blocked Git read is killed on the way out, and nothing on disk changes.
 
     python3 internal/tui/testdata/terminal.py /path/to/grove [scenario ...]
 
-`go test ./internal/tui` builds the binary and runs this. Unix only (stdlib
+`go test ./internal/tui` builds the binary and runs this; without scenario
+names every scenario runs at once in its own process. Unix only (stdlib
 pty, termios, fcntl); it says nothing about Windows consoles.
 """
 import fcntl, hashlib, json, os, pty, select, shutil, signal, struct, subprocess, sys, tempfile, termios, time
@@ -21,7 +22,7 @@ WORK = "---\nid: G-001\ntype: work\ntitle: {title}\nstatus: {status}\n---\nAn ou
 
 
 def git(cwd, *args):
-    subprocess.run([GIT, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-C", cwd, *args],
+    subprocess.run([GIT, "-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-C", cwd, *args],
                    check=True, capture_output=True)
 
 
@@ -379,6 +380,12 @@ SCENARIOS = [select_and_show, leave_without_selecting, refuses_without_terminal,
 
 
 def main():
+    if not ONLY:  # every scenario at once, each in its own process with its own repository
+        runs = [subprocess.Popen([sys.executable, __file__, GROVE, s.__name__], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                for s in SCENARIOS]
+        for proc in runs:
+            sys.stdout.write(proc.communicate()[0].decode(errors="replace"))
+        sys.exit(1 if any(proc.returncode for proc in runs) else 0)
     base = os.path.realpath(tempfile.mkdtemp(prefix="grove-terminal-"))
     failed = 0
     try:

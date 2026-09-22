@@ -37,6 +37,9 @@ func TestGitContextCancelledAndOrdinaryErrors(t *testing.T) {
 // A helper that holds Git's output open for longer than the kill delay must
 // not turn a successful command into an error with nothing after the colon.
 func TestUncancellableGitWaitsForHeldPipes(t *testing.T) {
+	if testing.Short() {
+		t.Skip("waits on a sleeping git shim")
+	}
 	real, err := exec.LookPath("git")
 	if err != nil {
 		t.Skip("needs git")

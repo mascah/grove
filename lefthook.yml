@@ -1,0 +1,18 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: gofmt
+      glob: "*.go"
+      run: gofmt -w {staged_files}
+      stage_fixed: true
+    - name: vet
+      glob: "*.go"
+      run: go vet ./...
+    - name: mod-tidy
+      glob: "{*.go,go.mod,go.sum}"
+      run: go mod tidy -diff
+
+pre-push:
+  jobs:
+    - name: test
+      run: go test -timeout 120s ./...

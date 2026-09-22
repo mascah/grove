@@ -86,6 +86,9 @@ func cancelDuring(t *testing.T, fifo string, call func(context.Context) (returne
 }
 
 func TestCancellationKillsGitAndWritesNothing(t *testing.T) {
+	if testing.Short() {
+		t.Skip("waits on a blocked git shim at eight stages")
+	}
 	root, _ := nestedFixture(t)
 	project := filepath.Join(root, "sub")
 	live := selectorFor(t, project, "G-001", "live", "feature")
