@@ -132,8 +132,9 @@ type Model struct {
 	resolving string // the exact selector a pending resolve was asked for
 	reading   string // the history key a pending history read was asked for
 	cancel    context.CancelFunc
-	hist      map[string]lineage // by commit and path, for the current result only
-	done      bool               // the session is ending: start nothing more
+	hist      map[string]lineage  // by commit and path, for the current result only
+	md        map[string][]string // rendered Markdown by key and width, for the current result only
+	done      bool                // the session is ending: start nothing more
 
 	board    sourceKey
 	hasBoard bool // a checkout's own board; otherwise the current view
@@ -283,7 +284,7 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		if msg.gen != m.gen || m.pending != "inspect" {
 			return nil
 		}
-		m.pending, m.cancel, m.hist = "", nil, map[string]lineage{}
+		m.pending, m.cancel, m.hist, m.md = "", nil, map[string]lineage{}, nil
 		if msg.err != nil {
 			m.res, m.failure = nil, msg.err.Error()
 			m.screen, m.cardID = boardScreen, ""
