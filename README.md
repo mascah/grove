@@ -357,6 +357,8 @@ drives the built binary through a pseudo-terminal with
 `python3` and under `-short`).
 Run `lefthook install` once per clone: pre-commit formats staged Go files and
 runs `go vet` and `go mod tidy -diff`; pre-push runs `go test ./...`.
+`just clean-merged` removes local branches merged into `main` and their clean
+worktrees after asking.
 GitHub Actions runs the same checks plus `go run ./cmd/grove check` and
 `go build ./...` on Ubuntu and macOS, and `govulncheck` on Ubuntu, for every
 push to `main` and every pull request (`.github/workflows/ci.yml`); it is a
