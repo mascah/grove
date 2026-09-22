@@ -775,3 +775,81 @@ func TestUpdateDoneMeansAnIntegratedCandidate(t *testing.T) {
 		t.Fatalf("historical done: %+v", r)
 	}
 }
+
+// TestUpdateOptionalExpectAndCommit covers G-079: an omitted Expect applies to
+// the file as it is while a stale one is still refused, and Commit commits the
+// record's file alone, nothing for a no-op, and reports a failed commit as an
+// applied update.
+func TestUpdateOptionalExpectAndCommit(t *testing.T) {
+	t.Parallel()
+	root := gitProject(t)
+	for _, kv := range [][2]string{{"user.name", "t"}, {"user.email", "t@t"}, {"commit.gpgsign", "false"}, {"maintenance.auto", "false"}} {
+		git(t, root, "config", kv[0], kv[1]) // the product's commit uses the repository's own identity
+	}
+	head := func() string { return git(t, root, "rev-parse", "HEAD") }
+	base := head()
+	// A direct edit after the last commit: the omitted form applies to it, a stale revision is refused.
+	write(t, root, "grove/work/G-001-first.md", strings.Replace(work, "Body --- stays.", "Edited body.", 1))
+	if _, err := Apply(root, Request{ID: "G-001", Expect: project.Revision([]byte(work)), Set: []Field{{"status", "active"}}}, now, nil); err == nil || !strings.Contains(err.Error(), "changed since the expected revision") {
+		t.Fatalf("stale expect: %v", err)
+	}
+	res, err := Apply(root, Request{ID: "G-001", Set: []Field{{"status", "active"}}}, now, nil)
+	if err != nil || !res.Changed || res.Commit != "" || head() != base {
+		t.Fatalf("omitted expect: %+v %v", res, err)
+	}
+	if src := read(t, root, "grove/work/G-001-first.md"); !strings.Contains(src, "status: active\n") || !strings.Contains(src, "Edited body.") {
+		t.Fatalf("update not applied over the direct edit:\n%s", src)
+	}
+	// Other changes in the tree, staged and unstaged, are left alone by --commit.
+	write(t, root, "grove/work/G-002-second.md", strings.Replace(second, "Second", "Second edited", 1))
+	write(t, root, "notes.txt", "staged\n")
+	git(t, root, "add", "notes.txt")
+	res, err = Apply(root, Request{ID: "G-001", Set: []Field{{"status", "review"}, {"candidate", base}}, Commit: true}, now, nil)
+	if err != nil || !res.Changed || res.Commit != head() || res.Commit == base {
+		t.Fatalf("commit: %+v %v (HEAD %s)", res, err, head())
+	}
+	if files := git(t, root, "show", "--stat", "--format=", "--name-only", "HEAD"); files != "grove/work/G-001-first.md" {
+		t.Fatalf("the commit must hold the record alone: %q", files)
+	}
+	if subject := git(t, root, "log", "-1", "--format=%s"); subject != "docs(G-001): set status=review candidate="+base {
+		t.Fatalf("message: %q", subject)
+	}
+	if status := git(t, root, "status", "--porcelain"); status != "M grove/work/G-002-second.md\nA  notes.txt" { // git() trims the leading space
+		t.Fatalf("other paths must stay as they were:\n%s", status)
+	}
+	// Acceptance 1: done from a clean tree in one step, with several fields and an unset in the message.
+	git(t, root, "commit", "-qam", "the rest")
+	clean := head()
+	res, err = Apply(root, Request{ID: "G-001", Set: []Field{{"status", "done"}}, Unset: []string{"relates_to"}, Commit: true}, now, nil)
+	if err != nil || res.Commit != head() || res.Commit == clean {
+		t.Fatalf("done --commit: %+v %v", res, err)
+	}
+	if subject := git(t, root, "log", "-1", "--format=%s"); subject != "docs(G-001): set status=done unset relates_to" {
+		t.Fatalf("message: %q", subject)
+	}
+	if status := git(t, root, "status", "--porcelain"); status != "" {
+		t.Fatalf("tree must be clean after the commit:\n%s", status)
+	}
+	// A no-op commits nothing.
+	done := head()
+	res, err = Apply(root, Request{ID: "G-001", Set: []Field{{"status", "done"}}, Commit: true}, now, nil)
+	if err != nil || res.Changed || res.Commit != "" || head() != done {
+		t.Fatalf("no-op with commit: %+v %v", res, err)
+	}
+	// A commit that fails after publication: the file holds the update, the
+	// error carries the applied revision, and nothing was committed.
+	hooks := filepath.Join(root, "hooks")
+	write(t, root, "hooks/pre-commit", "#!/bin/sh\necho refused by hook >&2\nexit 1\n")
+	if err := os.Chmod(filepath.Join(hooks, "pre-commit"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	git(t, root, "config", "core.hooksPath", hooks)
+	res, err = Apply(root, Request{ID: "G-001", Set: []Field{{"title", "Renamed"}}, Commit: true}, now, nil)
+	var failure *Failure
+	if !errors.As(err, &failure) || failure.Revision != revision(t, root, "grove/work/G-001-first.md") || !strings.Contains(err.Error(), "refused by hook") || !strings.Contains(err.Error(), "nothing was committed") || !strings.Contains(err.Error(), "the update was applied to grove/work/G-001-first.md") {
+		t.Fatalf("failed commit: %+v %v", res, err)
+	}
+	if head() != done || record(t, root, "G-001").Title != "Renamed" {
+		t.Fatal("the file must hold the update and HEAD must not move")
+	}
+}

@@ -25,7 +25,7 @@ import (
 const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] list [--status VALUE]... | show ID [--json] | brief [--json] | check\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
-	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n" +
+	"       grove [--project DIR] update ID [--expect REVISION] (--set FIELD=VALUE | --unset FIELD)... [--commit]\n" +
 	"       grove [--project DIR] convert PATH --type TYPE --title TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
 	"       grove [--project DIR] workspace --source SELECTOR [--json]\n" +
@@ -46,8 +46,11 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             the next shared ID, flat in the record root; a page is general knowledge\n" +
 	"             with a title and no status.\n" +
 	"             Put -- before a title that starts with a dash\n" +
-	"  update ID  Change frontmatter fields when the file still matches --expect\n" +
-	"             (the revision from show --json); prints {id, path, revision, changed}.\n" +
+	"  update ID  Change frontmatter fields; prints {id, path, revision, changed}. --expect\n" +
+	"             REVISION (from show --json) refuses a file that no longer hashes to it, for a\n" +
+	"             caller whose read may be old; omitted, the update applies to the file as it\n" +
+	"             is. --commit then commits that one file with a generated message and adds\n" +
+	"             commit to the result (null when nothing changed); other paths stay as they are.\n" +
 	"             Lists are JSON arrays such as '[\"G-001\"]'; priority is 1-5. A plan or\n" +
 	"             review names its work with work=[...]; a review's examined is a Git commit,\n" +
 	"             as is work's candidate, required in review and, reachable from HEAD, for done.\n" +
@@ -124,13 +127,23 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 			report(errOut, err)
 			return 1
 		}
-		result := marshal(map[string]any{"id": res.ID, "path": res.Path, "revision": res.Revision, "changed": res.Changed})
-		if _, err := io.Copy(out, bytes.NewReader(result)); err != nil {
+		object := map[string]any{"id": res.ID, "path": res.Path, "revision": res.Revision, "changed": res.Changed}
+		if a.request.Commit {
+			object["commit"] = nil // a no-op commits nothing
+			if res.Commit != "" {
+				object["commit"] = res.Commit
+			}
+		}
+		if _, err := io.Copy(out, bytes.NewReader(marshal(object))); err != nil {
 			state := "no change was needed for"
 			if res.Changed {
 				state = "the update was applied to"
 			}
-			fmt.Fprintf(errOut, "grove: write output: %s (%s %s; revision %s)\n", err, state, visible(res.Path), res.Revision)
+			committed := ""
+			if res.Commit != "" {
+				committed = "; commit " + res.Commit
+			}
+			fmt.Fprintf(errOut, "grove: write output: %s (%s %s; revision %s%s)\n", err, state, visible(res.Path), res.Revision, committed)
 			return 1
 		}
 		return 0
@@ -351,6 +364,13 @@ func parseArgs(args []string) (a invocation, err error) {
 			a.json = true
 			continue
 		}
+		if arg == "--commit" {
+			if a.request.Commit {
+				return a, fmt.Errorf("--commit may only be supplied once")
+			}
+			a.request.Commit = true
+			continue
+		}
 		matched := false
 		for _, o := range options {
 			var err error
@@ -390,8 +410,8 @@ func parseArgs(args []string) (a invocation, err error) {
 	if (a.options.Interaction != "" || a.options.MaxBytes != 0 || a.options.Include != nil) && a.command != "context" {
 		return a, fmt.Errorf("--interaction, --max-bytes, and --include apply only to context")
 	}
-	if (a.request.Expect != "" || len(fields) != 0) && a.command != "update" {
-		return a, fmt.Errorf("--expect, --set, and --unset apply only to update")
+	if (a.request.Expect != "" || a.request.Commit || len(fields) != 0) && a.command != "update" {
+		return a, fmt.Errorf("--expect, --set, --unset, and --commit apply only to update")
 	}
 	switch a.command {
 	case "":
@@ -440,9 +460,7 @@ func parseArgs(args []string) (a invocation, err error) {
 		switch {
 		case len(positional) != 2:
 			err = fmt.Errorf("update requires exactly one record ID")
-		case a.request.Expect == "":
-			err = fmt.Errorf("update requires --expect REVISION from show --json")
-		case !revisionPattern.MatchString(a.request.Expect):
+		case a.request.Expect != "" && !revisionPattern.MatchString(a.request.Expect):
 			err = fmt.Errorf("--expect must be sha256: followed by 64 lowercase hexadecimal digits")
 		case len(fields) == 0:
 			err = fmt.Errorf("update requires at least one --set FIELD=VALUE or --unset FIELD")
