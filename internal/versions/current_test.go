@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/mascah/grove/internal/repo"
 )
 
 // standing summarizes one group as "place status current|older" lines, with
@@ -193,19 +195,29 @@ func TestCurrentViewUnorderedPair(t *testing.T) {
 // TestMergeBases checks the walk against Git's own answers, including a
 // criss-cross history with two bases and commits sharing one timestamp.
 func TestMergeBases(t *testing.T) {
-	t.Setenv("GIT_COMMITTER_DATE", "1700000000 +0000")
+	t.Parallel()
 	root := repoFixture(t)
-	git(t, root, "checkout", "-q", "-b", "a")
-	commit(t, root, "a1")
-	git(t, root, "checkout", "-q", "-b", "b", "main")
-	commit(t, root, "b1")
-	git(t, root, "checkout", "-q", "a")
-	git(t, root, "merge", "-q", "--no-ff", "-m", "a merges b", "b")
-	git(t, root, "checkout", "-q", "b")
-	git(t, root, "merge", "-q", "--no-ff", "-m", "b merges a", "a~1")
-	commit(t, root, "b2")
-	git(t, root, "checkout", "-q", "main")
-	commit(t, root, "m1")
+	// Every commit here shares one committer time.
+	dated := func(args ...string) {
+		t.Helper()
+		cmd := repo.Command(t.Context(), root, append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false"}, args...)...)
+		cmd.Env = append(cmd.Environ(), "GIT_COMMITTER_DATE=1700000000 +0000")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	datedCommit := func(message string) { dated("commit", "-q", "--allow-empty", "-m", message) }
+	dated("checkout", "-q", "-b", "a")
+	datedCommit("a1")
+	dated("checkout", "-q", "-b", "b", "main")
+	datedCommit("b1")
+	dated("checkout", "-q", "a")
+	dated("merge", "-q", "--no-ff", "-m", "a merges b", "b")
+	dated("checkout", "-q", "b")
+	dated("merge", "-q", "--no-ff", "-m", "b merges a", "a~1")
+	datedCommit("b2")
+	dated("checkout", "-q", "main")
+	datedCommit("m1")
 
 	o := newObjects(t.Context(), root, "")
 	defer o.close()
