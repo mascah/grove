@@ -2,15 +2,16 @@
 id: "G-041"
 type: work
 title: "Cut nullsec over to this Grove and uninstall the predecessor"
-status: active
+status: review
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-22T19:40:45Z"
+updated: "2026-09-22T20:34:25Z"
 kind: tooling
 size: large
 priority: 2
 depends_on: ["G-040"]
 relates_to: ["G-035", "G-036", "G-064", "G-065"]
 formerly: "W-023"
+candidate: "b6db474"
 ---
 
 ## Outcome
@@ -323,7 +324,7 @@ In Review. To judge it:
 cd ~/GitHub/mascah/grove/.claude/worktrees/G-041
 go run ./cmd/grove context G-041 --include grove/G-091-nullsec-cutover-plan.md
 go run ./cmd/grove show G-092
-git diff --stat CANDIDATE HEAD     # only this record
+git diff --stat b6db474 HEAD     # only this record
 cd ~/GitHub/mascah/nullsec/.claude/worktrees/grove-cutover
 grove check && grove show G-127 | less
 grove                              # the board, in a real terminal (acceptance 6)
