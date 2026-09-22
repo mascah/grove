@@ -934,7 +934,7 @@ func TestCurrentViewBoard(t *testing.T) {
 	// W-001's current state leads its versions; main's copy is marked older.
 	press(m, "right", "right", "right", "enter")
 	screen = plain(m)
-	text := currentText(m.group()) // the details wrap it
+	text := currentText(m.group(), "") // the details wrap it
 	for _, want := range []string{"▸ done       same on 1 branch, 1 checkout", "▸ active     older  same on 1 branch",
 		`Current: done "Inspect records, finished" on branch feature, checkout feat (feature).`, "Older: 2 places hold an earlier state"} {
 		if !strings.Contains(screen, want) && !strings.Contains(text, want) {
@@ -950,7 +950,7 @@ func TestCurrentViewBoard(t *testing.T) {
 	}
 	// W-002 explains its divergence and the pair it could not order.
 	press(m, "esc", "left", "left", "left", "enter")
-	screen = currentText(m.group())
+	screen = currentText(m.group(), "")
 	for _, want := range []string{"Diverging: 2 current states.", `- proposed "Create records" on branch main, checkout . (main)`,
 		`- active "Create records, started" on branch feature, checkout feat (feature)`, "Could not order: branch main and branch feature could not be ordered: example"} {
 		if !strings.Contains(screen, want) {
@@ -973,5 +973,51 @@ func TestCurrentViewBoard(t *testing.T) {
 	press(m, "enter", "down")
 	if press(m, "enter") != nil || !strings.Contains(plain(m), "REFUSED: this record was deleted on that branch") {
 		t.Fatalf("a branch's deletion must not resolve:\n%s", plain(m))
+	}
+}
+
+// TestCurrentViewTarget: with a target, a card none of whose current states
+// the target holds is marked, unless its only current state is uncommitted,
+// and the details say which state is on the target.
+func TestCurrentViewTarget(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	older := func(v versions.Version) versions.Version {
+		v.Older = "branch feature changed it since their common history"
+		return v
+	}
+	var vs []versions.Version
+	for _, s := range []*versions.Source{fx.cMain, fx.main} {
+		vs = append(vs, older(version(s, "W-001", "Inspect records", "proposed")), version(s, "W-002", "Create records", "proposed"),
+			older(version(s, "W-003", "Edit records", "proposed")))
+	}
+	vs = append(vs, version(fx.cFeat, "W-001", "Inspect records", "active"), version(fx.feat, "W-001", "Inspect records", "active"),
+		version(fx.cFeat, "W-002", "Create records", "proposed"), version(fx.feat, "W-002", "Create records", "proposed"),
+		older(version(fx.cFeat, "W-003", "Edit records", "proposed")))
+	edited := version(fx.feat, "W-003", "Edit records", "active")
+	edited.Change, edited.Revision = "modified", "sha256:edited"
+	vs = append(vs, edited)
+	res := result(fx.main, fx.sources(), vs...)
+	res.Target = "main"
+	for _, g := range res.Groups { // as the projection marks them
+		i := slices.IndexFunc(g.Versions, func(v versions.Version) bool { return v.Source == fx.cMain })
+		for j := range g.Versions {
+			g.Versions[j].OnTarget = g.Versions[j].Revision == g.Versions[i].Revision
+		}
+	}
+
+	m := open(t, &fake{res: res}, 120, 30)
+	screen := plain(m)
+	for _, want := range []string{"Board: current view, target main", "W-001  not on main", "W-003  uncommitted"} {
+		if !strings.Contains(screen, want) {
+			t.Fatalf("board lacks %q:\n%s", want, screen)
+		}
+	}
+	if strings.Contains(screen, "W-002  not") || strings.Contains(screen, "uncommitted not on") {
+		t.Fatalf("W-002 is on main, and W-003's state is uncommitted only:\n%s", screen)
+	}
+	press(m, "right", "enter")
+	if text := currentText(m.group(), m.res.Target); !strings.Contains(text, `Current: active "Inspect records" on branch feature, checkout feat (feature), not on main.`) {
+		t.Fatalf("W-001: %s", text)
 	}
 }

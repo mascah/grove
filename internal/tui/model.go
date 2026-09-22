@@ -622,8 +622,10 @@ func (m *Model) cards() (columns [len(statuses)][]card, shelf []card) {
 // state puts the card in its status. Diverging states make one card, marked,
 // in the earliest status among them: the owner's choice, so that work is not
 // shown further along until its branches agree. A state held only by
-// uncommitted files is marked. The shelf holds work whose current state
-// deletes it. A group is work when a current record says so.
+// uncommitted files is marked, and so is a card none of whose committed
+// current states the integration target holds. The target places nothing.
+// The shelf holds work whose current state deletes it. A group is work when
+// a current record says so.
 func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
 	for _, g := range m.res.Groups {
 		states := currentStates(g)
@@ -650,6 +652,10 @@ func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
 		}
 		if uncommitted {
 			tags = append(tags, "uncommitted")
+		}
+		if t := m.res.Target; t != "" && !slices.ContainsFunc(states, func(state []*versions.Version) bool { return state[0].OnTarget }) &&
+			slices.ContainsFunc(states, func(state []*versions.Version) bool { return slices.ContainsFunc(state, committed) }) {
+			tags = append(tags, "not on "+t)
 		}
 		tag := strings.Join(tags, " ")
 		switch {

@@ -54,6 +54,7 @@ type Version struct {
 	HeadPath string // live: the record's path at HEAD when it differs
 	Selector string // "" for deleted rows, which cannot be opened
 	Older    string // why another observation is newer; "" when current (current.go)
+	OnTarget bool   // the target branch holds the same bytes, or lacks the record too; false without a target
 }
 
 // Group holds every observation of one record ID.
@@ -68,6 +69,8 @@ type Result struct {
 	Project, Repository, Prefix string
 	GitDir                      string // root's own worktree: the live source with this Git directory
 	Complete                    bool   // every source is valid or absent
+	Target                      string // the integration target branch grove.yaml names; "" when none applies (current.go)
+	Notes                       []string
 	Sources                     []*Source
 	Groups                      []Group
 }

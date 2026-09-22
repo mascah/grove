@@ -29,6 +29,12 @@ func runVersions(root string, a invocation, out, errOut io.Writer) int {
 			fmt.Fprintf(errOut, "  %s\n", visible(d))
 		}
 	}
+	if res.Target != "" {
+		fmt.Fprintf(errOut, "Target: %s\n", visible(res.Target))
+	}
+	for _, n := range res.Notes {
+		fmt.Fprintf(errOut, "Target: %s\n", visible(n))
+	}
 	for _, g := range res.Groups {
 		for _, n := range g.Notes {
 			fmt.Fprintf(errOut, "%s: %s\n", g.ID, visible(n))
@@ -49,7 +55,7 @@ func runVersions(root string, a invocation, out, errOut io.Writer) int {
 	} else {
 		var buffer bytes.Buffer
 		table := tabwriter.NewWriter(&buffer, 0, 4, 2, ' ', 0)
-		fmt.Fprintln(table, "ID\tSTATUS\tSOURCE\tCHANGE\tCURRENT\tSELECTOR")
+		fmt.Fprintln(table, "ID\tSTATUS\tSOURCE\tCHANGE\tCURRENT\tTARGET\tSELECTOR")
 		for _, g := range res.Groups {
 			for _, v := range g.Versions {
 				status, change := "-", "-"
@@ -63,7 +69,11 @@ func runVersions(root string, a invocation, out, errOut io.Writer) int {
 				if v.Older != "" {
 					current = "older"
 				}
-				fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%s\t%s\n", g.ID, visible(status), visible(sourceCell(v.Source)), change, current, cmp.Or(v.Selector, "-"))
+				onTarget := "-"
+				if res.Target != "" {
+					onTarget = map[bool]string{true: "yes", false: "no"}[v.OnTarget]
+				}
+				fmt.Fprintf(table, "%s\t%s\t%s\t%s\t%s\t%s\t%s\n", g.ID, visible(status), visible(sourceCell(v.Source)), change, current, onTarget, cmp.Or(v.Selector, "-"))
 			}
 		}
 		table.Flush()
@@ -122,6 +132,10 @@ func versionsJSON(res *versions.Result) map[string]any {
 			if v.Older != "" {
 				o["older"] = v.Older
 			}
+			o["on_target"] = nil
+			if res.Target != "" {
+				o["on_target"] = v.OnTarget
+			}
 			if v.Change != "" {
 				o["change"] = v.Change
 			}
@@ -137,9 +151,14 @@ func versionsJSON(res *versions.Result) map[string]any {
 		notes := make([]string, 0, len(g.Notes))
 		records = append(records, map[string]any{"id": g.ID, "versions": vs, "notes": append(notes, g.Notes...)})
 	}
+	var target any // null without a target
+	if res.Target != "" {
+		target = res.Target
+	}
 	return map[string]any{
 		"project": res.Project, "repository": res.Repository, "prefix": res.Prefix,
 		"complete": res.Complete, "sources": sources, "records": records,
+		"target": target, "notes": append(make([]string, 0, len(res.Notes)), res.Notes...),
 	}
 }
 

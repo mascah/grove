@@ -17,6 +17,7 @@ type Project struct {
 	RecordDir string // configured record folder, relative to Root
 	Config    []byte // exact grove.yaml bytes
 	Brief     string // configured brief, relative to Root with forward slashes; "" when none
+	Target    string // configured integration target branch; "" when none
 	Records   []*Record
 }
 
@@ -49,12 +50,11 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 		return p, []Diagnostic{{Path: "grove.yaml", Message: err.Error()}}
 	}
 	p.Config = source
-	config, recordDir, brief := parseConfig(source, func(dir string) error { return checkRecordRoot(fsys, dir) })
+	config, recordDir, brief, target := parseConfig(source, func(dir string) error { return checkRecordRoot(fsys, dir) })
 	if len(config.errors) != 0 {
 		return p, sortedDiagnostics(config.errors)
 	}
-	p.RecordDir = recordDir
-	p.Brief = brief
+	p.RecordDir, p.Brief, p.Target = recordDir, brief, target
 	recordRoot := path.Clean(filepath.ToSlash(recordDir))
 	var ds []Diagnostic
 	err = fs.WalkDir(fsys, recordRoot, func(relative string, entry fs.DirEntry, walkErr error) error {
@@ -106,13 +106,15 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 // clean brief path it names, with the diagnostics LoadFS would give short of
 // whether the folder exists on disk.
 func ParseConfig(source []byte) (recordDir, brief string, ds []Diagnostic) {
-	config, recordDir, brief := parseConfig(source, nil)
+	config, recordDir, brief, _ := parseConfig(source, nil)
 	return recordDir, brief, sortedDiagnostics(config.errors)
 }
 
 // parseConfig is the configuration half of LoadFS; checkRoot, when given,
-// inspects the record folder in the order LoadFS always has.
-func parseConfig(source []byte, checkRoot func(string) error) (config *metadata, recordDir, brief string) {
+// inspects the record folder in the order LoadFS always has. The target is
+// only compared with branch names, never passed to Git, so any nonempty
+// string is accepted.
+func parseConfig(source []byte, checkRoot func(string) error) (config *metadata, recordDir, brief, target string) {
 	config = parseMapping("grove.yaml", source, 0)
 	version, ok := config.integerField("schema_version", true)
 	if ok && version != 3 {
@@ -120,11 +122,12 @@ func parseConfig(source []byte, checkRoot func(string) error) (config *metadata,
 	}
 	recordDir = config.stringField("records", true)
 	for key := range config.fields {
-		if key != "schema_version" && key != "records" && key != "brief" {
+		if key != "schema_version" && key != "records" && key != "brief" && key != "target" {
 			config.problem(key, "unknown configuration key")
 		}
 	}
 	brief = config.stringField("brief", false)
+	target = config.stringField("target", false)
 	if recordDir != "" {
 		if !dedicated(recordDir) {
 			config.problem("records", "must name a dedicated relative subdirectory without .. components")
@@ -135,7 +138,7 @@ func parseConfig(source []byte, checkRoot func(string) error) (config *metadata,
 		}
 	}
 	if len(config.errors) != 0 {
-		return config, recordDir, ""
+		return config, recordDir, "", ""
 	}
 	if brief != "" {
 		clean := path.Clean(filepath.ToSlash(brief))
@@ -144,7 +147,7 @@ func parseConfig(source []byte, checkRoot func(string) error) (config *metadata,
 		}
 		brief = clean
 	}
-	return config, recordDir, brief
+	return config, recordDir, brief, target
 }
 
 func dedicated(recordDir string) bool {

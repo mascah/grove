@@ -310,6 +310,27 @@ func briefFixture(t *testing.T, config string) string {
 	return root
 }
 
+func TestTarget(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ name, config, target, want string }{
+		{"none", "", "", ""},
+		{"a branch", "target: main\n", "main", ""},
+		{"empty", "target: \"\"\n", "", "target: expected a nonempty string"},
+		{"not a string", "target: [main]\n", "", "target: expected a nonempty string"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			p, ds := Load(briefFixture(t, tc.config), "")
+			if got := diagnostics(ds); tc.want == "" && got != "" || !strings.Contains(got, tc.want) {
+				t.Fatalf("wanted %q; got %s", tc.want, got)
+			}
+			if tc.want == "" && p.Target != tc.target {
+				t.Fatalf("Target = %q, want %q", p.Target, tc.target)
+			}
+		})
+	}
+}
+
 func TestBrief(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct{ name, config, file, want string }{

@@ -77,9 +77,9 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             and Markdown links are never rewritten. A source already converted is\n" +
 	"             refused, reserving nothing.\n" +
 	"  versions   Show each record's committed version on every local branch and live\n" +
-	"             version in every worktree, whether it is current or older, with a\n" +
-	"             selector per version; exit 1 if any source could not be inspected.\n" +
-	"             Reads only; nothing is created.\n" +
+	"             version in every worktree, whether it is current or older and on the\n" +
+	"             integration target, with a selector per version; exit 1 if any source\n" +
+	"             could not be inspected. Reads only; nothing is created.\n" +
 	"  workspace  Print the project directory of the existing checkout holding the\n" +
 	"             version selected by --source (a selector from versions), after\n" +
 	"             checking it is still that version; --json adds checkout, record,\n" +

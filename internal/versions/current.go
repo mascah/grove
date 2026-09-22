@@ -39,9 +39,69 @@ type node struct {
 // branch whose current state is the record's deletion, and notes pairs that
 // could not be ordered. Only groups whose observations differ cost reads.
 func (o *objects) project(res *Result) {
+	t := res.target()
 	for i := range res.Groups {
-		o.projectGroup(res, &res.Groups[i])
+		g := &res.Groups[i]
+		o.projectGroup(res, g)
+		if t == nil {
+			continue
+		}
+		held := "" // the target's bytes, or absence
+		for _, v := range g.Versions {
+			if v.Source == t && v.Record != nil {
+				held = v.Revision
+			}
+		}
+		for j := range g.Versions {
+			v := &g.Versions[j]
+			v.OnTarget = held == v.Revision // a deletion's revision is ""
+		}
 	}
+}
+
+// target finds the integration target: the branch that every valid source
+// naming one in grove.yaml agrees on. A source that names none has no say, so
+// the answer is the same from every checkout, and a branch adding the key
+// works before it merges. It returns the target's source, or nil with a note.
+func (res *Result) target() *Source {
+	var named []string
+	first := map[string]*Source{}
+	for _, s := range res.Sources {
+		if t := s.target(); t != "" && first[t] == nil {
+			first[t] = s
+			named = append(named, t)
+		}
+	}
+	if len(named) == 0 {
+		return nil
+	}
+	if len(named) > 1 {
+		var parts []string
+		for _, t := range named {
+			parts = append(parts, t+" on "+name(first[t]))
+		}
+		res.Notes = append(res.Notes, "grove.yaml names different targets ("+strings.Join(parts, ", ")+"), so none is used")
+		return nil
+	}
+	t := named[0]
+	i := slices.IndexFunc(res.Sources, func(s *Source) bool { return s.Kind == "committed" && s.Ref == "refs/heads/"+t })
+	switch {
+	case i < 0:
+		res.Notes = append(res.Notes, "grove.yaml names target "+t+", which is not a local branch, so none is used")
+		return nil
+	case !res.Sources[i].Valid:
+		res.Notes = append(res.Notes, "target branch "+t+" could not be read, so none is used")
+		return nil
+	}
+	res.Target = t
+	return res.Sources[i]
+}
+
+func (s *Source) target() string {
+	if !s.Valid {
+		return ""
+	}
+	return s.project.Target
 }
 
 func (o *objects) projectGroup(res *Result, g *Group) {

@@ -311,3 +311,55 @@ func TestBaseOfUnborn(t *testing.T) {
 		t.Errorf("got %q, %v", base, err)
 	}
 }
+
+// TestCurrentViewTarget: the target is the branch every grove.yaml naming one
+// agrees on, even before the branch adding the key merges. It labels versions
+// and decides nothing; disagreement or a missing branch leaves none, noted.
+func TestCurrentViewTarget(t *testing.T) {
+	t.Parallel()
+	root := repoFixture(t)
+	target := func(branch string) { write(t, root, "grove.yaml", config+"target: "+branch+"\n") }
+	git(t, root, "checkout", "-q", "-b", "feature")
+	target("main")
+	write(t, root, "grove/work/G-001-first.md", record("G-001", "work", "active", "Main body.\n"))
+	commit(t, root, "name the target and start G-001")
+	git(t, root, "checkout", "-q", "main")
+
+	res := mustInspect(t, root, "")
+	if res.Target != "main" || len(res.Notes) != 0 {
+		t.Fatalf("target %q, notes %q", res.Target, res.Notes)
+	}
+	labels := func(g Group) (got []string) {
+		for _, v := range g.Versions {
+			got = append(got, fmt.Sprintf("%s:%s current=%t on=%t", v.Source.Kind, v.Source.Ref, v.Older == "", v.OnTarget))
+		}
+		return got
+	}
+	want := []string{"committed:refs/heads/feature current=true on=false", "committed:refs/heads/main current=false on=true", "live:refs/heads/main current=false on=true"}
+	if got := labels(group(t, res, "G-001")); !slices.Equal(got, want) {
+		t.Errorf("G-001:\n got %q\nwant %q", got, want)
+	}
+	for _, v := range group(t, res, "G-002").Versions {
+		if !v.OnTarget {
+			t.Errorf("G-002 is the same everywhere, so on the target: %+v", v.Source)
+		}
+	}
+
+	git(t, root, "checkout", "-q", "-b", "other")
+	target("trunk")
+	commit(t, root, "name another target")
+	git(t, root, "checkout", "-q", "main")
+	res = mustInspect(t, root, "")
+	if want := "grove.yaml names different targets (main on branch feature, trunk on branch other), so none is used"; res.Target != "" || !slices.Equal(res.Notes, []string{want}) {
+		t.Errorf("target %q, notes %q", res.Target, res.Notes)
+	}
+	if v := group(t, res, "G-002").Versions[0]; v.OnTarget {
+		t.Error("without a target nothing is on it")
+	}
+
+	git(t, root, "branch", "-q", "-D", "feature")
+	res = mustInspect(t, root, "")
+	if want := "grove.yaml names target trunk, which is not a local branch, so none is used"; res.Target != "" || !slices.Equal(res.Notes, []string{want}) {
+		t.Errorf("target %q, notes %q", res.Target, res.Notes)
+	}
+}

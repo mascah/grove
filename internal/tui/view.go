@@ -185,6 +185,9 @@ func (m *Model) header() string {
 		return "Grove    " + m.root
 	case m.current():
 		text += "current view"
+		if m.res.Target != "" {
+			text += ", target " + m.res.Target
+		}
 	case s == nil:
 		text += "no checkout selected"
 	case !s.Valid:
@@ -503,7 +506,7 @@ func (m *Model) describeRows(w int) []string {
 		for i := range g.Versions {
 			all[i] = &g.Versions[i]
 		}
-		return wrapAll(g.ID+": "+summary(g)+" ("+held(all)+").\n\n"+currentText(g)+"\n\nA version is this record's exact content. Grove read it on every local branch (its committed tip) and in every checkout (its files on disk, committed or not) and lists each differing content once, current ones first.\n\nMove to a row. Enter on ▸ lists the branches and checkouts holding that content; Enter on one of them, or on a row naming a single place, returns the path of the existing checkout to work in.", w)
+		return wrapAll(g.ID+": "+summary(g)+" ("+held(all)+").\n\n"+currentText(g, m.res.Target)+"\n\nA version is this record's exact content. Grove read it on every local branch (its committed tip) and in every checkout (its files on disk, committed or not) and lists each differing content once, current ones first.\n\nMove to a row. Enter on ▸ lists the branches and checkouts holding that content; Enter on one of them, or on a row naming a single place, returns the path of the existing checkout to work in.", w)
 	case r.fold != nil:
 		first := r.fold[0]
 		add("Title", first.Record.Title)
@@ -565,15 +568,15 @@ func (m *Model) describeRows(w int) []string {
 
 // currentText describes a record's current state or states, how many places
 // hold an older copy, and any pair that could not be ordered.
-func currentText(g *versions.Group) string {
+func currentText(g *versions.Group, target string) string {
 	states := currentStates(*g)
 	var b strings.Builder
 	if len(states) == 1 {
-		fmt.Fprintf(&b, "Current: %s.", stateText(states[0]))
+		fmt.Fprintf(&b, "Current: %s.", stateText(states[0], target))
 	} else {
 		fmt.Fprintf(&b, "Diverging: %d current states. None is known to replace the others: each changed this record since they split from a common commit, or their order could not be read (below). The card sits in the earliest status among them until one side takes the other's change, by a merge or an edit.", len(states))
 		for _, state := range states {
-			b.WriteString("\n  - " + stateText(state))
+			b.WriteString("\n  - " + stateText(state, target))
 		}
 	}
 	n := 0
@@ -591,8 +594,9 @@ func currentText(g *versions.Group) string {
 	return b.String()
 }
 
-// stateText names one current state and where it is held.
-func stateText(state []*versions.Version) string {
+// stateText names one current state, where it is held, and whether the
+// integration target holds it.
+func stateText(state []*versions.Version, target string) string {
 	text := "deleted"
 	if r := state[0].Record; r != nil {
 		text = r.Status + " \"" + r.Title + "\""
@@ -606,8 +610,14 @@ func stateText(state []*versions.Version) string {
 		names = strings.Join(labels, ", ")
 	}
 	text += " on " + names
-	if !slices.ContainsFunc(state, committed) {
+	switch {
+	case !slices.ContainsFunc(state, committed):
 		text += ", uncommitted"
+	case target == "":
+	case state[0].OnTarget:
+		text += ", on " + target
+	default:
+		text += ", not on " + target
 	}
 	return text
 }
@@ -639,6 +649,12 @@ func (m *Model) chooserBody(w, n int) []string {
 
 func (m *Model) sourceRows(w int) []string {
 	rows := []string{bold(line("Branches and checkouts read in "+m.res.Repository, w))}
+	if m.res.Target != "" {
+		rows = append(rows, line("Target: "+m.res.Target+", named in grove.yaml", w))
+	}
+	for _, n := range m.res.Notes {
+		rows = append(rows, wrapAll("Target: "+n, w)...)
+	}
 	for _, s := range m.res.Sources {
 		state := "valid"
 		if !s.Valid {

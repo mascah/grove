@@ -73,6 +73,42 @@ func TestVersionsLeavesGitUnchanged(t *testing.T) {
 	}
 }
 
+// TestVersionsTargetCLI: a target named on the feature branch alone applies
+// before it merges, and each row says whether the target holds its bytes.
+func TestVersionsTargetCLI(t *testing.T) {
+	t.Parallel()
+	root, wt := featureFixture(t)
+	write(t, wt, "grove.yaml", "schema_version: 3\nrecords: docs/records\ntarget: main\n")
+	gitIn(t, wt, "commit", "-q", "-am", "name the target")
+	var out, errOut bytes.Buffer
+	if code := Run([]string{"versions", "G-001"}, root, &out, &errOut); code != 0 {
+		t.Fatal(errOut.String())
+	}
+	var got []string
+	for _, row := range rowsOf(out.String())[1:] {
+		got = append(got, row[2]+" "+row[4]+" "+row[5])
+	}
+	want := []string{"committed refs/heads/feature yes no", "committed refs/heads/main older yes", "live . refs/heads/main older yes", "live feature-wt refs/heads/feature yes no"}
+	if !reflect.DeepEqual(got, want) || !strings.Contains(errOut.String(), "Target: main\n") {
+		t.Fatalf("rows %q\nstderr:\n%s", got, errOut.String())
+	}
+	out.Reset()
+	if code := Run([]string{"versions", "G-001", "--json"}, root, &out, &errOut); code != 0 {
+		t.Fatal(errOut.String())
+	}
+	var j struct {
+		Target  any
+		Notes   []string
+		Records []struct{ Versions []map[string]any }
+	}
+	if err := json.Unmarshal(out.Bytes(), &j); err != nil {
+		t.Fatal(err)
+	}
+	if j.Target != "main" || j.Notes == nil || j.Records[0].Versions[0]["on_target"] != false || j.Records[0].Versions[1]["on_target"] != true {
+		t.Fatalf("json: %s", out.String())
+	}
+}
+
 func TestVersionsCLI(t *testing.T) {
 	t.Parallel()
 	root, wt := featureFixture(t)
@@ -82,17 +118,17 @@ func TestVersionsCLI(t *testing.T) {
 	}
 	rows := rowsOf(out.String())
 	want := [][]string{
-		{"ID", "STATUS", "SOURCE", "CHANGE", "CURRENT", "SELECTOR"},
-		{"G-001", "active", "committed refs/heads/feature", "-", "yes", "committed:refs/heads/feature@"},
-		{"G-001", "proposed", "committed refs/heads/main", "-", "older", "committed:refs/heads/main@"},
-		{"G-001", "proposed", "live . refs/heads/main", "unchanged", "older", "live:.:refs/heads/main@"},
-		{"G-001", "active", "live feature-wt refs/heads/feature", "unchanged", "yes", "live:feature-wt:refs/heads/feature@"},
+		{"ID", "STATUS", "SOURCE", "CHANGE", "CURRENT", "TARGET", "SELECTOR"},
+		{"G-001", "active", "committed refs/heads/feature", "-", "yes", "-", "committed:refs/heads/feature@"},
+		{"G-001", "proposed", "committed refs/heads/main", "-", "older", "-", "committed:refs/heads/main@"},
+		{"G-001", "proposed", "live . refs/heads/main", "unchanged", "older", "-", "live:.:refs/heads/main@"},
+		{"G-001", "active", "live feature-wt refs/heads/feature", "unchanged", "yes", "-", "live:feature-wt:refs/heads/feature@"},
 	}
 	if len(rows) != len(want) {
 		t.Fatalf("stdout:\n%s", out.String())
 	}
 	for i, row := range rows {
-		if len(row) != 6 || !reflect.DeepEqual(row[:5], want[i][:5]) || !strings.HasPrefix(row[5], want[i][5]) {
+		if len(row) != 7 || !reflect.DeepEqual(row[:6], want[i][:6]) || !strings.HasPrefix(row[6], want[i][6]) {
 			t.Fatalf("row %d: %q, expected %q", i, row, want[i])
 		}
 	}
@@ -126,7 +162,7 @@ func TestVersionsCLI(t *testing.T) {
 		live["path"] != "docs/records/work/renamed.md" || live["status"] != "active" || live["type"] != "work" || live["title"] != "Inspect records" ||
 		!strings.HasPrefix(live["selector"].(string), "live:feature-wt:refs/heads/feature@") || live["source"] != strings.Replace(work, "status: proposed", "status: active", 1) ||
 		!strings.HasPrefix(live["revision"].(string), "sha256:") || !strings.HasPrefix(live["config_revision"].(string), "sha256:") || live["detached"] != false ||
-		live["current"] != true || live["older"] != nil {
+		live["current"] != true || live["older"] != nil || live["on_target"] != nil { // null without a target
 		t.Fatalf("live version: %v", live)
 	}
 	if committed := got.Records[0].Versions[1]; committed["ref"] != "refs/heads/main" || committed["status"] != "proposed" || committed["change"] != nil || committed["worktree"] != nil ||
@@ -157,7 +193,7 @@ func TestVersionsCLI(t *testing.T) {
 	rows = rowsOf(out.String())
 	last := rows[len(rows)-1]
 	revision := strings.TrimPrefix(showJSON(t, root, "G-002")["revision"].(string), "sha256:")[:12]
-	if !reflect.DeepEqual(last[:5], []string{"G-002", "open", "live odd-wt detached", "unchanged", "yes"}) || !strings.HasPrefix(last[5], "live:odd-wt:detached@"+gitIn(t, odd, "rev-parse", "HEAD")[:12]+":G-002@"+revision+":") {
+	if !reflect.DeepEqual(last[:6], []string{"G-002", "open", "live odd-wt detached", "unchanged", "yes", "-"}) || !strings.HasPrefix(last[6], "live:odd-wt:detached@"+gitIn(t, odd, "rev-parse", "HEAD")[:12]+":G-002@"+revision+":") {
 		t.Fatalf("detached row: %q", last)
 	}
 }

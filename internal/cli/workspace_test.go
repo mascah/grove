@@ -43,8 +43,8 @@ func versionSelector(t *testing.T, dir, id, where string) string {
 		t.Fatal(errOut.String())
 	}
 	for _, row := range rowsOf(out.String()) {
-		if len(row) == 6 && row[2] == where {
-			return row[5]
+		if len(row) == 7 && row[2] == where {
+			return row[6]
 		}
 	}
 	t.Fatalf("no %s row for %s in\n%s", where, id, out.String())
