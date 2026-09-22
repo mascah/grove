@@ -388,8 +388,11 @@ func publish(root string, snapshot *project.Project, idx int, candidate []byte, 
 			if err != nil {
 				return err
 			}
-			if !after.Mode().IsRegular() || !os.SameFile(before, after) || after.Mode().Perm() != before.Mode().Perm() {
-				return errors.New("the file was replaced or its permissions changed")
+			// A filesystem such as ext4 reuses a freed inode number at once, so a
+			// file removed and recreated can satisfy SameFile; its modification
+			// time still tells (G-089, found by CI on Linux).
+			if !after.Mode().IsRegular() || !os.SameFile(before, after) || !after.ModTime().Equal(before.ModTime()) || after.Mode().Perm() != before.Mode().Perm() {
+				return errors.New("the file was replaced, rewritten, or its permissions changed")
 			}
 			return nil
 		}},
