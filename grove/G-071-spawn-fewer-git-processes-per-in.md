@@ -2,9 +2,9 @@
 id: "G-071"
 type: work
 title: "Spawn fewer Git processes per inspection"
-status: proposed
+status: active
 created: "2026-09-22T03:19:16Z"
-updated: "2026-09-22T03:19:42Z"
+updated: "2026-09-22T03:28:39Z"
 kind: refactor
 size: medium
 relates_to: ["G-030", "G-031", "G-052"]
@@ -66,7 +66,71 @@ of worktrees; it does not lower CPU).
 4. The cost notes in `live.go` and `workspace.go` state the new
    per-inspection process count.
 
+## Evidence
+
+Implemented on `worktree-G-071` from main `5c637b4`, code in `418e3d2`.
+Design as proposed, with one addition found while measuring: skipping the
+second inventory's re-entry was needed to reach half, since one process
+per checkout at each read still left about 1,200 `rev-parse`.
+
+- The root's `--git-dir` rides on the one `rev-parse` that locates the
+  repository (`repo.IdentifyContext`).
+- `readWorktree` enters and owns a checkout with one `rev-parse` in the
+  record folder: Git's prefix there, with a matching common directory and
+  a main- or linked-shaped Git directory, proves every directory above it.
+  Any mismatch, prunable entry, symlink, missing or invalid project takes
+  the old step-by-step path, so diagnostics keep their wording and order.
+- `Source.unchanged` skips the re-entry after the second inventory when
+  the `.git` entry at the root, its `commondir`, the absence of `.git` or
+  `HEAD` in the directories down to the project, the walk to the project
+  and the `grove.yaml` bytes all read as before; otherwise the old
+  re-entry runs and reports as before.
+
+Acceptance 1, `GIT_TRACE` over `go test -short -count=1 ./internal/versions`
+on this machine, 2026-09-21:
+
+| | before (`fb2b398`) | after (`418e3d2`) |
+| --- | --- | --- |
+| `rev-parse --path-format=absolute …` | 2,001 | 640 |
+| `worktree list` | 338 | 338 |
+| `cat-file` | 186 | 186 |
+| `for-each-ref` | 150 | 150 |
+| all Git processes | 3,607 | 2,209 |
+
+One `versions G-071` on this repository (three worktrees, project at the
+root): 15 processes to 8. After: one `rev-parse` for the root, one per
+checkout, two `worktree list`, one `for-each-ref`, one `cat-file`.
+
+Acceptance 2: `go test -count=1 ./internal/versions` three times: 4.63 s,
+4.55 s, 4.59 s (8.1 s before). `go test -count=1 -timeout 120s ./...`
+passed in one run; no test or fixture was changed for speed.
+
+Acceptance 3: every test in `internal/versions`, `internal/cli` and
+`internal/tui` passes; the symlink, foreign-repository, moved-worktree and
+change-between-reads cases keep their diagnostics. One test was changed in
+scenario, not for speed: `TestCancellationKillsGitAndWritesNothing`'s
+"re-entering a worktree after the second inventory" blocked a Git process
+that an unchanged checkout no longer starts, so it now plants a `HEAD`
+file in the project directory between the reads. New tests:
+`TestInspectIdentityChangedDuringRead` (a repository begun in the project
+directory, the checkout root symlinked, the checkout replaced by a foreign
+one, and `commondir` repointed while the branch and commit stay the same,
+each between the reads) and `TestInspectWorktreeReplacedBySymlink`.
+
+Acceptance 4: the notes on `identity` in `live.go` and `Resolve` in
+`workspace.go` state the new counts.
+
+Independent review: [G-072](G-072-g-071-process-count-review.md). Round 1
+found that the one-process path had dropped the check that the registered
+path is itself a directory, so a symlink at it was admitted; fixed in
+`418e3d2` with the two symlink tests above. Round 2 on `418e3d2` found
+nothing consequential; `9a69223` adds the same case to the final-check
+table. Process counts here are from `GIT_TRACE`; the reviewer's wrapper
+counts all processes about 5% higher and agrees on `rev-parse`.
+
 ## Next
 
-Assign. Needs no plan: the change is inside `internal/versions` and
-`internal/repo`, and the evidence is the traced process count.
+Owner's judgment on acceptance 3: the cancellation scenario above could not
+pass unchanged once an unchanged checkout is not re-entered, which the
+proposed design asked for. If that reading is accepted, mark done; nothing
+else is open. Then integrate `worktree-G-071` (fast-forward onto main).
