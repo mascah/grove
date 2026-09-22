@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/mascah/grove/internal/versions"
@@ -15,9 +16,65 @@ import (
 
 const (
 	minWidth, minHeight = 40, 10
-	wideWidth           = 100 // five columns, and rows beside details
-	cardRows            = 3   // ID, title, gap
+	wideWidth           = 100 // every column side by side, and rows beside details
+	cardHeight          = 6   // a bordered box: ID and tag, two title rows, metadata
 )
+
+// accents colour each status column from the ANSI 16 palette, which follows
+// the terminal's theme. Colour is an accent only: focus has its heavy border
+// and marker, and every tag is text.
+var accents = [len(statuses)]lipgloss.Style{
+	lipgloss.NewStyle().Foreground(lipgloss.Color("4")),
+	lipgloss.NewStyle().Foreground(lipgloss.Color("3")),
+	lipgloss.NewStyle().Foreground(lipgloss.Color("5")),
+	lipgloss.NewStyle().Foreground(lipgloss.Color("2")),
+	lipgloss.NewStyle().Foreground(lipgloss.Color("8")),
+}
+
+// cardBox draws one card as a bordered box of rows rows and w cells: its ID
+// with any tag at the right, the title on two rows, and the metadata row
+// unless rows leaves no room. The focused card has a heavy border and a
+// marker before its ID.
+func cardBox(c card, focused bool, accent lipgloss.Style, rows, w int) []string {
+	iw := max(w-2, 1)
+	b := lipgloss.RoundedBorder()
+	if focused {
+		b, accent = lipgloss.ThickBorder(), accent.Bold(true)
+	}
+	edge := func(l, mid, r string) string { return accent.Render(l + strings.Repeat(mid, iw) + r) }
+	side := accent.Render(b.Left)
+	id := " " + c.id
+	if focused {
+		id = "▶" + c.id
+	}
+	first := line(id, iw)
+	if tw := ansi.StringWidth(safe(c.tag)); c.tag != "" && ansi.StringWidth(safe(id))+2+tw <= iw {
+		first = line(id, iw-tw-1) + " " + line(c.tag, tw)
+	} else if c.tag != "" {
+		first = line(id+"  "+c.tag, iw)
+	}
+	if focused {
+		first = bold(first)
+	}
+	title := wrap(c.title, iw-1)
+	if rows < cardHeight {
+		title = title[:1]
+	} else if len(title) > 2 {
+		title[1] = line(strings.TrimRight(title[1], " ")+"…", iw-1)
+	}
+	inner := []string{first}
+	for _, t := range fit(title, min(rows-3, 2), iw-1) {
+		inner = append(inner, " "+t)
+	}
+	if rows >= cardHeight {
+		inner = append(inner, " "+line(c.meta, iw-1))
+	}
+	out := []string{edge(b.TopLeft, b.Top, b.TopRight)}
+	for _, r := range inner {
+		out = append(out, side+r+side)
+	}
+	return append(out, edge(b.BottomLeft, b.Bottom, b.BottomRight))
+}
 
 // safe makes text from records, paths, and Git inert for a terminal. Controls
 // (ESC, C0, C1), format characters such as bidirectional overrides, and
@@ -168,10 +225,10 @@ func (m *Model) render() string {
 			shelf = "deleted"
 		}
 		rows, hints = m.boardBody(w, body), pick(w,
-			"←/→ columns   ↑/↓ cards   Enter open card   Tab "+shelf+"   b view or checkout   s what was read   r refresh   q quit",
-			"←→↑↓ move  Enter open card  Tab "+shelf+"  b view or checkout  s  r refresh  q quit",
-			"←→↑↓  Enter open  Tab "+shelf+"  b view  r  q quit",
-			"Enter open  Tab b s r  q quit")
+			"←/→ columns   ↑/↓ cards   Enter open   / search   a abandoned   Tab "+shelf+"   b view or checkout   s sources   r refresh   q quit",
+			"←→↑↓ move  Enter open  / search  a abandoned  Tab "+shelf+"  b view or checkout  s  r  q quit",
+			"←→↑↓  Enter open  / search  a  Tab "+shelf+"  b  s  r  q quit",
+			"Enter open  / a Tab b s r  q quit")
 	}
 	out := append([]string{bold(line(m.header(), w)), line(m.banner(), w)}, fit(rows, body, w)...)
 	return strings.Join(append(out, line(hints, w)), "\n")
@@ -233,7 +290,7 @@ func (m *Model) emptyBody(w int) []string {
 }
 
 func (m *Model) boardBody(w, n int) []string {
-	columns, shelf := m.cards()
+	columns, shelf, older := m.bounded()
 	shelfName, shelfWhy := "Elsewhere", "not in this checkout"
 	if m.current() {
 		shelfName, shelfWhy = "Deleted", "the current state removes the record"
@@ -265,6 +322,13 @@ func (m *Model) boardBody(w, n int) []string {
 		}
 		shelfRow = fmt.Sprintf("%s (%d, %s; Tab): %s", shelfName, len(shelf), shelfWhy, strings.Join(items, "  "))
 	}
+	// The hidden column is counted at the shelf row's end, so nothing is
+	// silently missing; a long shelf gives way to it.
+	note := "a hides Abandoned"
+	if !m.showAbandoned {
+		note = fmt.Sprintf("Abandoned %d hidden · a shows", len(columns[len(statuses)-1]))
+	}
+	shelfRow = line(shelfRow, w-ansi.StringWidth(note)-2) + "  " + note
 	area := n - 2 // a heading row above, the shelf row below
 	var rows []string
 	if s := m.boardSource(); !m.current() && (s == nil || !s.Valid) {
@@ -275,16 +339,16 @@ func (m *Model) boardBody(w, n int) []string {
 			}
 		}
 		rows = fit(rows, n-1, w)
-	} else if w >= wideWidth {
-		heads := make([]string, len(statuses))
-		cells := make([][]string, len(statuses))
-		for i := range statuses {
-			cw := w / len(statuses)
-			if i == len(statuses)-1 {
-				cw = w - i*cw
+	} else if vis := m.visible(); w >= wideWidth {
+		heads := make([]string, len(vis))
+		cells := make([][]string, len(vis))
+		for j, i := range vis {
+			cw := w / len(vis)
+			if j == len(vis)-1 {
+				cw = w - j*cw
 			}
-			heads[i] = bold(line(fmt.Sprintf("%s (%d)", title(statuses[i]), len(columns[i])), cw-1)) + " "
-			cells[i] = m.column(columns[i], i == m.col, cw-1, area)
+			heads[j] = accents[i].Bold(true).Render(line(m.heading(i, len(columns[i]), older), cw-1)) + " "
+			cells[j] = m.column(columns[i], i, i == m.col, older, cw-1, area)
 		}
 		rows = []string{strings.Join(heads, "")}
 		for r := range area {
@@ -296,27 +360,41 @@ func (m *Model) boardBody(w, n int) []string {
 		}
 	} else {
 		var tabs []string
-		for i, status := range statuses {
-			name := title(status)
+		for _, i := range vis {
+			name := title(statuses[i])
 			if w < 60 {
 				name = shortNames[i]
 			}
 			tab := fmt.Sprintf("%s %d", name, len(columns[i]))
+			if i == doneColumn {
+				tab = fmt.Sprintf("%s %d", name, len(columns[i])+older)
+			}
 			if i == m.col {
 				tab = "[" + tab + "]"
 			}
 			tabs = append(tabs, tab)
 		}
-		rows = append([]string{bold(line(strings.Join(tabs, " "), w))}, m.column(columns[m.col], true, w, area)...)
+		rows = append([]string{bold(line(strings.Join(tabs, " "), w))}, m.column(columns[m.col], m.col, true, older, w, area)...)
 	}
 	return append(rows, line(shelfRow, w))
+}
+
+// heading names a column with its count; Done also says how many of its
+// cards the page shows.
+func (m *Model) heading(status, n, older int) string {
+	if status == doneColumn && older > 0 {
+		return fmt.Sprintf("%s %d · %d recent", title(statuses[status]), n+older, n)
+	}
+	return fmt.Sprintf("%s %d", title(statuses[status]), n)
 }
 
 // shortNames abbreviates the column names for narrow terminals, one per status.
 var shortNames = [len(statuses)]string{"Prop", "Act", "Rev", "Done", "Aban"}
 
-// column renders one status column to exactly n rows.
-func (m *Model) column(cards []card, focused bool, w, n int) []string {
+// column renders one status column to exactly n rows: a page of cards, with
+// the counts beyond it, or for Done the count its bound cut off and how to
+// reach them.
+func (m *Model) column(cards []card, status int, focused bool, older, w, n int) []string {
 	if len(cards) == 0 {
 		return fit([]string{line("  (none)", w)}, n, w)
 	}
@@ -327,9 +405,13 @@ func (m *Model) column(cards []card, focused bool, w, n int) []string {
 		if on {
 			at = i
 		}
-		rows = append(rows, mark(on, strings.TrimRight(c.id+"  "+c.tag, " "), w), mark(on, c.title, w), line("", w))
+		rows = append(rows, cardBox(c, on, accents[status], m.cardRows(), w)...)
 	}
-	return window(rows, at, (n-2)/cardRows, cardRows, n, w)
+	out := window(rows, at, m.pageSize(status), m.cardRows(), n, w)
+	if status == doneColumn && older > 0 {
+		out = append(fit(out, n-1, w), line(fmt.Sprintf("  + %d older · / to search", older), w))
+	}
+	return out
 }
 
 func (m *Model) versionsBody(w, n int) []string {

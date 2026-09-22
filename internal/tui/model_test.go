@@ -198,6 +198,23 @@ func ids(cards []card) string {
 	return strings.Join(out, ",")
 }
 
+// onRow reports a card's ID row holding text after the ID, inside the card's
+// own box: what follows the ID up to the next border.
+func onRow(screen, id, text string) bool {
+	for _, r := range strings.Split(screen, "\n") {
+		if i := strings.Index(r, id); i >= 0 {
+			cell := r[i:]
+			if j := strings.IndexAny(cell, "│┃"); j >= 0 {
+				cell = cell[:j]
+			}
+			if strings.Contains(cell, text) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func board(m *Model) string {
 	columns, shelf := m.cards()
 	var parts []string
@@ -415,12 +432,15 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 		t.Fatalf("main board:\n got %s\nwant %s", got, want)
 	}
 	screen := plain(m)
-	for _, want := range []string{"Board: checkout . (main)", "read 2 branches, 2 checkouts", "Inspect records", "W-001  2 versions", "Elsewhere (1", "): W-010 ", "Done (0)", "(none)"} {
+	for _, want := range []string{"Board: checkout . (main)", "read 2 branches, 2 checkouts", "Inspect records", "Elsewhere (1", "): W-010 ", "Done 0", "(none)"} {
 		if !strings.Contains(screen, want) {
 			t.Fatalf("board lacks %q:\n%s", want, screen)
 		}
 	}
-	for _, unwanted := range []string{"Q-001", "D-001", "Which version", "finished", "Only on feature", "W-002  2", "W-010 ["} {
+	if !onRow(screen, "W-001", "2 versions") || onRow(screen, "W-002", "versions") {
+		t.Fatalf("W-001 alone has differing versions:\n%s", screen)
+	}
+	for _, unwanted := range []string{"Q-001", "D-001", "Which version", "finished", "Only on feature", "W-010 ["} {
 		if strings.Contains(screen, unwanted) {
 			t.Fatalf("main's board shows %q:\n%s", unwanted, screen)
 		}
@@ -430,7 +450,7 @@ func TestBoardComesFromOneLiveSource(t *testing.T) {
 	if got, want := board(m), "proposed=W-002,W-010 active= review= done=W-001 abandoned= shelf="; got != want {
 		t.Fatalf("feature board:\n got %s\nwant %s", got, want)
 	}
-	if screen = plain(m); !strings.Contains(screen, "Board: checkout feat (feature)") || !strings.Contains(screen, "Inspect records, fin…") { // five columns at 120 cells leave 23 for a title
+	if screen = plain(m); !strings.Contains(screen, "Board: checkout feat (feature)") || !strings.Contains(screen, "Inspect records, finished") {
 		t.Fatalf("the feature board should carry feature's label and titles:\n%s", screen)
 	}
 	if f.inspects != 1 || len(f.resolved) != 0 {
@@ -451,7 +471,7 @@ func TestContextStates(t *testing.T) {
 	fx := newFixture()
 	empty := result(fx.main, fx.sources(), version(fx.main, "Q-001", "Which version?", "resolved"))
 	m := open(t, &fake{res: empty}, 120, 30)
-	if s := plain(m); !strings.Contains(s, "Proposed (0)") || strings.Contains(s, "No board") {
+	if s := plain(m); !strings.Contains(s, "Proposed 0") || strings.Contains(s, "No board") {
 		t.Fatalf("a valid checkout without work is an empty board:\n%s", s)
 	}
 
@@ -471,7 +491,7 @@ func TestContextStates(t *testing.T) {
 			t.Fatalf("invalid context lacks %q:\n%s", want, s)
 		}
 	}
-	if strings.Contains(s, "Proposed (") {
+	if strings.Contains(s, "Proposed ") {
 		t.Fatalf("an invalid context must not draw columns:\n%s", s)
 	}
 	// The valid subset stays selectable, and the invalid source cannot be chosen.
@@ -549,7 +569,7 @@ func TestRefreshFollowsIdentityNotPosition(t *testing.T) {
 	moved.main.Ref = "refs/heads/other"
 	f.res = result(moved.main, moved.sources(), version(moved.main, "W-003", "Newcomer", "active"))
 	deliver(m, press(m, "r"))
-	if s := plain(m); m.hasBoard || !strings.Contains(s, "changed branch, moved, or was removed") || strings.Contains(s, "Active (") {
+	if s := plain(m); m.hasBoard || !strings.Contains(s, "changed branch, moved, or was removed") || strings.Contains(s, "Active ") {
 		t.Fatalf("a changed context identity must require a new choice:\n%s", s)
 	}
 	if deliver(m, press(m, "r")); m.hasBoard {
@@ -586,13 +606,22 @@ func TestLayoutAtEverySize(t *testing.T) {
 		}
 		check("board")
 		s := plain(m)
-		if wide := strings.Contains(s, "Proposed (2)") && strings.Contains(s, "Abandoned (0)"); wide != (w >= wideWidth) {
-			t.Fatalf("%dx%d: five columns = %v:\n%s", w, h, wide, s)
+		if wide := strings.Contains(s, "Proposed 2") && strings.Contains(s, "Done 0") && !strings.Contains(s, "[Proposed"); wide != (w >= wideWidth) {
+			t.Fatalf("%dx%d: columns side by side = %v:\n%s", w, h, wide, s)
 		}
+		if strings.Count(s, "Aban") != 1 || !strings.Contains(s, "Abandoned 0 hidden") {
+			t.Fatalf("%dx%d: Abandoned is hidden until asked for:\n%s", w, h, s)
+		}
+		press(m, "a")
+		check("abandoned shown")
+		if s := plain(m); !(strings.Contains(s, "Abandoned 0") || strings.Contains(s, "Aban 0")) || strings.Contains(s, "hidden") {
+			t.Fatalf("%dx%d: a should add the Abandoned column:\n%s", w, h, s)
+		}
+		press(m, "a")
 		if w < wideWidth {
-			tabs := "[Proposed 2] Active 1 Review 0 Done 0 Abandoned 0"
+			tabs := "[Proposed 2] Active 1 Review 0 Done 0"
 			if w < 60 {
-				tabs = "[Prop 2] Act 1 Rev 0 Done 0 Aban 0"
+				tabs = "[Prop 2] Act 1 Rev 0 Done 0"
 			}
 			if !strings.Contains(s, tabs) || strings.Contains(s, "Inspect records") {
 				t.Fatalf("%dx%d: want tabs %q and only the focused column:\n%s", w, h, tabs, s)
@@ -632,7 +661,7 @@ func TestLayoutAtEverySize(t *testing.T) {
 		t.Fatalf("below the minimum height:\n%s", s)
 	}
 	m.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
-	if s := plain(m); !strings.Contains(s, "Proposed (2)") {
+	if s := plain(m); !strings.Contains(s, "Proposed 2") {
 		t.Fatalf("resizing back should redraw the board:\n%s", s)
 	}
 }
@@ -663,7 +692,7 @@ func TestEverythingStaysReachable(t *testing.T) {
 		chooseCheckout(m, 0) // the shelf of a checkout's board
 		focusedRow := func(id string) bool {
 			for _, r := range strings.Split(plain(m), "\n") {
-				if strings.Contains(r, "> "+id) {
+				if strings.Contains(r, "> "+id) || strings.Contains(r, "▶"+id) {
 					return true
 				}
 			}
@@ -742,10 +771,7 @@ func TestHostileTextIsInert(t *testing.T) {
 		deliver(m, m.Init())
 		check := func(where string) {
 			t.Helper()
-			out := m.render()
-			for _, own := range []string{"\x1b[7m", "\x1b[1m", "\x1b[m"} {
-				out = strings.ReplaceAll(out, own, "")
-			}
+			out := sgr.ReplaceAllString(m.render(), "") // the interface's own styles
 			if !utf8.ValidString(out) {
 				t.Fatalf("%v %s: invalid UTF-8 reached the screen", size, where)
 			}
@@ -920,10 +946,13 @@ func TestCurrentViewBoard(t *testing.T) {
 		t.Fatalf("current view:\n got %s\nwant %s", got, want)
 	}
 	screen := plain(m)
-	for _, want := range []string{"Board: current view", "W-002  ⑂ 2 states", "Create records", "W-003  uncommitted", "Inspect records, fin…", "Deleted (2, the current state removes the record; Tab): W-004  W-005 [uncommitted]"} {
+	for _, want := range []string{"Board: current view", "Create records", "Inspect records, finished", "Deleted (2, the current state removes the record; Tab): W-004  W-005 [uncommitted]"} {
 		if !strings.Contains(screen, want) {
 			t.Fatalf("board lacks %q:\n%s", want, screen)
 		}
+	}
+	if !onRow(screen, "W-002", "⑂ 2 states") || !onRow(screen, "W-003", "uncommitted") {
+		t.Fatalf("cards lack their tags:\n%s", screen)
 	}
 	other := *res
 	other.GitDir = fx.feat.GitDir
@@ -1013,12 +1042,15 @@ func TestCurrentViewTarget(t *testing.T) {
 
 	m := open(t, &fake{res: res}, 120, 30)
 	screen := plain(m)
-	for _, want := range []string{"Board: current view, target main", "W-001  not on main", "W-003  uncommitted", "W-004  ⑂ 2 states", "Tab): W-005 [not on main]"} {
+	for _, want := range []string{"Board: current view, target main", "Tab): W-005 [not on main]"} {
 		if !strings.Contains(screen, want) {
 			t.Fatalf("board lacks %q:\n%s", want, screen)
 		}
 	}
-	if strings.Contains(screen, "W-002  not") || strings.Contains(screen, "uncommitted not on") || strings.Contains(screen, "states not on") {
+	if !onRow(screen, "W-001", "not on main") || !onRow(screen, "W-003", "uncommitted") || !onRow(screen, "W-004", "⑂ 2 states") {
+		t.Fatalf("cards lack their tags:\n%s", screen)
+	}
+	if onRow(screen, "W-002", "not on") || strings.Contains(screen, "uncommitted not on") || strings.Contains(screen, "states not on") {
 		t.Fatalf("W-002 is on main, and W-003's state is uncommitted only:\n%s", screen)
 	}
 	press(m, "right", "enter")

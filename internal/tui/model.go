@@ -7,15 +7,18 @@
 package tui
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/versions"
 )
 
@@ -50,6 +53,35 @@ type card struct {
 	id, title string
 	versions  int    // distinct contents, not the places holding them
 	tag       string // what the card notes beside its ID
+	meta      string // kind, size and priority, or when Done and its candidate
+	rec       *project.Record
+}
+
+// meta is a card's last line: what a glance at the board needs beyond the
+// title. Done work shows when it was last written and its candidate.
+func meta(r *project.Record) string {
+	if r == nil {
+		return ""
+	}
+	var parts []string
+	if r.Status == "done" {
+		if r.Updated != nil {
+			parts = append(parts, "done "+r.Updated.Format("2006-01-02"))
+		}
+		if r.Candidate != "" {
+			parts = append(parts, r.Candidate[:min(len(r.Candidate), 7)])
+		}
+		return strings.Join(parts, " · ")
+	}
+	for _, v := range []string{r.Kind, r.Size} {
+		if v != "" {
+			parts = append(parts, v)
+		}
+	}
+	if r.Priority != nil {
+		parts = append(parts, fmt.Sprintf("P%d", *r.Priority))
+	}
+	return strings.Join(parts, " · ")
 }
 
 // row is one line of a card's version list: a fold standing for several
@@ -136,9 +168,10 @@ type Model struct {
 	md        map[string][]string // rendered Markdown by key and width, for the current result only
 	done      bool                // the session is ending: start nothing more
 
-	board    sourceKey
-	hasBoard bool // a checkout's own board; otherwise the current view
-	lost     bool // the chosen checkout changed identity; b must choose again
+	board         sourceKey
+	hasBoard      bool // a checkout's own board; otherwise the current view
+	lost          bool // the chosen checkout changed identity; b must choose again
+	showAbandoned bool // the Abandoned column is hidden until asked for
 
 	screen, back screen
 	col          int
@@ -376,7 +409,7 @@ func (m *Model) key(k string) tea.Cmd {
 }
 
 func (m *Model) boardKey(k string) tea.Cmd {
-	columns, shelf := m.cards()
+	columns, shelf, _ := m.bounded()
 	list := shelf
 	if !m.onShelf {
 		list = columns[m.col]
@@ -395,12 +428,21 @@ func (m *Model) boardKey(k string) tea.Cmd {
 		focus(list, at+1)
 	case "left", "h", "right", "l":
 		if !m.onShelf {
+			vis := m.visible()
+			i := slices.Index(vis, m.col)
 			if k == "left" || k == "h" {
-				m.col = max(m.col-1, 0)
+				i = max(i-1, 0)
 			} else {
-				m.col = min(m.col+1, len(statuses)-1)
+				i = min(i+1, len(vis)-1)
 			}
+			m.col = vis[i]
 			focus(columns[m.col], at)
+		}
+	case "a":
+		// Abandoned work is hidden by default; showing it adds its column.
+		if m.showAbandoned = !m.showAbandoned; !m.showAbandoned && m.col == len(statuses)-1 {
+			m.col = len(statuses) - 2
+			focus(columns[m.col], 0)
 		}
 	case "tab":
 		if m.onShelf = !m.onShelf && len(shelf) != 0; m.onShelf {
@@ -533,10 +575,10 @@ func (m *Model) current() bool { return !m.hasBoard && !m.lost }
 
 // settleFocus follows the focused card to wherever the new result places it.
 func (m *Model) settleFocus() {
-	columns, shelf := m.cards()
+	columns, shelf, _ := m.bounded()
 	if m.cardID != "" {
-		for i, column := range columns {
-			if slices.ContainsFunc(column, func(c card) bool { return c.id == m.cardID }) {
+		for _, i := range m.visible() {
+			if slices.ContainsFunc(columns[i], func(c card) bool { return c.id == m.cardID }) {
 				m.col, m.onShelf = i, false
 				return
 			}
@@ -554,6 +596,9 @@ func (m *Model) settleFocus() {
 		}
 	}
 	m.cardID, m.onShelf = "", m.onShelf && len(shelf) != 0
+	if !slices.Contains(m.visible(), m.col) {
+		m.col = len(statuses) - 2
+	}
 	if list := columns[m.col]; !m.onShelf && len(list) != 0 {
 		m.cardID = list[0].id
 	} else if m.onShelf {
@@ -608,7 +653,7 @@ func (m *Model) cards() (columns [len(statuses)][]card, shelf []card) {
 				continue
 			}
 			if i := slices.Index(statuses[:], v.Record.Status); i >= 0 {
-				columns[i] = append(columns[i], card{g.ID, v.Record.Title, distinct(g), count("", distinct(g), "")})
+				columns[i] = append(columns[i], card{g.ID, v.Record.Title, distinct(g), count("", distinct(g), ""), meta(v.Record), v.Record})
 				placed = true
 			}
 		}
@@ -616,7 +661,76 @@ func (m *Model) cards() (columns [len(statuses)][]card, shelf []card) {
 			shelf = append(shelf, card{id: g.ID, versions: distinct(g), tag: count("", distinct(g), "")})
 		}
 	}
+	newestFirst(columns[doneColumn])
 	return
+}
+
+const doneColumn = 3
+
+// newestFirst orders Done by when each record was last written, so the
+// bounded column shows the latest work: updated, then created, then the ID.
+func newestFirst(cards []card) {
+	when := func(t *time.Time) int64 {
+		if t == nil {
+			return 0
+		}
+		return t.Unix()
+	}
+	slices.SortStableFunc(cards, func(a, b card) int {
+		if c := cmp.Compare(when(b.rec.Updated), when(a.rec.Updated)); c != 0 {
+			return c
+		}
+		if c := cmp.Compare(when(b.rec.Created), when(a.rec.Created)); c != 0 {
+			return c
+		}
+		return cmp.Compare(len(b.id), len(a.id))*2 + cmp.Compare(b.id, a.id)
+	})
+}
+
+// visible lists the columns on the board: every status but Abandoned, which
+// a hides until asked for.
+func (m *Model) visible() []int {
+	vis := []int{0, 1, 2, 3}
+	if m.showAbandoned {
+		vis = append(vis, 4)
+	}
+	return vis
+}
+
+// bounded is the board as shown: the columns with Done cut to the cards that
+// fit its page, newest first, how many that cut off, and the shelf. Focus
+// never lands on a cut card; search still reaches it.
+func (m *Model) bounded() (columns [len(statuses)][]card, shelf []card, older int) {
+	columns, shelf = m.cards()
+	if per := m.pageSize(doneColumn); len(columns[doneColumn]) > per {
+		older = len(columns[doneColumn]) - per
+		columns[doneColumn] = columns[doneColumn][:per]
+	}
+	return
+}
+
+// columnArea is the rows a column has under the header, banner and column
+// heading and above the shelf row.
+func (m *Model) columnArea() int { return m.height - 3 - 2 }
+
+// pageSize is how many cards one column page holds: two rows are kept for
+// the counts of cards beyond the page, or one for Done's footer, since its
+// bound is its page.
+func (m *Model) pageSize(status int) int {
+	if status == doneColumn {
+		return max((m.columnArea()-1)/m.cardRows(), 1)
+	}
+	return max((m.columnArea()-2)/m.cardRows(), 1)
+}
+
+// cardRows is a card's height on this terminal: a bordered box of four
+// rows, or of two (the ID and one title row) where the area is too short
+// for a full card and Done's footer.
+func (m *Model) cardRows() int {
+	if m.columnArea() < cardHeight+1 {
+		return cardHeight - 2
+	}
+	return cardHeight
 }
 
 // currentCards places each work record by its current states (G-042). One
@@ -631,7 +745,7 @@ func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
 	for _, g := range m.res.Groups {
 		states := currentStates(g)
 		best, work, deleted, uncommitted := -1, false, false, false
-		var title string
+		var rec *project.Record
 		for _, state := range states {
 			uncommitted = uncommitted || !slices.ContainsFunc(state, committed)
 			r := state[0].Record
@@ -644,7 +758,7 @@ func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
 			}
 			work = true
 			if i := slices.Index(statuses[:], r.Status); i >= 0 && (best < 0 || i < best) {
-				best, title = i, r.Title
+				best, rec = i, r
 			}
 		}
 		var tags []string
@@ -661,11 +775,12 @@ func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
 		tag := strings.Join(tags, " ")
 		switch {
 		case best >= 0:
-			columns[best] = append(columns[best], card{g.ID, title, len(states), tag})
+			columns[best] = append(columns[best], card{g.ID, rec.Title, len(states), tag, meta(rec), rec})
 		case !work && deleted && isWork(g, nil):
 			shelf = append(shelf, card{id: g.ID, versions: len(states), tag: tag})
 		}
 	}
+	newestFirst(columns[doneColumn])
 	return
 }
 

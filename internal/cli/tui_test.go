@@ -188,14 +188,14 @@ func boardWorkflow(t *testing.T, broken bool) {
 		// The current view: feature changed G-001 after main, and G-003 is
 		// only there, so both show in feature's state.
 		s := openBoard(t, root)
-		s.want("Board: current view", "Proposed (1)", "Active (1)", "Inspect records, on feature", "Only on feature", "Deleted: none")
+		s.want("Board: current view", "Proposed 1", "Active 1", "Inspect records, on feature", "Only on feature", "Deleted: none")
 		s.lacks("G-002", "⑂", "uncommitted")
 		incomplete(s)
 
 		s.press("b")
 		s.want("current view", "checkout . (main)", "checkout feature-wt (feature)")
 		s.press("down", "enter")
-		s.want("Board: checkout . (main)", "Proposed (1)", "Active (0)", "Inspect records", "G-001  2 versions", "Elsewhere (1", "): G-003 ")
+		s.want("Board: checkout . (main)", "Proposed 1", "Active 0", "Inspect records", "2 versions", "Elsewhere (1", "): G-003 ")
 		s.lacks("on feature", "Only on feature", "G-002")
 		incomplete(s)
 
@@ -206,10 +206,10 @@ func boardWorkflow(t *testing.T, broken bool) {
 			s.want("cannot fill the board", "Choose what the board shows")
 		}
 		s.press("down", "enter")
-		s.want("Board: checkout feature-wt (feature)", "Proposed (1)", "Active (1)", "Inspect records, on feature", "Only on feature", "Elsewhere: none")
+		s.want("Board: checkout feature-wt (feature)", "Proposed 1", "Active 1", "Inspect records, on feature", "Only on feature", "Elsewhere: none")
 		incomplete(s)
 		s.press("b", "down", "enter") // back to main's board
-		s.want("Board: checkout . (main)", "Active (0)")
+		s.want("Board: checkout . (main)", "Active 0")
 
 		s.press("enter")
 		s.want("G-001   2 versions differ", "▸ proposed   older  same on ", "▸ active     same on 1 branch, 1 checkout")
