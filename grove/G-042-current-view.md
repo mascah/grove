@@ -2,9 +2,9 @@
 id: "G-042"
 type: work
 title: "Derive a project-wide current view of work"
-status: proposed
+status: active
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-21T15:45:42Z"
+updated: "2026-09-22T21:40:04Z"
 kind: feature
 size: medium
 priority: 3
