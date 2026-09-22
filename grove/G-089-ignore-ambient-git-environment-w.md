@@ -2,9 +2,10 @@
 id: "G-089"
 type: work
 title: "Ignore ambient Git environment when Grove and its tests run Git"
-status: proposed
+status: active
 created: "2026-09-22T17:11:12Z"
-updated: "2026-09-22T17:11:12Z"
+updated: "2026-09-22T17:19:18Z"
+size: small
 ---
 
 ## Outcome
