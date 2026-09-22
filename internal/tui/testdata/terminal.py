@@ -169,11 +169,13 @@ def select_and_show(root, wt, base):
         s.expect("Board: current view")
         s.expect("First on feature")  # feature changed G-001 after main: its state is current
         s.send(b"l" + ENTER)  # the card is Active
-        mark = s.expect("versions differ")
-        check(s.proc.poll() is None, "opening a card must not resolve or exit")
-        # The card opens on the history of its current state, read from Git.
-        s.expect("History on branch feature")
+        # The detail opens on the history of its current state, read from Git.
+        s.expect("Timeline on branch feature")
         s.expect(f"active     {short(root, 'feature')}  feature")
+        check(s.proc.poll() is None, "opening a card must not resolve or exit")
+        s.send(b"v")
+        mark = s.expect("versions differ")
+        s.expect("History on branch feature")
         # Rows fold by content, current first: feature's (branch, checkout),
         # then main's older one. Enter on a fold only lists its places.
         s.send(DOWN + ENTER)
@@ -203,7 +205,7 @@ def leave_without_selecting(root, wt, base):
         s = Session(root)
         main_board(s)
         if where == "versions":
-            s.send(ENTER)
+            s.send(ENTER + b"v")
             s.expect("versions differ")
             s.send(DOWN)
         s.send(keys)
@@ -265,7 +267,7 @@ def blocked_git(root, wt, base):
                 # only Git left to block is the resolution's.
                 s.send(ENTER)
                 s.expect(f"{short(root, 'main')}  main")
-                s.send(DOWN)
+                s.send(b"v" + DOWN)
                 s.expect(f"{short(root, 'feature')}  feature")
                 s.send(DOWN + ENTER + DOWN * 2)
                 s.expect("Selector: live:.:")
@@ -359,13 +361,13 @@ def output_failure(root, wt, base):
 
 def resize(root, wt, base):
     s = Session(root)
-    mark = s.expect("Active (1)")
+    mark = s.expect("Active 1")
     s.resize(24, 80)
     mark = s.expect("[Proposed 0] Active 1", mark)
     s.resize(8, 30)
     mark = s.expect("Grove needs 40x10", mark)
     s.resize(30, 120)
-    s.expect("Active (1)", mark)
+    s.expect("Active 1", mark)
     s.send(b"q")
     code, out = s.finish()
     s.restored()
