@@ -52,8 +52,16 @@ escaping and separate trusted renderer styling from untrusted content.
 
 ## Preparation and next
 
-No implementation plan exists yet. Create a linked plan through the supported
-CLI with visual examples using real records and G-041 feedback. Check dependency
-compatibility rather than assuming all Charm modules share the same major
-version. Design can begin during the interactive loop, without making the
-complete visual redesign a prerequisite for the hobby-project pilot.
+Prepared on 2026-09-22 on branch `worktree-G-043` (worktree
+`.claude/worktrees/G-043`) from `main` `dc3b9b6`, which holds G-042. The plan
+is [G-096](G-096-g-043-board-and-detail-design-vi.md): the visual proposal
+with this repository's real records at 120 and 80 columns and with the Done
+column bounded, the detail and search screens, the review view for G-044 to
+build, the Charm module compatibility check (glamour v2.0.1 and lipgloss
+v2.0.6 build with the pinned bubbletea v2.0.9; lipgloss lifts ultraviolet),
+and the implementation steps.
+
+Checkpoint: awaiting the owner's review of the proposal (acceptance 1) and
+their choice on Markdown links (plain text or terminal hyperlinks; plan's Open
+choices). Implementation has not started; nothing else is written. Next: on
+the owner's answer, set this record active and follow the plan's steps from 1.
