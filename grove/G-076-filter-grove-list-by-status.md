@@ -67,9 +67,64 @@ model's `list` contract say so.
 6. The owner runs it on this repository and judges from the output that it
    answers "what is open" without further piping.
 
+## Evidence
+
+Implemented 2026-09-22 on branch `worktree-G-076` (worktree
+`.claude/worktrees/G-076`) from main `ff0f3e9`, starting from this record at
+revision `sha256:b5c9464e…` with no plan record (none needed: the proposed
+design above fixes every choice). Commits: `32b7b40` the feature, `cd1067d`
+the review fixes, `a28f3d5` the review record; the candidate is the commit
+that adds this section.
+
+Behavior against the acceptance:
+
+1. `list --status proposed` prints the header and the `proposed` rows in the
+   unfiltered order; `--status active --status review` unions them
+   (`TestListFiltersByStatus`, `internal/cli/cli_test.go`). Decision: the
+   tabwriter fits column widths to the rows it prints, so a filtered table
+   is narrower than the unfiltered one; "same format" is read as the same
+   four columns, since the unfiltered widths already float with the records
+   present. The reviewer accepted that reading (G-077).
+2. `list` without the option is unchanged: the reviewer built `ff0f3e9` and
+   `32b7b40` and compared their `list` output on this checkout byte for byte.
+3. A value outside the union of the type table's vocabularies, an empty or
+   blank value, a bare `--status`, and `--status` on `show` or `check` exit 2
+   with a message naming the option, empty stdout, and no `Project:` line,
+   so no project was read (same test, and the reviewer's manual runs).
+4. `list --status=review` on this checkout printed the header alone, exit 0.
+5. Usage text (`internal/cli/cli.go`), README and `docs/record-model.md`
+   describe the option; verification at `a28f3d5`: `go vet ./...` clean,
+   `gofmt -l .` empty, `grove check` → `OK: 76 records`,
+   `go test -count=1 -timeout 120s ./...` all green. `internal/versions`
+   takes 7.3 s, above the five-second budget, before and after this change
+   (its Git process count, not these tests; `internal/cli` is 1.8 s in
+   `-short`).
+6. Owner's judgment: pending, see Next.
+
+Review: [G-077](G-077-g-076-independent-review-of-the.md), independent,
+examined `32b7b40`: nothing consequential; two minor findings and one nit,
+each fixed in `cd1067d` or being this handoff. Limits: the `cd1067d` fixes
+(one documentation sentence, one test helper) were self-checked, not
+re-reviewed.
+
 ## Next
 
-Prepared 2026-09-22 on `worktree-G-076` from main `ff0f3e9`: no plan record
-needed, since the record's proposed design fixes every choice and the change
-is one option, one filter, one test and two documentation lines.
-Implementation in progress; the handoff is written here when it enters review.
+Candidate awaits the owner's judgment (acceptance 6). Demo on this repository:
+
+```sh
+cd .claude/worktrees/G-076
+go run ./cmd/grove list --status active --status review
+go run ./cmd/grove list --status proposed
+go run ./cmd/grove list --status bogus   # exit 2
+```
+
+Integrate on approval, from the main checkout:
+
+```sh
+git merge --ff-only worktree-G-076
+go run ./cmd/grove show G-076 --json    # take the revision
+go run ./cmd/grove update G-076 --expect REVISION --set status=done
+git commit -am "docs(G-076): mark done on the owner's acceptance and merge"
+```
+
+Feedback instead: write it here and set `status=active` on the branch.
