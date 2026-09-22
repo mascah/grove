@@ -51,8 +51,9 @@ commit to done: 22 minutes (09:03 to 09:25 local, commit timestamps).
    `update … status=done` at `e8bcf03`, four minutes after the handoff. The
    record and CLI carried enough to integrate, but the done commit changed
    `status` and `updated` only: the verdict is not quoted in the record, and
-   its Next still says "Candidate awaits the owner's judgment". Whether chat
-   was needed is the owner's to say; see G-039's Next.
+   its Next still says "Candidate awaits the owner's judgment". The owner,
+   asked in the G-039 review session on 2026-09-22, said: "It went well. I
+   did not need the chat to integrate it."
 4. Continue (this session): `/grove-work G-039` in a fresh session found the
    checkpoint in G-039's Next and plan G-075 through `context`, rebased
    `worktree-G-039` from `5f07c94` onto `e8bcf03` (one commit, no conflict)
@@ -113,8 +114,9 @@ Against G-039's acceptance:
 1. Met, real: item 1 above, with the harness discovering guides and code.
 2. Met, real: item 2; proportionate preparation, one genuine escalation in
    shaping and none in implementation, checkpoints in Next, linked review.
-3. Met with a gap, real: item 3; the owner integrated from files and the CLI,
-   but the verdict was not quoted and Next was not reconciled at done.
+3. Met with a gap, real: item 3; the owner integrated from files and the CLI
+   without the chat, by their own account, but the verdict was not quoted
+   and Next was not reconciled at done.
 4. Met, real for continuation (item 4), simulation for feedback (5) and the
    missing-human case (6, 7), with the headless divergence recorded.
 5. Met, this record and G-039's Evidence.
@@ -128,4 +130,8 @@ a scope or design choice the acceptance depends on is a missing choice even
 when the proposal could be assigned without it (`docs/work-shaping.md`); and
 `new review` leaves `Examined`, `Findings` and `Disposition` headings that
 G-077 left empty while writing its own, which the CLI could fill or the guide
-could name (G-036's Next, not changed here).
+could name (G-036's Next, not changed here). On the headless divergence in
+finding 6 the owner said, in the same session, that it concerns them, that
+little can be done about it right now, and that an eval suite for the guides
+should be considered in future; that is intent, recorded in G-036's Next,
+not a proposal.

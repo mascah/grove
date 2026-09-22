@@ -88,16 +88,14 @@ unaffected. Review: G-078 is this session's evidence, not an independent
 review; the record and plan ask for none, so that omission is reported here
 as open rather than blocking.
 
-Limits: the owner's verbatim verdict on G-076 and whether chat was needed for
-it are not on file; the headless work row and the review cap were not
+Limits: the headless work row and the review cap were not
 exercised; the clones were left under the session scratchpad and are not
 part of this branch.
 
 ## Next
 
-Candidate awaits the owner's judgment. Two facts only the owner has, to write
-into G-078's finding 3 when judging: the G-076 verdict verbatim, and whether
-chat was needed to integrate it. Demo, from any checkout:
+Candidate awaits the owner's judgment; their G-076 verdict and the fact that
+no chat was needed are now in G-078. Demo, from any checkout:
 
 ```sh
 cd .claude/worktrees/G-039

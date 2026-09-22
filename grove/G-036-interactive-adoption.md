@@ -56,4 +56,7 @@ G-039's trial evidence is [G-078](G-078-g-039-trial-evidence-for-the-int.md),
 open, unowned until assigned: `new review` leaves `Examined`, `Findings` and
 `Disposition` headings the CLI could fill or the work guide could name; the
 headless shaping call did not take the question path, so exercise it again
-after the guide change; the headless work row is still unexercised.
+after the guide change; the headless work row is still unexercised. On the
+headless divergence the owner said on 2026-09-22 that it concerns them and
+that an eval suite for the guides should be considered in future; nothing
+is proposed or assigned for it yet.
