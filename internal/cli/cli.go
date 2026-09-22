@@ -35,9 +35,10 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] workspace --source SELECTOR [--json]\n" +
 	"       grove [--project DIR] context WORK_ID... [--json] [--interaction interactive|headless]\n" +
 	"                                     [--max-bytes N] [--include PATH]...\n\n" +
-	"  (none)     Open the terminal board: one checkout's work by status, each card's\n" +
-	"             differing versions across branches and checkouts, and explicit selection of a\n" +
-	"             version's existing workspace, printed like workspace (--json likewise).\n" +
+	"  (none)     Open the terminal board: work by its current state across every branch\n" +
+	"             and checkout (or one checkout's own), each card's differing versions, and\n" +
+	"             explicit selection of a version's existing workspace, printed like\n" +
+	"             workspace (--json likewise).\n" +
 	"             Needs a terminal on stdin and stderr; stdout may be redirected. Reads only.\n" +
 	"  list       List records in the selected checkout; --status VALUE, repeatable, keeps\n" +
 	"             only records in any given status (a value outside the vocabulary is refused)\n" +
@@ -76,8 +77,9 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             and Markdown links are never rewritten. A source already converted is\n" +
 	"             refused, reserving nothing.\n" +
 	"  versions   Show each record's committed version on every local branch and live\n" +
-	"             version in every worktree, with a selector per version; exit 1 if any\n" +
-	"             source could not be inspected. Reads only; nothing is created.\n" +
+	"             version in every worktree, whether it is current or older, with a\n" +
+	"             selector per version; exit 1 if any source could not be inspected.\n" +
+	"             Reads only; nothing is created.\n" +
 	"  workspace  Print the project directory of the existing checkout holding the\n" +
 	"             version selected by --source (a selector from versions), after\n" +
 	"             checking it is still that version; --json adds checkout, record,\n" +
