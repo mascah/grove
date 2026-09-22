@@ -34,7 +34,31 @@ Asked with examples in the `/grove-work G-042` session:
   show concrete examples.
 - **No target:** "No target for now." No `target` key and no branch name is
   special. The card detail says where the current state lives. The board
-  cannot call anything unintegrated.
+  cannot call anything unintegrated. *Revised the same day; see below.*
+
+## Revised decision: integration target, 2026-09-22
+
+Reviewing candidate `046150e`, the owner reopened the target: "I think I want
+to revisit the idea of an integration target. In my case that's main. During
+initial scoping I was asked if this should be a grove.yaml setting and I think
+it probably should be." They chose to add it within G-042. Having `update`
+refuse `done` off the target (G-038's "configured target") is separate work.
+
+- `grove.yaml` gains an optional `target: BRANCH`, `main` here. It is only
+  ever compared with local branch names, never passed to Git.
+- Every valid source whose `grove.yaml` names a target must agree. A source
+  that names none has no say, so the answer is the same from every checkout,
+  and a branch that adds the key works before it merges. Conflicting names,
+  a missing branch, or an unreadable one give a note and no target.
+- The target labels states and decides nothing: which states are current,
+  and where a card sits, stay as above. Each current state is on the target
+  (the target's tip holds its bytes, or lacks the record too), not on it, or
+  uncommitted. A card is tagged `not on main` when none of its current states
+  is on the target and one is committed somewhere.
+- `versions` prints `Target:` on stderr and a `TARGET` column (`yes`/`no`,
+  `-` without a target); JSON adds `target`, `notes`, and each version's
+  `on_target`.
+
 
 ## The projection
 

@@ -2,9 +2,9 @@
 id: "G-042"
 type: work
 title: "Derive a project-wide current view of work"
-status: review
+status: active
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-22T22:28:24Z"
+updated: "2026-09-22T22:40:21Z"
 kind: feature
 size: medium
 priority: 3
@@ -171,21 +171,14 @@ the record since they last shared a commit, into different bytes:
 
 ## Next
 
-Judge the candidate (the owner). Demo from the branch:
+**Owner feedback on candidate `046150e`, 2026-09-22 (reviewing its
+Decisions):** "I think I want to revisit the idea of an integration target.
+In my case that's main. During initial scoping I was asked if this should be a
+grove.yaml setting and I think it probably should be." Asked where it lands,
+the owner chose to reopen G-042 rather than merge first. They deferred to
+separate work having `update` refuse `done` off the target.
 
-```sh
-cd /Users/mascah/GitHub/mascah/grove/.claude/worktrees/G-042
-go run ./cmd/grove            # opens on "Board: current view"; b lists checkouts
-go run ./cmd/grove versions   # the CURRENT column
-```
-
-On approval, in the main checkout, after quoting the verdict under Evidence
-in this record:
-
-```sh
-cd /Users/mascah/GitHub/mascah/grove
-git merge worktree-G-042
-go run ./cmd/grove update G-042 --set status=done --commit
-```
-
-On feedback, write it here and set `status=active` on the branch.
+Implement an optional `target` key in `grove.yaml`, set to `main` here. The
+current view labels each current state on or not on the target, following
+the plan's revised decision. The candidate above and review G-094 remain as
+evidence of the earlier attempt.
