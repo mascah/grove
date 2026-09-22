@@ -68,7 +68,7 @@ type Requirement struct {
 	Work         string `json:"work"`
 	Prerequisite string `json:"prerequisite"`
 	Status       string `json:"status"`
-	Candidate    string `json:"candidate,omitempty"` // the prerequisite's candidate, if any: merged when done, offered when in review
+	Candidate    string `json:"candidate,omitempty"` // the prerequisite's candidate, if any: merged when done, offered when in review, kept when reopened
 	Selected     bool   `json:"selected"`
 }
 

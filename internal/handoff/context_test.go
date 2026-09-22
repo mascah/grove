@@ -530,3 +530,22 @@ func FuzzResolve(f *testing.F) {
 		}
 	})
 }
+
+func TestRequirementsNameADoneCandidateOrItsAbsence(t *testing.T) {
+	t.Parallel()
+	b := &Bundle{Requirements: []Requirement{
+		{Work: "G-002", Prerequisite: "G-001", Status: "done", Candidate: "0123456789abcdef0123456789abcdef01234567"},
+		{Work: "G-003", Prerequisite: "G-001", Status: "done"},
+		{Work: "G-003", Prerequisite: "G-002", Status: "review", Candidate: "abcdefa", Selected: true},
+	}}
+	text := string(Text(b))
+	for _, want := range []string{
+		"G-002 depends on G-001: done, candidate 0123456789abcdef0123456789abcdef01234567, not selected",
+		"G-003 depends on G-001: done, no candidate, not selected",
+		"G-003 depends on G-002: review, selected",
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("lacks %q:\n%s", want, text)
+		}
+	}
+}

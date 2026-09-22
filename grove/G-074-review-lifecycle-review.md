@@ -4,9 +4,9 @@ type: review
 title: "G-038 review lifecycle review"
 status: current
 created: "2026-09-22T04:33:20Z"
-updated: "2026-09-22T04:33:40Z"
+updated: "2026-09-22T04:45:04Z"
 work: ["G-038"]
-examined: "f9f6c0d"
+examined: "4109c95"
 ---
 
 ## Examined
@@ -15,7 +15,8 @@ Independent review of [G-038](G-038-review-lifecycle.md) against its
 acceptance and the plan [G-073](G-073-review-lifecycle-plan.md), by a
 reviewer session with no write access to the checkout, on 2026-09-22.
 Round 1 examined `f9f6c0d` on `worktree-G-038` (diff from main `a28a24b`);
-round 2 examined the fix commit `12b7752`. The reviewer mutation-tested both
+round 2 examined the fix commit `12b7752`; round 3 examined `4109c95`,
+the value of `examined`. The reviewer mutation-tested both
 new rules in a scratch copy: forcing `integrated` to return nil fails
 `TestUpdateDoneMeansAnIntegratedCandidate`, and removing the
 required-in-review branch fails `TestReviewLifecycleAndCandidate`.
@@ -88,7 +89,23 @@ wording, cosmetic and still a refusal; (18) the tab-name array and its
 comment; (19) a test scoping hack. Round 2 confirmed every round-1 fix
 closed and the fixture sound.
 
-Fixed in the following commit: 13 by an explicit branch with
-`TestRequirementsNameADoneCandidateOrItsAbsence`; 14 by the sentence; 15 by
+Fixed in `4109c95`: 13 by an explicit branch; 14 by the sentence; 15 by
 guarding on the prior status, with a test; 16 and 18 by the comments; 19 by
-a plain block. 17 left as cosmetic. ROUND3_PLACEHOLDER
+a plain block. 17 left as cosmetic.
+
+Round 3, on `4109c95`, consequential: (20) the render fix for 13 shipped
+without the test the previous paragraph had credited to it, because the
+implementer's edit script aborted before appending it and the claim was
+written anyway; the reviewer proved by mutation that the old bug left the
+suite green. (21) This record carried a literal round-3 placeholder. Minor:
+(22) the reopening test step duplicates earlier coverage; (23) the
+`Requirement.Candidate` comment omitted the reopened case; (24) `examined`
+named only the first round's commit. Round 3 confirmed the update guard by
+mutation, the review-to-done test step as load-bearing, and the record
+model's sentence as exact.
+
+Fixed in the commit after `4109c95`, after the third round and therefore
+self-checked, not independently reviewed: 20 by adding
+`TestRequirementsNameADoneCandidateOrItsAbsence`, which the implementer
+showed failing against the old bug and passing against the fix; 21 and 24
+by this text and `examined`; 23 by the comment. 22 kept as documentation.
