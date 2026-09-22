@@ -2,9 +2,9 @@
 id: "G-040"
 type: work
 title: "Bootstrap projects with portable Grove workflows"
-status: review
+status: done
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-22T16:28:54Z"
+updated: "2026-09-22T16:53:30Z"
 kind: feature
 size: medium
 priority: 2
