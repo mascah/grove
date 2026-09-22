@@ -2,6 +2,7 @@ package update
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -28,8 +29,8 @@ var now = time.Date(2026, 9, 19, 18, 30, 0, 500, time.UTC)
 
 func git(t *testing.T, dir string, args ...string) string {
 	t.Helper()
-	full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-C", dir}, args...)
-	out, err := exec.Command("git", full...).CombinedOutput()
+	full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false"}, args...)
+	out, err := repo.Command(context.Background(), dir, full...).CombinedOutput()
 	if err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}

@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/mascah/grove/internal/repo"
 )
 
 func lineage(t *testing.T, root, commit, path string) string {
@@ -111,7 +112,7 @@ func TestHistoryAcrossMergesAndDates(t *testing.T) {
 	t.Setenv("GIT_COMMITTER_DATE", "1700000200 +0000")
 	write(t, root, renamed, record("G-001", "work", "abandoned", "Main body.\n"))
 	commit(t, root, "abandon on main")
-	if out, err := exec.Command("git", "-C", root, "merge", "-q", "feature").CombinedOutput(); err == nil {
+	if out, err := repo.Command(context.Background(), root, "-c", "user.name=t", "-c", "user.email=t@t", "merge", "-q", "feature").CombinedOutput(); err == nil {
 		t.Fatalf("expected a conflict: %s", out)
 	}
 	write(t, root, renamed, record("G-001", "work", "proposed", "Resolved.\n"))

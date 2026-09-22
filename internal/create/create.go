@@ -4,6 +4,7 @@ package create
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -266,8 +267,8 @@ func highestUsed(root, recordDir, showPrefix string) (int, error) {
 	}
 	if trees := strings.Fields(refs); len(trees) != 0 {
 		// git grep only pre-filters; note validates every line.
-		args := append([]string{"-C", root, "grep", "-h", "-I", "-e", "^id:"}, trees...)
-		cmd := exec.Command("git", append(args, "--", recordDir)...)
+		args := append([]string{"grep", "-h", "-I", "-e", "^id:"}, trees...)
+		cmd := repo.Command(context.Background(), root, append(args, "--", recordDir)...)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		out, err := cmd.Output()

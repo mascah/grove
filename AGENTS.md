@@ -84,6 +84,14 @@ read the brief when the record, a product question, or reconciliation needs it.
   seconds, and no test that builds, sleeps, or waits on a shim without a
   `-short` skip and a comment saying why. TUI work also needs terminal
   lifecycle and connected-workflow checks.
+- Every Git process Grove or its tests start goes through `repo.Command`,
+  never a bare `exec.Command("git", …)`: it drops `GIT_DIR` and the other
+  variables that name a repository, because Git exports `GIT_DIR` to hooks
+  and a child that inherits it acts on the real repository. G-089 records the
+  incident: test fixtures run by lefthook's pre-push hook from a linked
+  worktree committed into this repository. The hook also scrubs them; keep
+  both layers, and reproduce Linux-only failures with
+  `docker run --rm -v "$PWD":/src -w /src -e GOFLAGS=-buildvcs=false golang:1.26 go test ./...`.
 
 ## Assigned work
 

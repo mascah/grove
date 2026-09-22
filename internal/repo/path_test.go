@@ -12,8 +12,8 @@ import (
 
 func git(t *testing.T, dir string, args ...string) {
 	t.Helper()
-	full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false", "-C", dir}, args...)
-	if out, err := exec.Command("git", full...).CombinedOutput(); err != nil {
+	full := append([]string{"-c", "user.name=t", "-c", "user.email=t@t", "-c", "commit.gpgsign=false", "-c", "maintenance.auto=false"}, args...)
+	if out, err := Command(context.Background(), dir, full...).CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
 }
