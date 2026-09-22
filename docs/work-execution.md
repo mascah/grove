@@ -158,7 +158,8 @@ checkout.
 - **Reuse** an existing branch and worktree only when step 2 shows it is
   clearly this assignment's and reusing it preserves all concurrent work.
 - **Otherwise create** an isolated worktree on a new branch, named as the
-  repository's instructions say. Base it on the intended base from step 2. If
+  repository's instructions say; where they name nothing, choose a clear
+  name and state it in the handoff. Base it on the intended base from step 2. If
   none is named, use the repository's default base only when that base holds
   the selected records and their inputs. When `versions` shows the selected
   records only on another branch, base the work there, or stop and ask if that

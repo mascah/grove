@@ -170,14 +170,22 @@ func planInit(root string) (steps []initStep, conflicts []string) {
 	conflict := func(relative, reason string) { conflicts = append(conflicts, relative+": "+reason) }
 	// regular reports whether the path is absent (nil, false), a regular file
 	// (info, true), or something init cannot replace, which is a conflict.
-	regular := func(relative string) (os.FileInfo, bool) {
-		for i, c := range relative { // a symlinked parent would carry the write outside the checkout
+	// symlinkedParent reports a conflict where a component above relative is a
+	// symlink, which would carry the write outside the checkout.
+	symlinkedParent := func(relative string) bool {
+		for i, c := range relative {
 			if c == '/' {
 				if parent, err := lstat(relative[:i]); err == nil && parent.Mode()&fs.ModeSymlink != 0 {
 					conflict(relative, relative[:i]+" is a symlink")
-					return nil, false
+					return true
 				}
 			}
+		}
+		return false
+	}
+	regular := func(relative string) (os.FileInfo, bool) {
+		if symlinkedParent(relative) {
+			return nil, false
 		}
 		info, err := lstat(relative)
 		switch {
@@ -212,7 +220,8 @@ func planInit(root string) (steps []initStep, conflicts []string) {
 		steps = append(steps, initStep{path: "grove.yaml", verdict: "created", content: []byte(defaultConfig)})
 	}
 
-	if info, err := lstat(recordDir); errors.Is(err, fs.ErrNotExist) {
+	if symlinkedParent(recordDir) {
+	} else if info, err := lstat(recordDir); errors.Is(err, fs.ErrNotExist) {
 		steps = append(steps, initStep{path: recordDir, verdict: "created", dir: true})
 	} else if err != nil {
 		conflict(recordDir, err.Error())

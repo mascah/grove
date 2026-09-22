@@ -150,7 +150,9 @@ GOBIN="$HOME/.local/grove/bin" go install github.com/mascah/grove/cmd/grove@COMM
 PATH="$HOME/.local/grove/bin:$PATH" grove version
 ```
 
-`go install …@COMMIT` resolves only a pushed commit. Codex runs each command through a login shell, so it sees the profile's
+`go install …@COMMIT` resolves only a pushed commit.
+
+Codex runs each command through a login shell, so it sees the profile's
 `PATH`, not the caller's: put the build directory on the login `PATH` ahead of
 the predecessor, or name the executable in the target's `AGENTS.md` or
 `CLAUDE.md`, which the entrypoints defer to for how the CLI is invoked. When

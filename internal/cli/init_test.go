@@ -183,6 +183,22 @@ func TestInitRefusesConflictsWithoutWriting(t *testing.T) {
 			t.Fatalf("init from the checkout top without --project: code=%d stdout=%q stderr=%q", code, out.String(), errOut.String())
 		}
 	})
+	t.Run("symlinked parent of the record root", func(t *testing.T) {
+		t.Parallel()
+		root := emptyRepo(t)
+		elsewhere := t.TempDir()
+		write(t, root, "grove.yaml", "schema_version: 3\nrecords: docs/records\n")
+		if err := os.Symlink(elsewhere, filepath.Join(root, "docs")); err != nil {
+			t.Skip("symlinks unavailable")
+		}
+		code, out, errOut := runInitAt(t, root)
+		if code != 1 || out != "" || !strings.Contains(errOut, "docs/records: docs is a symlink") {
+			t.Fatalf("code=%d stdout=%q stderr=%q", code, out, errOut)
+		}
+		if entries, _ := os.ReadDir(elsewhere); len(entries) != 0 {
+			t.Fatal("the record root may not be created through the symlink")
+		}
+	})
 	t.Run("symlinked parent of a managed path", func(t *testing.T) {
 		t.Parallel()
 		root := emptyRepo(t)
