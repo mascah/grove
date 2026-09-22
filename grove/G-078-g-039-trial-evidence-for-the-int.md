@@ -134,4 +134,7 @@ could name (G-036's Next, not changed here). On the headless divergence in
 finding 6 the owner said, in the same session, that it concerns them, that
 little can be done about it right now, and that an eval suite for the guides
 should be considered in future; that is intent, recorded in G-036's Next,
-not a proposal.
+not a proposal. The owner also noted, when asked to accept G-039, that
+approval has no CLI form: it is either told to an agent or a merge, a hand
+edit and an `update` run by hand, which is what
+[G-044](G-044-review-integration.md) proposes to cover.

@@ -2,9 +2,9 @@
 id: "G-039"
 type: work
 title: "Prove the complete interactive workflow on real Grove work"
-status: review
+status: done
 created: "2026-09-21T00:54:14Z"
-updated: "2026-09-22T15:44:25Z"
+updated: "2026-09-22T15:49:17Z"
 kind: investigation
 size: small
 priority: 1
@@ -94,8 +94,9 @@ part of this branch.
 
 ## Next
 
-Candidate awaits the owner's judgment; their G-076 verdict and the fact that
-no chat was needed are now in G-078. Demo, from any checkout:
+Accepted and integrated. The owner's verdict on candidate `3e6b9d4`, given
+in the G-039 review session on 2026-09-22: "it went as expected". Merged
+fast-forward into main and marked done there. Demo, from any checkout:
 
 ```sh
 cd .claude/worktrees/G-039
@@ -104,14 +105,4 @@ go run ./cmd/grove show G-078
 git diff --stat main
 ```
 
-Integrate on approval, from the main checkout, quoting the verdict here
-before setting done:
-
-```sh
-git merge --ff-only worktree-G-039
-go run ./cmd/grove show G-039 --json    # take the revision
-go run ./cmd/grove update G-039 --expect REVISION --set status=done
-git commit -am "docs(G-039): mark done on the owner's acceptance and merge"
-```
-
-Feedback instead: write it here and set `status=active` on the branch.
+Nothing further for this record; open improvements live in G-036's Next.
