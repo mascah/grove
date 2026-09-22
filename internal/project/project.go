@@ -49,40 +49,13 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 		return p, []Diagnostic{{Path: "grove.yaml", Message: err.Error()}}
 	}
 	p.Config = source
-	config := parseMapping("grove.yaml", source, 0)
-	version, ok := config.integerField("schema_version", true)
-	if ok && version != 3 {
-		config.problem("schema_version", fmt.Sprintf("unsupported version %d; expected 3", version))
-	}
-	recordDir := config.stringField("records", true)
-	for key := range config.fields {
-		if key != "schema_version" && key != "records" && key != "brief" {
-			config.problem(key, "unknown configuration key")
-		}
-	}
-	brief := config.stringField("brief", false)
-	if recordDir != "" {
-		if !dedicated(recordDir) {
-			config.problem("records", "must name a dedicated relative subdirectory without .. components")
-		} else if err := checkRecordRoot(fsys, recordDir); err != nil {
-			config.problem("records", err.Error())
-		}
-	}
+	config, recordDir, brief := parseConfig(source, func(dir string) error { return checkRecordRoot(fsys, dir) })
 	if len(config.errors) != 0 {
 		return p, sortedDiagnostics(config.errors)
 	}
 	p.RecordDir = recordDir
+	p.Brief = brief
 	recordRoot := path.Clean(filepath.ToSlash(recordDir))
-	if brief != "" {
-		clean := path.Clean(filepath.ToSlash(brief))
-		if !dedicated(brief) || clean != filepath.ToSlash(brief) || path.Ext(clean) != ".md" {
-			config.problem("brief", "must name a project-relative .md file as a clean path without .. components")
-		}
-		if len(config.errors) != 0 {
-			return p, sortedDiagnostics(config.errors)
-		}
-		p.Brief = clean
-	}
 	var ds []Diagnostic
 	err = fs.WalkDir(fsys, recordRoot, func(relative string, entry fs.DirEntry, walkErr error) error {
 		problem := func(message string) {
@@ -127,6 +100,51 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 	slices.SortFunc(p.Records, compareRecords)
 	ds = append(ds, Validate(p.Records)...)
 	return p, sortedDiagnostics(ds)
+}
+
+// ParseConfig validates grove.yaml's text alone: the record folder and the
+// clean brief path it names, with the diagnostics LoadFS would give short of
+// whether the folder exists on disk.
+func ParseConfig(source []byte) (recordDir, brief string, ds []Diagnostic) {
+	config, recordDir, brief := parseConfig(source, nil)
+	return recordDir, brief, sortedDiagnostics(config.errors)
+}
+
+// parseConfig is the configuration half of LoadFS; checkRoot, when given,
+// inspects the record folder in the order LoadFS always has.
+func parseConfig(source []byte, checkRoot func(string) error) (config *metadata, recordDir, brief string) {
+	config = parseMapping("grove.yaml", source, 0)
+	version, ok := config.integerField("schema_version", true)
+	if ok && version != 3 {
+		config.problem("schema_version", fmt.Sprintf("unsupported version %d; expected 3", version))
+	}
+	recordDir = config.stringField("records", true)
+	for key := range config.fields {
+		if key != "schema_version" && key != "records" && key != "brief" {
+			config.problem(key, "unknown configuration key")
+		}
+	}
+	brief = config.stringField("brief", false)
+	if recordDir != "" {
+		if !dedicated(recordDir) {
+			config.problem("records", "must name a dedicated relative subdirectory without .. components")
+		} else if checkRoot != nil {
+			if err := checkRoot(recordDir); err != nil {
+				config.problem("records", err.Error())
+			}
+		}
+	}
+	if len(config.errors) != 0 {
+		return config, recordDir, ""
+	}
+	if brief != "" {
+		clean := path.Clean(filepath.ToSlash(brief))
+		if !dedicated(brief) || clean != filepath.ToSlash(brief) || path.Ext(clean) != ".md" {
+			config.problem("brief", "must name a project-relative .md file as a clean path without .. components")
+		}
+		brief = clean
+	}
+	return config, recordDir, brief
 }
 
 func dedicated(recordDir string) bool {

@@ -3,10 +3,10 @@
 This is Grove's one work workflow: how to interpret an assignment, retrieve
 context, prepare, execute, review, checkpoint, handle blockers, and hand off.
 The `grove-work` skill adapters for
-[Claude](../.claude/skills/grove-work/SKILL.md) and
-[Codex](../.agents/skills/grove-work/SKILL.md) only load it; an interactive
-session, a headless `claude -p` call, and a person reading this file follow the
-same steps. There is no second work prompt to keep in step with it.
+Claude and Codex, which `grove init` writes, only load it, and `grove guide
+work` prints the copy the binary carries; an interactive session, a headless
+`claude -p` call, and a person reading this file follow the same steps. There
+is no second work prompt to keep in step with it.
 
 The caller's assignment supplies authorization and scope. Reading this guide,
 or assembling context, does not start work or authorize a launch, merge, or push.
@@ -22,8 +22,8 @@ win.
 ## Lifecycle
 
 Work runs Proposed → Active → Review → Done, with Abandoned only by an
-explicit human decision, as [G-035](../grove/G-035-interactive-adoption.md)
-selected and [G-038](../grove/G-038-review-lifecycle.md) implemented. An
+explicit human decision, as Grove's own records G-035 and G-038 selected and
+implemented. An
 assignment sets `active` when implementation starts (step 5) and ends by
 handing a candidate commit into `review` (step 8). Only the integrator writes
 `done`, on the target after the merge, since Done means accepted and merged.
@@ -31,8 +31,8 @@ The CLI refuses it where the candidate is not already in HEAD, which keeps a
 checkout without the code from closing the work; it cannot tell the target
 from the work branch, so writing done there is this guide's rule. Preparation,
 independent review, waiting and a failed attempt are facts recorded inside
-`active`, never statuses. The [adoption roadmap](../grove/G-047-adoption-roadmap-plan.md)
-is not an assignment of all its members.
+`active`, never statuses. A roadmap plan is not an assignment of all its
+members.
 
 ## Inputs
 
@@ -379,7 +379,7 @@ an untracked background agent running as an implied continuation.
 | Claude, interactive | `/grove-work G-030 G-031` |
 | Claude, headless | `claude -p "/grove-work G-030 --interaction headless"` |
 | Codex, interactive | `$grove-work G-030 G-031` |
-| Any agent without skills | "Read AGENTS.md and docs/work-execution.md, then follow the guide for `G-030 --interaction headless`." |
+| Any agent without skills | "Read the repository's agent instructions and the output of `grove guide work`, then follow that guide for `G-030 --interaction headless`." |
 | Inspect first, no agent | `grove context G-030` |
 
 Every row ends in this file and the same `context` command; the mode travels
@@ -389,6 +389,5 @@ the headless row is a command for a person or a future supervised runner, which
 must separately define authorization, workspace binding, attempt identity,
 logs, cancellation, and recovery. Which of these rows has been exercised in a
 real harness, and what this workflow keeps, adapts, and defers from the
-predecessor's `/work`, are recorded in the
-[dogfooding evidence](../grove/G-032-dogfood-review.md). That is history,
-not required reading for an assignment.
+predecessor's `/work`, are recorded in Grove's own repository (G-032). That is
+history, not required reading for an assignment.

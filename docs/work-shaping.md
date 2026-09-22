@@ -3,9 +3,9 @@
 This is Grove's one shaping workflow: how to turn a conversation about an idea,
 or about work that already exists, into useful proposed work and the knowledge
 that belongs with it. The `grove-shape` skill adapters for
-[Claude](../.claude/skills/grove-shape/SKILL.md) and
-[Codex](../.agents/skills/grove-shape/SKILL.md) only load it; an interactive
-session, a headless call, and a person reading this file follow the same steps.
+Claude and Codex, which `grove init` writes, only load it, and `grove guide
+shape` prints the copy the binary carries; an interactive session, a headless
+call, and a person reading this file follow the same steps.
 Carrying out assigned work is the [work guide](work-execution.md)'s job, not
 this one's.
 
@@ -227,9 +227,8 @@ define authorization, budgets, logs, and recovery.
 | Claude, interactive | `/grove-shape a way to archive finished work` or `/grove-shape G-037` |
 | Claude, headless | `claude -p "/grove-shape G-037 --interaction headless"` |
 | Codex, interactive | `$grove-shape a way to archive finished work` |
-| Any agent without skills | "Read AGENTS.md and docs/work-shaping.md, then follow the guide for: TOPIC." |
+| Any agent without skills | "Read the repository's agent instructions and the output of `grove guide shape`, then follow that guide for: TOPIC." |
 
 The skills are explicit-invocation only. Which rows have been exercised in a
-real harness is recorded in the
-[G-025 evidence](../grove/G-050-shaping-review.md); that is history, not
-required reading for a shaping session.
+real harness is recorded in Grove's own repository (G-050); that is history,
+not required reading for a shaping session.

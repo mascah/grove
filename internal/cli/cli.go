@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"regexp"
 	"slices"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/mascah/grove"
 	"github.com/mascah/grove/internal/create"
 	"github.com/mascah/grove/internal/handoff"
 	"github.com/mascah/grove/internal/project"
@@ -24,6 +26,7 @@ import (
 
 const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] list [--status VALUE]... | show ID [--json] | brief [--json] | check\n" +
+	"       grove [--project DIR] init | guide work|shape | version\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID --expect REVISION (--set FIELD=VALUE | --unset FIELD)...\n" +
 	"       grove [--project DIR] convert PATH --type TYPE --title TITLE [--slug SLUG]\n" +
@@ -42,6 +45,15 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"  brief      Print the project brief that grove.yaml names with brief: PATH;\n" +
 	"             --json prints {path, revision, source}. context never adds it by itself.\n" +
 	"  check      Validate configuration, records, and relationships\n" +
+	"  init       Set up the Git checkout at --project DIR (default: the current directory,\n" +
+	"             which must be the checkout's top): grove.yaml, the record root, a\n" +
+	"             placeholder brief, and the grove-work and grove-shape entrypoints for\n" +
+	"             Claude Code and Codex. Existing files are kept; a file init wrote before\n" +
+	"             (marked as managed) is updated when its template changed. Prints one line\n" +
+	"             per path; on any conflict nothing is written and the reasons are printed.\n" +
+	"  guide      Print the work or shaping guide this binary carries; the generated\n" +
+	"             entrypoints read it from here, so the workflow version is the binary's.\n" +
+	"  version    Print this binary's module version and, when stamped, its VCS revision.\n" +
 	"  new        Create a work, question, decision, term, plan, review, or page record with\n" +
 	"             the next shared ID, flat in the record root; a page is general knowledge\n" +
 	"             with a title and no status.\n" +
@@ -93,8 +105,19 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 	if a.help {
 		return writeResult(out, errOut, []byte(usage))
 	}
-	if a.command == "" {
+	switch a.command {
+	case "":
 		return runBoard(a, cwd, out, errOut)
+	case "version":
+		return writeResult(out, errOut, []byte(versionLine()))
+	case "guide":
+		source, err := fs.ReadFile(grove.Guides, "docs/work-"+map[string]string{"work": "execution", "shape": "shaping"}[a.id]+".md")
+		if err != nil {
+			panic(err) // the two names were validated and both files are embedded
+		}
+		return writeResult(out, errOut, source)
+	case "init":
+		return runInit(cwd, a, out, errOut)
 	}
 	p, ds := project.Load(cwd, a.project)
 	if p != nil {
@@ -395,9 +418,15 @@ func parseArgs(args []string) (a invocation, err error) {
 	}
 	switch a.command {
 	case "":
-	case "list", "check", "brief":
+	case "list", "check", "brief", "init", "version":
 		if len(positional) != 1 {
 			err = fmt.Errorf("%s takes no positional arguments", a.command)
+		}
+	case "guide":
+		if len(positional) != 2 || (positional[1] != "work" && positional[1] != "shape") {
+			err = fmt.Errorf("guide requires one argument, work or shape")
+		} else {
+			a.id = positional[1]
 		}
 	case "show":
 		if len(positional) != 2 {

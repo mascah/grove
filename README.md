@@ -3,8 +3,9 @@
 A local project workspace for humans and agents, built around a CLI and durable files.
 
 **Status: the first Go CLI lists, shows, validates, creates, and updates local
-project records, shows each record's versions across local branches, and
-locates the checkout holding a selected version. Run without a command, it
+project records, shows each record's versions across local branches,
+locates the checkout holding a selected version, and sets up another
+repository with `init`, carrying the workflow guides inside the binary. Run without a command, it
 opens a read-only terminal Kanban board over the same operations. `context`
 assembles staged context for selected work, the `grove-work` skill carries it
 out, and the `grove-shape` skill shapes proposals.**
@@ -136,6 +137,48 @@ record; the directory it prints is a location, not write authority, and a
 later `update` performs its own revision check. The board below uses these
 two operations in process; creating a worktree for a branch without one
 remains future work.
+
+### Adopt Grove in another repository
+
+Build one binary from a named commit and put it first on `PATH` only in the
+shells that use the new Grove; the predecessor `grove` stays installed for the
+sibling projects, and nothing here replaces it:
+
+```sh
+go build -o "$HOME/.local/grove/bin/grove" ./cmd/grove   # from this checkout
+GOBIN="$HOME/.local/grove/bin" go install github.com/mascah/grove/cmd/grove@COMMIT  # or from the module
+PATH="$HOME/.local/grove/bin:$PATH" grove version
+```
+
+`grove version` prints the module version and, when the build stamped it, the
+VCS revision with `modified` for a dirty tree; `go run` prints `(devel)`, which
+means this checkout's files. The predecessor rejects `version` as an unknown
+command, so the line tells the two apart. The workflow guides travel inside the
+binary: `grove guide work` and `grove guide shape` print them, so the workflow
+version is the executable version and no copy is edited elsewhere.
+
+In the target checkout's top directory:
+
+```sh
+grove init        # or: grove --project /absolute/path init
+grove check
+```
+
+`init` writes `grove.yaml` (`records: grove`, `brief: grove/brief.md`), the
+record root, a placeholder brief that states no intent, and the `grove-work`
+and `grove-shape` entrypoints for Claude Code (`.claude/skills/`) and Codex
+(`.agents/skills/`), each marked as managed. It prints one line per path:
+`created`; `kept` for an existing `grove.yaml`, whose own `records` and `brief`
+it then follows, for the brief and the record root, and for an entrypoint
+without the marker, which is yours; `unchanged`; or `updated` for a marked
+entrypoint whose template changed in the binary, which is the managed update.
+A `grove.yaml` that is not a schema 3 configuration, or a directory, symlink,
+or unreadable file at a managed path, is a conflict: init prints every reason,
+writes nothing, and exits 1. It must run at the top of the Git checkout, and it
+never reads or writes `AGENTS.md` or `CLAUDE.md`: the entrypoints defer to them
+for how the CLI is invoked. Upgrading is building again and rerunning `init`.
+Then `/grove-shape TOPIC` develops the brief and proposes work, and
+`/grove-work G-001` carries it out, through the guides the binary prints.
 
 ### Work context and the `grove-work` skill
 
