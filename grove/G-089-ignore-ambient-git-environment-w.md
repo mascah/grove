@@ -4,9 +4,9 @@ type: work
 title: "Ignore ambient Git environment when Grove and its tests run Git"
 status: review
 created: "2026-09-22T17:11:12Z"
-updated: "2026-09-22T17:28:11Z"
+updated: "2026-09-22T17:35:29Z"
 size: small
-candidate: "50b0599"
+candidate: "7fe4ccf"
 ---
 
 ## Outcome
@@ -108,15 +108,13 @@ plus the decoy run above.
 
 ## Next
 
-In Review. This branch has no `.github` workflow, so its pull request runs CI
-only once [G-081](G-081-github-ci.md) is merged. Integrator, from the main
-checkout, after G-081:
+In Review. After PR #2 merged, `origin/main` was merged into this branch at
+7fe4ccf, resolving the history test's merge line as planned, with the whole
+verification rerun there; that merge commit is the candidate, and PR #3 runs
+CI on it. Integrator, from the main checkout:
 
-1. `git merge worktree-G-089`; the one conflict, if any, is the merge line in
-   `internal/versions/history_test.go`: keep the `repo.Command` form with the
-   `-c user.name=t -c user.email=t@t` flags, and keep G-081's `MERGE_HEAD`
-   assertion beneath it.
-2. `go test -count=1 -timeout 120s ./...`, then `git push origin main`; the
-   hook is safe again from this merge on.
-3. Write the verdict here and `go run ./cmd/grove update G-089 --expect
+1. Merge PR #3 (or `git merge worktree-G-089`), then
+   `go test -count=1 -timeout 120s ./...` on `main`; the hook is safe again
+   from this merge on, so plain `git push` works.
+2. Write the verdict here and `go run ./cmd/grove update G-089 --expect
    REVISION --set status=done`, committed on `main`.
