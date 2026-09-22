@@ -96,22 +96,27 @@ conflict with.
 
 ## Steps
 
-1. [x] Plan committed with the record revisions above.
-2. [ ] Root package `grove` with the embedded guides; `guide` and `version`
-   commands in `internal/cli`, dispatched before the project loads; usage text.
-3. [ ] `init` in `internal/cli/init.go`: templates, plan-then-write, the report
+All done on 2026-09-22; evidence and the handoff are in
+[G-040](G-040-portable-bootstrap.md) and [G-082](G-082-portable-bootstrap-review.md).
+
+1. [x] Plan committed with the record revisions above (`73b2044`).
+2. [x] Root package `grove` with the embedded guides; `guide` and `version`
+   commands in `internal/cli`, dispatched before the project loads; usage text
+   (`7ddbf52`; `version` gained a guide digest in `66fcccc`).
+3. [x] `init` in `internal/cli/init.go`: templates, plan-then-write, the report
    lines; tests in `init_test.go` for creation, `check` passing afterwards, a
    second run reporting `unchanged`, a marked edit reported `updated`, an
    unmarked file `kept`, an invalid `grove.yaml` and a nested directory
-   refused with nothing written.
-4. [ ] Guide link edits (design item 2); README section "Adopt Grove in
+   refused with nothing written (`7ddbf52`; symlinked parents and the default
+   path added by the review, `66fcccc`, `3113280`).
+4. [x] Guide link edits (design item 2); README section "Adopt Grove in
    another repository"; record model's configuration section names `init`;
-   AGENTS.md names the new commands.
-5. [ ] Evidence in a disposable Git repository under the session scratchpad,
-   with a binary built from the candidate first on `PATH`: init, check, rerun,
-   managed update, conflict; `claude -p` and `codex exec` fresh sessions
-   invoking the generated `grove-shape` and `grove-work` skills headless,
-   reported as observed behaviour apart from file checks.
-6. [ ] `go test -short`, `go vet ./...`, `gofmt -l .`, `grove check`,
+   AGENTS.md names the new commands (`7ddbf52`, `731674e`, `eb32209`).
+5. [x] Evidence in a disposable Git repository under the session scratchpad,
+   with a binary built from a clone of the candidate first on `PATH`: init,
+   check, rerun, managed update, conflict; `claude -p` and `codex exec` fresh
+   sessions invoking the generated `grove-shape` and `grove-work` skills
+   headless, reported as observed behaviour apart from file checks (G-082).
+6. [x] `go test -short`, `go vet ./...`, `gofmt -l .`, `grove check`,
    `go test -count=1 -timeout 120s ./...`; independent review of the combined
-   diff; review record; handoff into Review.
+   diff, two rounds; review record G-082; handoff into Review.
