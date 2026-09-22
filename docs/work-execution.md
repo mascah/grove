@@ -26,8 +26,10 @@ explicit human decision, as [G-035](../grove/G-035-interactive-adoption.md)
 selected and [G-038](../grove/G-038-review-lifecycle.md) implemented. An
 assignment sets `active` when implementation starts (step 5) and ends by
 handing a candidate commit into `review` (step 8). Only the integrator writes
-`done`, on the target after the merge, since Done means accepted and merged;
-the CLI refuses it where the candidate is not already in HEAD. Preparation,
+`done`, on the target after the merge, since Done means accepted and merged.
+The CLI refuses it where the candidate is not already in HEAD, which keeps a
+checkout without the code from closing the work; it cannot tell the target
+from the work branch, so writing done there is this guide's rule. Preparation,
 independent review, waiting and a failed attempt are facts recorded inside
 `active`, never statuses. The [adoption roadmap](../grove/G-047-adoption-roadmap-plan.md)
 is not an assignment of all its members.

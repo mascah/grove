@@ -40,9 +40,10 @@ read the brief when the record, a product question, or reconciliation needs it.
   discovery, and `update --set type=`. G-038 implemented G-035's lifecycle:
   work runs `proposed`, `active`, `review`, `done`; an implementation ends in
   `review` with its `candidate` commit, and `done` is written on `main` after
-  the merge, by `update`, which refuses a candidate HEAD does not contain. A
-  `done` record without a candidate predates that meaning; do not backfill
-  one. G-052 reconciled this repository on 2026-09-21:
+  the merge, never on the work branch: `update` refuses a candidate HEAD does
+  not contain, but cannot tell the branch from `main`, so that rule is this
+  policy's. A `done` record without a candidate predates that meaning; do not
+  backfill one. G-052 reconciled this repository on 2026-09-21:
   every record, former `docs/plans` and `docs/reviews` document included, has
   a neutral ID flat under `grove/`, the brief is `grove/brief.md`, and
   [G-069](grove/G-069-migration-map.md) maps each old ID and path to its

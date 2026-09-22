@@ -47,13 +47,18 @@ func Text(b *Bundle) []byte {
 		line("      %s", inert(strings.Join([]string{strconv.Quote(r.Title), r.Path, r.Revision}, "  "), false))
 	}
 	if len(b.Requirements) != 0 {
-		line("\nRequirements (status as recorded here; done without a candidate is not integration):")
+		line("\nRequirements (status as recorded here; done with a candidate claims that commit merged where done was written, done without one is not integration):")
 		for _, r := range b.Requirements {
 			selected := "not selected"
 			if r.Selected {
 				selected = "selected"
 			}
-			line("  %s", inert(fmt.Sprintf("%s depends on %s: %s, %s", r.Work, r.Prerequisite, r.Status, selected), false))
+			status := r.Status
+			if r.Status == "done" {
+				status = cmp.Or(r.Candidate, "no candidate")
+				status = "done, " + strings.TrimPrefix("candidate "+status, "candidate no ")
+			}
+			line("  %s", inert(fmt.Sprintf("%s depends on %s: %s, %s", r.Work, r.Prerequisite, status, selected), false))
 		}
 	}
 	if len(b.Questions) != 0 {

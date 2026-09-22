@@ -29,8 +29,11 @@ records `examined`, the commit it looked at. Seventeen work records are
    `abandoned`, in that order everywhere the row is shown. `new` still writes
    `proposed`.
 2. **Candidate on work.** A new optional work field `candidate`: a quoted Git
-   commit, the same pattern as `examined`. It is refused while `proposed`,
-   required while `review`, and allowed on `active`, `done` and `abandoned`.
+   commit, the same pattern as `examined`. It is required while `review` and
+   allowed on every other status (adjusted during implementation from
+   "refused while `proposed`": a proposed record with a candidate is
+   harmless, and the refusal would only make reopening to proposed need
+   `--unset`).
    It names the last implementation commit; the commit that sets `review`
    changes only the record, so `git diff --stat CANDIDATE TIP` shows one file.
    A changed candidate is a new value set through `update`; the prior value
@@ -40,9 +43,12 @@ records `examined`, the commit it looked at. Seventeen work records are
    record, naming the candidate. Integration is the candidate being reachable
    from the target, shown by ancestry. `update --set status=done` therefore
    requires a candidate, present or set in the same call, and refuses one
-   that `git merge-base --is-ancestor` cannot reach from the checkout's HEAD:
-   Done is written on the target after the merge, never on the work branch
-   before it. A squash or rebase that lands a different commit names that
+   that `git merge-base --is-ancestor` cannot reach from the checkout's HEAD,
+   so a checkout without the code cannot close the work. The CLI cannot tell
+   the target from the work branch, where the candidate is an ancestor too
+   (the independent review's first finding): writing done on the target
+   after the merge is the guide's rule. A squash or rebase that lands a
+   different commit names that
    commit as the candidate in the same call. No `target:` configuration, no
    approval field and no `report` type: the interactive loop needs none, the
    work record's Evidence is the report, and G-044 adds structured approval

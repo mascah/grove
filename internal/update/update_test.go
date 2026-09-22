@@ -717,25 +717,45 @@ func TestUpdateDoneMeansAnIntegratedCandidate(t *testing.T) {
 			t.Fatalf("%s was written despite the refusal", id)
 		}
 	}
+	// A candidate value of letters only must still be written as a quoted string.
+	apply(t, root, "G-002", []Field{{"candidate", "abcdefa"}})
+	if src := read(t, root, "grove/work/G-002-second.md"); !strings.Contains(src, "candidate: \"abcdefa\"\n") {
+		t.Fatalf("candidate must be quoted:\n%s", src)
+	}
 	refuse("G-001", "candidate: required while status is review", Field{"status", "review"})
 	refuse("G-001", "set candidate=COMMIT", Field{"status", "done"})
-	refuse("G-001", "is not an ancestor of this checkout's HEAD", Field{"status", "done"}, Field{"candidate", strings.Repeat("a", 40)})
+	refuse("G-001", "could not be checked against this checkout's HEAD", Field{"status", "done"}, Field{"candidate", strings.Repeat("a", 40)})
 	// A candidate on an unmerged branch is refused on main until it is merged.
 	git(t, root, "checkout", "-q", "-b", "feature")
 	write(t, root, "grove/work/G-001-first.md", strings.Replace(work, "status: proposed", "status: active", 1))
 	git(t, root, "commit", "-qam", "implement")
 	candidate := git(t, root, "rev-parse", "HEAD")
+	// On the work branch the candidate is an ancestor too: the CLI cannot tell
+	// the target from the branch, so the guide, not this check, keeps done off
+	// the branch. Undo it so the merge below is a fast-forward.
+	apply(t, root, "G-001", []Field{{"status", "done"}, {"candidate", candidate}})
+	git(t, root, "checkout", "-q", "--", ".")
 	git(t, root, "checkout", "-q", "main")
-	refuse("G-001", "is not an ancestor of this checkout's HEAD", Field{"status", "done"}, Field{"candidate", candidate})
+	refuse("G-001", "is not an ancestor of this checkout's HEAD; mark done where it was merged", Field{"status", "done"}, Field{"candidate", candidate})
 	git(t, root, "merge", "-q", "--ff-only", "feature")
 	apply(t, root, "G-001", []Field{{"status", "done"}, {"candidate", candidate}})
-	// Changing a done record's candidate is judged again; its other fields are not.
-	refuse("G-001", "is not an ancestor", Field{"candidate", strings.Repeat("b", 40)})
+	// Changing a done record's candidate is judged again; its other fields are
+	// not, and the candidate cannot be dropped.
+	refuse("G-001", "could not be checked against this checkout's HEAD", Field{"candidate", strings.Repeat("b", 40)})
+	if r := record(t, root, "G-001"); true {
+		_, err := Apply(root, Request{ID: "G-001", Expect: project.Revision(r.Source), Unset: []string{"candidate"}}, now, nil)
+		if err == nil || !strings.Contains(err.Error(), "candidate cannot be removed") {
+			t.Fatalf("unset candidate on a done record: %v", err)
+		}
+	}
+	if r := record(t, root, "G-001"); r.Candidate != candidate {
+		t.Fatalf("candidate changed: %+v", r)
+	}
 	apply(t, root, "G-001", []Field{{"candidate", base}, {"title", "Renamed"}})
 	// A historical done record has no candidate: editable, and never given one that HEAD lacks.
 	write(t, root, "grove/work/G-002-second.md", strings.Replace(second, "status: proposed", "status: done", 1))
 	apply(t, root, "G-002", []Field{{"title", "Still done"}})
-	refuse("G-002", "is not an ancestor", Field{"candidate", strings.Repeat("c", 40)})
+	refuse("G-002", "could not be checked", Field{"candidate", strings.Repeat("c", 40)})
 	if r := record(t, root, "G-002"); r.Candidate != "" || r.Title != "Still done" {
 		t.Fatalf("historical done: %+v", r)
 	}

@@ -68,6 +68,7 @@ type Requirement struct {
 	Work         string `json:"work"`
 	Prerequisite string `json:"prerequisite"`
 	Status       string `json:"status"`
+	Candidate    string `json:"candidate,omitempty"` // a done prerequisite's merged commit; absent on a historical done
 	Selected     bool   `json:"selected"`
 }
 
@@ -253,7 +254,7 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 	for _, r := range scope {
 		for _, id := range r.DependsOn {
 			b.Requirements = append(b.Requirements, Requirement{
-				Work: r.ID, Prerequisite: id, Status: byID[id].Status, Selected: slices.Contains(ids, id),
+				Work: r.ID, Prerequisite: id, Status: byID[id].Status, Candidate: byID[id].Candidate, Selected: slices.Contains(ids, id),
 			})
 		}
 	}

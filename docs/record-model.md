@@ -521,21 +521,26 @@ implementation, independent review and waiting are activities inside
 - **Done** means the candidate was accepted and merged into the target, for
   research and design deliverables too, since those are files. `update` writes
   `done`, or changes a done record's candidate, only when the candidate is an
-  ancestor of the checkout's `HEAD` (`git merge-base --is-ancestor`), so Done
-  is written on the target after the merge and never on the work branch
-  before it. A squash or rebase that lands a different commit names that
-  commit as the candidate in the same update. The check needs Git, as
-  `update` already does; `check` verifies the form only.
+  ancestor of the checkout's `HEAD` (`git merge-base --is-ancestor`), so a
+  checkout that lacks the code cannot close the work; a done record's
+  candidate cannot be removed. The integrator writes done in the target's
+  checkout after the merge. A squash or rebase that lands a different commit
+  names that commit as the candidate in the same update. The check needs Git,
+  as `update` already does; `check` verifies the form only.
 - **Historical Done.** A `done` work record without `candidate` was completed
   before this rule and asserts only that its outcome was achieved in that
   record's own branch context, as its Evidence says; it is not proof of a
   merge. Nothing rewrites it, `check` accepts it, and its other fields stay
   editable; `update` never writes a new one. Delivery of such a prerequisite
   is established by Git ancestry or observed behavior, as before.
-- Not enforced by software: the order of transitions, that Abandoned needs a
-  human decision, and that a review record exists before Review. These are
-  guide rules, since software cannot verify a person and the owner edits by
-  hand. No `target` configuration, approval field or automatic merge exists;
+- Not enforced by software: the order of transitions; that Abandoned needs a
+  human decision; that a review record exists before Review; that done is
+  written on the target and not on the work branch, where the candidate is
+  an ancestor too; and that a reopened record's candidate is moved to its new
+  commits before it is closed again, which the guide's `git diff --stat
+  CANDIDATE TIP` check catches. These are guide rules, since software cannot
+  verify a person or know the target, and the owner edits by hand. No `target`
+  configuration, approval field or automatic merge exists;
   [G-044](../grove/G-044-review-integration.md) owns integration actions.
 
 Body organization is for readers. The first CLI should not infer readiness or

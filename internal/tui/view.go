@@ -278,7 +278,7 @@ func (m *Model) boardBody(w, n int) []string {
 		for i, status := range statuses {
 			name := title(status)
 			if w < 60 {
-				name = [...]string{"Prop", "Act", "Rev", "Done", "Aban"}[i]
+				name = shortNames[i]
 			}
 			tab := fmt.Sprintf("%s %d", name, len(columns[i]))
 			if i == m.col {
@@ -290,6 +290,9 @@ func (m *Model) boardBody(w, n int) []string {
 	}
 	return append(rows, line(shelfRow, w))
 }
+
+// short abbreviates the column names for narrow terminals, one per status.
+var shortNames = [len(statuses)]string{"Prop", "Act", "Rev", "Done", "Aban"}
 
 // column renders one status column to exactly n rows.
 func (m *Model) column(cards []card, focused bool, w, n int) []string {

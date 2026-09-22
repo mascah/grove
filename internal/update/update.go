@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -237,21 +238,30 @@ func plan(r *project.Record, req Request) ([]change, error) {
 	return changes, nil
 }
 
-// integrated enforces what Done means since the review lifecycle: an accepted
-// candidate that reached the target. Writing done, or changing the candidate of
-// a done record, needs a candidate that HEAD already contains, so Done is
-// written on the target after the merge and never on the work branch before
-// it. A done record without a candidate predates this meaning and its other
-// fields stay editable.
+// integrated enforces what the CLI can of Done's meaning since the review
+// lifecycle, an accepted candidate that reached the target: writing done, or
+// changing the candidate of a done record, needs a candidate that this
+// checkout's HEAD already contains, so a checkout without the code cannot
+// close the work. Which branch is the target is the guide's rule, not the
+// CLI's: on the work branch itself the candidate is an ancestor too. A done
+// record without a candidate predates this meaning and its other fields stay
+// editable.
 func integrated(root string, before, after *project.Record) error {
 	if after.Type != "work" || after.Status != "done" || (before.Status == "done" && before.Candidate == after.Candidate) {
 		return nil
 	}
 	if after.Candidate == "" {
+		if before.Candidate != "" {
+			return fmt.Errorf("a done record's candidate cannot be removed: it is the commit that was accepted and merged")
+		}
 		return fmt.Errorf("done means accepted and integrated: set candidate=COMMIT, the commit that was accepted and merged, in the same update")
 	}
 	if _, err := repo.Git(root, "merge-base", "--is-ancestor", after.Candidate, "HEAD"); err != nil {
-		return fmt.Errorf("done means accepted and integrated: candidate %s is not an ancestor of this checkout's HEAD (%v); mark done where it was merged", after.Candidate, err)
+		var exit *exec.ExitError
+		if errors.As(err, &exit) && exit.ExitCode() == 1 { // Git's answer, not a failure: known commit, not an ancestor
+			return fmt.Errorf("done means accepted and integrated: candidate %s is not an ancestor of this checkout's HEAD; mark done where it was merged", after.Candidate)
+		}
+		return fmt.Errorf("done means accepted and integrated: candidate %s could not be checked against this checkout's HEAD: %v", after.Candidate, err)
 	}
 	return nil
 }

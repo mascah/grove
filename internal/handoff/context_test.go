@@ -127,7 +127,7 @@ func TestSelectionOrderAndScope(t *testing.T) {
 	if !reflect.DeepEqual(b.Order, []string{"G-001", "G-004"}) || b.Interaction != "headless" {
 		t.Fatalf("order %v", b.Order)
 	}
-	wantReq := []Requirement{{"G-004", "G-005", "abandoned", false}, {"G-005", "G-001", "done", true}}
+	wantReq := []Requirement{{"G-004", "G-005", "abandoned", "", false}, {"G-005", "G-001", "done", "", true}}
 	if !reflect.DeepEqual(b.Requirements, wantReq) {
 		t.Fatalf("%+v", b.Requirements)
 	}

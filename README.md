@@ -13,9 +13,9 @@ The selected next milestone is a complete interactive shape → implement →
 review → integrate loop on real nullsec work. Start with
 [G-036's adoption roadmap](grove/G-047-adoption-roadmap-plan.md) for the ordered
 work. Its proposed capabilities are not commands available in this build:
-the current board remains checkout-scoped. Work has the Review status:
-an implementation ends as a `review` record naming its `candidate` commit,
-and `done` is written where that candidate was merged.
+the current board remains checkout-scoped. Work has the Review status: an
+implementation ends with its work record in Review, naming its `candidate`
+commit, and `done` is written where that candidate was merged.
 
 Start with [the restart brief](grove/brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
@@ -73,8 +73,9 @@ selected work without reading them; a review can record the Git commit it
 `examined`. Work moves `proposed`, `active`, `review`, `done`, with
 `abandoned` for an explicit human decision. `review` requires `candidate`, the
 commit offered for judgment, and `update` writes `done` only with a candidate
-that the checkout's HEAD contains: Done means accepted and merged, and is
-written on the target after the merge. A `done` record without a candidate
+that the checkout's HEAD contains: Done means accepted and merged, so the
+integrator writes it in the target's checkout after the merge, where the
+check holds it to the code that landed. A `done` record without a candidate
 predates that meaning. `new page "Title"` creates general knowledge with a title and no
 status; pages are never work cards and `context` reads one only through
 `--include`. `update --set type=...` reclassifies in place, keeping ID and path.
