@@ -201,9 +201,13 @@ The same steps, with these bounds:
   proposals' implementation, promote a status, accept a decision, merge, or
   start another session.
 - **Missing human choice.** Do not invent the answer or write acceptance that
-  presumes it. Create the question with `blocks`, note it in the affected
-  work's Next, commit, and return the wait: the question ID, what it stops,
-  and the branch and commit holding it.
+  presumes it. A scope or design choice that the acceptance depends on is
+  such a choice even when the proposal could be assigned without it; choices
+  "left for the owner" in Next are the interactive form, not this one
+  (G-078 saw a headless session settle three such choices itself). Create
+  the question with `blocks`, note it in the affected work's Next, commit,
+  and return the wait: the question ID, what it stops, and the branch and
+  commit holding it.
 - **Unchanged wait.** When a rerun finds the same open question and nothing
   new, return the same wait. Do not redo the research, create a second
   question, or loop.

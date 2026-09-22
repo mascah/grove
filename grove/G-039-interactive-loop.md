@@ -55,21 +55,64 @@ The user must supply the actual usability verdict. This record does not itself
 authorize merging any trial branch: obtain that work's explicit disposition.
 Feed lessons into their owning guide or work record and the adoption milestone.
 
+## Evidence
+
+Trial run 2026-09-22 under plan G-075 on branch `worktree-G-039` (worktree
+`.claude/worktrees/G-039`), rebased from main `5f07c94` onto `e8bcf03` once
+the real change was integrated there; started from this record at revision
+`43830baa…` and G-075 at `8dedc7c6…`, neither changed by the rebase. The
+evidence per acceptance item, with each observation labelled real,
+simulation or unexercised, is the review record
+[G-078](G-078-g-039-trial-evidence-for-the-int.md), examined `840a78b`, the
+candidate of the real change [G-076](G-076-filter-grove-list-by-status.md)
+whose loop is main `ff0f3e9..e8bcf03`. In short: items 1, 2, 4 (continuation)
+and 6 were met on real sessions; item 3 was met with one gap, the owner's
+verdict not quoted at done; item 4's feedback and missing-human cases were
+simulated in disposable clones, where the headless shaping call diverged from
+the guide by settling product choices itself; item 5 is G-078 and this
+section. The candidate is the commit that adds this section.
+
+Decisions: the rebase, so that G-076 and G-077 resolve as links from G-078;
+the headless simulation ran `claude -p` with write tools allowed on the
+clone, which used Claude Opus 5 rather than the interactive model. Lessons
+went to their owners in the same commit: `docs/work-execution.md` step 8 (the
+handoff's integration commands include the verdict edit),
+`docs/work-shaping.md` headless bounds (a choice the acceptance depends on is
+a missing choice), and G-036's Next (open improvements).
+
+Verification at the candidate: `go run ./cmd/grove check` → `OK: 78
+records`; every link written here and in G-078 resolves to a file in this
+checkout; no Go source changed, so `go vet`, `gofmt` and the suite are
+unaffected. Review: G-078 is this session's evidence, not an independent
+review; the record and plan ask for none, so that omission is reported here
+as open rather than blocking.
+
+Limits: the owner's verbatim verdict on G-076 and whether chat was needed for
+it are not on file; the headless work row and the review cap were not
+exercised; the clones were left under the session scratchpad and are not
+part of this branch.
+
 ## Next
 
-Checkpoint 2026-09-22, `/grove-work G-039` interactive, Claude Code 2.1.278
-(Fable 5.1). Branch `worktree-G-039` in `.claude/worktrees/G-039`, base main
-`5f07c94`; started from G-039 revision `b7fdfd14` and plan G-075. Done: context
-assembled, prerequisites verified, checkout created, change selected with the
-owner, plan G-075 written, status active. Nothing else written; no commands
-left running. Waiting on the owner for G-075 steps 1 to 3, in fresh sessions:
+Candidate awaits the owner's judgment. Two facts only the owner has, to write
+into G-078's finding 3 when judging: the G-076 verdict verbatim, and whether
+chat was needed to integrate it. Demo, from any checkout:
 
 ```sh
-# fresh session, main checkout
-/grove-shape add a status filter to grove list
-# fresh session, after the proposal is committed on main
-/grove-work G-NNN
-# then judge from .claude/worktrees/G-NNN, and on acceptance integrate on main
+cd .claude/worktrees/G-039
+go run ./cmd/grove context G-039 --include grove/G-078-g-039-trial-evidence-for-the-int.md
+go run ./cmd/grove show G-078
+git diff --stat main
 ```
 
-Then resume `/grove-work G-039` in a fresh session for G-075 steps 4 and 5.
+Integrate on approval, from the main checkout, quoting the verdict here
+before setting done:
+
+```sh
+git merge --ff-only worktree-G-039
+go run ./cmd/grove show G-039 --json    # take the revision
+go run ./cmd/grove update G-039 --expect REVISION --set status=done
+git commit -am "docs(G-039): mark done on the owner's acceptance and merge"
+```
+
+Feedback instead: write it here and set `status=active` on the branch.

@@ -316,7 +316,10 @@ candidate to human judgment:
    changed behavior against each acceptance item; the decisions taken and
    why; the verification commands, their results and the commit they ran at;
    each review record with its findings and their dispositions; unresolved
-   issues and limits; and the integrator's next action as runnable commands.
+   issues and limits; and the integrator's next action as runnable commands,
+   including the edit that quotes the verdict in the record before `done`,
+   since the integrator runs them as given (G-078 found a done commit that
+   changed the status alone).
 2. Set the status with that commit as the candidate, and commit that change
    alone, so `git diff --stat CANDIDATE HEAD` shows one file:
    `grove update G-030 --expect REVISION --set status=review --set candidate=COMMIT`.

@@ -50,3 +50,10 @@ contract, not the act of migrating this repo's documents; the order is a
 recommended sequence rather than an extra dependency. Do not invoke
 `/grove-work G-036` to execute every member unattended. Select one bounded member
 or explicitly scoped set. G-041 owns the hobby-project completion evidence.
+
+G-039's trial evidence is [G-078](G-078-g-039-trial-evidence-for-the-int.md),
+2026-09-22: the full loop ran on G-076 in 22 minutes. Improvements it left
+open, unowned until assigned: `new review` leaves `Examined`, `Findings` and
+`Disposition` headings the CLI could fill or the work guide could name; the
+headless shaping call did not take the question path, so exercise it again
+after the guide change; the headless work row is still unexercised.
