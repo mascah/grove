@@ -2,16 +2,16 @@
 id: "G-042"
 type: work
 title: "Derive a project-wide current view of work"
-status: active
+status: review
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-22T22:40:21Z"
+updated: "2026-09-22T22:49:29Z"
 kind: feature
 size: medium
 priority: 3
 depends_on: ["G-037", "G-038"]
 relates_to: ["G-035", "G-002", "G-010", "G-011", "G-030", "G-031", "G-064", "G-065"]
 formerly: "W-024"
-candidate: "046150e"
+candidate: "b56646c"
 ---
 
 ## Outcome
