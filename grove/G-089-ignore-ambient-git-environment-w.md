@@ -4,9 +4,9 @@ type: work
 title: "Ignore ambient Git environment when Grove and its tests run Git"
 status: review
 created: "2026-09-22T17:11:12Z"
-updated: "2026-09-22T17:35:29Z"
+updated: "2026-09-22T17:40:11Z"
 size: small
-candidate: "7fe4ccf"
+candidate: "07a63d3"
 ---
 
 ## Outcome
@@ -102,6 +102,16 @@ own fix and is resolved by taking either.
 `go vet ./...`, `go run ./cmd/grove check` (`OK: 85 records`), plain
 `go test -count=1 -timeout 120s ./...` all ok (`internal/versions` 7.3 s),
 plus the decoy run above.
+
+**Bounded adjustment after the merge with main:** PR #3's first CI run failed
+`TestUpdateDetectsChangesDuringPreparation/target_replaced` on
+`ubuntu-latest` only, twice. The publication guard in `internal/update`
+compared file identity with `os.SameFile`; ext4 reuses a freed inode number
+at once, so a record removed and recreated with the same bytes passed as the
+same file, while APFS and the container's overlay filesystem hand out new
+numbers. 07a63d3 also compares the modification time, which the product never
+changes between the two reads. Outside this record's original outcome but
+the same class as G-081's Linux fixes, and one line.
 
 **Review:** G-090, two rounds, no blocking findings; the should-fix items
 (hook variable list, `AGENTS.md` scope) and nits are fixed in ca6a599.
