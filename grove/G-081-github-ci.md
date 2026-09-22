@@ -2,9 +2,9 @@
 id: "G-081"
 type: work
 title: "Run secure CI and Dependabot on GitHub"
-status: proposed
+status: active
 created: "2026-09-22T16:10:10Z"
-updated: "2026-09-22T16:18:32Z"
+updated: "2026-09-22T16:26:44Z"
 kind: tooling
 size: medium
 relates_to: ["G-040", "G-044"]
@@ -133,12 +133,102 @@ citing the comprehensive CI suites of their professional projects (the sibling
 6. The owner judges the setup useful and not noisy after the first week of
    pushes and Dependabot PRs; that judgment is theirs and is recorded here.
 
+## Evidence
+
+Implemented 2026-09-22 on `worktree-G-081` from `main` 6c11ad8, starting from
+this record at revision ba0e9175 with no plan (the record said none was
+needed). Commits: d8aae4e (`go.mod` to Go 1.26.5), d4f5360 (CI workflow,
+Dependabot, README), 64ad5d3 (review fixes), then the commit carrying this
+evidence and [G-084](G-084-review-of-g-081-ci-dependabot-an.md), which is the
+`candidate`.
+
+**Against the acceptance:**
+
+1. `.github/workflows/ci.yml` runs on `pull_request` and `push` to `main`.
+   The `check` job on `ubuntu-latest` and `macos-latest` runs, in order,
+   `test -z "$(gofmt -l . 2>&1 | tee /dev/stderr)"`, `go vet ./...`,
+   `go mod tidy -diff`, `go build ./...`, `go run ./cmd/grove check`, and
+   `go test -count=1 -timeout 120s ./...`. The gofmt guard was shown to exit
+   1 on an unformatted file and on a syntax error, and 0 on the clean tree.
+   Not verified: a run on GitHub, since this session does not push; green on
+   both runners is the integrator's observation after the push (Next).
+2. Hardening, one workflow file: `permissions: contents: read` at top level
+   and no job addition; `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1`
+   (v7.0.1) and `actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e`
+   (v7.0.0), both resolved from their tags with `gh api` and re-verified by
+   the reviewer; `timeout-minutes` 15 on `check` and 10 on `govulncheck`;
+   `concurrency` on `${{ github.workflow }}-${{ github.ref }}` with
+   `cancel-in-progress` only for pull requests, so each push to `main` keeps
+   its result; no `pull_request_target`; `persist-credentials: false` on
+   both checkouts. `actionlint` v1.7.12 reports nothing.
+3. Settings are unchanged and remain the owner's step; observed at review:
+   `allowed_actions: all`, `sha_pinning_required: false`, vulnerability
+   alerts 404, automated security fixes disabled. `.github/dependabot.yml`
+   groups `gomod` and `github-actions` weekly, one PR each; it omits
+   `labels`, relying on Dependabot's default `dependencies` label, since the
+   repository has no such label and a listed label that does not exist is
+   ignored. The first Dependabot PR confirms both.
+4. Observed: `gh pr view 1` is `CLOSED`, `gh secret list` is empty. The App
+   installation cannot be read with the user token; the owner confirms it in
+   the installed-apps settings.
+5. README's testing paragraph now says CI runs the same checks plus
+   `grove check` and `go build` on both systems and `govulncheck` on Ubuntu,
+   as a signal, and that Dependabot opens grouped PRs.
+6. The owner's judgment after the first week; not yet given.
+
+**Decisions:**
+
+- `go.mod` now requires Go 1.26.5. At 1.26.2, govulncheck exits 3 on
+  GO-2026-4970 (an `os.Root` escape through a symlink plus trailing slash),
+  reached from `readConfined` in `internal/handoff`, the confined reader
+  behind `grove context`. The toolchain is the fix; `GOTOOLCHAIN=auto`
+  downloads it on the next build. Limit: `setup-go` installs exactly the
+  `go` directive, so CI's toolchain moves only when `go.mod` is edited.
+- govulncheck runs as `go run golang.org/x/vuln/cmd/govulncheck@v1.8.0`,
+  pinned through the module proxy rather than a third-party action. It is
+  symbol-level: advisories in modules the code does not call leave it green
+  (nine such at the candidate), which Dependabot alerts cover once enabled.
+- Not added: CodeQL (optional in the design; add when the owner wants a
+  second scanner), an `anthropics/*` allow pattern (no Anthropic action is
+  used now), and a `labels` key.
+
+**Verification** at the Go tree of 64ad5d3 (identical to d4f5360), on
+macOS with Go 1.26.5: `gofmt -l .` empty, `go vet ./...`, `go mod tidy
+-diff`, `go build ./...`, `go run ./cmd/grove check` (`OK: 80 records`;
+81 with G-084), `go test -count=1 -timeout 120s ./...` all packages ok,
+`internal/versions` 7.3 s; `govulncheck` 0 called vulnerabilities, exit 0;
+`actionlint` clean. The reviewer repeated the suite and `grove check` from
+a credential-free shallow clone of 64ad5d3, all green.
+
+**Review:** G-084, two rounds, no blocking findings. Round 1's should-fix
+items were the `main` cancellation (fixed), govulncheck's symbol-level scope
+(recorded above), and the settings still off (owner's step); nits fixed:
+gofmt parse errors, README wording, persisted credentials; kept: `go build`
+by the design's request. Round 2 confirmed the fixes with one accepted
+residual: a third push to `main` inside one run still cancels the pending
+middle run; a per-SHA group on push would close that if it ever matters.
+
 ## Next
 
-Assign. No plan is needed: the design above and `xfer`'s `.github` are enough
-for one implementation. The owner's own steps, in any order: close PR #1
-unmerged (`gh pr close 1`), uninstall the Claude Code GitHub App and delete
-the `CLAUDE_CODE_OAUTH_TOKEN` secret, change the repository settings in
-acceptance 3, and merge the result. When G-040 selects a distribution
-mechanism, its release workflow should reuse this work's hardening pattern
-rather than restart it.
+In Review. The integrator's steps, from the main checkout:
+
+1. Optional, exercises the pull-request half of acceptance 1 before merging:
+   `git push origin worktree-G-081 && gh pr create --base main --head worktree-G-081 --fill`,
+   then `gh pr checks --watch`.
+2. Merge and push: `git merge --ff-only worktree-G-081 && git push origin main`,
+   then `gh run watch` until both `check` runners and `govulncheck` are green.
+3. Settings (acceptance 3), then read them back:
+
+   ```sh
+   gh api -X PUT repos/mascah/grove/actions/permissions -F enabled=true -f allowed_actions=selected -F sha_pinning_required=true
+   printf '{"github_owned_allowed":true,"verified_allowed":true,"patterns_allowed":[]}' | gh api -X PUT repos/mascah/grove/actions/permissions/selected-actions --input -
+   gh api -X PUT repos/mascah/grove/vulnerability-alerts
+   gh api -X PUT repos/mascah/grove/automated-security-fixes
+   gh api repos/mascah/grove/actions/permissions; gh api repos/mascah/grove/actions/permissions/selected-actions; gh api -i repos/mascah/grove/vulnerability-alerts | head -1
+   ```
+
+4. Confirm the Claude Code GitHub App is gone at
+   https://github.com/settings/installations (acceptance 4).
+5. Write the verdict into this record with the `gh api` output, then on
+   `main`: `go run ./cmd/grove update G-081 --expect REVISION --set status=done`
+   and commit. Acceptance 6 is recorded after the first week.
