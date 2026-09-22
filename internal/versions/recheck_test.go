@@ -49,6 +49,10 @@ func TestResolveFinalCheck(t *testing.T) {
 			must(t, os.Rename(filepath.Join(wt, "sub"), filepath.Join(wt, "aside")))
 			must(t, os.Symlink("aside", filepath.Join(wt, "sub")))
 		}, "is a symlink"},
+		{"checkout root symlinked", "live", func(t *testing.T, root, wt string) {
+			must(t, os.Rename(wt, wt+"-aside"))
+			must(t, os.Symlink(wt+"-aside", wt))
+		}, "is a symlink or not a directory"},
 		{"registration moved", "live", func(t *testing.T, root, wt string) {
 			git(t, root, "worktree", "move", wt, wt+"-moved")
 		}, "was removed or moved"},
