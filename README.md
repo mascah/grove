@@ -322,58 +322,100 @@ checkout that is `go run ./cmd/grove`. There is no `board` subcommand and no
 work-ID argument; every command above stays noninteractive, and `--help`,
 `-h`, and `help` need neither a project nor a terminal.
 
-The columns (Proposed, Active, Review, Done, Abandoned) open on the current
-view: every work record in its current state across all local branches and
-checkouts, as `versions` decides it, the same from any checkout. An old copy
-on a stale branch does not hide a later status elsewhere. A card whose current
-state is only in a checkout's uncommitted files is marked `uncommitted`. With a
-target, a card none of whose committed current states is on it is marked
-`not on main`, and the header names the target. Where
-the current states diverge, one card sits in the earliest of their statuses,
-marked `⑂ 2 states`, and its details list each state and where it lives. Work
-whose current state removes its record is listed under Deleted.
+The columns (Proposed, Active, Review, Done) open on the current view: every
+work record in its current state across all local branches and checkouts, as
+`versions` decides it, the same from any checkout. An old copy on a stale
+branch does not hide a later status elsewhere. Each card is a box holding the
+record's ID and tag, its title, and its kind, size and priority, or for Done
+the date it was last written and its candidate; the focused card has a heavy
+border and a `▶` marker, and each column an accent colour that nothing
+depends on. A card whose current state is only in a checkout's uncommitted
+files is marked `uncommitted`. With a target, a card none of whose committed
+current states is on it is marked `not on main`, and the header names the
+target. Where the current states diverge, one card sits in the earliest of
+their statuses, marked `⑂ 2 states`, and its detail says which states exist
+and where. Work whose current state removes its record is listed under
+Deleted. Done shows the most recently written cards that fit the column,
+newest first, and counts the rest (`+ 23 older · / to search`). Abandoned is
+hidden until `a` shows its column, and the shelf row counts it meanwhile.
+Neither the bound nor the hiding moves a file.
 
 `b` chooses between the current view and one checkout's own live files, as
 before; this changes what is displayed and switches no branch or directory.
 On a checkout's board, work with no live record there is listed under
-Elsewhere without a status. Questions and decisions are not on the board.
+Elsewhere without a status. Questions, decisions, pages, terms, plans and
+reviews are never cards; `/` finds them.
 
-Enter on a card opens that record's versions. A version is the record's exact
-content; the board read it at every local branch's tip and in every checkout's
-files, and lists each differing content once with its own title and status,
-current ones first. An older one is marked `older`, and its details say why.
-Where several branches and checkouts hold the same content the row is a fold
-(`▸ done  same on 4 branches, 4 checkouts`): Enter lists those places, and
-selects nothing. Opening a card selects nothing either. Moving to one branch
-or checkout and pressing Enter asks `workspace`'s resolver about exactly that
-version's selector; on success the board closes and prints
-what `workspace` prints (the project path on stdout, or its JSON with
-`--json`; checkout, branch, record, and revision on stderr). A refusal (the
-version changed, its checkout is missing or ambiguous, the record was deleted
-there) stays on screen with its reason until `r` refreshes, after which a
-version must be selected again. The board never creates a worktree, edits a
-record, or starts an editor, shell, or agent.
+Enter on a card opens the record's detail: a boxed header with the ID,
+status, title, planning fields, candidate, standing against the target, the
+places holding its current state and when it was last written; then its body
+rendered from Markdown (headings, emphasis, lists, code, tables) beside a
+sidebar of the records linked to it, the timeline of commits that changed
+it, and one line per current state. Linked records are listed by role,
+derived from fields alone: `plan` and `review` (records whose `work` names
+it; a review adds what it `examined` and whether that is the candidate),
+`work` for a plan or review, `needs` and `needed by` (`depends_on` either
+way), `blocked by` and `blocks` (a question's `blocks`), `part of` and
+`member` (`members`), and `related` (`relates_to` either way). Tab moves
+focus from the content to the linked records, to the timeline, and back;
+↑/↓ and PgUp/PgDn scroll the content or move the cursor. Enter on a linked
+record opens its own detail, of any type, and Esc returns; Enter on a
+timeline commit shows the record as it was at that commit, and Esc returns
+to now. Below 100 columns the detail shows one pane at a time and Tab cycles
+them. A page, term, decision, question, plan or review opens in the same
+screen, with the fields its type has.
 
-The card's details begin with History: the commits that changed the record's
+The timeline is the record's history from Git: the commits that changed its
 file, newest first, each with its date, the status the record held at that
-commit, its short ID, and its subject, following renames. It is the history of
-whichever row has focus, named in its heading: while the card's first line
-has focus, the first current version's place (the board's checkout on a
-checkout's board), otherwise that branch's tip or that checkout's HEAD. A checkout whose files differ from its HEAD gets a first `uncommitted`
-row. Merges are not listed, so where the record's status is not the newest
-listed commit's, a first `here` row gives it and says why. History is read from
-Git when a card is open, never while the board loads, and no key waits for a
-read still in progress. It says what happened on one branch and nothing about
-whether another branch contains it. [G-030](grove/G-030-card-lineage.md)
-owns this.
+commit, its short ID, and its subject, following renames. It is the history
+of the state the detail shows, named in its heading: in the current view the
+first current state's branch or checkout, on a checkout's board that
+checkout's HEAD. A checkout whose files differ from its HEAD gets a first
+`uncommitted` row. Merges are not listed, so where the record's status is not
+the newest listed commit's, a first `here` row gives it and says why. History
+is read from Git when a detail is open, never while the board loads, and no
+key waits for a read still in progress. It says what happened on one branch
+and nothing about whether another branch contains it.
+[G-030](grove/G-030-card-lineage.md) owns this.
+
+`v` in a detail opens the record's versions. A version is the record's exact
+content; the board read it at every local branch's tip and in every
+checkout's files, and lists each differing content once with its own title
+and status, current ones first. An older one is marked `older`, and its
+details say why. Where several branches and checkouts hold the same content
+the row is a fold (`▸ done  same on 4 branches, 4 checkouts`): Enter lists
+those places, and selects nothing. Opening a card or a detail selects nothing
+either. Moving to one branch or checkout and pressing Enter asks
+`workspace`'s resolver about exactly that version's selector; on success the
+board closes and prints what `workspace` prints (the project path on stdout,
+or its JSON with `--json`; checkout, branch, record, and revision on stderr).
+A refusal (the version changed, its checkout is missing or ambiguous, the
+record was deleted there) stays on screen with its reason until `r`
+refreshes, after which a version must be selected again. The details pane
+there begins with the focused version's history. The board never creates a
+worktree, edits a record, or starts an editor, shell, or agent.
+
+`/` on the board searches every record of the project in its current state,
+of every type, including hidden Abandoned work, Done beyond its page, pages
+and terms: typing filters by ID, type, status and title, not the body; ↑/↓
+move, Enter opens the detail, Esc closes. Letters typed there filter rather
+than act; Ctrl-C still interrupts.
+
+Record bodies are rendered by glamour after the same escaping as every other
+text, so a body's control sequences show as text and only the renderer's own
+styles reach the terminal. Links are shown as text, never as terminal
+hyperlinks, and a relative target is shown root-relative (`/G-093-….md`).
+The render is cached per record content and width.
 
 Keys: arrows or `h` `j` `k` `l` move; Tab switches between the columns and
-Deleted or Elsewhere, or between versions and details; PgUp/PgDn scroll details; `s`
-lists every branch and checkout read with its diagnostics, which stay reachable while a banner
-marks an incomplete result; `r` re-reads; Esc goes back, and quits from the
-board; `q` quits. Below 100 columns one status column shows at a time; below
-40x10 the board asks for more room. Leaving without a selection prints nothing
-and exits 0; Ctrl-C exits 1; a usage error exits 2.
+Deleted or Elsewhere, between the detail's panes, or between versions and
+details; `/` searches; `a` shows or hides Abandoned; `v` opens a detail's
+versions; PgUp/PgDn scroll; `s` lists every branch and checkout read with its
+diagnostics, which stay reachable while a banner marks an incomplete result;
+`r` re-reads; Esc goes back, and quits from the board; `q` quits. Below 100
+columns one status column shows at a time; below 40x10 the board asks for
+more room. Leaving without a selection prints nothing and exits 0; Ctrl-C
+exits 1; a usage error exits 2.
 
 The board draws on stderr and reads stdin, so both must be terminals, while
 stdout may be redirected: `cd "$(go run ./cmd/grove)"`. Without a terminal it
@@ -402,7 +444,8 @@ workspace-provenance, update-preservation, and Git-path defects; G-014 through
 G-016 repair them, with [evidence and remaining limits](grove/G-028-repairs-review.md).
 [G-017](grove/G-017-terminal-picker.md) owns the board's contract and its
 [evidence](grove/G-029-board-review.md), including the owner's judgment
-from a demo, which automated checks do not supply.
+from a demo, which automated checks do not supply;
+[G-043](grove/G-043-board-detail.md) owns the cards, the detail, and search.
 
 The intended experience combines linked work, questions, research, project
 knowledge, and evidence. A CLI serves agents and humans; a TUI can make the

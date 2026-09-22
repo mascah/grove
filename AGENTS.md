@@ -18,7 +18,11 @@ read the brief when the record, a product question, or reconciliation needs it.
   and G-009 field updates with content revisions and a shared write lock.
   G-017 implements the read-only terminal board that bare `grove` opens, with
   Bubble Tea v2 in `internal/tui`; keep explicit subcommands noninteractive,
-  and the board's text escaping and exact source targeting intact. G-035 selects
+  and the board's text escaping and exact source targeting intact. G-043 gave
+  it bordered cards, a Done column bounded to its page, Abandoned behind `a`,
+  a record detail (glamour-rendered body behind the same escaping, linked
+  records by field, the timeline) and `/` search; versions and workspace
+  selection sit behind `v`. Every rendered body goes through `safe` first. G-035 selects
   a project-wide current view, which G-042 derives from Git ancestry in
   `internal/versions/current.go`: the board opens on it, and `b` still chooses
   one checkout's own board, retaining explicit source inspection and freshness

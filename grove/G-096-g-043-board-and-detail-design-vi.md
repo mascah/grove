@@ -324,8 +324,42 @@ day:
 
 Everything else above is a routine technical choice inside G-043's outcome.
 
+## Adjustments made while implementing, 2026-09-22
+
+- **Lip Gloss v2.0.4, not v2.0.6.** glamour v2.0.1 already requires v2.0.4,
+  and that pair keeps `ultraviolet` at bubbletea v2.0.9's own pin, so the
+  one compatibility risk the table names never arises. `go.mod` gained
+  glamour, lipgloss, goldmark, goldmark-emoji and `golang.org/x/text`.
+- **Escaping is per line.** `safe` escapes newlines too, which flattened
+  Markdown; the pipeline escapes each line and keeps the breaks.
+- **Relative link targets show root-relative.** glamour resolves every
+  relative URL against its base and prints `/G-093-….md`; with hyperlinks
+  stripped that text is what remains. Record links are relative to the
+  record root, so the slash reads as that root. Accepted rather than
+  rewriting links before rendering.
+- **The Done bound is its page.** One row is kept for the footer, two for the
+  paging counts of other columns; at fewer than 12 rows a card shrinks to
+  its ID and one title row so the footer still fits, and the detail's header
+  drops its metadata below 16 rows.
+- **Esc from the versions returns to the detail**, not the board, since the
+  versions now open from it; Esc from the detail cancels a pending history
+  read, since the board never reads one.
+- **A linked review shows what it examined** on a row under its entry, and
+  whether that is the work's candidate: the fact the review view starts
+  from, shown without any action.
+- **`versions.Commit` gained `Source`**, the record's bytes at the commit,
+  which the history read already fetched to parse the status; the timeline's
+  Enter shows them. Nothing else in `versions` changed.
+- **Search opens from the board only**, as drawn; the detail has `v`, `s`,
+  `r` and Esc.
+- The header keeps its `Board: current view, target main` wording rather
+  than the mockup's dots: fewer contract changes for no gain.
+
 ## Limits
 
 Dependency graph visualization stays later, as G-043 says. Review actions are
-G-044. Search matches ID, type and title, not bodies. Colour is an accent on
-top of a design that reads without it; the owner judges both in a terminal.
+G-044. Search matches ID, type, status and title, not bodies. Colour is an
+accent on top of a design that reads without it; the owner judges both in a
+terminal. The sidebar clips long titles to its width; the detail of the
+linked record has the whole title. A timeline commit's content is held only
+while the history read is (a refresh rereads it).
