@@ -67,13 +67,15 @@ type objects struct {
 	trees    map[string][]entry
 	blobs    map[string][]byte
 
-	commitInfos map[string]commitInfo
-	bases       map[[2]string][]string // by the ordered pair of commits
+	graph   map[string]*commitNode   // commits read for merge bases
+	epoch   int                      // the current merge-base walk
+	bases   map[[2]string][]string   // by the ordered pair of commits
+	records map[[2]string]recordRead // by commit and record ID
 }
 
 func newObjects(ctx context.Context, root, prefix string) *objects {
 	return &objects{ctx: ctx, root: root, prefix: prefix, commits: map[string]*tree{}, projects: map[string]*tree{}, trees: map[string][]entry{}, blobs: map[string][]byte{},
-		commitInfos: map[string]commitInfo{}, bases: map[[2]string][]string{}}
+		graph: map[string]*commitNode{}, bases: map[[2]string][]string{}, records: map[[2]string]recordRead{}}
 }
 
 // close ends the process, if one was started. Closing its input is how

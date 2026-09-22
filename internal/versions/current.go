@@ -2,8 +2,10 @@ package versions
 
 import (
 	"bytes"
+	"cmp"
 	"container/heap"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -26,6 +28,7 @@ import (
 type node struct {
 	commit, content string
 	live            bool
+	path            string // where the record is, for reading it at a base
 	sources         []*Source
 	older           string // why another node is newer
 }
@@ -52,7 +55,7 @@ func (o *objects) projectGroup(res *Result, g *Group) {
 		}
 		n := node{commit: s.Commit}
 		if v := of[s]; v != nil && v.Record != nil {
-			n.content = v.Revision
+			n.content, n.path = v.Revision, v.Path
 		}
 		if s.Kind == "live" {
 			head, known := s.baseline.revisionOf(g.ID)
@@ -68,19 +71,68 @@ func (o *objects) projectGroup(res *Result, g *Group) {
 		nodes[i].sources = append(nodes[i].sources, s)
 		at[s] = nodes[i]
 	}
-	for i, a := range nodes {
-		for _, b := range nodes[i+1:] {
-			if a.content == b.content {
-				continue
+	// A pair can only mark one of its nodes older, so a node already older
+	// needs no more comparisons of its own. Candidates for current are found
+	// first, keeping every pair's order: each node meets the candidates so far
+	// and drops those it is newer than. Then each remaining candidate meets
+	// every node, so nothing newer than a current node goes unseen, without
+	// assuming that older is transitive.
+	compared := map[[2]*node]bool{}
+	order := func(a, b *node) {
+		if a.content == b.content || a.older != "" && b.older != "" || compared[[2]*node{a, b}] || compared[[2]*node{b, a}] {
+			return
+		}
+		compared[[2]*node{a, b}] = true
+		base, err := o.baseOf(a, b, g.ID)
+		switch {
+		case err != nil:
+			first, second := a, b
+			if slices.Index(nodes, b) < slices.Index(nodes, a) {
+				first, second = b, a
 			}
-			base, err := o.baseOf(a, b, g.ID)
-			switch {
-			case err != nil:
-				g.Notes = append(g.Notes, fmt.Sprintf("%s and %s could not be ordered: %v", name(a.sources[0]), name(b.sources[0]), err))
-			case base == a.content && a.older == "":
-				a.older = why(a, b)
-			case base == b.content && b.older == "":
-				b.older = why(b, a)
+			g.Notes = append(g.Notes, fmt.Sprintf("%s and %s could not be ordered: %v", name(first.sources[0]), name(second.sources[0]), err))
+		case base == a.content && a.older == "":
+			a.older = why(a, b)
+		case base == b.content && b.older == "":
+			b.older = why(b, a)
+		}
+	}
+	// Newer commits tend to supersede, so meeting them first drops the rest
+	// after one comparison each. The date orders the work, never the result.
+	byDate := slices.Clone(nodes)
+	when := func(n *node) int64 {
+		if unborn(n.commit) {
+			return 0
+		}
+		c, _ := o.commit(n.commit)
+		return c.when
+	}
+	slices.SortStableFunc(byDate, func(a, b *node) int {
+		if a.live != b.live {
+			return map[bool]int{true: -1, false: 1}[a.live]
+		}
+		return cmp.Compare(when(b), when(a)) // ties keep the sources' order
+	})
+	// ponytail: n diverging states cost n² merge-base walks (1,001 branches
+	// editing one record: about 1 s more per load); group sources by content
+	// before comparing if real repositories diverge that widely.
+	var candidates []*node
+	for _, n := range byDate {
+		for i := 0; i < len(candidates) && n.older == ""; {
+			if order(candidates[i], n); candidates[i].older != "" {
+				candidates = slices.Delete(candidates, i, i+1)
+			} else {
+				i++
+			}
+		}
+		if n.older == "" {
+			candidates = append(candidates, n)
+		}
+	}
+	for _, c := range candidates {
+		for _, n := range byDate {
+			if c.older == "" {
+				order(c, n)
 			}
 		}
 	}
@@ -135,19 +187,94 @@ func (o *objects) baseOf(a, b *node, id string) (string, error) {
 	}
 	content := ""
 	for i, c := range bases {
-		t := o.loadTree(c)
-		got, known := t.revisionOf(id)
+		got, err := o.recordAt(c, id, a, b)
 		switch {
-		case t.err != nil:
-			return "", fmt.Errorf("their common commit %s cannot be read: %v", short(c), t.err)
-		case !known:
-			return "", fmt.Errorf("their common commit %s holds a project that does not validate", short(c))
+		case err != nil:
+			return "", err
 		case i > 0 && got != content:
 			return "", fmt.Errorf("their common commits %s and %s hold different versions", short(bases[0]), short(c))
 		}
 		content = got
 	}
 	return content, nil
+}
+
+// recordAt returns id's revision at commit, "" when it is absent there. It
+// reads the paths the compared observations have the record at, where it
+// almost always was; only when neither holds it does it load the whole
+// project there, which tells absence from a record that moved.
+func (o *objects) recordAt(commit, id string, a, b *node) (string, error) {
+	key := [2]string{commit, id}
+	if r, ok := o.records[key]; ok {
+		return r.revision, r.err
+	}
+	revision, err := o.readRecordAt(commit, id, a, b)
+	o.records[key] = recordRead{revision, err}
+	return revision, err
+}
+
+type recordRead struct {
+	revision string
+	err      error
+}
+
+func (o *objects) readRecordAt(commit, id string, a, b *node) (string, error) {
+	for _, n := range []*node{a, b} {
+		if n.path == "" {
+			continue
+		}
+		data, err := o.fileAt(commit, n.path)
+		if err != nil {
+			return "", fmt.Errorf("their common commit %s cannot be read: %v", short(commit), err)
+		}
+		if data == nil {
+			continue
+		}
+		// Bytes equal to a side's are that record; others need their ID read.
+		revision := project.Revision(data)
+		if revision == a.content || revision == b.content {
+			return revision, nil
+		}
+		if r, _ := project.ParseRecord(n.path, data); r.ID == id {
+			return revision, nil
+		}
+	}
+	t := o.loadTree(commit)
+	got, known := t.revisionOf(id)
+	switch {
+	case t.err != nil:
+		return "", fmt.Errorf("their common commit %s cannot be read: %v", short(commit), t.err)
+	case !known:
+		return "", fmt.Errorf("their common commit %s holds a project that does not validate", short(commit))
+	}
+	return got, nil
+}
+
+// fileAt returns the regular file at path below the prefix in commit, or nil.
+func (o *objects) fileAt(commit, path string) ([]byte, error) {
+	es, err := o.entries(commit + "^{tree}")
+	if err != nil {
+		return nil, err
+	}
+	parts := strings.Split(strings.Trim(o.prefix+path, "/"), "/")
+	for i, part := range parts {
+		e, ok := entryNamed(es, part)
+		switch {
+		case !ok:
+			return nil, nil
+		case i == len(parts)-1:
+			if e.mode != "100644" && e.mode != "100755" {
+				return nil, nil
+			}
+			return o.blob(e.id)
+		case !e.isDir():
+			return nil, nil
+		}
+		if es, err = o.entries(e.id); err != nil {
+			return nil, err
+		}
+	}
+	return nil, nil
 }
 
 // revisionOf returns the revision of id in a commit's project, "" when the
@@ -176,28 +303,35 @@ func short(commit string) string { return commit[:min(len(commit), 12)] }
 // unborn reports an unborn branch's HEAD, which has no history.
 func unborn(commit string) bool { return strings.Trim(commit, "0") == "" }
 
-type commitInfo struct {
-	parents []string
+// commitNode is one commit read for merge bases, its parents linked as they are
+// read. flags belong to the walk numbered epoch, so a walk starts clean
+// without clearing the graph.
+type commitNode struct {
+	id      string
+	read    bool
+	parents []*commitNode
 	when    int64
+	epoch   int
+	flags   int
 }
 
-// commit reads one commit's parents and committer time, once.
-func (o *objects) commit(id string) (commitInfo, error) {
-	if c, ok := o.commitInfos[id]; ok {
+// commit returns id's node, reading its parents and committer time once.
+func (o *objects) commit(id string) (*commitNode, error) {
+	c := o.node(id)
+	if c.read {
 		return c, nil
 	}
 	data, err := o.read(id, "commit")
 	if err != nil {
-		return commitInfo{}, err
+		return nil, err
 	}
-	var c commitInfo
 	for line := range bytes.Lines(data) {
 		line = bytes.TrimSuffix(line, []byte("\n"))
 		if len(line) == 0 {
 			break // the message follows
 		}
 		if p, ok := bytes.CutPrefix(line, []byte("parent ")); ok {
-			c.parents = append(c.parents, string(p))
+			c.parents = append(c.parents, o.node(string(p)))
 		} else if rest, ok := bytes.CutPrefix(line, []byte("committer ")); ok {
 			// "<name> <email> <seconds> <zone>"
 			fields := bytes.Fields(rest)
@@ -206,8 +340,29 @@ func (o *objects) commit(id string) (commitInfo, error) {
 			}
 		}
 	}
-	o.commitInfos[id] = c
+	c.read = true
 	return c, nil
+}
+
+func (o *objects) node(id string) *commitNode {
+	c := o.graph[id]
+	if c == nil {
+		c = &commitNode{id: id}
+		o.graph[id] = c
+	}
+	return c
+}
+
+// flag returns c's flags in the current walk.
+func (o *objects) flag(c *commitNode) int {
+	if c.epoch != o.epoch {
+		return 0
+	}
+	return c.flags
+}
+
+func (o *objects) mark(c *commitNode, f int) {
+	c.flags, c.epoch = o.flag(c)|f, o.epoch
 }
 
 // mergeBases returns the best common ancestors of a and b, as git merge-base
@@ -229,56 +384,54 @@ func (o *objects) mergeBases(a, b string) ([]string, error) {
 		stale
 		found
 	)
-	flags := map[string]int{a: fromA, b: fromB}
+	o.epoch++
 	var q commitQueue
-	push := func(id string) error {
-		c, err := o.commit(id)
-		heap.Push(&q, queued{id, c.when})
-		return err
-	}
-	if err := push(a); err != nil {
-		return nil, err
-	}
-	if err := push(b); err != nil {
-		return nil, err
-	}
-	var bases []string
-	for q.nonStale(flags, stale) {
-		id := heap.Pop(&q).(queued).id
-		f := flags[id] & (fromA | fromB | stale)
-		if f == fromA|fromB {
-			if flags[id]&found == 0 {
-				flags[id] |= found
-				bases = append(bases, id)
-			}
-			f |= stale
-		}
+	for i, id := range []string{a, b} {
 		c, err := o.commit(id)
 		if err != nil {
 			return nil, err
 		}
+		o.mark(c, []int{fromA, fromB}[i])
+		heap.Push(&q, c)
+	}
+	var bases []*commitNode
+	for q.nonStale(o, stale) {
+		c := heap.Pop(&q).(*commitNode)
+		f := o.flag(c) & (fromA | fromB | stale)
+		if f == fromA|fromB {
+			if o.flag(c)&found == 0 {
+				o.mark(c, found)
+				bases = append(bases, c)
+			}
+			f |= stale
+		}
 		for _, p := range c.parents {
-			if flags[p]&f == f {
+			if o.flag(p)&f == f {
 				continue
 			}
-			flags[p] |= f
-			if err := push(p); err != nil {
+			if _, err := o.commit(p.id); err != nil {
 				return nil, err
 			}
+			o.mark(p, f)
+			heap.Push(&q, p)
 		}
 	}
-	var best []string
-	for _, id := range bases {
-		if flags[id]&stale == 0 { // not below another base
-			best = append(best, id)
+	var best []*commitNode
+	for _, c := range bases {
+		if o.flag(c)&stale == 0 { // not below another base
+			best = append(best, c)
 		}
 	}
 	best, err := o.independent(best)
 	if err != nil {
 		return nil, err
 	}
-	o.bases[key] = best
-	return best, nil
+	ids := make([]string, len(best))
+	for i, c := range best {
+		ids[i] = c.id
+	}
+	o.bases[key] = ids
+	return ids, nil
 }
 
 // independent drops each base that is an ancestor of another, as Git does
@@ -286,8 +439,11 @@ func (o *objects) mergeBases(a, b string) ([]string, error) {
 // stop before marking one. It runs only when there are several bases.
 // ponytail: each check may walk all history below a base; use the walk's
 // generation order if repositories with criss-cross merges make it slow.
-func (o *objects) independent(bases []string) ([]string, error) {
-	var keep []string
+func (o *objects) independent(bases []*commitNode) ([]*commitNode, error) {
+	if len(bases) < 2 {
+		return bases, nil
+	}
+	var keep []*commitNode
 	for _, x := range bases {
 		below := false
 		for _, y := range bases {
@@ -307,16 +463,15 @@ func (o *objects) independent(bases []string) ([]string, error) {
 }
 
 // reaches reports whether x is y or one of its ancestors.
-func (o *objects) reaches(y, x string) (bool, error) {
-	seen := map[string]bool{y: true}
-	for stack := []string{y}; len(stack) != 0; {
-		id := stack[len(stack)-1]
+func (o *objects) reaches(y, x *commitNode) (bool, error) {
+	seen := map[*commitNode]bool{y: true}
+	for stack := []*commitNode{y}; len(stack) != 0; {
+		c := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
-		if id == x {
+		if c == x {
 			return true, nil
 		}
-		c, err := o.commit(id)
-		if err != nil {
+		if _, err := o.commit(c.id); err != nil {
 			return false, err
 		}
 		for _, p := range c.parents {
@@ -329,13 +484,8 @@ func (o *objects) reaches(y, x string) (bool, error) {
 	return false, nil
 }
 
-type queued struct {
-	id   string
-	when int64
-}
-
 // commitQueue pops the newest commit first, ties by ID, so walks repeat.
-type commitQueue []queued
+type commitQueue []*commitNode
 
 func (q commitQueue) Len() int { return len(q) }
 func (q commitQueue) Less(i, j int) bool {
@@ -345,7 +495,7 @@ func (q commitQueue) Less(i, j int) bool {
 	return q[i].id < q[j].id
 }
 func (q commitQueue) Swap(i, j int) { q[i], q[j] = q[j], q[i] }
-func (q *commitQueue) Push(x any)   { *q = append(*q, x.(queued)) }
+func (q *commitQueue) Push(x any)   { *q = append(*q, x.(*commitNode)) }
 func (q *commitQueue) Pop() any {
 	old := *q
 	x := old[len(old)-1]
@@ -354,9 +504,9 @@ func (q *commitQueue) Pop() any {
 }
 
 // nonStale reports a queued commit that is not yet known to be below a base.
-func (q commitQueue) nonStale(flags map[string]int, stale int) bool {
+func (q commitQueue) nonStale(o *objects, stale int) bool {
 	for _, c := range q {
-		if flags[c.id]&stale == 0 {
+		if o.flag(c)&stale == 0 {
 			return true
 		}
 	}

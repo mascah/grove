@@ -147,7 +147,8 @@ func TestCurrentView(t *testing.T) {
 	if why := find(t, group(t, res, "G-011"), "committed", "refs/heads/feature").Older; why != "checkout feature (feature) has an uncommitted change to it on top of this commit" {
 		t.Errorf("reason for the committed copy under an uncommitted edit: %q", why)
 	}
-	if why := find(t, group(t, res, "G-010"), "committed", "refs/heads/stale").Older; why != "branch main changed it since their common history" {
+	// Main and mid hold the same current bytes; either may be named.
+	if why := find(t, group(t, res, "G-010"), "committed", "refs/heads/stale").Older; why != "branch main changed it since their common history" && why != "branch mid changed it since their common history" {
 		t.Errorf("reason for the stale copy: %q", why)
 	}
 
@@ -163,27 +164,29 @@ func TestCurrentView(t *testing.T) {
 	}
 }
 
-// TestCurrentViewUnorderedPair shows ambiguity explicitly: two branches whose
-// common commit holds a project that does not validate cannot be ordered, so
-// both stay current and a note names them.
+// TestCurrentViewUnorderedPair shows ambiguity explicitly: where the record
+// cannot be read at two branches' common commit, they cannot be ordered, so
+// both stay current and a note names them. A project that does not validate
+// there does not matter while the record itself reads at its path.
 func TestCurrentViewUnorderedPair(t *testing.T) {
 	t.Parallel()
 	root := repoFixture(t)
 	write(t, root, "grove/G-020.md", "---\nid: [broken\n---\n")
 	write(t, root, "grove/G-021.md", record("G-021", "work", "proposed", "Start.\n"))
 	base := commit(t, root, "base does not validate")
-	write(t, root, "grove/G-020.md", record("G-020", "work", "proposed", "Fixed.\n"))
+	write(t, root, "grove/G-020.md", record("G-020", "work", "proposed", "Fixed on main.\n"))
 	commit(t, root, "fix on main")
 	git(t, root, "checkout", "-q", "-b", "other", base)
-	write(t, root, "grove/G-020.md", record("G-020", "work", "proposed", "Fixed.\n"))
+	write(t, root, "grove/G-020.md", record("G-020", "work", "proposed", "Fixed on other.\n"))
 	write(t, root, "grove/G-021.md", record("G-021", "work", "active", "Start.\n"))
 	commit(t, root, "fix and change on other")
 	git(t, root, "checkout", "-q", "main")
 
-	res := mustInspect(t, root, "G-021")
+	res := mustInspect(t, root, "")
+	expectStanding(t, res, "G-021", "branch main proposed older", "branch other active current", "checkout . proposed older")
 	want := fmt.Sprintf("branch main and branch other could not be ordered: their common commit %s holds a project that does not validate", base[:12])
-	expectStanding(t, res, "G-021",
-		"branch main proposed current", "branch other active current", "checkout . proposed current", want)
+	expectStanding(t, res, "G-020",
+		"branch main proposed current", "branch other proposed current", "checkout . proposed current", want)
 }
 
 // TestMergeBases checks the walk against Git's own answers, including a
