@@ -108,8 +108,8 @@ ref or worktree. Never number new records by hand. Both commands serialize
 through a write lock in that same directory; `update` refuses a stale
 `--expect`, an invalid project, or any change it observes while preparing the
 write, and reports when a failure happened after the file was replaced,
-including a `--commit` that Git refused: the file then holds the update and
-is staged, and nothing was committed.
+including a `--commit` that Git refused: the file then holds the update,
+nothing was committed, and the message says whether it was staged.
 
 `versions [ID]` shows one row per version of each record: its committed
 version on every local branch tip and its live version in every registered
