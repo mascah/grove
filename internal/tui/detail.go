@@ -20,6 +20,7 @@ import (
 // a commit of the timeline.
 type entry struct {
 	role, id, title, status string
+	note                    string // a review: what it examined, against the candidate
 	commit                  *versions.Commit
 }
 
@@ -117,10 +118,24 @@ func (m *Model) linked(id string, r *project.Record) []entry {
 	var out []entry
 	seen := map[string]bool{}
 	add := func(role string, o *project.Record) {
-		if !seen[o.ID] {
-			seen[o.ID] = true
-			out = append(out, entry{role: role, id: o.ID, title: o.Title, status: o.Status})
+		if seen[o.ID] {
+			return
 		}
+		seen[o.ID] = true
+		e := entry{role: role, id: o.ID, title: o.Title, status: o.Status}
+		// A review says what it examined, and whether that is the work's
+		// candidate: the fact G-044's review view starts from.
+		if o.Type == "review" && o.Examined != "" {
+			e.note = "examined " + o.Examined[:min(len(o.Examined), 7)]
+			switch {
+			case r == nil || r.Candidate == "":
+			case strings.HasPrefix(o.Examined, r.Candidate) || strings.HasPrefix(r.Candidate, o.Examined):
+				e.note += " = candidate"
+			default:
+				e.note += ", not the candidate"
+			}
+		}
+		out = append(out, e)
 	}
 	has := func(list []string, id string) bool { return slices.Contains(list, id) }
 	for i := range m.res.Groups {
@@ -425,6 +440,9 @@ func (m *Model) sidebar(v *versions.Version, w, n int) []string {
 		}
 		title := ansi.Truncate(safe(e.title), max(w-2-ansi.StringWidth(e.role)-2-len(e.id)-2-ansi.StringWidth(safe(status))-2, 8), "…")
 		item(fmt.Sprintf("%-10s %s  %s  %s", e.role, e.id, title, status))
+		if e.note != "" {
+			rows = append(rows, line("             "+e.note, w))
+		}
 	}
 	if v != nil {
 		heading("Timeline on " + label(v.Source))

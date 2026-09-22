@@ -19,7 +19,7 @@ func linkedFixture(fx fixture) *fake {
 	for _, s := range []*versions.Source{fx.cMain, fx.main} {
 		w := version(s, "W-001", "Inspect records", "active")
 		p := 2
-		w.Record.Kind, w.Record.Size, w.Record.Priority = "feature", "small", &p
+		w.Record.Kind, w.Record.Size, w.Record.Priority, w.Record.Candidate = "feature", "small", &p, "abcdef1"
 		w.Record.DependsOn, w.Record.Members, w.Record.RelatesTo = []string{"W-002"}, []string{"W-004"}, []string{"G-020"}
 		w.Record.Source = []byte("---\nid: W-001\n---\n\n## Outcome\n\nA **clear** board.\n\n- one\n- two\n" + strings.Repeat("\nfiller paragraph\n", 40) + "\nTHE END\n")
 		u := time.Date(2026, 9, 22, 12, 0, 0, 0, time.UTC)
@@ -66,9 +66,9 @@ func TestDetailLeadsWithContentAndLinks(t *testing.T) {
 	press(m, "right") // W-001 in Active
 	deliverAll(m, press(m, "enter"))
 	s := plain(m)
-	for _, want := range []string{"W-001 · active", "Inspect records", "feature · small · P2 · on main · same on 1 branch, 1 checkout · updated 2026-09-22",
+	for _, want := range []string{"W-001 · active", "Inspect records", "feature · small · P2 · candidate abcdef1 · on main · same on 1 branch, 1 checkout · updated 2026-09-22",
 		"▶ Content", "## Outcome", "A **clear** board.", "• one",
-		"plan       W-005  W-001 plan  current", "review     W-006  W-001 review  current", "needs      W-002  Create records  done",
+		"plan       W-005  W-001 plan  current", "review     W-006  W-001 review  current", "             examined abcdef1 = candidate", "needs      W-002  Create records  done",
 		"needed by  W-003  Later work  proposed", "blocked by Q-001  Which first?  open", "part of    W-007  Milestone  active",
 		"member     W-004  A member  proposed", "related    G-020  How boards work  -",
 		"Timeline on branch main", "2026-09-22 10:00  active     bbbbbbb", "2026-09-20 09:00  -          0000000",
