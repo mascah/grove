@@ -2,9 +2,9 @@
 id: "G-076"
 type: work
 title: "Filter grove list by status"
-status: review
+status: done
 created: "2026-09-22T15:01:38Z"
-updated: "2026-09-22T15:20:38Z"
+updated: "2026-09-22T15:24:39Z"
 kind: feature
 size: small
 relates_to: ["G-039"]
