@@ -56,6 +56,36 @@ Found outside the documentation scope, flagged for follow-up, not changed:
 `grove --help` still says the board "Reads only", though it writes through
 the prompted review actions and starts and stops attempts.
 
+### Revision after the owner's feedback on `71a650e`
+
+The owner returned the work (2026-09-23): the README and AGENTS.md are
+routers, not books. The README at `4159e79` is 34,644 characters. It retells
+`grove --help` a paragraph at a time and carries the whole board manual.
+The ownership table above changes in three rows:
+
+| Fact | One editable owner | Others |
+| --- | --- | --- |
+| What Grove is, how to run it, where each subject is owned | `README.md`: an introduction, a one-line-per-command overview and a router | Links, never retells |
+| Command behaviour beyond `grove --help`: versions and the current view, workspace, context, attempts, init, version and guide | new `docs/commands.md` | The record model keeps the commands over records and the lifecycle commands, which it already states |
+| The board: views, cards, detail, review actions, attempts, timeline, versions, search, rendering, keys, terminal | new `docs/board.md` | The brief keeps its direction; AGENTS.md keeps the board's constraints as rules |
+
+Revised dispositions:
+
+| Surface | Finding at `4159e79` | Disposition |
+| --- | --- | --- |
+| README "Use the CLI" | Paragraphs on `list`, `show`, `check`, `update`, allocation and discovery repeat the record model's "Reading and writing records", "Identity and dates" and "Configuration and discovery"; `approve`, `feedback` and `integrate` repeat its "Work lifecycle" | **Cut**, with links to those sections |
+| README `run`, `attempts`, `attempt`, `stop`, `versions`, `workspace`, and the `context` section | Reference text that no current document owns | **Relocated** to `docs/commands.md` |
+| README "Adopt Grove in another repository" | Install steps mixed with `version` stamping, Codex `PATH` and `init` output rules | **Split**: the four steps stay in the README; the rules move to `docs/commands.md` |
+| README "The terminal board" | The full board manual, key by key | **Relocated** to `docs/board.md`, with the keys as a table; the README keeps two sentences and a link |
+| README skills sections | Guide summaries | **Cut** to the router's links to the guides and adapters |
+| README "Develop Grove" | Accurate | **Retained**, shortened to a routing paragraph |
+| `AGENTS.md` | Several rules run to a paragraph of reasons | **Reconciled**: one line per rule, naming the record that owns the reasons; the routing list names `docs/commands.md` and `docs/board.md` |
+
+No text moves out of the record model, the brief or the guides. No constraint
+is dropped: each rule AGENTS.md kept stays, shorter. Rewording `grove --help`
+and a help overlay on the board are separate work, proposed in G-107's Next,
+not done here.
+
 ## Steps
 
 1. Done: plan `0c42435`, G-107 active `ef911b1`.
