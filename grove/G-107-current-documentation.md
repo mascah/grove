@@ -93,12 +93,21 @@ changing the workflow contract. No release compatibility promise is selected.
    Historical verdicts remain attributable.
 3. A fresh session given only AGENTS.md can say how to shape work, how to
    execute assigned work, and how to retrieve context in stages, without being
-   routed through the old adoption roadmap. This is a reading check, not a
-   behavioral eval: one bounded interactive session, its harness and revision
-   recorded, launched only with the assignment's mandate.
-4. The README's opening says what Grove is, what this build does, and where a
-   reader goes next, without requiring old work IDs. Whether that serves an
-   external newcomer is G-110's judgment, not this work's.
+   routed through the old adoption roadmap. AGENTS.md states each rule in a
+   line with the record that owns its reasoning, and routes to the documents
+   that own everything else; it does not explain. This is a reading check,
+   not a behavioral eval: one bounded interactive session, its harness and
+   revision recorded, launched only with the assignment's mandate.
+4. The README is an introduction and a router, not a manual (owner feedback,
+   2026-09-23). It says what Grove is, how to run it, and where each subject
+   is owned, and links there, without requiring old work IDs. It gives a
+   command overview, not a paragraph-per-command retelling of `grove --help`.
+   The board's key-by-key description and other reference-grade text move to
+   a document that owns them, or are cut where another owner already holds
+   them. There is no word cap: the test is that a reader new to the
+   repository finds the place that owns each subject without reading the
+   rest. Whether that serves an external newcomer is G-110's judgment, not
+   this work's.
 5. Local links and command examples resolve or are explicitly labelled
    historical. `go run ./cmd/grove check` passes. Shared guide ownership and thin
    adapter behavior remain consistent, and no safeguarded behavior or authority
@@ -192,22 +201,13 @@ and starts and stops attempts behind prompts.
 
 ## Next
 
-In Review, awaiting the owner's judgment of the reconciled documents
-(AGENTS.md, README, the brief, the record model). The diff is
-`git diff 768efab CANDIDATE`. To approve, in this worktree:
-
-```sh
-go run ./cmd/grove approve G-107 "VERDICT"
-```
-
-Then, in main's checkout (`/Users/mascah/GitHub/mascah/grove`):
-
-```sh
-go run ./cmd/grove integrate G-107 --cleanup
-```
-
-Or `go run ./cmd/grove feedback G-107 "TEXT"` here to return it to active.
-The `--help` "Reads only" text needs its own work if the owner wants it
-fixed.
+Returned to active by the owner's feedback below. The next pass starts from
+this branch, keeps the ownership and reconciliation work already on it, and
+restructures against the revised acceptance 3 and 4: the README becomes an
+introduction and router, the board manual and other reference text move to
+an owning document, and AGENTS.md keeps its rules as one line each. G-111's
+dispositions are revised where they change. `grove --help` improvements and
+a board help overlay are separate work; propose them, do not do them here.
+Then hand off into Review again with a new candidate.
 
 Feedback on candidate 71a650e, 2026-09-23: Missed the intent. The record asked for reconciliation and got it, but never said that the README and AGENTS.md are routers, not books, so they still are: the README is 34.6k characters, a prose retelling of grove --help plus a full board manual. There is no word cap; the test is that the right content is in the right place and someone else can understand it. The README keeps a command overview but does not retell --help, which needs its own work and does not replace the README. The board's key-by-key manual leaves the README. AGENTS.md matters less. Acceptance revised in the next commit.
