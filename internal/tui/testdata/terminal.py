@@ -539,7 +539,8 @@ def attempt_lifecycle(root, wt, base):
     mark = s.expect("permission mode", mark)
     s.send(b"auto" + ENTER)
     s.expect("Launch of an attempt of G-001", mark)
-    mark = s.expect("started; owner pid", mark)
+    s.expect("started; owner pid", mark)
+    mark = s.expect("The board has been re-read.", mark)  # Esc waits for the re-read; both may be one frame
     s.send(ESC)
     mark = s.expect("A lists them", mark)
     s.send(b"A")
@@ -570,7 +571,8 @@ def attempt_lifecycle(root, wt, base):
     s.send(b"x")
     mark = s.expect("Stop attempt", mark)
     s.send(b"y")
-    mark = s.expect(f"Stop of attempt {first}", mark)
+    s.expect(f"Stop of attempt {first}", mark)
+    mark = s.expect("The board has been re-read.", mark)
     s.send(ESC)
     mark = s.expect("stopped (exit 130)", mark)  # only the changed cells are redrawn
     check(os.path.exists(os.path.join(root, ".claude", "worktrees", "worktree-G-001", "partial.txt")), "Stop kept the partial work")
@@ -585,7 +587,8 @@ def attempt_lifecycle(root, wt, base):
     s.send(b"1" + ENTER)
     mark = s.expect("permission mode", mark)
     s.send(b"auto" + ENTER)
-    mark = s.expect("started; owner pid", mark)
+    s.expect("started; owner pid", mark)
+    mark = s.expect("The board has been re-read.", mark)  # Esc waits for the re-read; both may be one frame
     s.send(ESC)
     mark = s.expect("waiting on question G-002", mark)
     s.send(b"R")
@@ -608,7 +611,8 @@ def attempt_lifecycle(root, wt, base):
     mark = s.expect("permission mode", mark)
     s.send(b"auto" + ENTER)
     s.expect("worktree: reusing", mark)
-    mark = s.expect("started; owner pid", mark)
+    s.expect("started; owner pid", mark)
+    mark = s.expect("The board has been re-read.", mark)  # Esc waits for the re-read; both may be one frame
     s.send(ESC)
     s.expect("candidate ready", mark)  # the poll saw it end
     s.expect("Review: candidate", mark)  # and the board was re-read: the detail is a review
