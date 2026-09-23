@@ -108,6 +108,14 @@ func (m *Model) detailKey(k string) {
 		m.leaveVersions()
 	case "a", "f", "i":
 		m.action(k)
+	case "A":
+		work := ""
+		if r := m.openRecord(); r != nil && r.Type == "work" {
+			work = m.openID()
+		}
+		m.openAttempts(work)
+	case "R":
+		m.launch()
 	}
 }
 
@@ -336,6 +344,12 @@ func (m *Model) detailHead(v *versions.Version, w int) []string {
 		for _, row := range m.reviewRows(g, v) {
 			inner = append(inner, wrap(row, iw)[:min(len(wrap(row, iw)), rows)]...)
 		}
+	}
+	// Work shows its latest attempt, so a person back after closing the
+	// board finds a run from the card they know.
+	if !compact && r != nil && r.Type == "work" && m.backend.Attempts != nil {
+		row := m.attemptRow(g.ID, r.Status)
+		inner = append(inner, wrap(row, iw)[:min(len(wrap(row, iw)), rows)]...)
 	}
 	b := lipgloss.ThickBorder()
 	edge := func(l, mid, r string) string { return accent.Render(l + strings.Repeat(mid, iw+2) + r) }

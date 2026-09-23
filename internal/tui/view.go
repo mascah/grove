@@ -209,6 +209,16 @@ func (m *Model) render() string {
 	switch {
 	case m.res == nil:
 		rows, hints = m.emptyBody(w), "r retry   q quit"
+	case m.screen == detailScreen && m.group() != nil && m.backend.Attempts != nil && m.openRecord() != nil && m.openRecord().Type == "work":
+		// Work adds its attempts: A lists them, R launches one where it can.
+		judge, keys := "", ""
+		if m.reviewable() {
+			judge, keys = "a approve   f feedback   i integrate   ", "a  f  i  "
+		}
+		rows, hints = m.detailBody(w, body), pick(w,
+			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   R launch   A attempts   "+judge+"v versions   s   r   Esc back   q quit",
+			"↑↓ PgUp/PgDn  Tab pane  Enter open  R launch  A attempts  "+keys+"v  Esc  q",
+			"↑↓  Tab  Enter  R  A  "+keys+"v  Esc  q quit")
 	case m.screen == detailScreen && m.group() != nil && m.reviewable():
 		rows, hints = m.detailBody(w, body), pick(w,
 			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   a approve   f feedback   i integrate   v versions   s   r   Esc back   q quit",
@@ -236,13 +246,21 @@ func (m *Model) render() string {
 		rows, hints = m.searchBody(w, body), pick(w, "type to filter   Backspace   ↑/↓ move   Enter open   Esc close   Ctrl-C quit", "type  ↑↓  Enter open  Esc close  ^C quit")
 	case m.screen == sourcesScreen:
 		rows, hints = m.scrolled(m.sourceRows(w), body, w), pick(w, "↑/↓ PgUp/PgDn scroll   r refresh   Esc back   q quit", "↑↓ scroll  Esc back  q quit")
+	case m.screen == attemptsScreen:
+		rows, hints = m.attemptsBody(w, body), pick(w,
+			"↑/↓ attempts   Enter show it   x stop it   o open its record   r refresh   Esc back   q quit",
+			"↑↓  Enter show  x stop  o record  Esc back  q quit")
+	case m.screen == attemptScreen:
+		rows, hints = m.scrolled(m.attemptRows(w), body, w), pick(w,
+			"↑/↓ PgUp/PgDn scroll   x stop it   o open its record   r refresh   Esc back   q quit",
+			"↑↓ scroll  x stop  o record  Esc back  q quit")
 	default:
 		shelf := "elsewhere"
 		if m.current() {
 			shelf = "deleted"
 		}
 		rows, hints = m.boardBody(w, body), pick(w,
-			"←/→ columns   ↑/↓ cards   Enter open   / search   a abandoned   Tab "+shelf+"   b view or checkout   s sources   r refresh   q quit",
+			"←/→ columns   ↑/↓ cards   Enter open   / search   a abandoned   A attempts   Tab "+shelf+"   b view or checkout   s sources   r refresh   q quit",
 			"←→↑↓ move  Enter open  / search  a abandoned  Tab "+shelf+"  b view or checkout  s  r  q quit",
 			"←→↑↓  Enter open  / search  a  Tab "+shelf+"  b  s  r  q quit",
 			"Enter open  / a Tab b s r  q quit")
@@ -764,6 +782,8 @@ func (m *Model) clampScroll() {
 		rows, n = len(m.sourceRows(m.width)), m.height-3
 	case m.screen == resultScreen && m.result != nil:
 		rows, n = len(m.resultRows(m.width)), m.height-3
+	case m.screen == attemptScreen:
+		rows, n = len(m.attemptRows(m.width)), m.height-3
 	case m.screen == versionsScreen:
 		w := m.width
 		if w >= wideWidth {

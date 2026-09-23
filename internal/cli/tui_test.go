@@ -88,8 +88,14 @@ func openBoard(t *testing.T, root string) boardSession {
 func (s boardSession) run(cmd tea.Cmd) (quit bool) {
 	for cmd != nil {
 		msg := cmd()
-		if _, ok := msg.(tea.QuitMsg); ok {
+		switch msg := msg.(type) {
+		case tea.QuitMsg:
 			return true
+		case tea.BatchMsg: // the attempts read beside another (G-046)
+			for _, c := range msg {
+				quit = s.run(c) || quit
+			}
+			return quit
 		}
 		_, cmd = s.m.Update(msg)
 	}

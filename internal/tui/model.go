@@ -4,7 +4,9 @@
 // checkouts holding each, the focused one's history of commits, and explicit
 // selection of one existing workspace. It reads through Backend, and writes
 // only through Backend's three actions on a record in review (G-044), each
-// behind a prompt: approve, feedback, and integrate.
+// behind a prompt: approve, feedback, and integrate; it starts and stops
+// processes only through Backend's Launch and Stop of an attempt (G-046),
+// each behind a prompt too.
 package tui
 
 import (
@@ -19,6 +21,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/mascah/grove/internal/attempt"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/versions"
 )
@@ -42,6 +45,14 @@ type Backend struct {
 	Approve   func(ctx context.Context, root, id, verdict string) ([]string, error)
 	Feedback  func(ctx context.Context, root, id, text string) ([]string, error)
 	Integrate func(ctx context.Context, root, id string, cleanup bool) ([]string, error)
+	// Attempts lists the attempts in the repository's attempts directory,
+	// starting no process, and Attempt reads one in root with the end of its
+	// activity (G-046); nil leaves attempts out. Launch starts one and Stop
+	// stops one, each returning the facts to show; nil leaves the action out.
+	Attempts func(ctx context.Context, dir string) ([]attempt.View, error)
+	Attempt  func(ctx context.Context, root, id string) (*attempt.View, attempt.Activity, error)
+	Launch   func(ctx context.Context, req attempt.Request) ([]string, error)
+	Stop     func(ctx context.Context, root, id string) ([]string, error)
 }
 
 type screen int
@@ -54,6 +65,8 @@ const (
 	sourcesScreen
 	searchScreen
 	resultScreen
+	attemptsScreen
+	attemptScreen
 )
 
 var statuses = [5]string{"proposed", "active", "review", "done", "abandoned"}
@@ -212,16 +225,32 @@ type Model struct {
 	choice       int      // chooser row
 	refusal      string
 
+	// Attempts, read apart from the Git reads: every attempt, and the one
+	// the attempt screen shows, in full.
+	attempts        []attempt.View
+	attemptsErr     string
+	attemptsReading bool // a read is in flight
+	attemptsStale   bool // a read is due
+	ticking         bool // the next poll is scheduled
+	every           time.Duration
+	listFor, listAt string // the attempts screen's work ("" every one) and cursor
+	runID, runErr   string // the attempt screen's attempt and its last read's failure
+	run             *attempt.View
+	activity        attempt.Activity
+	listBack        screen // where Esc leaves the attempts screen for
+	runBack         screen // and the attempt screen
+	resultBack      screen // the screen an action started from
+
 	// Workspace is the explicitly selected, freshly resolved result, if any.
 	Workspace *versions.Workspace
 }
 
 // New returns a model that starts by inspecting every record of root.
 func New(ctx context.Context, root string, backend Backend) *Model {
-	return &Model{ctx: ctx, root: root, backend: backend}
+	return &Model{ctx: ctx, root: root, backend: backend, attemptsStale: true, every: pollEvery}
 }
 
-func (m *Model) Init() tea.Cmd { return m.inspect() }
+func (m *Model) Init() tea.Cmd { return tea.Batch(m.inspect(), m.wantAttempts()) }
 
 // read starts the one allowed backend call under its own cancellable context,
 // cancelling and outdating whichever came before.
@@ -353,6 +382,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd == nil {
 		cmd = m.wantDiff()
 	}
+	if read := m.wantAttempts(); read != nil {
+		cmd = tea.Batch(cmd, read)
+	}
 	return m, cmd
 }
 
@@ -413,17 +445,26 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		m.pending, m.reading, m.cancel = "", "", nil
 		m.diffs[msg.key] = diffRead{msg.text, msg.err}
 		m.clampScroll()
+	case attemptsMsg:
+		return m.gotAttempts(msg)
+	case attemptTick:
+		m.ticking = false
+		m.attemptsStale = m.attemptsStale || slices.ContainsFunc(m.attempts, func(v attempt.View) bool { return live(&v) })
 	case actMsg:
 		if msg.gen != m.gen || m.pending != "act" {
 			return nil
 		}
 		m.pending, m.acting, m.cancel = "", "", nil
-		title := map[string]string{"approve": "Approved " + m.openID(), "feedback": "Feedback recorded on " + m.openID(), "integrate": "Integration of " + m.openID()}[msg.kind]
+		title := map[string]string{"approve": "Approved " + msg.about, "feedback": "Feedback recorded on " + msg.about, "integrate": "Integration of " + msg.about,
+			"launch": "Launch of an attempt of " + msg.about, "stop": "Stop of attempt " + msg.about}[msg.kind]
 		m.result = &outcome{title: title, facts: msg.facts}
+		if msg.kind == "feedback" && msg.err == nil && m.backend.Launch != nil {
+			m.result.facts = append(m.result.facts, "or: R on "+msg.about+" launches a bounded attempt on its branch")
+		}
 		if msg.err != nil {
 			m.result.err = msg.err.Error()
 		}
-		m.screen, m.scroll = resultScreen, 0
+		m.screen, m.scroll, m.attemptsStale = resultScreen, 0, true
 		// Whatever was written, the board is re-read; the outcome stays up.
 		return m.inspect()
 	case tea.KeyPressMsg:
@@ -464,6 +505,7 @@ func (m *Model) key(k string) tea.Cmd {
 			return nil
 		}
 		m.leaveVersions()
+		m.attemptsStale = true
 		return m.inspect()
 	case "s":
 		if m.screen != sourcesScreen && m.res != nil {
@@ -494,9 +536,18 @@ func (m *Model) key(k string) tea.Cmd {
 				return nil // the record shown next must be the re-read one
 			}
 			m.result, m.scroll = nil, 0
-			if m.screen = boardScreen; len(m.stack) != 0 {
+			switch {
+			case m.resultBack == attemptsScreen || m.resultBack == attemptScreen:
+				m.screen = m.resultBack
+			case len(m.stack) != 0:
 				m.screen = detailScreen
+			default:
+				m.screen = boardScreen
 			}
+		case attemptsScreen:
+			m.screen, m.scroll = m.listBack, 0
+		case attemptScreen:
+			m.screen, m.scroll = m.runBack, 0
 		default:
 			m.screen, m.scroll = m.back, 0
 		}
@@ -513,6 +564,10 @@ func (m *Model) key(k string) tea.Cmd {
 		m.chooserKey(k)
 	case sourcesScreen, resultScreen:
 		m.scrollKey(k)
+	case attemptsScreen:
+		m.attemptsKey(k)
+	case attemptScreen:
+		m.attemptKey(k)
 	}
 	return nil
 }
@@ -567,6 +622,8 @@ func (m *Model) boardKey(k string) tea.Cmd {
 		if m.res != nil {
 			m.back, m.screen, m.query, m.hit = boardScreen, searchScreen, "", 0
 		}
+	case "A":
+		m.openAttempts("")
 	case "enter":
 		// Opening a card shows its detail. It never resolves a workspace,
 		// even when only one version exists.
@@ -753,7 +810,7 @@ func (m *Model) boardSource() *versions.Source {
 // own status, and a shelf of work groups with no live record there. No status
 // is combined across sources.
 // ponytail: recomputed per key and frame; cache per result if boards grow large.
-func (m *Model) cards() (columns [len(statuses)][]card, shelf []card) {
+func (m *Model) placed() (columns [len(statuses)][]card, shelf []card) {
 	if m.res == nil {
 		return
 	}
@@ -780,6 +837,19 @@ func (m *Model) cards() (columns [len(statuses)][]card, shelf []card) {
 		}
 	}
 	newestFirst(columns[doneColumn])
+	return
+}
+
+// cards derives the board and marks work with an attempt that may be running.
+func (m *Model) cards() (columns [len(statuses)][]card, shelf []card) {
+	columns, shelf = m.placed()
+	for i := range columns {
+		for j := range columns[i] {
+			if t := m.attemptTag(columns[i][j].id); t != "" {
+				columns[i][j].tag = strings.TrimSpace(t + " " + columns[i][j].tag)
+			}
+		}
+	}
 	return
 }
 

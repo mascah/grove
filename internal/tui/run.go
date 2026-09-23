@@ -65,7 +65,7 @@ func Run(ctx context.Context, root string, input, screen *os.File) (*versions.Wo
 // checkout the review view named. An action ignores ctx for its Git
 // commands: a key never cancels a write half-way.
 func Live() Backend {
-	return Backend{
+	b := Backend{
 		Inspect: versions.InspectContext, Resolve: versions.ResolveContext, History: versions.HistoryContext,
 		Changes: versions.ChangesContext, Diff: versions.DiffContext,
 		Approve: func(_ context.Context, root, id, verdict string) ([]string, error) {
@@ -93,6 +93,8 @@ func Live() Backend {
 			return facts, err
 		},
 	}
+	liveAttempts(&b)
+	return b
 }
 
 // watched ends the session at the first failed write to the screen. The

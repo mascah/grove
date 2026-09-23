@@ -10,6 +10,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/mascah/grove/internal/attempt"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/versions"
 )
@@ -46,6 +47,7 @@ type diffMsg struct {
 type actMsg struct {
 	gen   int
 	kind  string
+	about string // the record, or the attempt a stop was for
 	facts []string
 	err   error
 }
@@ -53,11 +55,13 @@ type actMsg struct {
 // prompt is the open question on the last row: text to type for a verdict or
 // feedback, or y/n for the merge and its cleanup.
 type prompt struct {
-	kind             string // approve, feedback, integrate, cleanup
+	kind             string // approve, feedback, integrate, cleanup; budget and mode for a launch; stop
 	text             string
 	id, root, branch string // the record, the checkout the action runs in, the branch judged
 	target, wt       string // integrate: the target and the branch's checkout, if any
 	cleanup          bool
+	req              *attempt.Request // launch: what Start is asked for, filled in by the prompt
+	attempt          string           // stop: the attempt
 }
 
 // outcome is what an action returned, shown on the result screen until Esc.
@@ -438,9 +442,22 @@ func (m *Model) promptKey(msg tea.KeyPressMsg) tea.Cmd {
 	case k == "esc":
 		m.prompt = nil
 		m.notice = "cancelled; nothing was written"
-	case p.kind == "approve" || p.kind == "feedback":
+		if p.req != nil {
+			m.notice = "cancelled; nothing was launched"
+		} else if p.kind == "stop" {
+			m.notice = "cancelled; nothing was stopped"
+		}
+	case msg.Text == "y" && p.kind == "stop":
+		return m.act(p)
+	case msg.Text == "n" && p.kind == "stop":
+		m.prompt = nil
+		m.notice = "cancelled; nothing was stopped"
+	case p.kind == "approve" || p.kind == "feedback" || p.req != nil:
 		switch k {
 		case "enter":
+			if p.req != nil {
+				return m.launchKey(p)
+			}
 			if strings.TrimSpace(p.text) == "" {
 				m.notice = "type the " + map[string]string{"approve": "verdict", "feedback": "feedback"}[p.kind] + " first, or Esc"
 				return nil
@@ -477,14 +494,24 @@ func (m *Model) promptKey(msg tea.KeyPressMsg) tea.Cmd {
 // key never cancels its Git commands.
 func (m *Model) act(p *prompt) tea.Cmd {
 	m.prompt = nil
-	kind, root, id, text, cleanup := p.kind, p.root, p.id, strings.TrimSpace(p.text), p.cleanup
-	if kind == "cleanup" {
+	kind, root, id, text, cleanup, req, about := p.kind, p.root, p.id, strings.TrimSpace(p.text), p.cleanup, p.req, p.id
+	switch {
+	case kind == "cleanup":
 		kind = "integrate"
+	case req != nil:
+		kind = "launch"
+	case kind == "stop":
+		about = p.attempt
 	}
+	m.resultBack = m.screen
 	cmd := m.read("act", func(ctx context.Context, gen int) tea.Msg {
 		var facts []string
 		var err error
 		switch kind {
+		case "launch":
+			facts, err = m.backend.Launch(ctx, *req)
+		case "stop":
+			facts, err = m.backend.Stop(ctx, root, about)
 		case "approve":
 			facts, err = m.backend.Approve(ctx, root, id, text)
 		case "feedback":
@@ -492,7 +519,7 @@ func (m *Model) act(p *prompt) tea.Cmd {
 		default:
 			facts, err = m.backend.Integrate(ctx, root, id, cleanup)
 		}
-		return actMsg{gen, kind, facts, err}
+		return actMsg{gen, kind, about, facts, err}
 	})
 	m.acting = kind
 	return cmd
@@ -500,7 +527,8 @@ func (m *Model) act(p *prompt) tea.Cmd {
 
 // acting names the running action for the banner.
 func actingText(kind string) string {
-	return map[string]string{"approve": "Approving…", "feedback": "Recording the feedback…", "integrate": "Integrating…"}[kind]
+	return map[string]string{"approve": "Approving…", "feedback": "Recording the feedback…", "integrate": "Integrating…",
+		"launch": "Launching the attempt…", "stop": "Stopping the attempt…"}[kind]
 }
 
 // promptRow is the last row while a prompt is open.
@@ -515,6 +543,12 @@ func (m *Model) promptRow(w int) string {
 	case "integrate":
 		// The question first: a long checkout path is what truncation drops.
 		text = fmt.Sprintf("Merge branch %s into %s and mark %s done? y/n   (runs in %s)", p.branch, p.target, p.id, p.root)
+	case "budget":
+		text = fmt.Sprintf("Launch %s: budget in USD, required (Enter continues, Esc cancels): %s▏   (%s)", p.id, p.text, p.where())
+	case "mode":
+		text = fmt.Sprintf("Launch %s for %s USD: permission mode, required, e.g. acceptEdits or auto (Enter launches, Esc cancels): %s▏", p.id, p.req.BudgetUSD, p.text)
+	case "stop":
+		text = fmt.Sprintf("Stop attempt %s of %s? Its partial work stays. y/n", p.attempt, p.id)
 	default:
 		text = fmt.Sprintf("Also delete branch %s and remove its worktree? y/n   (%s)", p.branch, p.wt)
 	}
