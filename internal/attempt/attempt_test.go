@@ -404,6 +404,22 @@ func TestBlockingQuestionStopsTheNextRun(t *testing.T) {
 	}
 }
 
+func TestReviewOnTheBranchStopsTheNextRun(t *testing.T) {
+	root := fixture(t)
+	fake(t, resultLine("success", false))
+	wt := filepath.Join(root, ".claude", "worktrees", "worktree-G-001")
+	git(t, root, "worktree", "add", "-q", "-b", "worktree-G-001", wt)
+	write(t, wt, "grove/G-001-first.md", strings.Replace(fmt.Sprintf(work, "review"), "---\n\n## Outcome", "candidate: \""+git(t, root, "rev-parse", "HEAD")+"\"\n---\n\n## Outcome", 1))
+	git(t, wt, "commit", "-qam", "review")
+	_, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "auto"}, now, func(string) {})
+	if err == nil || !strings.Contains(err.Error(), "G-001 is review on worktree-G-001 at "+wt+"; judge that candidate") {
+		t.Fatal(err)
+	}
+	if views, _ := List(root, ""); len(views) != 0 {
+		t.Fatal("a refusal wrote an attempt")
+	}
+}
+
 func TestInputsChanged(t *testing.T) {
 	skipShort(t)
 	root := fixture(t)

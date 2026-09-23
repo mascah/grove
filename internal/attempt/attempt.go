@@ -288,10 +288,16 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if err != nil {
 		return nil, err
 	}
-	// The branch may hold what an earlier attempt persisted, such as the
-	// question the headless guide writes for a missing decision.
+	// The branch may hold what an earlier attempt persisted: a candidate in
+	// review awaiting the owner, or the question the headless guide writes
+	// for a missing decision. Either is a wait, not a reason to spend again.
 	if reused || base != head {
 		if wp, _ := project.Load(worktree, worktree); wp != nil {
+			for _, c := range wp.Records {
+				if c.ID == req.ID && c.Status != "proposed" && c.Status != "active" {
+					return nil, fmt.Errorf("%s is %s on %s at %s; judge that candidate (approve, feedback) before another attempt", req.ID, c.Status, branch, worktree)
+				}
+			}
 			if err := blocked(wp, req.ID); err != nil {
 				return nil, fmt.Errorf("%v (on %s at %s)", err, branch, worktree)
 			}

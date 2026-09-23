@@ -112,11 +112,12 @@ files under the Git common directory (`.git/grove/attempts/ATTEMPT/`, shared
 by every worktree, never committed). Budget and permission mode are required:
 Grove sets no default spend or profile. Grove starts one process and never
 retries; subagents the provider starts share the budget. `run` refuses,
-before writing anything, a record that is not proposed or active, an open
-question that blocks it (the wait the headless guide persists, so rerunning
-with nothing changed refuses the same way), uncommitted changes to the record
-here, a running or orphaned attempt of the same work, and a worktree path
-that is something else. `attempts [ID]` lists attempts newest first;
+before writing anything, a record that is not proposed or active here or on
+the branch's worktree (a candidate in review there awaits the owner's
+judgment), an open question that blocks it in either place (the wait the
+headless guide persists, so rerunning with nothing changed refuses the same
+way), uncommitted changes to the record here, a running or orphaned attempt
+of the same work, and a worktree path that is something else. `attempts [ID]` lists attempts newest first;
 `attempt ATTEMPT [--json]` prints one attempt's launch, event counts (parsed
 bounded: a line over 1 MiB is counted, not read), the provider's init and
 result fields, the result, the record as the branch holds it, whether the
