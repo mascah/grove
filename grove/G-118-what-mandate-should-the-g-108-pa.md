@@ -36,8 +36,8 @@ and stops here. Four answers, and one approval, are needed before
    with allowed Bash tools (safer, but the allow-list itself shapes behaviour
    and would need a runner option). Recommendation: `bypassPermissions`, in
    the disposable clone, with the transcripts read for writes outside it.
-5. **Fixture approval.** The fixture and topics as built at the commit that
-   adds `evals/` on `worktree-G-108`: [`evals/fixture/`](../evals/fixture),
+5. **Fixture approval.** The fixture and topics as built at `1f03a12` on
+   `worktree-G-108`: [`evals/fixture/`](../evals/fixture),
    with the case table in [`evals/README.md`](../evals/README.md#what-a-run-does)
    and the design in [G-115](G-115-g-108-eval-skeleton-plan.md). The planted
    choice is whether `dropped` tasks count as "finished"; the companion's

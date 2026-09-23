@@ -132,13 +132,53 @@ digest under evaluation so later cleanup is comparable.
    at or concludes that no change is justified, and says whether a further
    case is worth building. No product change happens in this work.
 
+## Evidence
+
+Headless `/grove-work G-108` session, 2026-09-23, on `worktree-G-108` from
+main `6208e82`, starting from this record at `sha256:ff01c9f0…`. Plan
+[G-115](G-115-g-108-eval-skeleton-plan.md) (`d9dbf23`) holds the design.
+Built, all offline and spending nothing:
+
+- `evals/run.py` (`run` and `selftest`), `evals/fixture/` (the `tasks` tool,
+  its brief, `AGENTS.md` naming `worktree-shape-SLUG` branches) and
+  [`evals/README.md`](../evals/README.md) (command, retention, checks,
+  retrieval facts, rubric, limits); a row in the README's ownership table.
+  Commits `4b5b345`, `399cc5f`, `1f03a12`.
+- Against acceptance 1 to 4, offline: the command builds the CLI and the
+  fixture with `grove init` and a bare remote per run, requires model, runs,
+  budget, permission mode and a clean `--config-dir`, retains transcript,
+  state, versions, guide digest, cost, turns and duration per run, and
+  reports an unavailable harness, unrun cases and the unbuilt Codex row
+  (1). Every acceptance 2 check is implemented and reported per run (2).
+  Retrieval facts come from the trace (3). The rubric has the four questions
+  with anchors and `owner`/`judge` labels (4). None of this has met a real
+  `claude` run yet, so each item is met in software and unexercised in fact.
+- Verification at `1f03a12`: `python3 evals/run.py selftest` prints
+  `selftest: ok` (a fake `claude` in good, bad and worse modes; every check
+  and retrieval fact asserted); signal checks with a sleeping fake: SIGINT,
+  SIGTERM and SIGHUP stop the runner and kill the session; a deleted `main`
+  fails `session-checkout-unchanged` and keeps the run's cost;
+  `grove check` OK; `go vet ./...` and `gofmt -l .` clean; the links in
+  `evals/README.md` resolve. No Go code changed, so the Go suite was not
+  rerun.
+- Independent review [G-119](G-119-g-108-eval-skeleton-review.md), three
+  rounds, examined `1f03a12`: eleven findings fixed, none open.
+
 ## Next
 
-The owner can commit this proposal and assign it with `$grove-work G-108`.
-At assignment, agree the model, the repeat count (five proposed), the per-run
-budget, and the fixture's brief and two topics: preparation must design
-them so the missing-choice topic's planted choice is genuinely the owner's
-and not answerable from the brief, while the companion topic's choice is.
+**Checkpoint, 2026-09-23.** G-108 alone, on `worktree-G-108` in
+`.claude/worktrees/worktree-G-108`, base main `6208e82`. Steps 1 to 4 of
+G-115 are done; step 5 (paid runs, then the acceptance 5 review record)
+waits on [G-118](G-118-what-mandate-should-the-g-108-pa.md): the model,
+repeat count, per-run budget, permission mode, config directory, and
+approval of the fixture and topics as built. No command is still running.
+Stays `active`: acceptance 5 is unmet.
+
+When G-118 is resolved, a successor on this branch runs `python3 evals/run.py
+run` with exactly the answered values (a changed fixture first, and a rerun
+of `selftest`), scores the rubric labelled `owner` or `judge`, writes the
+review record acceptance 5 asks for, and hands off into `review`.
+
 Follow-on candidates, shaped only if the skeleton's report says so: a case
 whose proposal must find and apply a constraint held in a listed
 prerequisite or plan amid plausible distractors, the only candidate that
