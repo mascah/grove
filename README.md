@@ -1,40 +1,36 @@
 # Grove
 
-A local project workspace for humans and agents, built around a CLI and durable files.
+A local project workspace for humans and agents: work, questions, decisions,
+plans, reviews and knowledge as Markdown files with YAML frontmatter in your
+Git repository, read and changed through a CLI and a terminal board, with no
+service to run.
 
-**Status: the first Go CLI lists, shows, validates, creates, and updates local
-project records, shows each record's versions across local branches,
-locates the checkout holding a selected version, and sets up another
-repository with `init`, carrying the workflow guides inside the binary. Run without a command, it
-opens a terminal Kanban board over the same operations, which reads everything,
-writes only through the three review actions behind prompts, and starts or
-stops an implementation attempt only behind prompts too. `context`
-assembles staged context for selected work, the `grove-work` skill carries it
-out, and the `grove-shape` skill shapes proposals.**
+This build:
 
-The selected next milestone is a complete interactive shape → implement →
-review → integrate loop on real nullsec work. Start with
-[G-036's adoption roadmap](grove/G-047-adoption-roadmap-plan.md) for the ordered
-work. Its proposed capabilities are not commands available in this build.
-The board opens on a project-wide current view of work. Work has the Review status: an
-implementation ends with its work record in Review, naming its `candidate`
-commit, and `done` is written where that candidate was merged. `approve`,
-`feedback` and `integrate` record the verdict, return work with feedback, and
-merge an approved candidate locally; the record's detail on the board offers
-the same as `a`, `f` and `i`. `run` starts one bounded headless attempt of a
-work item that outlives the terminal, which the board launches with `R`, lists
-with `A` and stops with `x`.
+- lists, shows, validates, creates, updates and converts records, with
+  sequential IDs shared by every linked worktree;
+- shows each record's versions across local branches and worktrees, decides
+  which are current by Git ancestry, and finds the checkout holding one;
+- assembles staged context for selected work, and carries two shared
+  workflows inside the binary: shaping ideas into proposed work, and executing
+  assigned work through to a candidate in Review;
+- records the owner's approval or feedback on a candidate and merges an
+  approved one locally;
+- runs one bounded headless agent attempt of a work item as a process that
+  outlives the terminal, and lists and stops attempts;
+- opens a terminal board, with no command, over all of the above.
 
-Start with [the restart brief](grove/brief.md) and
-[the accepted record model](docs/record-model.md). The brief records the selected
-direction and next investment. The
-[direction evaluation](grove/G-048-direction-evaluation-review.md) retains
-research and evidence from Bench, the sibling skills and the current prototype. [grove.yaml](grove.yaml)
-configures the record tree. The completed first implementation is
-[CLI inspection](grove/G-003-inspect-records.md).
-The predecessor `grove` from the sibling skills project is uninstalled; an
-installed `grove` is a build of this CLI ([Adopt Grove in another
-repository](#adopt-grove-in-another-repository)).
+Where to go next:
+
+- Try it here: [Use the CLI](#use-the-cli).
+- Set it up in another repository:
+  [Adopt Grove in another repository](#adopt-grove-in-another-repository).
+- Shape or carry out work with an agent:
+  [the `grove-shape` skill](#shaping-and-the-grove-shape-skill) and
+  [the `grove-work` skill](#work-context-and-the-grove-work-skill).
+- The record format and lifecycle: [the record model](docs/record-model.md).
+- Why Grove exists and where it is going: [the brief](grove/brief.md).
+- Developing Grove itself: [AGENTS.md](AGENTS.md).
 
 ## Use the CLI
 
@@ -144,36 +140,18 @@ Without `--project`, discovery searches upward for `grove.yaml` and stops at
 the current Git checkout boundary. Plain directories also work. Any invalid
 record makes the command fail; no partial list or record is printed.
 
-Every `.md` beneath the record root is a record wherever it sits, and folders
-mean nothing: `new` gives every type a neutral `G-NNN` ID in a flat
-`ROOT/G-NNN-slug.md`. Work, questions, decisions, terms, plans and reviews keep
-their own rules. A plan or review names its work in a `work` list, set with
-`update`, and `context G-NNN` lists the plans and reviews attached to the
-selected work without reading them; a review can record the Git commit it
-`examined`. Work moves `proposed`, `active`, `review`, `done`, with
-`abandoned` for an explicit human decision. `review` requires `candidate`, the
-commit offered for judgment; `approved`, which `approve` sets, must name that
-same candidate, so a changed candidate needs its own approval. `update` writes
-`done` only with a candidate that the checkout's HEAD contains, and only in a
-checkout on the configured target: Done means accepted and merged, so
-`integrate` writes it in the target's checkout after the merge, where the
-check holds it to the code that landed. A `done` record without a candidate
-predates that meaning. `new page "Title"` creates general knowledge with a title and no
-status; pages are never work cards and `context` reads one only through
-`--include`. `update --set type=...` reclassifies in place, keeping ID and path.
-`convert` turns a Markdown document outside the record root into a record and
-prints the old-to-new mapping. `brief: PATH` in `grove.yaml` names the project
-brief, which `brief` prints and `check` requires to exist.
-
-`schema_version: 3` is the only schema: Grove keeps no backward compatibility
-before its first release. [G-052](grove/G-052-migrate-knowledge.md) converted
-this repository from typed IDs (`W-001`) in type folders, and
-[G-069](grove/G-069-migration-map.md) maps every old ID and path to its
-counterpart. Inspect an older commit with the CLI in that commit; `versions`
-and the board report a branch that predates the conversion as a source they
-cannot inspect. The
-[record model](docs/record-model.md#identity-and-placement-apart-from-classification)
-has the page boundary and conversion's limits.
+Every `.md` beneath the record root is a record wherever it sits: `new`
+gives every type a neutral `G-NNN` ID in a flat `ROOT/G-NNN-slug.md`, and
+folders mean nothing. Work moves `proposed`, `active`, `review`, `done`, with
+`abandoned` for an explicit human decision; `review` names a `candidate`
+commit, and `done` is written on the target after that candidate is merged.
+A plan or review names its work in a `work` list, and a page is general
+knowledge with no status. `brief: PATH` in `grove.yaml` names the project
+brief, which `brief` prints. [The record model](docs/record-model.md) owns
+these rules: types, fields, statuses, validation, what `update` refuses, and
+what `convert` does and does not rewrite. `schema_version: 3` is the only
+schema; inspect an older commit with the CLI in that commit, and use
+[G-069](grove/G-069-migration-map.md) to follow an old typed ID (`W-001`).
 
 `new` and `update` require a Git checkout. `new` takes the next number
 from a counter under the repository's common Git directory,
@@ -235,15 +213,14 @@ re-read once more just before its path is returned. The command never creates a
 worktree, switches a branch, launches anything, claims ownership, or edits a
 record; the directory it prints is a location, not write authority, and a
 later `update` performs its own revision check. The board below uses these
-two operations in process; creating a worktree for a branch without one
-remains future work.
-
+two operations in process, and selecting a version never creates a worktree
+for a branch without one.
 ### Adopt Grove in another repository
 
 Build one binary from a named commit and put it on `PATH`. On the owner's
-machine it is `~/.local/bin/grove`, which replaced the predecessor on
-2026-09-22 ([G-041](grove/G-041-nullsec-pilot.md) records the rollback);
-rebuilding is manual, and `grove version` names what is installed:
+machine it is `~/.local/bin/grove` ([G-041](grove/G-041-nullsec-pilot.md)
+records how it replaced the predecessor and how to restore that); rebuilding
+is manual, and `grove version` names what is installed:
 
 ```sh
 go build -o "$HOME/.local/bin/grove" ./cmd/grove   # from a clone at that commit
@@ -369,9 +346,10 @@ for [Claude](.claude/skills/grove-work/SKILL.md) (`/grove-work G-030`) and
 [Codex](.agents/skills/grove-work/SKILL.md) (`$grove-work G-030`), invoked
 explicitly and kept in this repository on purpose while it is dogfooded;
 [AGENTS.md](AGENTS.md) holds this repository's development policy, which the
-guide does not repeat. Grove launches no agent;
-[the dogfooding evidence](grove/G-032-dogfood-review.md) says which
-invocations have actually been exercised.
+guide does not repeat. Grove starts an agent only through `run` or the
+board's `R`, one assigned work ID per attempt, as the headless form of this
+skill; [the dogfooding evidence](grove/G-032-dogfood-review.md) says which
+invocations have been exercised.
 
 ### Shaping and the `grove-shape` skill
 
@@ -547,59 +525,21 @@ records, paths, Git, and an attempt's provider is shown with control
 characters escaped. Besides its prompted actions it writes no files, including
 the framework's debug logs.
 
-Use `go test -short ./...` while iterating and `go test -count=1 -timeout 120s
-./...` plus `go vet ./...` as evidence; `-race` is per package only, since a
-whole-suite race run hangs in the Go toolchain on macOS. `internal/tui` also
-drives the built binary through a pseudo-terminal with
+Each command's contract, and the evidence and limits behind it, belongs to the
+work record that delivered it; `/` on the board or `grove list` finds them.
+
+## Develop Grove
+
+[AGENTS.md](AGENTS.md) holds the development and verification policy. The
+board's terminal checks drive the built binary through a pseudo-terminal with
 `python3 internal/tui/testdata/terminal.py BINARY` (Unix; skipped without
-`python3` and under `-short`).
-Run `lefthook install` once per clone: pre-commit formats staged Go files and
-runs `go vet` and `go mod tidy -diff`; pre-push runs `go test ./...`.
-`just clean-merged` removes local branches merged into `main` and their clean
-worktrees after asking.
-GitHub Actions runs the same checks plus `go run ./cmd/grove check` and
-`go build ./...` on Ubuntu and macOS, and `govulncheck` on Ubuntu, for every
-push to `main` and every pull request (`.github/workflows/ci.yml`); it is a
-signal, not a gate, and Dependabot opens weekly grouped update PRs for Go
-modules and actions.
-Agent execution remains future work. The
-[integrated CLI review](grove/G-022-integrated-cli-review.md) found
-workspace-provenance, update-preservation, and Git-path defects; G-014 through
-G-016 repair them, with [evidence and remaining limits](grove/G-028-repairs-review.md).
-[G-017](grove/G-017-terminal-picker.md) owns the board's contract and its
-[evidence](grove/G-029-board-review.md), including the owner's judgment
-from a demo, which automated checks do not supply;
-[G-043](grove/G-043-board-detail.md) owns the cards, the detail, and search.
+`python3` and under `-short`). Run `lefthook install` once per clone:
+pre-commit formats staged Go files and runs `go vet` and `go mod tidy -diff`;
+there is no pre-push hook. `just clean-merged` removes local branches merged
+into `main` and their clean worktrees after asking.
 
-The intended experience combines linked work, questions, research, project
-knowledge, and evidence. A CLI serves agents and humans; a TUI can make the
-project visible and eventually launch agent sessions. An optional local web UI
-can operate on the same records. Core project operations require no hosted
-service or persistent daemon.
-
-## Local restart
-
-On 2026-09-18, the first Grove application checkout was preserved intact at
-`../grove-archive-2026-09-18/` and this fresh repository replaced `../grove/`.
-The archived checkout retains its Git history and ignored local data. Its last
-commit was `be40e46`. Existing deployments and external data were not changed.
-The archive's instructions and service-based planning authority belong to that
-old application; they do not govern this restart.
-
-`../skills/` holds the predecessor Grove skill suite and CLI, uninstalled since
-G-041 and kept as files. `../nullsec/` remains the real project providing
-workflow evidence; G-041 cut it over to this CLI.
-
-## Resume this conversation
-
-Give a new agent this prompt:
-
-> Read AGENTS.md, grove/brief.md, and docs/record-model.md. Continue the file-backed
-> Grove CLI and interactive workspace described there. The old application was
-> archived. The Go list/show/check/new/update CLI and its records now work
-> locally, as do versions and workspace; G-003, G-007 and G-009 to G-011 record
-> verification. Find the next
-> action in G-036 and the work records' Next. Treat the brief's
-> remaining proposals as proposals. Inspect
-> nullsec through the installed `grove`, and the sibling skills project as files,
-> when evidence is needed. Preserve this direction and update the brief as choices settle.
+GitHub Actions runs gofmt, `go vet`, `go mod tidy -diff`, `go build ./...`,
+`go run ./cmd/grove check` and `go test -count=1 -timeout 120s ./...` on
+Ubuntu and macOS, and `govulncheck` on Ubuntu, for every push to `main` and
+every pull request (`.github/workflows/ci.yml`); it is a signal, not a gate.
+Dependabot opens weekly grouped update PRs for Go modules and actions.

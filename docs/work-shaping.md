@@ -217,9 +217,10 @@ The same steps, with these bounds:
   proposals and knowledge selectively. If the branch cannot be created or
   written, write nothing and return the exact obstacle.
 
-Grove starts no agent and schedules nothing: a headless invocation is a command
-a person or a future supervised runner issues, and that runner must separately
-define authorization, budgets, logs, and recovery.
+Grove starts no shaping agent and schedules nothing: a headless shaping
+invocation is a command a person or another runner issues, and that runner
+must separately define authorization, budgets, logs, and recovery. Grove's own
+runner, `grove run`, starts only assigned work attempts.
 
 ## Invocation
 
