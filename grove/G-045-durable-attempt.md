@@ -2,9 +2,9 @@
 id: "G-045"
 type: work
 title: "Run one bounded implementation independently of the viewing terminal"
-status: proposed
+status: active
 created: "2026-09-21T00:54:16Z"
-updated: "2026-09-21T01:03:41Z"
+updated: "2026-09-23T02:24:20Z"
 kind: feature
 size: large
 priority: 4
