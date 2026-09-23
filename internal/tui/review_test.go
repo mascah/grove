@@ -40,7 +40,7 @@ func reviewFixture(fx fixture, approved bool) *fake {
 			return &versions.Changes{Base: "base000", Files: []versions.Change{{Path: "internal/x.go", Added: 12, Removed: 3}, {Path: "grove/work/W-001.md", Added: 5, Removed: 1}, {Path: "bin.dat", Added: -1, Removed: -1}}}, nil
 		},
 		diff: func(from, to, path string) (string, error) {
-			return "diff --git a/" + path + " b/" + path + "\n@@ -1,2 +1,3 @@\n-old\n+new \x1b]0;evil\a\n+more\n", nil
+			return "diff --git a/" + path + " b/" + path + "\n@@ -1,2 +1,3 @@\n-old\n+new \x1b]0;evil\a\n+\tmore\n", nil
 		},
 	}
 }
@@ -94,7 +94,7 @@ func TestReviewDetailShowsStandingChangesAndDiffs(t *testing.T) {
 	}
 	deliverAll(m, press(m, "enter"))
 	s = plain(m)
-	for _, want := range []string{"Diff of internal/x.go (Esc returns to the content)", "-old", `+new \x1b]0;evil\a`, "+more"} {
+	for _, want := range []string{"Diff of internal/x.go (Esc returns to the content)", "-old", `+new \x1b]0;evil\a`, "+    more"} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("diff view lacks %q:\n%s", want, s)
 		}
@@ -124,6 +124,27 @@ func TestReviewDetailShowsStandingChangesAndDiffs(t *testing.T) {
 		if s := plain(m); size[1] >= 16 && !strings.Contains(s, "Review: candidate abcdef1 · approved") {
 			t.Fatalf("%v: review block missing:\n%s", size, s)
 		}
+	}
+}
+
+// Esc from the detail cancels a changes or diff read as it cancels history.
+func TestReviewReadsStopWithTheDetail(t *testing.T) {
+	t.Parallel()
+	f := reviewFixture(newFixture(), false)
+	m := open(t, f, 120, 36)
+	press(m, "right", "right", "enter")
+	deliverAll(m, press(m, "esc")) // the history read is cancelled: the detail's own
+	if m.pending != "" && m.pending != "inspect" {
+		t.Fatalf("pending %q", m.pending)
+	}
+	m = openReview(t, f, 120, 36)
+	press(m, "tab", "down")
+	if cmd := press(m, "enter"); cmd == nil || m.pending != "diff" {
+		t.Fatalf("Enter on a change starts the diff read: pending %q", m.pending)
+	}
+	press(m, "esc")
+	if m.pending != "" || m.cancel != nil {
+		t.Fatalf("Esc must cancel the diff read: pending %q", m.pending)
 	}
 }
 
@@ -164,12 +185,19 @@ func TestReviewApproveAndFeedbackFromTheBoard(t *testing.T) {
 		t.Fatalf("the outcome shows and the board is re-read: screen %d pending %q", m.screen, m.pending)
 	}
 	s := plain(m)
-	for _, want := range []string{"Approved W-001", "approved: W-001 in /repo/feat", "The board has been re-read. Esc returns to the record."} {
+	for _, want := range []string{"Approved W-001", "approved: W-001 in /repo/feat", "Re-reading the board…"} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("result lacks %q:\n%s", want, s)
 		}
 	}
+	press(m, "esc") // waits for the re-read, so the record shown next is current
+	if m.screen != resultScreen || m.pending != "inspect" {
+		t.Fatal("Esc must wait for the re-read")
+	}
 	deliverAll(m, next)
+	if s := plain(m); m.screen != resultScreen || !strings.Contains(s, "The board has been re-read. Esc returns to the record.") {
+		t.Fatalf("after the re-read:\n%s", s)
+	}
 	if f.inspects != 2 || strings.Join(f.acts, ";") != "approve /repo/feat W-001 Ship it" {
 		t.Fatalf("inspects %d acts %v", f.inspects, f.acts)
 	}

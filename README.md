@@ -6,7 +6,8 @@ A local project workspace for humans and agents, built around a CLI and durable 
 project records, shows each record's versions across local branches,
 locates the checkout holding a selected version, and sets up another
 repository with `init`, carrying the workflow guides inside the binary. Run without a command, it
-opens a read-only terminal Kanban board over the same operations. `context`
+opens a terminal Kanban board over the same operations, which reads everything
+and writes only through the three review actions behind prompts. `context`
 assembles staged context for selected work, the `grove-work` skill carries it
 out, and the `grove-shape` skill shapes proposals.**
 
@@ -90,7 +91,8 @@ any other file after the candidate, since that tip is a new candidate.
 ID, merges it with a plain `git merge` (a conflict is aborted and refused,
 leaving the target as it was), writes `done` there committed alone, and with
 `--cleanup` removes the branch's worktree and the branch, keeping either with
-Git's reason when Git refuses. It prints one line per fact as it holds
+Git's reason when Git refuses, and keeping a worktree that holds ignored
+files, which Git would delete. It prints one line per fact as it holds
 (`approval:`, `merge:`, `done:`, `cleanup:`); a refusal comes before the merge,
 and nothing undoes a merge that happened.
 

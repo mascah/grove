@@ -1,6 +1,7 @@
 package update
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/repo"
+	"github.com/mascah/grove/internal/versions"
 )
 
 // The owner's two dispositions of a candidate in review (G-044), each an
@@ -126,14 +128,8 @@ func holdsCandidate(root string, r *project.Record, exact bool) error {
 // changedSince lists the files other than the record's that differ between
 // the candidate and HEAD, with HEAD itself.
 func changedSince(root, candidate, recordPath string) (others []string, tip string, err error) {
-	out, err := repo.Git(root, "diff", "--name-only", "-z", candidate, "HEAD")
-	if err != nil {
+	if others, err = versions.Others(context.Background(), root, candidate, "HEAD", recordPath); err != nil {
 		return nil, "", err
-	}
-	for _, path := range strings.Split(strings.TrimSuffix(out, "\x00"), "\x00") {
-		if path != "" && path != recordPath {
-			others = append(others, path)
-		}
 	}
 	tip, err = repo.Git(root, "rev-parse", "HEAD")
 	return others, strings.TrimSpace(tip), err

@@ -121,7 +121,7 @@ func TestIntegrateCommand(t *testing.T) {
 	before := gitIn(t, root, "rev-parse", "HEAD")
 	code, out, stderr = run("integrate", "G-001", "--cleanup")
 	head := gitIn(t, root, "rev-parse", "HEAD")
-	want := "approval: candidate " + candidate[:7] + " of G-001 approved on branch feature (Verdict on candidate " + candidate[:7] + ", " + today() + ": Yes)\n" +
+	want := "approval: candidate " + candidate[:7] + " of G-001 approved on branch feature at " + tip[:7] + " (Verdict on candidate " + candidate[:7] + ", " + today() + ": Yes)\n" +
 		"merge: fast-forward main from " + before[:7] + " to " + tip[:7] + "\n" +
 		"done: G-001 done at commit " + head[:7] + "\n" +
 		"cleanup: deleted branch feature\n"

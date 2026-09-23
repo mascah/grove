@@ -361,7 +361,7 @@ func TestBoardReviewWorkflow(t *testing.T) {
 	s.press("y")
 	s.want("Also delete branch feature and remove its worktree? y/n   (")
 	s.press("n")
-	s.want("Integration of G-001", "approval: candidate "+short+" of G-001 approved on branch feature (Verdict on candidate "+short+", ", "merge: fast-forward main from ", "done: G-001 done at commit ")
+	s.want("Integration of G-001", "approval: candidate "+short+" of G-001 approved on branch feature at ", "merge: fast-forward main from ", "done: G-001 done at commit ")
 	if got := gitIn(t, root, "show", "HEAD:docs/records/work/renamed.md"); !strings.Contains(got, "status: done") || !strings.Contains(got, "approved: \""+candidate+"\"") {
 		t.Fatalf("main's record after integration:\n%s", got)
 	}

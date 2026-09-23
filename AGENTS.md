@@ -16,7 +16,7 @@ read the brief when the record, a product question, or reconciliation needs it.
   metadata directory; reading records requires no allocator state.
   G-003 implements the reader, G-007 record creation with shared allocation,
   and G-009 field updates with content revisions and a shared write lock.
-  G-017 implements the read-only terminal board that bare `grove` opens, with
+  G-017 implements the terminal board that bare `grove` opens, with
   Bubble Tea v2 in `internal/tui`; keep explicit subcommands noninteractive,
   and the board's text escaping and exact source targeting intact. G-043 gave
   it bordered cards, a Done column bounded to its page, Abandoned behind `a`,

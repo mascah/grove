@@ -63,19 +63,21 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 	if _, err := repo.Git(root, "merge-base", "--is-ancestor", r.Candidate, from.Commit); err != nil {
 		return fmt.Errorf("branch %s does not contain candidate %s, which it names; repair the record before integrating", name, r.Candidate)
 	}
-	if others, err := changed(root, r.Candidate, from.Commit, r.Path); err != nil {
+	if others, err := versions.Others(context.Background(), root, r.Candidate, from.Commit, r.Path); err != nil {
 		return err
 	} else if len(others) != 0 {
 		return fmt.Errorf("commits after candidate %s on %s change %s: the tip %s is a new candidate; approve it before integrating", short(r.Candidate), name, strings.Join(others, ", "), short(from.Commit))
 	}
-	report(fmt.Sprintf("approval: candidate %s of %s approved on branch %s%s", short(r.Candidate), req.ID, name, verdict(r)))
+	report(fmt.Sprintf("approval: candidate %s of %s approved on branch %s at %s%s", short(r.Candidate), req.ID, name, short(from.Commit), verdict(r)))
 
 	before, err := head(root)
 	if err != nil {
 		return err
 	}
-	// Git prints its CONFLICT lines on stdout, so both streams are read.
-	if out, err := repo.Command(context.Background(), root, "merge", "--no-edit", name).CombinedOutput(); err != nil {
+	// The commit the checks above read is what is merged, not the name: the
+	// branch may move meanwhile, and a tag of the same name would win the
+	// name. Git prints its CONFLICT lines on stdout, so both streams are read.
+	if out, err := repo.Command(context.Background(), root, "merge", "--no-edit", "-m", "Merge branch '"+name+"'", from.Commit).CombinedOutput(); err != nil {
 		if _, aborted := repo.Git(root, "rev-parse", "-q", "--verify", "MERGE_HEAD"); aborted == nil {
 			if _, err := repo.Git(root, "merge", "--abort"); err != nil {
 				return fmt.Errorf("merge of %s into %s failed and could not be aborted: %v; resolve it by hand", name, p.Target, err)
@@ -102,7 +104,8 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 
 	done, err := update.Apply(root, update.Request{ID: req.ID, Set: []update.Field{{Name: "status", Value: "done"}}, Commit: true}, now, nil)
 	if err != nil {
-		return fmt.Errorf("merged as %s, but %s could not be marked done: %v; run grove update %s --set status=done --commit here once that is fixed", short(after), req.ID, err, req.ID)
+		// update says whether the file was written before the commit failed.
+		return fmt.Errorf("merged as %s, but marking %s done failed: %v; once that is repaired, commit the staged record here: git commit -m 'docs(%s): set status=done' -- %s (or, if it was not written, grove update %s --set status=done --commit)", short(after), req.ID, err, req.ID, r.Path, req.ID)
 	}
 	if done.Changed {
 		report(fmt.Sprintf("done: %s done at commit %s", req.ID, short(done.Commit)))
@@ -184,25 +187,10 @@ func verdict(r *project.Record) string {
 	return " (" + found + ")"
 }
 
-// changed lists the files other than the record's that differ between the
-// candidate and the branch tip.
-func changed(root, candidate, tip, recordPath string) ([]string, error) {
-	out, err := repo.Git(root, "diff", "--name-only", "-z", candidate, tip)
-	if err != nil {
-		return nil, err
-	}
-	var others []string
-	for _, path := range strings.Split(strings.TrimSuffix(out, "\x00"), "\x00") {
-		if path != "" && path != recordPath {
-			others = append(others, path)
-		}
-	}
-	return others, nil
-}
-
 // cleanup removes the branch's worktree, then the branch, through Git's own
 // refusals: a worktree with changes or untracked files and a branch the
-// target does not contain are kept. A worktree holding cwd is kept too.
+// target does not contain are kept. A worktree holding cwd is kept too, and
+// one holding ignored files, which git worktree remove would delete.
 // Whatever is kept is reported and makes the result an error, since the
 // caller asked for a cleanup that did not fully happen.
 func cleanup(root, cwd, name, worktree string, report func(string)) error {
@@ -214,6 +202,10 @@ func cleanup(root, cwd, name, worktree string, report func(string)) error {
 	if worktree != "" {
 		if rel, err := filepath.Rel(worktree, cwd); cwd != "" && err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			keep("worktree "+worktree, "it holds this process's working directory")
+		} else if ignored, err := ignored(worktree); err != nil {
+			keep("worktree "+worktree, err.Error())
+		} else if len(ignored) != 0 {
+			keep("worktree "+worktree, "it holds ignored files ("+strings.Join(ignored, ", ")+"); remove them or the worktree by hand")
 		} else if _, err := repo.Git(root, "worktree", "remove", "--", worktree); err != nil {
 			keep("worktree "+worktree, err.Error())
 		} else {
@@ -229,6 +221,22 @@ func cleanup(root, cwd, name, worktree string, report func(string)) error {
 		return errors.New("cleanup incomplete; the integration stands")
 	}
 	return nil
+}
+
+// ignored lists a checkout's ignored files, which git worktree remove deletes
+// without --force; a .env or a build directory is not Grove's to delete.
+func ignored(worktree string) ([]string, error) {
+	out, err := repo.Git(worktree, "status", "--porcelain", "--ignored", "-z")
+	if err != nil {
+		return nil, err
+	}
+	var files []string
+	for _, entry := range strings.Split(strings.TrimSuffix(out, "\x00"), "\x00") {
+		if strings.HasPrefix(entry, "!! ") {
+			files = append(files, entry[3:])
+		}
+	}
+	return files, nil
 }
 
 func head(root string) (string, error) {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 
@@ -57,16 +58,34 @@ func ChangesContext(ctx context.Context, root, target, candidate, tip, recordPat
 			return nil, err
 		}
 	}
-	out, err := repo.GitContext(ctx, root, "diff", "--name-only", "-z", candidate, tip)
+	after, err := Others(ctx, root, candidate, tip, recordPath)
 	if err != nil {
 		return nil, err
 	}
-	for _, path := range strings.Split(strings.TrimSuffix(out, "\x00"), "\x00") {
-		if path != "" && path != recordPath {
-			c.After = append(c.After, path)
+	c.After = after
+	return c, nil
+}
+
+// Others lists the files other than the record's that differ between two
+// commits, as paths from the repository's top, where git diff prints them;
+// recordPath is relative to the project, which may sit under a prefix.
+func Others(ctx context.Context, root, from, to, recordPath string) ([]string, error) {
+	_, _, prefix, err := repo.IdentifyContext(ctx, root)
+	if err != nil {
+		return nil, err
+	}
+	out, err := repo.GitContext(ctx, root, "diff", "--name-only", "-z", from, to)
+	if err != nil {
+		return nil, err
+	}
+	record := path.Join(prefix, recordPath)
+	var others []string
+	for _, p := range strings.Split(strings.TrimSuffix(out, "\x00"), "\x00") {
+		if p != "" && p != record {
+			others = append(others, p)
 		}
 	}
-	return c, nil
+	return others, nil
 }
 
 // numstat parses git diff --numstat -z: "added\tremoved\tpath" per entry, or
@@ -107,5 +126,6 @@ func numstat(out string) ([]Change, error) {
 // DiffContext is one file's diff between two commits, as git diff prints it
 // without colour: text from the repository, to be escaped before display.
 func DiffContext(ctx context.Context, root, from, to, path string) (string, error) {
-	return repo.GitContext(ctx, root, "diff", "--no-color", "--no-ext-diff", from, to, "--", ":(literal)"+path)
+	// The path is one Changes listed, from the repository's top.
+	return repo.GitContext(ctx, root, "diff", "--no-color", "--no-ext-diff", from, to, "--", ":(top,literal)"+path)
 }

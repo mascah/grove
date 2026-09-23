@@ -272,6 +272,21 @@ Made while implementing, none changing the four designs:
 - `integrate` reads the process's working directory to keep a worktree it is
   running from; the board passes the same, so `i` from inside the branch's
   worktree keeps that worktree with the reason shown.
+- After the independent review (G-099): `integrate` merges the commit it
+  inspected, never the branch name, so a branch that moves between the check
+  and the merge, or a tag of the same name, cannot be merged unchecked; the
+  approval fact names that tip. `--cleanup` also keeps a worktree holding
+  ignored files, which `git worktree remove` would delete. The three "other
+  files changed" comparisons share `versions.Others`, which places the
+  record under the project's prefix, and the diff view reads a top-relative
+  path, so a project under a subdirectory works. The board's result screen
+  says "Re-reading the board…" until the re-read lands and Esc waits for it;
+  Esc from a detail cancels a changes or diff read as it does history; diff
+  tabs are shown as spaces.
+- `update --set approved=COMMIT` remains possible by hand, without a verdict
+  or the tip check, as every field is; `check` still holds it to the
+  candidate and `integrate` re-checks the tip. Design 1's "same call unsets
+  approved" rule is not enforced beyond that.
 
 ## Limits
 
@@ -280,4 +295,6 @@ policy here; every action is a person's key or command. Automatic relaunch
 after feedback is G-046's. A branch without a checkout cannot be approved
 from the board; `git worktree add` one. Diffs are per file from the merge
 base; a whole-branch diff is `git diff` at a shell. Bodies other than the
-appended paragraph are still edited by hand.
+appended paragraph are still edited by hand. Ctrl-C during a board action
+waits for the action to finish and then reports only the interruption; the
+action's commits are in Git, and the record shows them.

@@ -2,8 +2,9 @@
 // current work across every branch and checkout (G-042), or of one checkout's
 // files, whose cards open a record's differing versions with the branches and
 // checkouts holding each, the focused one's history of commits, and explicit
-// selection of one existing workspace. It reads through Backend and changes
-// nothing but the terminal: no records, refs, index, or worktrees.
+// selection of one existing workspace. It reads through Backend, and writes
+// only through Backend's three actions on a record in review (G-044), each
+// behind a prompt: approve, feedback, and integrate.
 package tui
 
 import (
@@ -476,9 +477,9 @@ func (m *Model) key(k string) tea.Cmd {
 			m.done = true
 			return tea.Quit
 		case detailScreen:
-			// The board never reads history; whatever the detail returns to
-			// asks again for its own.
-			if m.pending == "history" {
+			// The board reads no history, changes or diff; whatever the
+			// detail returns to asks again for its own.
+			if m.pending != "" && m.pending != "inspect" && m.pending != "act" {
 				m.stop()
 			}
 			m.leaveDetail()
@@ -489,6 +490,9 @@ func (m *Model) key(k string) tea.Cmd {
 			m.screen = detailScreen
 			m.leaveVersions()
 		case resultScreen:
+			if m.pending == "inspect" {
+				return nil // the record shown next must be the re-read one
+			}
 			m.result, m.scroll = nil, 0
 			if m.screen = boardScreen; len(m.stack) != 0 {
 				m.screen = detailScreen

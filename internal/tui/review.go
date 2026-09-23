@@ -332,7 +332,7 @@ func (m *Model) changesSection(v *versions.Version, w int, heading func(string),
 func diffRows(text string, w int) []string {
 	var rows []string
 	for _, l := range strings.Split(strings.TrimRight(text, "\n"), "\n") {
-		row := line(l, w)
+		row := line(strings.ReplaceAll(l, "\t", "    "), w)
 		switch {
 		case strings.HasPrefix(l, "+") && !strings.HasPrefix(l, "+++"):
 			row = "\x1b[32m" + row + "\x1b[m"
@@ -533,6 +533,9 @@ func (m *Model) resultRows(w int) []string {
 		failed := wrap("NOT DONE: "+o.err, w)
 		failed[0] = bold(failed[0])
 		rows = append(append(rows, line("", w)), failed...)
+	}
+	if m.pending == "inspect" {
+		return append(rows, line("", w), line("Re-reading the board…", w))
 	}
 	return append(rows, line("", w), line("The board has been re-read. Esc returns to the record.", w))
 }

@@ -55,7 +55,7 @@ func record(t *testing.T, root string) *project.Record {
 // fixture is a main checkout with target main, and a linked worktree on
 // branch feature where G-001 is in review, approved, with a review record in
 // its candidate. It returns the main root, the worktree, and the candidate.
-func fixture(t *testing.T, approve bool) (root, wt, candidate string) {
+func fixture(t *testing.T, approve bool, sub ...string) (root, wt, candidate string) {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
@@ -72,29 +72,31 @@ func fixture(t *testing.T, approve bool) (root, wt, candidate string) {
 	for _, kv := range [][2]string{{"user.name", "t"}, {"user.email", "t@t"}, {"commit.gpgsign", "false"}, {"maintenance.auto", "false"}} {
 		git(t, root, "config", kv[0], kv[1]) // the product's commits use the repository's own identity
 	}
-	write(t, root, "grove.yaml", config)
-	write(t, root, "grove/G-001-first.md", strings.Replace(work, "%s", "proposed", 1))
+	// sub places the project under a prefix, with the code above it.
+	project, wtProject := filepath.Join(append([]string{root}, sub...)...), filepath.Join(append([]string{wt}, sub...)...)
+	write(t, project, "grove.yaml", config)
+	write(t, project, "grove/G-001-first.md", strings.Replace(work, "%s", "proposed", 1))
 	write(t, root, "code.txt", "before\n")
 	git(t, root, "add", "-A")
 	git(t, root, "commit", "-qm", "init")
 	git(t, root, "worktree", "add", "-q", "-b", "feature", wt)
-	write(t, wt, "grove/G-001-first.md", strings.Replace(work, "%s", "active", 1))
+	write(t, wtProject, "grove/G-001-first.md", strings.Replace(work, "%s", "active", 1))
 	write(t, wt, "code.txt", "the change\n")
 	git(t, wt, "add", "-A")
 	git(t, wt, "commit", "-qm", "feat: implement")
-	write(t, wt, "grove/G-005-review.md", strings.Replace(review, "%s", git(t, wt, "rev-parse", "HEAD"), 1))
+	write(t, wtProject, "grove/G-005-review.md", strings.Replace(review, "%s", git(t, wt, "rev-parse", "HEAD"), 1))
 	git(t, wt, "add", "-A")
 	git(t, wt, "commit", "-qm", "docs: evidence and review")
 	candidate = git(t, wt, "rev-parse", "HEAD")
-	if _, err := update.Apply(wt, update.Request{ID: "G-001", Set: []update.Field{{Name: "status", Value: "review"}, {Name: "candidate", Value: candidate}}, Commit: true}, now, nil); err != nil {
+	if _, err := update.Apply(wtProject, update.Request{ID: "G-001", Set: []update.Field{{Name: "status", Value: "review"}, {Name: "candidate", Value: candidate}}, Commit: true}, now, nil); err != nil {
 		t.Fatal(err)
 	}
 	if approve {
-		if _, err := update.Approve(wt, "G-001", "Ship it.", now); err != nil {
+		if _, err := update.Approve(wtProject, "G-001", "Ship it.", now); err != nil {
 			t.Fatal(err)
 		}
 	}
-	return root, wt, candidate
+	return project, wtProject, candidate
 }
 
 func run(t *testing.T, root, cwd string, cleanup bool) ([]string, error) {
@@ -132,7 +134,7 @@ func TestIntegrateFastForwardAndCleanup(t *testing.T) {
 	}
 	head := git(t, root, "rev-parse", "HEAD")
 	want := []string{
-		"approval: candidate " + candidate[:7] + " of G-001 approved on branch feature (Verdict on candidate " + candidate[:7] + ", 2026-09-22: Ship it.)",
+		"approval: candidate " + candidate[:7] + " of G-001 approved on branch feature at " + tip[:7] + " (Verdict on candidate " + candidate[:7] + ", 2026-09-22: Ship it.)",
 		"merge: fast-forward main from " + before[:7] + " to " + tip[:7],
 		"done: G-001 done at commit " + head[:7],
 		"cleanup: removed worktree " + wt,
@@ -290,6 +292,19 @@ func TestIntegrateCleanupKeepsWhatGitOrTheSessionHolds(t *testing.T) {
 			t.Fatal("the worktree's file is gone")
 		}
 	})
+	t.Run("ignored files", func(t *testing.T) {
+		t.Parallel()
+		root, wt, _ := fixture(t, true)
+		write(t, root, ".git/info/exclude", "*.log\n")
+		write(t, wt, "junk.log", "ignored, so git worktree remove would delete it\n")
+		facts, err := run(t, root, root, true)
+		if err == nil || len(facts) != 5 || facts[3] != "cleanup: kept worktree "+wt+": it holds ignored files (junk.log); remove them or the worktree by hand" {
+			t.Fatalf("%v; facts %q", err, facts)
+		}
+		if _, err := os.Stat(filepath.Join(wt, "junk.log")); err != nil {
+			t.Fatal("the ignored file is gone")
+		}
+	})
 	t.Run("the session's directory", func(t *testing.T) {
 		t.Parallel()
 		root, wt, _ := fixture(t, true)
@@ -313,7 +328,7 @@ func TestIntegrateReportsADoneWriteThatFailedAfterTheMerge(t *testing.T) {
 	}
 	git(t, root, "config", "core.hooksPath", hooks)
 	facts, err := run(t, root, root, true)
-	if err == nil || !strings.Contains(err.Error(), "merged as "+tip[:7]+", but G-001 could not be marked done: ") || !strings.Contains(err.Error(), "run grove update G-001 --set status=done --commit here once that is fixed") {
+	if err == nil || !strings.Contains(err.Error(), "merged as "+tip[:7]+", but marking G-001 done failed: ") || !strings.Contains(err.Error(), "commit the staged record here: git commit -m 'docs(G-001): set status=done' -- grove/G-001-first.md") {
 		t.Fatalf("%v; facts %q", err, facts)
 	}
 	if len(facts) != 2 || git(t, root, "rev-parse", "HEAD") != tip {

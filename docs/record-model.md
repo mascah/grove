@@ -571,7 +571,9 @@ implementation, independent review and waiting are activities inside
   holding an approved candidate of ID, merges it with a plain `git merge`
   (a conflict is aborted and refused before anything changes), writes done
   there committed alone, and with `--cleanup` removes the branch's worktree
-  and the branch only where Git agrees. A squash or rebase that lands a
+  and the branch only where Git agrees and the worktree holds no ignored
+  files. The merge is of the commit the checks read, so a branch that moves
+  meanwhile is not merged. A squash or rebase that lands a
   different commit is a manual merge that names that commit as the candidate
   in the same `update`. The check needs Git, as `update` already does;
   `check` verifies the form only.
@@ -608,8 +610,9 @@ branches and worktrees, and locates the existing checkout holding a selected
 version. The [integrated CLI review](../grove/G-022-integrated-cli-review.md) found
 contract defects that G-014/G-015/G-016 repair; their
 [evidence](../grove/G-028-repairs-review.md) lists the remaining limits.
-[G-017](../grove/G-017-terminal-picker.md) adds a read-only terminal board over
-these operations; it changes no schema and writes no record. Editing from an
+[G-017](../grove/G-017-terminal-picker.md) adds a terminal board over these
+operations; it changes no schema, and since G-044 writes a record only through
+the three review actions, each behind a prompt. Editing fields from an
 interactive view and automatic checkout creation are future investments.
 
 Plans and reviews are records. Report records, artifact
