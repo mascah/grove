@@ -6,6 +6,7 @@
 package integrate
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -73,13 +74,18 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 	if err != nil {
 		return err
 	}
-	if _, err := repo.Git(root, "merge", "--no-edit", name); err != nil {
+	// Git prints its CONFLICT lines on stdout, so both streams are read.
+	if out, err := repo.Command(context.Background(), root, "merge", "--no-edit", name).CombinedOutput(); err != nil {
 		if _, aborted := repo.Git(root, "rev-parse", "-q", "--verify", "MERGE_HEAD"); aborted == nil {
 			if _, err := repo.Git(root, "merge", "--abort"); err != nil {
 				return fmt.Errorf("merge of %s into %s failed and could not be aborted: %v; resolve it by hand", name, p.Target, err)
 			}
 		}
-		return fmt.Errorf("merge of %s into %s refused: %v; %s is unchanged at %s and %s stays in review", name, p.Target, err, p.Target, short(before), req.ID)
+		why := strings.TrimSpace(string(out))
+		if i := strings.Index(why, "CONFLICT"); i >= 0 {
+			why = strings.ReplaceAll(why[i:], "\n", "; ")
+		}
+		return fmt.Errorf("merge of %s into %s refused: %s; %s is unchanged at %s and %s stays in review", name, p.Target, why, p.Target, short(before), req.ID)
 	}
 	after, err := head(root)
 	if err != nil {

@@ -193,7 +193,7 @@ func TestIntegrateRefusesConflictsBeforeAnythingChanges(t *testing.T) {
 		root, _, _ := fixture(t, true)
 		write(t, root, "code.txt", "a different change\n")
 		git(t, root, "commit", "-qam", "fix: on main")
-		facts := refused(t, root, false, "merge of feature into main refused: git merge: ")
+		facts := refused(t, root, false, "merge of feature into main refused: CONFLICT (content): Merge conflict in code.txt; Automatic merge failed; fix conflicts and then commit the result.; main is unchanged at")
 		if len(facts) != 1 || !strings.HasPrefix(facts[0], "approval: ") {
 			t.Fatalf("facts %q", facts)
 		}
