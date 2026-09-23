@@ -549,7 +549,7 @@ def attempt_lifecycle(root, wt, base):
     s.send(b"A")
     mark = s.expect("Attempts of G-001", mark)
     s.send(ENTER)
-    mark = s.expect("Outcome: running", mark)
+    s.expect("Outcome: running", mark)
     mark = s.expect("step 19999", mark)  # the newest of 20,000 events, polled while it runs
     for _ in range(20):  # keys stay immediate however much the provider writes
         s.send(b"\x1b[6~")

@@ -378,8 +378,9 @@ func TestStopAfterReconnect(t *testing.T) {
 	if n := starts(t, mark); n > 2 {
 		t.Fatalf("the provider started %d times", n)
 	}
-	if n := starts(t, mark); n == 2 && v.Result.ExitCode != 130 {
-		t.Fatalf("started then stopped, but exit %d", v.Result.ExitCode)
+	// The fake marks its start before its INT trap, so SIGINT may end it either way.
+	if n := starts(t, mark); n == 2 && v.Result.ExitCode != 130 && v.Result.Signal != "interrupt" {
+		t.Fatalf("started then stopped, but exit %d signal %q", v.Result.ExitCode, v.Result.Signal)
 	}
 }
 
