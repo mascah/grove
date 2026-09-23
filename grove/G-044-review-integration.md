@@ -4,7 +4,7 @@ type: work
 title: "Review candidates and integrate approved work locally"
 status: review
 created: "2026-09-21T00:54:16Z"
-updated: "2026-09-23T01:17:00Z"
+updated: "2026-09-23T02:05:25Z"
 kind: feature
 size: large
 priority: 3
@@ -12,6 +12,7 @@ depends_on: ["G-038", "G-043"]
 relates_to: ["G-035", "G-046", "G-064"]
 formerly: "W-026"
 candidate: "93b971b"
+approved: "93b971b"
 ---
 
 ## Outcome
@@ -145,3 +146,5 @@ cd /Users/mascah/GitHub/mascah/grove && /tmp/grove-G-044 integrate G-044 --clean
 
 Feedback instead: `/tmp/grove-G-044 --project …/G-044 feedback G-044 "TEXT"`
 or `f` on the board, then `/grove-work G-044` in this worktree.
+
+Verdict on candidate 93b971b, 2026-09-23: looks good to merge
