@@ -2,10 +2,11 @@
 id: "G-107"
 type: work
 title: "Reconcile current documentation and give each fact one owner"
-status: active
+status: review
 created: "2026-09-23T15:51:37Z"
-updated: "2026-09-23T16:49:34Z"
+updated: "2026-09-23T16:59:27Z"
 relates_to: ["G-036", "G-108", "G-109", "G-110"]
+candidate: "71a650ec59c7e0b881a295741ede86bda2c84d09"
 ---
 
 ## Outcome
