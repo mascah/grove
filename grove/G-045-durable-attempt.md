@@ -2,15 +2,16 @@
 id: "G-045"
 type: work
 title: "Run one bounded implementation independently of the viewing terminal"
-status: active
+status: review
 created: "2026-09-21T00:54:16Z"
-updated: "2026-09-23T02:34:39Z"
+updated: "2026-09-23T02:54:54Z"
 kind: feature
 size: large
 priority: 4
 depends_on: ["G-038", "G-040"]
 relates_to: ["G-035", "G-044", "G-046", "G-101"]
 formerly: "W-027"
+candidate: "d8ed3159447bdc7f4930499aaf6a57e182e68c04"
 ---
 
 ## Outcome
