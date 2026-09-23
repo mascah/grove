@@ -72,8 +72,20 @@ inside presentation work.
 
 ## Next
 
-Review and assign this proposal after committing it. Preparation should collect
-representative Attempts states and compare a small number of concrete layouts
-with the owner before implementing the selected hierarchy. No layout has been
-approved. This work can proceed independently of the eval baseline and
-documentation cleanup; coordinate any shared documentation edits.
+Waiting on question [G-117](G-117-which-attempts-list-and-detail-l.md): the
+owner chooses a layout. Nothing is implemented.
+
+Checkpoint, 2026-09-23, headless attempt `G-109.20260923T194926Z`:
+selected G-109 alone, on branch `worktree-G-109` from `main` `6208e82`,
+starting from this record at `sha256:5a72acaa…`. Preparation is done:
+plan [G-116](G-116-g-109-attempts-layouts-observed.md) records the current
+screens, rendered from this repository's six real attempts by a throwaway
+model test that was deleted and never committed. It lists six findings,
+draws options A and B at 80×24 with every state G-109's acceptance names
+(sanitized `X-` examples where no real attempt exists), and gives the
+implementation steps. It also records that no report-retention repair is
+needed. G-117 asks for the layout, the rule for what needs the owner, and
+whether provider `system:` notices are counted rather than listed; it
+recommends A with both rules. No commands are still running. Once G-117 is
+resolved, rerun `/grove-work G-109`: the record goes active and G-116's
+Steps apply to the chosen option.
