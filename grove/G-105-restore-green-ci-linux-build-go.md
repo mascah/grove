@@ -2,12 +2,13 @@
 id: "G-105"
 type: work
 title: "Restore green CI: Linux build, Go patch, and dependency advisories"
-status: active
+status: review
 created: "2026-09-23T04:44:12Z"
-updated: "2026-09-23T04:49:42Z"
+updated: "2026-09-23T05:00:10Z"
 kind: fix
 size: small
 relates_to: ["G-081", "G-045", "G-046"]
+candidate: "e30f90c6572edf3493e9f2c24504b6477e64053e"
 ---
 
 ## Outcome
