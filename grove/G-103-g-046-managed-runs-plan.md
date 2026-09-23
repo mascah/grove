@@ -105,6 +105,22 @@ here.
 - README and `docs/record-model.md` where they describe `grove` and
   attempts.
 
+## Checkpoint
+
+All steps done at `79095a6` on `worktree-G-046`; evidence in
+[G-046](G-046-managed-runs.md) and review [G-104](G-104-g-046-managed-runs-review.md).
+Adjustments to the design, each from evidence: the attempts list is read
+from the attempts directory under the common directory the board already
+found, since a Git process there could not be cancelled at quit (the
+blocked-Git terminal check showed it); the open attempt's read skips the
+full events scan; the owner records at exit whether the record's file was
+committed (`record_uncommitted`), which alone decides `candidate ready`,
+since the branch's tip moves on with an approval; a launch is refused up
+front while an open question blocks the work; this checkout is found by
+its Git directory, and a branch is passed only when the target (or this
+checkout) does not hold the current state, reusing a live checkout of
+`worktree-ID` for a fresh start; `o` returns to the attempt on Esc.
+
 ## Steps
 
 1. Commit this plan; set G-046 active.
