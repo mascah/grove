@@ -2,9 +2,9 @@
 id: "G-105"
 type: work
 title: "Restore green CI: Linux build, Go patch, and dependency advisories"
-status: proposed
+status: active
 created: "2026-09-23T04:44:12Z"
-updated: "2026-09-23T04:44:16Z"
+updated: "2026-09-23T04:49:42Z"
 kind: fix
 size: small
 relates_to: ["G-081", "G-045", "G-046"]
