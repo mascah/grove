@@ -2,15 +2,16 @@
 id: "G-046"
 type: work
 title: "Launch and inspect managed attempts from the TUI"
-status: active
+status: review
 created: "2026-09-21T00:54:16Z"
-updated: "2026-09-23T03:35:48Z"
+updated: "2026-09-23T04:14:44Z"
 kind: feature
 size: medium
 priority: 4
 depends_on: ["G-044", "G-045"]
 relates_to: ["G-035", "G-043"]
 formerly: "W-028"
+candidate: "61edd53390c4459462e79ededf5a25eb0644a1f7"
 ---
 
 ## Outcome
