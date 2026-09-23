@@ -333,11 +333,13 @@ func TestBoardReviewWorkflow(t *testing.T) {
 	s.press("l", "l", "enter")
 	s.want("G-001 · review", "candidate "+short+" · not on main",
 		"Review: candidate "+short+" · not yet approved · only the record changed since it · not on main",
-		"a approve and f feedback run on branch feature in "+wt,
 		"Changes against main from ", "code.txt  +1 −0", "docs/records/work/renamed.md  +1 −1", "a approve   f feedback   i integrate")
 	// The temp dir's length decides where the card wraps, so read it unwrapped.
-	if card := strings.Join(strings.Fields(strings.ReplaceAll(s.screen(), "┃", "")), " "); !strings.Contains(card, "i integrate runs into main in "+root) {
-		t.Fatalf("the card lacks the integrate target %s:\n%s", root, s.screen())
+	card := strings.Join(strings.Fields(strings.ReplaceAll(s.screen(), "┃", "")), " ")
+	for _, want := range []string{"a approve and f feedback run on branch feature in " + wt, "i integrate runs into main in " + root} {
+		if !strings.Contains(card, want) {
+			t.Fatalf("the card lacks %q:\n%s", want, s.screen())
+		}
 	}
 	s.press("tab")
 	for !strings.Contains(s.screen(), "> code.txt") {
