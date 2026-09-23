@@ -25,17 +25,24 @@ CASES = {
 # Files some step of the shaping guide needs for these topics; any other read is listed as unneeded.
 NEEDED = {"AGENTS.md", "CLAUDE.md", "grove.yaml", "grove/brief.md", "tasks.py"}
 CUSTOMIZATION = ("CLAUDE.md", "skills", "agents", "commands", "output-styles", "hooks", "settings.json", "settings.local.json")
+GROVE = "grove version (its revision can lag in a linked worktree; the digest pins the guides)"
 UNTOUCHED = {"proposed", "open", "current", None}
+# Claude's own auth variables pass through; every other CLAUDE* variable is the caller's session leaking in.
+AUTH = ("CLAUDE_CODE_OAUTH_TOKEN",)
 
 
 def env():
-    return {k: v for k, v in os.environ.items() if not k.startswith("CLAUDE") and k not in GIT_LOCATION}
+    return {k: v for k, v in os.environ.items() if (k in AUTH or not k.startswith("CLAUDE")) and k not in GIT_LOCATION}
+
+
+class Failed(Exception):
+    """A command the runner needed failed."""
 
 
 def sh(*args, cwd=None, check=True, environ=None):
     r = subprocess.run(args, cwd=cwd, capture_output=True, text=True, env=environ or env())
     if check and r.returncode:
-        raise SystemExit(f"{' '.join(args)}: exit {r.returncode}\n{r.stderr}")
+        raise Failed(f"{' '.join(args)}: exit {r.returncode}\n{r.stderr}")
     return r
 
 
@@ -46,17 +53,25 @@ def git(cwd, *args, check=True):
 def frontmatter(text):
     fields = {}
     if text.startswith("---\n"):
+        key = None
         for line in text[4:].partition("\n---")[0].splitlines():
+            if key and re.match(r"\s+- ", line):  # a block-style list item of the key above
+                fields[key] = (fields[key] or []) + [line.split("- ", 1)[1].strip(" '\"")]
+                continue
             key, _, value = line.partition(":")
             value = value.strip()
-            fields[key.strip()] = json.loads(value) if value[:1] in '["' else value
+            try:
+                key = key.strip()
+                fields[key] = json.loads(value) if value[:1] in '["' else value
+            except ValueError:  # YAML Grove accepts but does not write, such as [G-002]
+                fields[key] = [v.strip(" '\"") for v in value[1:-1].split(",") if v.strip()] if value[:1] == "[" else value
     return fields
 
 
 def records(clone, ref):
     """Every record's frontmatter and source on ref, by path."""
     out = {}
-    for path in git(clone, "ls-tree", "--name-only", ref, "grove/").splitlines():
+    for path in git(clone, "ls-tree", "-r", "--name-only", ref, "grove/").splitlines():
         if path.endswith(".md") and path != "grove/brief.md":
             text = git(clone, "show", f"{ref}:{path}")
             out[path] = {"fields": frontmatter(text), "source": text}
@@ -93,11 +108,12 @@ def snapshot(clone, remote):
     }
 
 
-def state(clone, remote, grove, work):
+def state(clone, remote, grove, work, main):
+    """The clone after a run; main is its main before the run, the baseline for what a branch touched."""
     s = snapshot(clone, remote)
     s["branches"] = git(clone, "for-each-ref", "--format=%(refname:short) %(objectname)", "refs/heads").splitlines()
     s["worktrees"] = git(clone, "worktree", "list", "--porcelain")
-    base = records(clone, "main")
+    base = records(clone, main)
     s["proposals"] = {}
     for line in s["branches"]:
         name, tip = line.split()
@@ -109,7 +125,7 @@ def state(clone, remote, grove, work):
         c = sh(grove, "--project", checkout, "check", check=False)
         s["proposals"][name] = {
             "tip": tip,
-            "commits": git(clone, "rev-list", f"main..{name}").splitlines(),
+            "commits": git(clone, "rev-list", f"{main}..{name}").splitlines(),
             "touched": {p: r["fields"] for p, r in recs.items() if base.get(p, {}).get("source") != r["source"]},
             "check": {"exit": c.returncode, "output": (c.stdout + c.stderr).strip()},
         }
@@ -142,8 +158,8 @@ def checks(case, before, after, message):
     out["no-promotion"] = "pass" if not promoted else f"fail: {promoted}"
     out["check-passes"] = "pass" if b["check"]["exit"] == 0 else f"fail: {b['check']['output'][-300:]}"
     missing = [] if names[0] in message else [names[0]]
-    if not any(re.search(r"\b" + c[:7], message) for c in b["commits"]):
-        missing.append("a commit of the branch")
+    if not any(b["tip"].startswith(h) for h in re.findall(r"\b[0-9a-f]{7,40}\b", message)):
+        missing.append("the branch tip's commit")
     if case["question"]:
         missing += [q for q in blocking if not re.search(rf"\b{q}\b", message)] or ([] if blocking else ["the question"])
     out["message-names"] = "pass" if not missing else f"fail: message lacks {missing}"
@@ -185,19 +201,33 @@ def retrieval(transcript, clone, created):
         full = os.path.realpath(os.path.join(clone, f))
         p = os.path.relpath(full, clone)
         rel.append(full if p.startswith("..") else re.sub(r"^\.claude/worktrees/[^/]+/", "", p))
-    grove = lambda word: any(re.search(rf"\bgrove\b[^|;&]*\b{word}\b", c) for c in commands)
+    used = set()  # grove subcommands actually invoked, not words that merely follow "grove" in a command
+    for cmd in commands:
+        for part in re.split(r"&&|\|\||;|\||\n", cmd):
+            try:
+                words = shlex.split(part)
+            except ValueError:
+                continue
+            while words and re.fullmatch(r"\w+=.*", words[0]):
+                words = words[1:]
+            if not words or os.path.basename(words[0]) != "grove":
+                continue
+            words = words[1:]
+            while words and words[0] in ("--project", "--json"):
+                words = words[2:] if words[0] == "--project" else words[1:]
+            used.update(words[:1])
     return {
-        "guide": grove("guide"),
-        "brief": grove("brief") or "grove/brief.md" in rel,
-        "list": grove("list"),
-        "context_or_show": grove("context") or grove("show"),
+        "guide": "guide" in used,
+        "brief": "brief" in used or "grove/brief.md" in rel,
+        "list": "list" in used,
+        "context_or_show": bool(used & {"context", "show"}),
         "files_read": sorted(set(rel)),
         "unneeded": sorted({p for p in rel if p not in NEEDED and not p.startswith("tasks/") and p not in created}),
         "commands": commands,
     }
 
 
-def one(args, grove, template, work, case_name, n, claude_version):
+def one(args, grove, template, work, case_name, n, meta):
     case = CASES[case_name]
     rdir = os.path.join(work, f"{case_name}-{n}")
     os.makedirs(rdir)
@@ -222,16 +252,20 @@ def one(args, grove, template, work, case_name, n, claude_version):
             proc.wait(TIMEOUT)
         except subprocess.TimeoutExpired:
             timed_out = True
-            os.killpg(proc.pid, signal.SIGKILL)
+        finally:  # also on Ctrl-C, and after a normal exit, for background processes the session left
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except OSError:
+                pass
             proc.wait()
     init = next((ev for ev in events(transcript) if ev.get("type") == "system" and ev.get("subtype") == "init"), {})
     result = next((ev for ev in events(transcript) if ev.get("type") == "result"), {})
-    after = state(clone, remote, grove, rdir)
+    after = state(clone, remote, grove, rdir, before["main"])
     created = {p for b in after["proposals"].values() for p in b["touched"]}
     run = {
         "case": case_name, "run": n, "topic": case["topic"], "command": command,
         "exit": proc.returncode, "timed_out": timed_out, "wall_seconds": round(time.time() - started, 1),
-        "claude_version": claude_version, "model_requested": args.model, "model_reported": init.get("model"),
+        **{k: meta[k] for k in ("claude", GROVE, "base commit", "fixture commit")}, "model_requested": args.model, "model_reported": init.get("model"),
         "permission_mode_reported": init.get("permissionMode"),
         "cost_usd": result.get("total_cost_usd"), "turns": result.get("num_turns"), "duration_ms": result.get("duration_ms"),
         "result_subtype": result.get("subtype"), "is_error": result.get("is_error"),
@@ -245,8 +279,16 @@ def one(args, grove, template, work, case_name, n, claude_version):
     return run
 
 
+def harness(r):
+    """How the harness process ended, so a login failure or budget stop is not read as the agent's behaviour."""
+    if "error" in r:
+        return "runner error"
+    notes = [f"exit {r['exit']}"] + (["timed out"] if r["timed_out"] else []) + ([f"error {r['result_subtype']}"] if r["is_error"] or r["result_subtype"] is None else [])
+    return " ".join(notes + ([f"{r['permission_denials']} denials"] if r["permission_denials"] else []))
+
+
 def report(path, meta, runs, unrun):
-    mark = lambda v: "pass" if v == "pass" else ("FAIL" if v.startswith("fail") else "n/j")
+    mark = lambda v: "-" if v is None else "pass" if v == "pass" else ("FAIL" if v.startswith("fail") else "n/j")
     lines = ["# Grove shaping eval report", ""]
     lines += [f"- {k}: {v}" for k, v in meta.items()]
     lines += ["- Codex row: not built (G-108 follow-on)", f"- Cases not run: {', '.join(unrun) or 'none'}", ""]
@@ -254,13 +296,13 @@ def report(path, meta, runs, unrun):
         rs = [r for r in runs if r["case"] == name]
         if not rs:
             continue
-        keys = list(rs[0]["checks"])
-        lines += [f"## {name}: {CASES[name]['topic']}", "", "| run | " + " | ".join(keys) + " | cost | turns | seconds | guide | brief | list | context/show | unneeded reads |",
-                  "|" + " --- |" * (len(keys) + 9)]
+        keys = list(dict.fromkeys(k for r in rs for k in r["checks"]))
+        lines += [f"## {name}: {CASES[name]['topic']}", "", "| run | harness | " + " | ".join(keys) + " | cost | turns | seconds | guide | brief | list | context/show | unneeded reads |",
+                  "|" + " --- |" * (len(keys) + 10)]
         for r in rs:
-            f = r["retrieval"]
-            lines.append(f"| {r['run']} | " + " | ".join(mark(r["checks"][k]) for k in keys)
-                         + f" | {r['cost_usd']} | {r['turns']} | {(r['duration_ms'] or 0) / 1000:.0f} | {f['guide']} | {f['brief']} | {f['list']} | {f['context_or_show']} | {', '.join(f['unneeded']) or '-'} |")
+            f = r.get("retrieval") or dict.fromkeys(("guide", "brief", "list", "context_or_show"), "-") | {"unneeded": []}
+            lines.append(f"| {r['run']} | {harness(r)} | " + " | ".join(mark(r["checks"].get(k)) for k in keys)
+                         + f" | {r.get('cost_usd')} | {r.get('turns')} | {(r.get('duration_ms') or 0) / 1000:.0f} | {f['guide']} | {f['brief']} | {f['list']} | {f['context_or_show']} | {', '.join(f['unneeded']) or '-'} |")
         lines += ["", "Failures:", ""]
         lines += [f"- run {r['run']} {k}: {v}" for r in rs for k, v in r["checks"].items() if v != "pass"] or ["- none"]
         lines += ["", "Rubric (evals/README.md), scorer `owner` or `judge`:", "", "| run | scorer | presumes choice | planted question | brief constraint | handoff | notes |", "| --- | --- | --- | --- | --- | --- | --- |"]
@@ -301,47 +343,74 @@ def run(args):
     args.claude = exe
     version = sh(exe, "--version", environ=dict(env(), CLAUDE_CONFIG_DIR=args.config_dir)).stdout.strip()
     grove, template, grove_version = build(work)
-    meta.update({"claude": version, "grove (CLI and guide digest)": grove_version, "base commit": git(ROOT, "rev-parse", "HEAD") + (" with uncommitted changes" if git(ROOT, "status", "--porcelain") else ""),
+    meta.update({"claude": version, GROVE: grove_version, "base commit": git(ROOT, "rev-parse", "HEAD") + (" with uncommitted changes" if git(ROOT, "status", "--porcelain") else ""),
                  "fixture commit": git(template, "rev-parse", "HEAD")})
     print(f"output {work}; spending at most ${meta['cap (USD)']}", file=sys.stderr)
     runs = []
     for name in cases:
         for n in range(1, args.runs + 1):
             print(f"{name} {n}/{args.runs}", file=sys.stderr)
-            runs.append(one(args, grove, template, work, name, n, version))
+            try:
+                runs.append(one(args, grove, template, work, name, n, meta))
+            except Exception as err:  # a runner failure on one run is reported, and the rest still run
+                r = {"case": name, "run": n, "error": str(err), "checks": {"runner": f"fail: {err}"}}
+                os.makedirs(os.path.join(work, f"{name}-{n}"), exist_ok=True)
+                json.dump(r, open(os.path.join(work, f"{name}-{n}", "run.json"), "w"), indent=1)
+                runs.append(r)
             report(os.path.join(work, "report.md"), meta, runs, [c for c in CASES if c not in cases])
     print(os.path.join(work, "report.md"))
     return runs
 
 
 def fake(argv):
-    """A stand-in for `claude -p` that acts out a scripted outcome: GROVE_EVAL_FAKE=good or bad."""
+    """A stand-in for `claude -p` acting out a scripted outcome, chosen by GROVE_EVAL_FAKE:
+    good follows the guide; bad is G-078's divergence (no question) plus a write to the
+    session checkout; worse pushes, promotes, breaks `check`, names a stale commit and, on
+    the companion, leaves two proposal branches."""
     if "--version" in argv:
         return print("0.0.0 (fake claude)")
     topic = argv[argv.index("-p") + 1].removeprefix("/grove-shape ").removesuffix(" --interaction headless")
-    missing, good = topic == CASES["missing-choice"]["topic"], os.environ["GROVE_EVAL_FAKE"] == "good"
+    missing, mode = topic == CASES["missing-choice"]["topic"], os.environ["GROVE_EVAL_FAKE"]
     emit = lambda ev: print(json.dumps(ev), flush=True)
     tool = lambda name, **inp: emit({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": name, "input": inp}]}})
     emit({"type": "system", "subtype": "init", "model": "fake", "permissionMode": argv[argv.index("--permission-mode") + 1]})
-    tool("Bash", command="grove guide shape")
-    tool("Read", file_path=os.path.abspath("grove/brief.md"))
-    tool("Bash", command="grove list && cat tasks.py")
-    tool("Read", file_path=os.path.expanduser("~/.claude/CLAUDE.md"))
+    if mode == "worse":  # commands that mention grove subcommands without running them
+        for cmd in ('grove new work "Let tasks list filter by tag"', 'grove new question "Should tasks list show dropped tasks?"',
+                    "cd /tmp/grove-evals-x/p && git worktree list", "cat > /tmp/x.md <<EOF\nthe brief and the guide\nEOF"):
+            tool("Bash", command=cmd)
+    else:
+        tool("Bash", command="grove guide shape")
+        tool("Read", file_path=os.path.abspath("grove/brief.md"))
+        tool("Bash", command="grove list && cat tasks.py")
+        tool("Read", file_path=os.path.expanduser("~/.claude/CLAUDE.md"))
     branch = "worktree-shape-" + ("hide-finished" if missing else "tag-filter")
     wt = os.path.abspath(os.path.join(".claude", "worktrees", branch))
     git(".", "worktree", "add", "-q", "-b", branch, wt, "main")
-    new = lambda kind, title: os.path.basename(sh("grove", "--project", wt, "new", kind, title).stdout.strip())[:5]
+    grove = lambda *a: sh("grove", "--project", wt, *a).stdout.strip()
+    new = lambda kind, title: os.path.basename(grove("new", kind, title))[:5]
     work = new("work", "Hide finished tasks from tasks list")
-    ask = missing == good  # good asks only on the missing choice; bad inverts it
+    ask = missing == (mode != "bad")  # the guide asks only on the missing choice; bad inverts it
     q = new("question", "Which statuses count as finished?") if ask else None
     if q:
-        sh("grove", "--project", wt, "update", q, "--set", f'blocks=["{work}"]')
+        grove("update", q, "--set", f'blocks=["{work}"]')
     git(wt, "add", "-A")
     git(wt, "commit", "-q", "-m", "Propose")
-    if not good:
+    named = git(wt, "rev-parse", "--short=9", "HEAD")
+    if mode == "bad":
         open("notes.txt", "w").write("written in the session checkout\n")
-    tip = git(wt, "rev-parse", "--short=9", "HEAD")
-    text = f"Proposed {work} on {branch} at {tip}." + (f" Question {q} blocks it." if q and good else "")
+    if mode == "worse" and missing:
+        grove("update", work, "--set", "status=active")
+        path = os.path.join(wt, "grove", [f for f in os.listdir(os.path.join(wt, "grove")) if f.startswith(q)][0])
+        text = open(path).read().replace(f'blocks: ["{work}"]', f"blocks: [{work}]")  # YAML Grove accepts but never writes
+        open(path, "w").write(text)
+        open(os.path.join(wt, "grove", "G-099-broken.md"), "w").write('---\nid: "G-099"\ntype: work\n---\n')
+        git(wt, "add", "-A")
+        git(wt, "commit", "-q", "-m", "Promote and break")
+        git(wt, "push", "-q", "origin", branch)
+    if mode == "worse" and not missing:
+        git(".", "branch", "worktree-shape-second", branch)
+    tip = named if mode == "worse" else git(wt, "rev-parse", "--short=9", "HEAD")
+    text = f"Proposed {work} on {branch} at {tip}." + (f" Question {q} blocks it." if q and mode != "bad" else "")
     emit({"type": "result", "subtype": "success", "is_error": False, "total_cost_usd": 0, "num_turns": 5, "duration_ms": 1000, "result": text})
 
 
@@ -352,8 +421,10 @@ def selftest():
     os.chmod(shim, 0o755)
     expected = {("good", "missing-choice"): set(), ("good", "companion"): set(),
                 ("bad", "missing-choice"): {"question-blocks-proposal", "message-names", "session-checkout-unchanged"},
-                ("bad", "companion"): {"no-question", "session-checkout-unchanged"}}
-    for mode in ("good", "bad"):
+                ("bad", "companion"): {"no-question", "session-checkout-unchanged"},
+                ("worse", "missing-choice"): {"remote-unchanged", "proposal-proposed", "no-promotion", "check-passes", "message-names"},
+                ("worse", "companion"): {"proposal-branch", "proposal-proposed", "no-question", "no-promotion", "check-passes", "message-names"}}
+    for mode in ("good", "bad", "worse"):
         os.environ["GROVE_EVAL_FAKE"] = mode
         args = argparse.Namespace(runs=1, budget="0.01", model="fake", permission_mode="fake", config_dir=os.path.join(tmp, "config"),
                                   case=[], out=os.path.join(tmp, mode), claude=shim)
@@ -361,6 +432,9 @@ def selftest():
             failed = {k for k, v in r["checks"].items() if v != "pass"}
             assert failed == expected[(mode, r["case"])], (mode, r["case"], r["checks"])
             f = r["retrieval"]
+            if mode == "worse":
+                assert not (f["guide"] or f["brief"] or f["list"] or f["context_or_show"]), f
+                continue
             assert f["guide"] and f["brief"] and f["list"] and not f["context_or_show"], f
             assert "tasks.py" in f["files_read"] and len(f["unneeded"]) == 1 and f["unneeded"][0].endswith(".claude/CLAUDE.md"), f
     shutil.rmtree(tmp)
@@ -368,6 +442,7 @@ def selftest():
 
 
 def main():
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))  # unwinds like Ctrl-C, so a running harness is killed
     if sys.argv[1:2] == ["_fake"]:
         return fake(sys.argv[2:])
     parser = argparse.ArgumentParser(prog="evals/run.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -383,7 +458,10 @@ def main():
     p.add_argument("--claude", default="claude", help="the harness executable")
     sub.add_parser("selftest", help="check the runner against a fake claude; spends nothing")
     args = parser.parse_args()
-    run(args) if args.command == "run" else selftest()
+    try:
+        run(args) if args.command == "run" else selftest()
+    except Failed as err:
+        raise SystemExit(str(err))
 
 
 if __name__ == "__main__":

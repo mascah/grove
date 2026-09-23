@@ -9,8 +9,7 @@ This is the owner's intent; the owner is the only user.
 ## Constraints
 
 - A task is one Markdown file under `tasks/`, named `NNN-slug.md`, with YAML
-  frontmatter: `status`, `created`, `closed` (the date it left `open`) and
-  `tags`. It stays readable and editable without the tool.
+  frontmatter: `status`, `created`, `closed` (a date) and `tags`. It stays readable and editable without the tool.
 - A task's status is `open`, `done` (it was completed) or `dropped` (the
   owner decided not to do it).
 - A task file never moves and is never renamed once created: history and

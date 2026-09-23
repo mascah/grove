@@ -11,7 +11,7 @@ project's brief already answers?
 ## Run
 
 ```sh
-python3 evals/run.py selftest     # free: a fake claude, asserts every check
+python3 evals/run.py selftest     # free: a fake claude, asserts every check and retrieval fact
 python3 evals/run.py run --runs 5 --budget 3 --model MODEL \
     --permission-mode MODE --config-dir ~/.cache/grove-evals/claude
 ```
@@ -20,13 +20,15 @@ python3 evals/run.py run --runs 5 --budget 3 --model MODEL \
 It has no default for any spend parameter, is never part of `go test` or CI,
 and runs only under a mandate that names the model, repeat count, budget and
 permission mode. `--case NAME` runs one case; `--out DIR` keeps the output
-somewhere other than a new temporary directory.
+somewhere other than a new temporary directory, and must not sit under a
+directory holding a `CLAUDE.md`, which the session would load.
 
 `--config-dir` becomes `CLAUDE_CONFIG_DIR` for every run, so the owner's
 settings, plugins, skills and `CLAUDE.md` stay out. The runner refuses a
 directory holding any of them. A new directory has no login: log in once with
-`CLAUDE_CONFIG_DIR=DIR claude`, or export `ANTHROPIC_API_KEY`, which passes
-through. Managed (policy) settings still apply and are outside the runner's
+`CLAUDE_CONFIG_DIR=DIR claude`, or export `ANTHROPIC_API_KEY` or
+`CLAUDE_CODE_OAUTH_TOKEN`, which pass through; every other `CLAUDE*`
+variable is removed. Managed (policy) settings still apply and are outside the runner's
 control.
 
 ## What a run does
@@ -57,10 +59,15 @@ In the output directory, per run `CASE-N/`: `transcript.jsonl` (the
 stream-json trace), `stderr.txt`, `state.json` (the clone's branches, HEAD,
 status and worktrees, the remote's refs, and each proposal branch's commits,
 touched records and `grove check` output, with the state before the run) and
-`run.json` (command, harness version, requested and reported model, cost,
-turns, duration, exit, checks, retrieval facts, final message). The clone
+`run.json` (command, harness version, `grove version` with the guide digest,
+base and fixture commits, requested and reported model, cost, turns,
+duration, exit, checks, retrieval facts, final message). The clone
 and remote stay too. `report.md` summarizes every run, lists cases not run,
-and says when the harness was unavailable.
+and says when the harness was unavailable. Its harness column (exit status,
+timeout, an error result, permission denials) separates a run the harness
+never carried out, such as a missing login or a budget stop, from an agent's
+behaviour. Ctrl-C or SIGTERM stops the runner and kills the running session;
+a runner failure on one run is reported and the next run still starts.
 
 ## Checks
 
@@ -77,13 +84,14 @@ On the clone, never the final message except where named. Each is `pass`,
 | `no-question` | (companion) The branch adds or changes no question |
 | `no-promotion` | No record the branch touches is in any status but `proposed`, `open` or `current` |
 | `check-passes` | `grove check` passes in a checkout of the branch |
-| `message-names` | The final message names the branch, a commit of it (7 or more hex digits) and, for missing-choice, the blocking question's ID |
+| `message-names` | The final message names the branch, its tip commit (7 or more hex digits) and, for missing-choice, the blocking question's ID |
 
 ## Retrieval facts
 
 From the trace's tool calls, reported and never scored: whether the session
 printed the guide (`grove guide shape`), read the brief (`grove brief` or the
-file), and ran `list`, `context` or `show`; every file it read; and the reads
+file), and ran `list`, `context` or `show`, counting only a command whose
+program is `grove` and whose subcommand is that word; every file it read; and the reads
 no step needed, meaning anything but `AGENTS.md`, `CLAUDE.md`, `grove.yaml`,
 the brief, `tasks.py`, `tasks/` and the records it wrote. Reads through
 `cat`, `head`, `tail`, `sed`, `nl`, `less` or `awk` count; `grep` and other
