@@ -2,9 +2,9 @@
 id: "G-107"
 type: work
 title: "Reconcile current documentation and give each fact one owner"
-status: proposed
+status: active
 created: "2026-09-23T15:51:37Z"
-updated: "2026-09-23T16:45:45Z"
+updated: "2026-09-23T16:49:34Z"
 relates_to: ["G-036", "G-108", "G-109", "G-110"]
 ---
 
