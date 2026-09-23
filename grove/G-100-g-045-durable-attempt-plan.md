@@ -143,6 +143,16 @@ SIGINT ends the turn.
   Git common directory, not records); `docs/work-execution.md` invocation
   table, whose headless row `grove run` now exercises.
 
+## Checkpoint
+
+All steps done at `b4a93a7` on `worktree-G-045`; evidence in
+[G-045](G-045-durable-attempt.md) and [G-102](G-102-g-045-durable-attempt-review.md).
+One adjustment to the design: a run is also refused while the branch's
+record is in `review`, `done` or `abandoned`, which the first real trial
+showed (a second run would have spent budget on a candidate awaiting
+judgment); and the owner reports readiness to the launcher through a pipe
+so a Stop can never precede its signal handler.
+
 ## Steps
 
 1. Set G-045 active; commit this plan.

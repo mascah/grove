@@ -540,6 +540,9 @@ func TestRefusals(t *testing.T) {
 		t.Fatalf("refusals wrote attempts: %v %v", views, err)
 	}
 	// An owner that exits before doing anything is reported, not announced as started.
+	if testing.Short() {
+		return // this case starts an owner process and waits on it (AGENTS.md)
+	}
 	if err := os.RemoveAll(wt); err != nil {
 		t.Fatal(err)
 	}
