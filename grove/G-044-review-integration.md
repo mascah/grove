@@ -2,15 +2,16 @@
 id: "G-044"
 type: work
 title: "Review candidates and integrate approved work locally"
-status: active
+status: review
 created: "2026-09-21T00:54:16Z"
-updated: "2026-09-23T00:25:14Z"
+updated: "2026-09-23T01:17:00Z"
 kind: feature
 size: large
 priority: 3
 depends_on: ["G-038", "G-043"]
 relates_to: ["G-035", "G-046", "G-064"]
 formerly: "W-026"
+candidate: "93b971b"
 ---
 
 ## Outcome
