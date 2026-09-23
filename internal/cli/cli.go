@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/mascah/grove"
+	"github.com/mascah/grove/internal/attempt"
 	"github.com/mascah/grove/internal/create"
 	"github.com/mascah/grove/internal/handoff"
 	"github.com/mascah/grove/internal/integrate"
@@ -32,6 +33,9 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID [--expect REVISION] (--set FIELD=VALUE | --unset FIELD)... [--commit]\n" +
 	"       grove [--project DIR] approve ID VERDICT | feedback ID TEXT | integrate ID [--cleanup]\n" +
+	"       grove [--project DIR] run ID --budget USD --permission-mode MODE [--model MODEL]\n" +
+	"                                     [--branch NAME] [--worktree DIR]\n" +
+	"       grove [--project DIR] attempts [ID] | attempt ATTEMPT [--json] | stop ATTEMPT\n" +
 	"       grove [--project DIR] convert PATH --type TYPE --title TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
 	"       grove [--project DIR] workspace --source SELECTOR [--json]\n" +
@@ -88,6 +92,25 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             merge (fast-forward or merge commit; a conflict is aborted and refused),\n" +
 	"             done, and with --cleanup the worktree and branch removed, or kept with\n" +
 	"             Git's reason. Every refusal comes before the merge; nothing undoes one.\n" +
+	"  run        Start one bounded implementation attempt of a proposed or active work ID\n" +
+	"             as a Grove-owned `claude -p \"/grove-work ID --interaction headless\"` process\n" +
+	"             that outlives this terminal: in the branch's worktree (default worktree-ID\n" +
+	"             under .claude/worktrees/, created from this checkout's HEAD or reused), with\n" +
+	"             --max-budget-usd USD, --permission-mode MODE and --permission-prompts none, its\n" +
+	"             raw output in files under the Git common directory. Refused while an attempt\n" +
+	"             of ID runs, while an open question blocks ID, when the record has uncommitted\n" +
+	"             changes here, or when the worktree path is something else. Prints one line per\n" +
+	"             fact and the attempt id. A result is facts, never acceptance: the record's own\n" +
+	"             status on the branch is the handoff.\n" +
+	"  attempts   List this repository's attempts, newest first, or those of one work ID:\n" +
+	"             running (its owner holds the lock), finished (a result was written), orphaned\n" +
+	"             (owner lost, provider alive) or interrupted (owner lost, nothing alive).\n" +
+	"  attempt    Print one attempt's launch, status, event counts, result and file paths, and\n" +
+	"             whether the record on the target changed since launch; --json prints the\n" +
+	"             whole view. Reads files only: nothing is started or resumed.\n" +
+	"  stop       End a running attempt through its owner (SIGINT ends the turn, SIGKILL after\n" +
+	"             15 s) or an orphaned one directly; the result is written and the worktree and\n" +
+	"             record are left as they are.\n" +
 	"  convert    The one deliberate identity change. A Markdown document outside the record\n" +
 	"             root becomes a new record with the document as its body and formerly: PATH;\n" +
 	"             the original is left in place. Prints {from, from_path, id, path}. Bodies\n" +
@@ -214,6 +237,40 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 			return 1
 		}
 		return 0
+	case "run":
+		a.run.Root = p.Root
+		l, err := attempt.Start(a.run, time.Now(), func(fact string) { fmt.Fprintln(out, visible(fact)) })
+		if err != nil {
+			report(errOut, err)
+			return 1
+		}
+		fmt.Fprintf(out, "attempt: %s started; owner pid %d, session %s, budget %s USD, permission mode %s\n", l.Attempt, l.Owner, l.SessionID, l.BudgetUSD, l.PermissionMode)
+		fmt.Fprintf(out, "inspect: grove attempt %s; stop: grove stop %s\n", l.Attempt, l.Attempt)
+		return 0
+	case "attempts":
+		views, err := attempt.List(p.Root, a.id)
+		if err != nil {
+			report(errOut, err)
+			return 1
+		}
+		return writeResult(out, errOut, attemptsTable(views))
+	case "attempt":
+		v, err := attempt.Show(p.Root, a.id)
+		if err != nil {
+			report(errOut, err)
+			return 1
+		}
+		if a.json {
+			data, _ := json.MarshalIndent(v, "", " ")
+			return writeResult(out, errOut, append(data, '\n'))
+		}
+		return writeResult(out, errOut, []byte(attemptText(v)))
+	case "stop":
+		if err := attempt.Stop(p.Root, a.id, func(fact string) { fmt.Fprintln(out, visible(fact)) }); err != nil {
+			report(errOut, err)
+			return 1
+		}
+		return 0
 	case "convert":
 		c, err := update.Convert(p.Root, a.convert, errOut)
 		code := 0
@@ -291,6 +348,7 @@ type invocation struct {
 	ids                                             []string // context
 	statuses                                        []string // list
 	options                                         handoff.Options
+	run                                             attempt.Request
 }
 
 var revisionPattern = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
@@ -344,6 +402,16 @@ func parseArgs(args []string) (a invocation, err error) {
 		{"--type", "record type", once(&a.convert.Type)},
 		{"--title", "title", once(&a.convert.Title)},
 		{"--source", "selector", once(&a.source)},
+		{"--budget", "dollar amount", func(value string) error {
+			if f, err := strconv.ParseFloat(value, 64); err != nil || f <= 0 {
+				return errors.New("must be a positive dollar amount")
+			}
+			return once(&a.run.BudgetUSD)(value)
+		}},
+		{"--permission-mode", "mode", once(&a.run.PermissionMode)},
+		{"--model", "model", once(&a.run.Model)},
+		{"--branch", "branch name", once(&a.run.Branch)},
+		{"--worktree", "directory", once(&a.run.Worktree)},
 		{"--expect", "revision", once(&a.request.Expect)},
 		{"--interaction", "mode", func(value string) error {
 			if value != "interactive" && value != "headless" {
@@ -472,8 +540,11 @@ func parseArgs(args []string) (a invocation, err error) {
 	if (a.convert.Type != "" || a.convert.Title != "") && a.command != "convert" {
 		return a, fmt.Errorf("--type and --title apply only to convert")
 	}
-	if a.json && a.command != "" && a.command != "show" && a.command != "brief" && a.command != "versions" && a.command != "workspace" && a.command != "context" {
-		return a, fmt.Errorf("--json applies only to the board, show, brief, versions, workspace, and context")
+	if a.json && a.command != "" && a.command != "show" && a.command != "brief" && a.command != "versions" && a.command != "workspace" && a.command != "context" && a.command != "attempt" {
+		return a, fmt.Errorf("--json applies only to the board, show, brief, versions, workspace, context, and attempt")
+	}
+	if (a.run.BudgetUSD != "" || a.run.PermissionMode != "" || a.run.Model != "" || a.run.Branch != "" || a.run.Worktree != "") && a.command != "run" {
+		return a, fmt.Errorf("--budget, --permission-mode, --model, --branch, and --worktree apply only to run")
 	}
 	if a.statuses != nil && a.command != "list" {
 		return a, fmt.Errorf("--status applies only to list")
@@ -505,6 +576,27 @@ func parseArgs(args []string) (a invocation, err error) {
 	case "show", "integrate":
 		if len(positional) != 2 {
 			err = fmt.Errorf("%s requires exactly one record ID", a.command)
+		} else {
+			a.id = positional[1]
+		}
+	case "run":
+		switch {
+		case len(positional) != 2:
+			err = fmt.Errorf("run requires exactly one work ID")
+		case a.run.BudgetUSD == "" || a.run.PermissionMode == "":
+			err = fmt.Errorf("run requires --budget USD and --permission-mode MODE: Grove sets no default spend or permission profile")
+		default:
+			a.run.ID = positional[1]
+		}
+	case "attempts":
+		if len(positional) > 2 {
+			err = fmt.Errorf("attempts takes at most one work ID")
+		} else if len(positional) == 2 {
+			a.id = positional[1]
+		}
+	case "attempt", "stop":
+		if len(positional) != 2 {
+			err = fmt.Errorf("%s requires exactly one attempt id", a.command)
 		} else {
 			a.id = positional[1]
 		}
