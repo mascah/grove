@@ -58,12 +58,10 @@ the prompted review actions and starts and stops attempts.
 
 ## Steps
 
-1. Commit this plan with `work` set; set G-107 active.
-2. Reconcile AGENTS.md, the brief, README, the record model and the shaping
-   guide's one sentence; delete `docs/prompts/`.
-3. Check every local link and anchor in the edited documents, run the CLI
-   examples that do not write, `go run ./cmd/grove check`, `go test` for the
-   embedded-guide packages, and report word counts before and after.
-4. Reading check (acceptance 3): a fresh subagent given only AGENTS.md answers
-   how to shape, execute and retrieve context in stages.
-5. Independent review of the final diff; evidence into G-107; hand into Review.
+1. Done: plan `0c42435`, G-107 active `ef911b1`.
+2. Done: `d6cc1df`. The README also dropped the "Local restart" history and
+   the unselected web UI remark. The archive's location moved to the brief.
+3. Done: see G-107 Evidence.
+4. Done: see G-107 Evidence.
+5. Done: review [G-112](G-112-g-107-review.md), fixes `1398458` and
+   `6a9f146`; handed into Review.

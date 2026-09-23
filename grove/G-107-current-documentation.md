@@ -104,11 +104,107 @@ changing the workflow contract. No release compatibility promise is selected.
    boundary changes merely to shorten text. Report context reduction as evidence,
    not as a substitute for correctness.
 
+## Evidence
+
+Executed headless via `/grove-work G-107 --interaction headless` in Claude
+Code (Opus 5.5), 2026-09-23. Branch `worktree-G-107` in
+`.claude/worktrees/worktree-G-107`, based on main `768efab`, which held this
+record at `sha256:c411c9a8…`. The candidate is the commit that adds this
+Evidence (the `candidate` field). Plan: [G-111](G-111-g-107-docs-plan.md).
+Commits: plan `0c42435`, active `ef911b1`, reconciliation `d6cc1df`, review
+fixes `1398458` and `6a9f146`.
+
+Against the acceptance:
+
+1. G-111 inventories every documentation file, agent entrypoint and spent
+   prompt at `768efab`, each with a disposition. The spent prompts in
+   `docs/prompts/` are deleted and remain in Git at `768efab`. As a result,
+   G-023's two links to them no longer resolve, which leaves them as
+   history. Current entrypoints no longer say that adoption is pending, that
+   the predecessor is installed, that the runner contract is open, that
+   "Grove launches no agent", or that agent execution is future work. The
+   same holds for the removed pre-push hook: `ff43559` removed it, and the
+   entrypoints no longer describe it.
+2. The brief now states:
+   - the purpose;
+   - G-036's closure, with the nullsec substitution attributed to the owner;
+   - Keyborg, still selected and without a record;
+   - the preview audience, marked as not a release channel or promise.
+
+   Its "Suggested sequence" names G-108, G-109 and G-110, says the owner has
+   selected no order, and sends G-047 and G-048 to history. It keeps no
+   progress account. The headings that records link to are kept.
+3. Reading check: a fresh `general-purpose` subagent in this session read
+   only AGENTS.md at `d6cc1df` and answered how to shape, execute and
+   retrieve context in stages. It went through no roadmap and never mentioned
+   G-036 or G-047. It asked what "the headless form" meant, and `1398458`
+   answered that.
+   Limit: its injected system context still held the session-start copy of
+   AGENTS.md (`768efab`). It reports answering from the file on disk. This
+   was a subagent, not a separate interactive session.
+4. The README now opens with what Grove is, a list of what this build does,
+   and where to go next, with no work IDs. Whether that serves a newcomer is
+   G-110's judgment.
+5. Local links and anchors were checked with a script over AGENTS.md, the
+   README, `docs/*.md`, the brief and G-111: no problems. Every anchor that a
+   record links into the record model or the brief resolves.
+
+   The non-writing README examples all exit 0 with a built binary at
+   `d6cc1df`: `list`, `list --status active --status review`, `show`,
+   `show --json`, `brief`, `versions`, `versions --json`, `guide work`,
+   `guide shape`, `version`, `attempts`, `context` and `--help`. Writing
+   commands and `workspace` were not run; their README text is unchanged.
+
+   The adapters are unchanged. Of the shared guides, only one sentence in
+   `docs/work-shaping.md` changed: Grove starts no *shaping* agent, and
+   `grove run` starts only work attempts. No workflow step changed.
+
+Verification at `6a9f146` content:
+
+- `go run ./cmd/grove check`: OK.
+- `go vet ./...`: clean.
+- `gofmt -l .`: empty.
+- `go test -count=1 -timeout 120s ./...`: all packages pass.
+  `attempt`, `cli`, `tui` and `versions` take 6–13 s. That is inherited;
+  documentation cannot change it.
+
+Context size (`wc -w`), from `768efab` to candidate:
+
+| File | Before | After |
+| --- | --- | --- |
+| AGENTS.md | 1557 | 1323 |
+| README | 6015 | 5485 |
+| Record model | 5454 | 4682 |
+| Brief | 1592 | 1566 |
+| Prompts | 935 | 0 |
+| **Total**, with the shaping guide | 17693 | 15206 |
+
+This is evidence of reduction, not of correctness.
+
+Review: [G-112](G-112-g-107-review.md), two rounds, with an independent
+agent reviewer. Its seven findings were fixed and confirmed. One round-2
+wording fix was self-checked. No findings are open.
+
+Flagged for follow-up, outside this documentation scope: `grove --help`
+says the board "Reads only", though it approves, gives feedback, integrates,
+and starts and stops attempts behind prompts.
+
 ## Next
 
-The owner can assign this proposal. Before execution, commit the agreed
-proposal so an isolated worktree based on main contains it, then invoke
-`$grove-work G-107`. Preparation writes the inventory plan and proposes final
-ownership and navigation before editing. The eval baseline, Attempts usability
-and distribution preparation are independently assignable; none is a
-prerequisite for this cleanup.
+In Review, awaiting the owner's judgment of the reconciled documents
+(AGENTS.md, README, the brief, the record model). The diff is
+`git diff 768efab CANDIDATE`. To approve, in this worktree:
+
+```sh
+go run ./cmd/grove approve G-107 "VERDICT"
+```
+
+Then, in main's checkout (`/Users/mascah/GitHub/mascah/grove`):
+
+```sh
+go run ./cmd/grove integrate G-107 --cleanup
+```
+
+Or `go run ./cmd/grove feedback G-107 "TEXT"` here to return it to active.
+The `--help` "Reads only" text needs its own work if the owner wants it
+fixed.
