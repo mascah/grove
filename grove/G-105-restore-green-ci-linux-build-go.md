@@ -4,11 +4,12 @@ type: work
 title: "Restore green CI: Linux build, Go patch, and dependency advisories"
 status: review
 created: "2026-09-23T04:44:12Z"
-updated: "2026-09-23T05:00:10Z"
+updated: "2026-09-23T05:22:10Z"
 kind: fix
 size: small
 relates_to: ["G-081", "G-045", "G-046"]
 candidate: "e30f90c6572edf3493e9f2c24504b6477e64053e"
+approved: "e30f90c6572edf3493e9f2c24504b6477e64053e"
 ---
 
 ## Outcome
@@ -165,3 +166,5 @@ gh pr list --state all --limit 5
 ```
 
 Acceptance 1, 2 and 5 are read from those last three after the push.
+
+Verdict on candidate e30f90c, 2026-09-23: lgtm
