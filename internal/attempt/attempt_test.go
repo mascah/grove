@@ -653,8 +653,9 @@ func TestReadActivityEntriesAndMetrics(t *testing.T) {
 		`{"type":"system","subtype":"thinking_tokens"}`,
 		`{"type":"system","subtype":"thinking_tokens"}`,
 		`{"type":"system","subtype":"thinking_tokens"}`,
-		`{"type":"system","subtype":"task_started","task_type":"local_agent"}`,
-		`{"type":"system","subtype":"task_started","task_type":"local_bash"}`,
+		`{"type":"system","subtype":"task_started","task_type":"local_agent","task_id":"t1"}`,
+		`{"type":"system","subtype":"task_started","task_type":"local_bash","task_id":"b1"}`,
+		`{"type":"system","subtype":"task_started","task_type":"local_agent","task_id":"t1"}`, // resumed, the same subagent
 		`{"type":"assistant","timestamp":"2026-09-23T18:24:00Z","parent_tool_use_id":"toolu_1","message":{"id":"s","usage":{"input_tokens":9000,"output_tokens":30},"content":[{"type":"text","text":"subagent"}]}}`,
 		`{"type":"system","subtype":"compact_boundary"}`,
 		`{"type":"assistant","timestamp":"bad","parent_tool_use_id":null,"message":{"id":"b","usage":{"input_tokens":1,"cache_read_input_tokens":400,"output_tokens":2},"content":[{"type":"text","text":"Again."}]}}`,
@@ -672,7 +673,7 @@ func TestReadActivityEntriesAndMetrics(t *testing.T) {
 	}
 	a := write()
 	e := a.Entries
-	if len(e) != 8 || e[4].Count != 2 || e[3] != (Entry{Kind: "notice", Text: "system: thinking_tokens", Count: 3}) {
+	if len(e) != 8 || e[4].Count != 3 || e[3] != (Entry{Kind: "notice", Text: "system: thinking_tokens", Count: 3}) {
 		t.Fatalf("%+v", e)
 	}
 	if want := time.Date(2026, 9, 23, 18, 23, 19, 183e6, time.UTC); !e[1].Time.Equal(want) || !e[0].Time.IsZero() || !e[3].Time.IsZero() || !e[7].Time.IsZero() || e[7].Text != "Again." {
@@ -681,8 +682,17 @@ func TestReadActivityEntriesAndMetrics(t *testing.T) {
 	if m := a.Metrics; m != (Metrics{Turns: 2, InputTokens: 112 + 9000 + 401, Context: 401, Subagents: 1, Compactions: 1, Tools: 1}) {
 		t.Fatalf("window metrics: %+v", m)
 	}
-	a = write(`{"type":"result","subtype":"success","num_turns":7,"result":"ok","modelUsage":{"m":{"inputTokens":3,"outputTokens":50,"cacheReadInputTokens":1000,"cacheCreationInputTokens":200,"contextWindow":200000},"h":{"inputTokens":7,"outputTokens":1,"contextWindow":100000}},"subagent_stats":{"spawned":4}}`)
-	if m := a.Metrics; m != (Metrics{Turns: 7, InputTokens: 1210, OutputTokens: 51, Context: 401, Window: 200000, Subagents: 4, Compactions: 1, Tools: 1, Total: true}) {
+	// A resumed session ends each query with a result counting its own
+	// turns; the model usage is the run's, and the window the main model's.
+	usage := `"modelUsage":{"m":{"inputTokens":3,"outputTokens":50,"cacheReadInputTokens":1000,"cacheCreationInputTokens":200,"contextWindow":200000},"h":{"inputTokens":7,"outputTokens":1,"contextWindow":1000000}}`
+	first := `{"type":"result","subtype":"success","num_turns":3,"result":"first",` + usage + `,"subagent_stats":{"spawned":4}}`
+	a = write(first, `{"type":"result","subtype":"success","num_turns":4,"result":"ok",`+usage+`,"subagent_stats":{"spawned":2}}`)
+	if m := a.Metrics; m != (Metrics{Turns: 7, InputTokens: 1210, OutputTokens: 51, Context: 401, Window: 200000, Subagents: 4, Compactions: 1, Tools: 1, Total: true, Ended: true}) {
 		t.Fatalf("the result's totals: %+v", m)
+	}
+	// Resumed again: the turns since the last result are not in its count.
+	a = write(first, `{"type":"assistant","parent_tool_use_id":null,"message":{"id":"c","usage":{"input_tokens":1},"content":[]}}`)
+	if m := a.Metrics; m.Ended || m.Turns != 3 {
+		t.Fatalf("a message after the result: %+v", m)
 	}
 }

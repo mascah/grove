@@ -87,10 +87,13 @@ func (m *Model) gotAttempts(msg attemptsMsg) tea.Cmd {
 		}
 		m.attempts, m.attemptsErr = msg.views, ""
 	}
+	// A failed read keeps what the last good one showed, under the failure,
+	// rather than an empty activity read as zeros.
 	if msg.open != "" && msg.open == m.runID {
-		m.run, m.activity, m.runErr = msg.run, msg.activity, ""
-		if msg.runErr != nil {
+		if m.runErr = ""; msg.runErr != nil {
 			m.runErr = msg.runErr.Error()
+		} else {
+			m.run, m.activity = msg.run, msg.activity
 		}
 	}
 	m.clampScroll()
@@ -271,7 +274,7 @@ func (m *Model) standingOf(v *attempt.View) standing {
 	case status == "done" && sameCommit(cand, current):
 		s.short = "done: candidate " + short7(cand)
 		s.state += " Candidate " + short7(cand) + " was integrated: " + work + " is done."
-	case cand != "" && (!latest || status == "done" || status == "abandoned"):
+	case cand != "" && (!latest || status == "done" || status == "abandoned" || status == "review" && current != "" && !sameCommit(cand, current)):
 		s.short = "candidate " + short7(cand) + ", superseded"
 		s.state += " " + work + " has moved on: it is " + orUnread(status) + " with candidate " + short7(orUnread(current)) + "."
 	case status == "done" || status == "abandoned":
@@ -691,7 +694,10 @@ func (m *Model) attemptRows(w int) []string {
 	st := m.standingOf(v)
 	l, a := &v.Launch, &m.activity
 	rows := []string{bold(line(l.Work+"  "+m.titleOf(l.Work), w))}
-	glyph := [...]string{"◆", "●", "✓"}[st.group]
+	glyph := [...]string{"◆", "●", "·"}[st.group]
+	if strings.HasPrefix(st.short, "done:") {
+		glyph = "✓"
+	}
 	badge := line(glyph+" "+st.short, min(ansi.StringWidth(safe(glyph+" "+st.short)), w))
 	rows = append(rows, tones[st.group].Bold(true).Render(badge)+faint.Render(line("  "+m.when(v), w-ansi.StringWidth(badge))))
 	if m.runErr != "" {
@@ -705,7 +711,17 @@ func (m *Model) attemptRows(w int) []string {
 		rows = append(rows, faint.Render(line("  "+label, 11))+tone.Render(line(value, w-11)))
 	}
 	field("Attempt", l.Attempt, lipgloss.NewStyle())
-	model := cmp.Or(a.Model, l.Model, "not reported yet")
+	model := cmp.Or(a.Model, l.Model)
+	if r := v.Result; model == "" && r != nil && r.Events.Init != nil {
+		model = r.Events.Init.Model // the owner's scan of the whole log at exit
+	}
+	switch {
+	case model != "":
+	case a.Cut:
+		model = "not in the part of the log read"
+	default:
+		model = "not reported yet"
+	}
 	if l.ClaudeVersion != "" {
 		model += " · " + l.ClaudeVersion
 	}
@@ -714,7 +730,11 @@ func (m *Model) attemptRows(w int) []string {
 	if r := v.Result; r != nil && r.Events.Result != nil {
 		spent = fmt.Sprintf("$%.2f of ", r.Events.Result.CostUSD)
 	}
-	if spent == "" {
+	switch {
+	case spent != "":
+	case v.Result != nil:
+		spent = "spend unknown: no result event, of "
+	default:
 		spent = "spend known at the end, of "
 	}
 	field("Budget", spent+"$"+budget+" · permission mode "+l.PermissionMode, green)
@@ -813,6 +833,10 @@ func (m *Model) metricRows(w int) []string {
 		}
 		return number(n)
 	}
+	turns := count(mt.Turns)
+	if !mt.Ended && !a.Cut {
+		turns = "≈" + turns // top-level messages, until a result counts them
+	}
 	tokens := count(mt.InputTokens) + " in · – out"
 	if mt.Total {
 		tokens = number(mt.InputTokens) + " in · " + number(mt.OutputTokens) + " out"
@@ -825,7 +849,7 @@ func (m *Model) metricRows(w int) []string {
 		}
 	}
 	chips := [][2]string{
-		{"Turns", count(mt.Turns)},
+		{"Turns", turns},
 		{"Tokens", tokens},
 		{"Context", ctx},
 		{"Subagents", count(mt.Subagents)},

@@ -44,10 +44,11 @@ type Entry struct {
 // is Cut. Total says the tokens are the result event's totals for the run;
 // without it the input is summed over the window's messages and the output
 // is unknown, since Claude reports a message's output tokens before writing
-// it. A run resumed in one session has several result events, and each
-// counts turns for its own query only, so Turns and Subagents are the larger
-// of the result's figure and the window's count. Context and Window are 0
-// when unknown.
+// it. A run resumed in one session has several result events, each counting
+// the turns of its own query, so Turns is their sum; it is exact only when
+// Ended, since top-level messages, the count without a result, approximate
+// turns. Subagents are distinct subagent tasks, or the result's figure if
+// larger. Context and Window are 0 when unknown.
 type Metrics struct {
 	Turns        int  `json:"turns"`
 	InputTokens  int  `json:"input_tokens"`   // cached input included
@@ -59,6 +60,7 @@ type Metrics struct {
 	Tools        int  `json:"tool_calls"`
 	ToolErrors   int  `json:"tool_errors"`
 	Total        bool `json:"total"`
+	Ended        bool `json:"ended"` // the window ends with a result event, no message after it
 }
 
 // ReadActivity reads at most the last window bytes of path, so its cost is
@@ -96,7 +98,7 @@ func ReadActivity(path string, window int64) (Activity, error) {
 	} else {
 		data = nil
 	}
-	c := counter{in: map[string]int{}, turns: map[string]bool{}}
+	c := counter{in: map[string]int{}, turns: map[string]bool{}, agents: map[string]bool{}}
 	for l := range bytes.SplitSeq(data, []byte("\n")) {
 		c.note(&a, l)
 	}
@@ -106,7 +108,7 @@ func ReadActivity(path string, window int64) (Activity, error) {
 			m.InputTokens += n
 		}
 	}
-	m.Turns, m.Subagents = max(len(c.turns), c.queries), max(c.agents, c.spawned)
+	m.Turns, m.Subagents = max(len(c.turns), c.queries), max(len(c.agents), c.spawned)
 	if len(a.Entries) > maxActivity {
 		a.Entries, a.Cut = a.Entries[len(a.Entries)-maxActivity:], true
 	}
@@ -116,10 +118,11 @@ func ReadActivity(path string, window int64) (Activity, error) {
 // counter is what summing a run's messages needs while reading: a message
 // arrives as one event per content block, each repeating its usage.
 type counter struct {
-	in               map[string]int  // input tokens by message
-	turns            map[string]bool // top-level messages
-	agents           int             // subagents started
-	spawned, queries int             // the result events' own counts, the largest seen
+	in      map[string]int  // input tokens by message
+	turns   map[string]bool // top-level messages
+	agents  map[string]bool // subagent tasks; a resumed one starts again
+	spawned int             // the largest subagent count a result gave
+	queries int             // the results' turns, summed
 }
 
 type usage struct {
@@ -136,6 +139,7 @@ func (c *counter) note(a *Activity, line []byte) {
 		Subtype   string  `json:"subtype"`
 		Model     string  `json:"model"`
 		TaskType  string  `json:"task_type"`
+		TaskID    string  `json:"task_id"`
 		IsError   bool    `json:"is_error"`
 		Result    string  `json:"result"`
 		Timestamp string  `json:"timestamp"`
@@ -187,7 +191,7 @@ func (c *counter) note(a *Activity, line []byte) {
 			m.Compactions++
 		case "task_started":
 			if ev.TaskType == "local_agent" {
-				c.agents++
+				c.agents[ev.TaskID] = true
 			}
 		}
 		add("notice", "system: "+ev.Subtype)
@@ -196,7 +200,7 @@ func (c *counter) note(a *Activity, line []byte) {
 			c.in[ev.Message.ID] = u.Input + u.CacheRead + u.CacheCreate
 			if ev.Parent == nil {
 				m.Context = u.Input + u.CacheRead + u.CacheCreate
-				c.turns[ev.Message.ID] = true
+				c.turns[ev.Message.ID], m.Ended = true, false
 			}
 		}
 		for _, b := range ev.Message.Content {
@@ -231,8 +235,12 @@ func (c *counter) note(a *Activity, line []byte) {
 				m.OutputTokens += u.Output
 				m.Window = max(m.Window, u.Window)
 			}
+			if u, ok := ev.ModelUsage[a.Model]; ok && u.Window > 0 {
+				m.Window = u.Window // the main model's, where subagents ran another
+			}
 		}
-		c.queries = max(c.queries, ev.Turns)
+		c.queries += ev.Turns
+		m.Ended = true
 		if ev.Subagents != nil {
 			c.spawned = max(c.spawned, ev.Subagents.Spawned)
 		}

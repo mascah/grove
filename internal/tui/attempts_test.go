@@ -24,6 +24,7 @@ type runs struct {
 	views     []attempt.View
 	activity  attempt.Activity
 	launchErr error
+	readErr   error // the next reads of one attempt fail after finding it
 	launches  []attempt.Request
 	stops     []string
 	reads     int
@@ -41,6 +42,9 @@ func (r *runs) add(b Backend) Backend {
 		defer r.mu.Unlock()
 		for _, v := range r.views {
 			if v.Launch.Attempt == id {
+				if r.readErr != nil {
+					return &v, attempt.Activity{}, r.readErr
+				}
 				return &v, r.activity, nil
 			}
 		}
@@ -477,7 +481,7 @@ func TestAttemptScreensReconnectAndStop(t *testing.T) {
 	_, cmd := m.Update(attemptTick{})
 	settle(m, cmd)
 	settle(m, early) // its reply is outdated by the restart
-	if m.gen == gen || f.inspects != inspects+2 || m.pending != "" || m.ticking || !strings.Contains(plain(m), "State  Stopped (exit 130).") || !strings.Contains(plain(m), "✓ stopped by x") {
+	if m.gen == gen || f.inspects != inspects+2 || m.pending != "" || m.ticking || !strings.Contains(plain(m), "State  Stopped (exit 130).") || !strings.Contains(plain(m), "· stopped by x") {
 		t.Fatalf("gen %d→%d inspects %d→%d pending %q ticking %v\n%s", gen, m.gen, inspects, f.inspects, m.pending, m.ticking, plain(m))
 	}
 	press(m, "x")
@@ -567,6 +571,7 @@ func TestAttemptStandings(t *testing.T) {
 	add("W-106", "Dropped", "abandoned", "")
 	add("Q-002", "Red or blue?", "open", "", "W-107")
 	add("W-107", "Asked", "active", "")
+	add("W-108", "Continued by hand", "review", "beefcafe")
 	m := openRuns(t, &fake{res: res}, &runs{}, 120, 36)
 	ok := &attempt.Final{Subtype: "success"}
 	ready := func(id, stamp string) attempt.View {
@@ -590,6 +595,8 @@ func TestAttemptStandings(t *testing.T) {
 		{view("W-107", "1", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "active"}}), needsYou, "answer question Q-002", "Waiting on question Q-002 (Red or blue?).", "o opens W-107, whose detail lists the question"},
 		{view("W-107", "0", attempt.Finished, &attempt.Result{ExitCode: 130, Stopped: true}), settled, "stopped by x", "Stopped (exit 130).", ""},
 		{view("W-001", "1", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "active"}}), needsYou, "ended, no handoff", "Ended without a handoff: W-001 is active on worktree-W-001, with no candidate.", "o opens W-001; the report says why"},
+		// Continued outside an attempt to another candidate: a approves that one, not this.
+		{ready("W-108", "1"), settled, "candidate c0ffee1, superseded", "Candidate ready: W-108 in review on worktree-W-108 with candidate c0ffee1. W-108 has moved on: it is review with candidate beefcaf.", ""},
 		{ready("W-999", "1"), needsYou, "judge candidate c0ffee1", "Candidate ready: W-999 in review on worktree-W-999 with candidate c0ffee1.", "o opens W-999: a approves, f gives feedback"},
 	}
 	for _, c := range cases {
@@ -622,8 +629,13 @@ func TestAttemptListFits(t *testing.T) {
 	r := &runs{}
 	var views []attempt.View
 	for i := range 200 {
-		views = append(views, view("W-002", fmt.Sprintf("2026092%dT%06dZ", i%2, 200-i), attempt.Finished, &attempt.Result{ExitCode: 130, Stopped: true}))
+		v := view("W-002", fmt.Sprintf("2026092%dT%06dZ", i%2, 200-i), attempt.Finished, &attempt.Result{ExitCode: 130, Stopped: true})
+		if i%3 == 0 { // every group mixed with the cursor
+			v.Status, v.Result = attempt.Orphaned, nil
+		}
+		views = append(views, v)
 	}
+	views[1].Status, views[1].Result = attempt.Running, nil
 	r.set(views...)
 	for _, size := range [][2]int{{40, 10}, {59, 24}, {60, 24}, {80, 24}, {160, 48}} {
 		w, h := size[0], size[1]
@@ -645,8 +657,57 @@ func TestAttemptListFits(t *testing.T) {
 		if !strings.Contains(s, "> W-002") || !strings.Contains(s, "stopped by x") {
 			t.Fatalf("%dx%d: the cursor's row and its state show:\n%s", w, h, s)
 		}
+		for range 150 {
+			press(m, "up")
+		}
+		if s := plain(m); !strings.Contains(s, " Needs you") || !strings.Contains(s, "orphaned") {
+			t.Fatalf("%dx%d: back at the top:\n%s", w, h, s)
+		}
 		if strings.Contains(s, "A very long") != (w >= 60) {
 			t.Fatalf("%dx%d: the title shows from 60 columns:\n%s", w, h, s)
 		}
+	}
+}
+
+// What the attempt screen cannot know it says: the model from the owner's
+// scan when the window lacks it, spend without a result, turns counted from
+// messages as approximate, and a failed read keeps the last good one.
+func TestAttemptScreenHonesty(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	r := &runs{}
+	stopped := view("W-002", "20260923T010000Z", attempt.Finished, &attempt.Result{ExitCode: 130, Stopped: true, Events: attempt.Events{Init: &attempt.Init{Model: "model-at-exit"}}})
+	r.set(stopped)
+	r.activity = attempt.Activity{Cut: true, Entries: []attempt.Entry{{Kind: "text", Text: "last words", Count: 1}}, Metrics: attempt.Metrics{Turns: 4}}
+	m := openRuns(t, &fake{res: fx.twoBranches()}, r, 120, 36)
+	m.openAttempt(stopped.Launch.Attempt)
+	settle(m, m.wantAttempts())
+	s := plain(m)
+	for _, want := range []string{"Model    model-at-exit", "Budget   spend unknown: no result event, of $2", "Turns ≥4", "· stopped by x"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("lacks %q:\n%s", want, s)
+		}
+	}
+	running := view("W-002", "20260923T010000Z", attempt.Running, nil)
+	r.set(running)
+	settle(m, press(m, "r"))
+	if s := plain(m); !strings.Contains(s, "Model    not in the part of the log read") {
+		t.Fatalf("a cut window without the start:\n%s", s)
+	}
+	r.activity.Cut = false
+	settle(m, press(m, "r"))
+	if s := plain(m); !strings.Contains(s, "Model    not reported yet") || !strings.Contains(s, "Turns ≈4") {
+		t.Fatalf("an uncut window without a result:\n%s", s)
+	}
+	r.readErr = errors.New("permission denied")
+	settle(m, press(m, "r"))
+	if s := plain(m); !strings.Contains(s, "The last read failed (r retries): permission denied") || !strings.Contains(s, "last words") || !strings.Contains(s, "Turns ≈4") {
+		t.Fatalf("a failed read keeps the last good one:\n%s", s)
+	}
+	m.openAttempt("W-002.20260923T020000Z") // never read: nothing to keep
+	r.set(running, view("W-002", "20260923T020000Z", attempt.Running, nil))
+	settle(m, m.wantAttempts())
+	if s := plain(m); !strings.Contains(s, "could not be read (r retries): permission denied") || strings.Contains(s, "Turns") {
+		t.Fatalf("a first read that fails shows no figures:\n%s", s)
 	}
 }

@@ -125,7 +125,10 @@ the events, so a flood of output costs the same. A count from a window that
 began inside the file is shown as `≥N`, and an unknown figure as `–`, never
 as 0. Tokens are the result event's totals once the run has ended; while it
 runs, only the input tokens are summed, since Claude reports a message's
-output before writing it. The figures are provider-neutral fields
+output before writing it. Turns are the sum of the result events' own counts,
+one per query of a resumed session, and until the run ends with one they are
+top-level messages shown as `≈N`. A read that fails keeps what the last good
+one showed, under the failure. The figures are provider-neutral fields
 (`attempt.Metrics`) that the reader of Claude's stream fills.
 
 The outcome is derived, never written: `running`, `orphaned`,
