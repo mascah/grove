@@ -2,9 +2,9 @@
 id: "G-043"
 type: work
 title: "Make the board and item detail clear and visually polished"
-status: review
+status: done
 created: "2026-09-21T00:54:15Z"
-updated: "2026-09-22T23:58:51Z"
+updated: "2026-09-23T00:06:54Z"
 kind: feature
 size: medium
 priority: 3
@@ -132,3 +132,5 @@ git merge worktree-G-043
 # edit grove/G-043-board-detail.md: add "Verdict: <the owner's words>" under Evidence
 go run ./cmd/grove update G-043 --set status=done --commit
 ```
+
+Verdict: Significant improvement over previous TUI experience.
