@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"path/filepath"
@@ -9,6 +10,8 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/mascah/grove/internal/attempt"
 	"github.com/mascah/grove/internal/versions"
@@ -115,6 +118,17 @@ func (m *Model) attemptOf(id string) *attempt.View {
 	return &m.attempts[i]
 }
 
+// latest reports whether v is its work's newest attempt, or its work has
+// none listed; it copies nothing, since every row of the list asks.
+func (m *Model) latest(v *attempt.View) bool {
+	for i := range m.attempts {
+		if m.attempts[i].Launch.Work == v.Launch.Work {
+			return m.attempts[i].Launch.Attempt == v.Launch.Attempt
+		}
+	}
+	return true
+}
+
 // attemptsOf lists one work's attempts, newest first; "" lists every one.
 func (m *Model) attemptsOf(work string) []attempt.View {
 	if work == "" {
@@ -129,21 +143,22 @@ func (m *Model) attemptsOf(work string) []attempt.View {
 	return out
 }
 
-// outcomeOf says where an attempt stands, from its files and the records the
-// board read. A clean exit alone is never a candidate: only the record in
-// review with a candidate on the attempt's branch is.
-func (m *Model) outcomeOf(v *attempt.View) string {
+// outcome says where an attempt stood when it ended, from its files and the
+// records the board read, as a kind and a sentence. A clean exit alone is
+// never a candidate: only the record in review with a candidate on the
+// attempt's branch is.
+func (m *Model) outcome(v *attempt.View) (kind, text string) {
 	switch v.Status {
 	case attempt.Running:
-		return "running"
+		return "running", "running"
 	case attempt.Orphaned:
-		return "orphaned: its owner is gone and the provider still runs (x stops it)"
+		return "orphaned", "orphaned: its owner is gone and the provider still runs (x stops it)"
 	case attempt.Interrupted:
-		return "interrupted: the owner and the provider are gone without a result"
+		return "interrupted", "interrupted: the owner and the provider are gone without a result"
 	}
 	r := v.Result
 	if r == nil {
-		return string(v.Status)
+		return string(v.Status), string(v.Status)
 	}
 	work := v.Launch.Work
 	review := r.Record != nil && r.Record.Status == "review" && r.Record.Candidate != ""
@@ -151,7 +166,7 @@ func (m *Model) outcomeOf(v *attempt.View) string {
 	// if the owner found it committed when the process ended. Later commits
 	// to the branch, such as an approval, change nothing about that.
 	if review && !r.RecordUncommitted {
-		return fmt.Sprintf("candidate ready: %s in review on %s with candidate %s", work, v.Launch.Branch, short7(r.Record.Candidate))
+		return "candidate", fmt.Sprintf("candidate ready: %s in review on %s with candidate %s", work, v.Launch.Branch, short7(r.Record.Candidate))
 	}
 	unsaid := ""
 	if review {
@@ -163,17 +178,17 @@ func (m *Model) outcomeOf(v *attempt.View) string {
 	}
 	switch f := r.Events.Result; {
 	case r.Stopped:
-		return "stopped (" + exit + ")" + unsaid
+		return "stopped", "stopped (" + exit + ")" + unsaid
 	case f == nil:
-		return "failed: no result event (" + exit + ")" + unsaid
+		return "failed", "failed: no result event (" + exit + ")" + unsaid
 	case f.IsError || r.ExitCode != 0:
-		return "failed: " + f.Subtype + " (" + exit + ")" + unsaid
+		return "failed", "failed: " + f.Subtype + " (" + exit + ")" + unsaid
 	}
 	// A question open now is this attempt's wait only if it is the work's
 	// latest: an earlier one ended before whatever came after.
-	if list := m.attemptsOf(work); len(list) == 0 || list[0].Launch.Attempt == v.Launch.Attempt {
+	if m.latest(v) {
 		if q := m.blockingQuestion(work); q != "" {
-			return "waiting on question " + q + unsaid
+			return "question", "waiting on question " + q + unsaid
 		}
 	}
 	status, none := "unreadable", ", with no candidate"
@@ -183,7 +198,184 @@ func (m *Model) outcomeOf(v *attempt.View) string {
 	if review {
 		none = ""
 	}
-	return fmt.Sprintf("ended without a handoff: %s is %s on %s%s%s", work, status, v.Launch.Branch, none, unsaid)
+	return "unhanded", fmt.Sprintf("ended without a handoff: %s is %s on %s%s%s", work, status, v.Launch.Branch, none, unsaid)
+}
+
+func (m *Model) outcomeOf(v *attempt.View) string {
+	_, text := m.outcome(v)
+	return text
+}
+
+// Attempts fall in three groups (G-117): those that need the owner, those
+// running, and the settled rest, each of which says why nothing is needed.
+const (
+	needsYou = iota
+	runningNow
+	settled
+)
+
+var groupNames = [...]string{"Needs you", "Running", "Settled"}
+
+// tones colour each group from the ANSI 16 palette, as accents only: every
+// group is also named, and every state is text.
+var (
+	tones = [...]lipgloss.Style{
+		lipgloss.NewStyle().Foreground(lipgloss.Color("3")),
+		lipgloss.NewStyle().Foreground(lipgloss.Color("4")),
+		lipgloss.NewStyle().Foreground(lipgloss.Color("8")),
+	}
+	faint = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	green = lipgloss.NewStyle().Foreground(lipgloss.Color("2"))
+	red   = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
+	cyan  = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+	pink  = lipgloss.NewStyle().Foreground(lipgloss.Color("5"))
+)
+
+// standing is where an attempt stands now: its group, the list's short
+// state, and the attempt screen's State and Next lines (next "" is none).
+type standing struct {
+	group       int
+	short       string
+	state, next string
+}
+
+// standingOf weighs an attempt's outcome against the work's current record
+// and its later attempts. Only the latest attempt of work still proposed,
+// active or in review needs the owner, and an orphan always does, since its
+// process runs unowned; a stopped attempt was the owner's own act.
+func (m *Model) standingOf(v *attempt.View) standing {
+	kind, text := m.outcome(v)
+	work := v.Launch.Work
+	s := standing{group: settled, state: sentence(text)}
+	status, current := "", ""
+	if g := m.groupOf(work); g != nil {
+		if r := m.record(g); r != nil {
+			status, current = r.Status, r.Candidate
+		}
+	}
+	cand := ""
+	if kind == "candidate" {
+		cand = v.Result.Record.Candidate
+	}
+	latest := m.latest(v)
+	switch {
+	case kind == "running":
+		s.group, s.short, s.next = runningNow, "running", "x stops it; the report arrives when it ends"
+	case kind == "orphaned":
+		s.group, s.short, s.next = needsYou, "orphaned: x stops it", "x stops it"
+	case kind == "stopped":
+		s.short = "stopped by x"
+		if latest && (status == "proposed" || status == "active") {
+			s.next = "R on " + work + " launches again"
+		}
+	case status == "done" && sameCommit(cand, current):
+		s.short = "done: candidate " + short7(cand)
+		s.state += " Candidate " + short7(cand) + " was integrated: " + work + " is done."
+	case cand != "" && (!latest || status == "done" || status == "abandoned"):
+		s.short = "candidate " + short7(cand) + ", superseded"
+		s.state += " " + work + " has moved on: it is " + orUnread(status) + " with candidate " + short7(orUnread(current)) + "."
+	case status == "done" || status == "abandoned":
+		s.short = "work " + status + " since"
+		s.state += " " + work + " is " + status + " now; nothing needs you."
+	case !latest:
+		s.short = shortOf(kind, v) + ", superseded"
+		s.state += " A later attempt of " + work + " followed this one."
+	default:
+		s.group = needsYou
+		switch kind {
+		case "candidate":
+			if status == "review" || status == "" {
+				s.short, s.next = "judge candidate "+short7(cand), "o opens "+work+": a approves, f gives feedback"
+			} else {
+				s.short, s.next = "feedback given: R again", "o opens "+work+": R launches the next attempt"
+				s.state += " " + work + " is " + status + " now: it had feedback."
+			}
+		case "question":
+			q, _, _ := strings.Cut(m.blockingQuestion(work), " (")
+			s.short, s.next = "answer question "+q, "o opens "+work+", whose detail lists the question"
+		case "failed", "interrupted":
+			s.short, s.next = shortOf(kind, v), "d shows the details and the raw log; R on "+work+" launches again"
+		default:
+			s.short, s.next = "ended, no handoff", "o opens "+work+"; the report says why"
+		}
+	}
+	return s
+}
+
+// shortOf is an outcome kind in a few words.
+func shortOf(kind string, v *attempt.View) string {
+	switch kind {
+	case "failed":
+		f := v.Result.Events.Result
+		switch {
+		case f == nil:
+			return "failed: no result"
+		case f.Subtype == "error_max_budget_usd":
+			return "failed: budget exhausted"
+		case f.Subtype == "error_max_turns":
+			return "failed: turn limit"
+		}
+		return "failed: " + strings.TrimPrefix(f.Subtype, "error_")
+	case "question":
+		return "waited on a question"
+	case "unhanded":
+		return "ended, no handoff"
+	}
+	return kind
+}
+
+// sameCommit compares two spellings of a commit, either possibly short.
+func sameCommit(a, b string) bool {
+	return a != "" && b != "" && (strings.HasPrefix(a, b) || strings.HasPrefix(b, a))
+}
+
+func orUnread(s string) string {
+	if s == "" {
+		return "unread"
+	}
+	return s
+}
+
+// sentence makes an outcome a sentence for the State line.
+func sentence(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:] + "."
+}
+
+// when is how long an attempt has run, or how long ago it ended.
+func (m *Model) when(v *attempt.View) string {
+	switch now := m.clock(); {
+	case v.Status == attempt.Running:
+		return age(now.Sub(v.Launch.Started)) + " so far"
+	case v.Result != nil && !v.Result.Finished.IsZero():
+		return age(now.Sub(v.Result.Finished)) + " ago"
+	default:
+		return age(now.Sub(v.Launch.Started)) + " ago"
+	}
+}
+
+func age(d time.Duration) string {
+	switch {
+	case d < time.Minute:
+		return "<1m"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 48*time.Hour:
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dd", int(d.Hours()/24))
+}
+
+// titleOf is the title of the work an attempt concerns, as the board read it.
+func (m *Model) titleOf(work string) string {
+	if g := m.groupOf(work); g != nil {
+		if r := m.record(g); r != nil {
+			return r.Title
+		}
+	}
+	return "(title unread)"
 }
 
 // blockingQuestion names an open question that blocks work in the records
@@ -217,7 +409,7 @@ func (m *Model) attemptRow(work, status string) string {
 	if len(mine) == 0 {
 		parts = append(parts, "Attempts: none")
 	} else {
-		parts = append(parts, fmt.Sprintf("Attempts: %d, latest %s %s", len(mine), mine[0].Launch.Attempt, m.outcomeOf(&mine[0])), "A lists them")
+		parts = append(parts, fmt.Sprintf("Attempts %d · latest: %s, %s", len(mine), m.standingOf(&mine[0]).short, m.when(&mine[0])), "A lists them")
 	}
 	if m.backend.Launch != nil && (status == "proposed" || status == "active") {
 		parts = append(parts, "R launches one")
@@ -233,15 +425,26 @@ func (m *Model) openAttempts(work string) {
 	m.listBack, m.screen, m.listFor, m.scroll, m.attemptsStale = m.screen, attemptsScreen, work, 0, true
 }
 
-// listed is the attempts screen's list and its cursor, the first row when
-// the remembered one is not listed.
-func (m *Model) listed() ([]attempt.View, int) {
+// listed is the attempts screen's list in its groups, newest first within
+// each, their standings, and the cursor, the first row when the remembered
+// one is not listed.
+func (m *Model) listed() ([]attempt.View, []standing, int) {
 	list := m.attemptsOf(m.listFor)
-	at := slices.IndexFunc(list, func(v attempt.View) bool { return v.Launch.Attempt == m.listAt })
-	if at < 0 && len(list) != 0 {
+	order := make([]int, len(list))
+	st := make([]standing, len(list))
+	for i := range list {
+		order[i], st[i] = i, m.standingOf(&list[i])
+	}
+	slices.SortStableFunc(order, func(a, b int) int { return st[a].group - st[b].group })
+	views, standings := make([]attempt.View, len(list)), make([]standing, len(list))
+	for i, j := range order {
+		views[i], standings[i] = list[j], st[j]
+	}
+	at := slices.IndexFunc(views, func(v attempt.View) bool { return v.Launch.Attempt == m.listAt })
+	if at < 0 && len(views) != 0 {
 		at = 0
 	}
-	return list, at
+	return views, standings, at
 }
 
 // openAttempt shows one attempt, read again now.
@@ -253,7 +456,7 @@ func (m *Model) openAttempt(id string) {
 }
 
 func (m *Model) attemptsKey(k string) {
-	list, at := m.listed()
+	list, _, at := m.listed()
 	switch k {
 	case "up", "k", "down", "j":
 		if len(list) == 0 {
@@ -290,6 +493,9 @@ func (m *Model) attemptKey(k string) {
 		if v := m.attemptOf(m.runID); v != nil {
 			m.openWork(v.Launch.Work)
 		}
+	case "d":
+		m.facts = !m.facts
+		m.clampScroll()
 	default:
 		m.scrollKey(k)
 	}
@@ -410,32 +616,54 @@ func (m *Model) launchKey(p *prompt) tea.Cmd {
 	return nil
 }
 
-// attemptsBody is the attempts screen: one row per attempt, newest first.
+// attemptsBody is the attempts screen: one row per attempt in its group,
+// with the work's ID and title, its state and its time. The title shrinks
+// first and goes below 60 columns; the state is cut last.
 func (m *Model) attemptsBody(w, n int) []string {
-	list, cursor := m.listed()
+	list, st, cursor := m.listed()
 	head := "Attempts in this repository"
 	if m.listFor != "" {
 		head = "Attempts of " + m.listFor
 	}
-	rows := []string{bold(line(fmt.Sprintf("%s  (%d)", head, len(list)), w))}
+	var count [len(groupNames)]int
+	for _, s := range st {
+		count[s.group]++
+	}
+	rows := []string{bold(line(fmt.Sprintf("%s (%d) · %d need you · %d running · %d settled", head, len(list), count[needsYou], count[runningNow], count[settled]), w))}
 	if m.attemptsErr != "" {
 		rows = append(rows, wrap("The attempts could not be read (r retries): "+m.attemptsErr, w)...)
 	}
 	if len(list) == 0 {
 		rows = append(rows, line("  none yet; R on a proposed or active work record launches one", w))
 	}
-	at := 0
+	const tw = 11 // "14m so far"
+	idw, sw := 0, 0
 	for i, v := range list {
-		cost := ""
-		if r := v.Result; r != nil && r.Events.Result != nil {
-			cost = fmt.Sprintf("  $%.2f", r.Events.Result.CostUSD)
+		idw = max(idw, ansi.StringWidth(safe(v.Launch.Work)))
+		sw = max(sw, ansi.StringWidth(safe(st[i].short)))
+	}
+	idw, sw = min(idw, 12), min(sw, 32)
+	titleW := min(w-2-idw-2-sw-2-tw-2, 48) // wider than that, the rest is margin
+	if w < 60 || titleW < 10 {
+		titleW, sw = 0, max(w-2-idw-2-tw-2, 1)
+	}
+	at, group := 0, -1
+	for i, v := range list {
+		if st[i].group != group {
+			group = st[i].group
+			rows = append(rows, tones[group].Bold(true).Render(line(" "+groupNames[group], w)))
 		}
-		text := fmt.Sprintf("%s  %s%s  %s", v.Launch.Attempt, m.outcomeOf(&v), cost, v.Launch.Branch)
+		text := line(v.Launch.Work, idw) + "  "
+		if titleW > 0 {
+			text += line(m.titleOf(v.Launch.Work), titleW) + "  "
+		}
+		when := m.when(&v)
+		text += line(st[i].short, sw) + "  " + line(strings.Repeat(" ", max(tw-len(when), 0))+when, tw)
 		if i == cursor {
 			at = len(rows)
-			rows = append(rows, hot(line("> "+text, w)))
+			rows = append(rows, hot(clip("> "+text, w)))
 		} else {
-			rows = append(rows, line("  "+text, w))
+			rows = append(rows, clip("  "+text, w))
 		}
 	}
 	off := 0
@@ -445,9 +673,10 @@ func (m *Model) attemptsBody(w, n int) []string {
 	return rows[min(off, len(rows)):]
 }
 
-// attemptRows is the attempt screen: facts, the outcome, the final report,
-// then recent activity newest first, so the report never scrolls away and
-// the newest activity is always nearest the facts.
+// attemptRows is the attempt screen (G-117): the work and a coloured state,
+// the run's configuration and what it has used, State and Next, the
+// details folded behind d, then the final report beside the activity,
+// newest first, or above it where the terminal is narrow.
 func (m *Model) attemptRows(w int) []string {
 	v := m.run
 	if v == nil || v.Launch.Attempt != m.runID {
@@ -459,30 +688,220 @@ func (m *Model) attemptRows(w int) []string {
 	if cur := m.attemptOf(v.Launch.Attempt); cur != nil && cur.Status != v.Status {
 		v = cur // the list read is newer; its status leads until the next full read
 	}
-	rows := []string{bold(line("Attempt "+v.Launch.Attempt+" of "+v.Launch.Work, w))}
-	rows = append(rows, wrap("Outcome: "+m.outcomeOf(v), w)...)
+	st := m.standingOf(v)
+	l, a := &v.Launch, &m.activity
+	rows := []string{bold(line(l.Work+"  "+m.titleOf(l.Work), w))}
+	glyph := [...]string{"◆", "●", "✓"}[st.group]
+	badge := line(glyph+" "+st.short, min(ansi.StringWidth(safe(glyph+" "+st.short)), w))
+	rows = append(rows, tones[st.group].Bold(true).Render(badge)+faint.Render(line("  "+m.when(v), w-ansi.StringWidth(badge))))
 	if m.runErr != "" {
 		rows = append(rows, wrap("The last read failed (r retries): "+m.runErr, w)...)
 	}
-	for _, f := range attempt.Facts(m.run, func(s string) string { return s }) {
-		rows = append(rows, wrap(f, w)...)
+
+	// The run's configuration, one labelled row each.
+	blank := line("", w)
+	rows = append(rows, blank)
+	field := func(label string, value string, tone lipgloss.Style) {
+		rows = append(rows, faint.Render(line("  "+label, 11))+tone.Render(line(value, w-11)))
 	}
-	if report := m.activity.Report; report != "" {
-		rows = append(rows, line("", w), bold(line("Final report", w)))
-		rows = append(rows, m.rendered("report\x00"+v.Launch.Attempt, report, w)...)
+	field("Attempt", l.Attempt, lipgloss.NewStyle())
+	model := cmp.Or(a.Model, l.Model, "not reported yet")
+	if l.ClaudeVersion != "" {
+		model += " · " + l.ClaudeVersion
 	}
-	lines := m.activity.Lines
-	rows = append(rows, line("", w), bold(line(fmt.Sprintf("Activity, newest first (%d)", len(lines)), w)))
-	if len(lines) == 0 {
-		rows = append(rows, line("  none yet", w))
+	field("Model", model, pink)
+	spent, budget := "", l.BudgetUSD
+	if r := v.Result; r != nil && r.Events.Result != nil {
+		spent = fmt.Sprintf("$%.2f of ", r.Events.Result.CostUSD)
 	}
-	for i := len(lines) - 1; i >= 0; i-- {
-		rows = append(rows, line("  "+lines[i], w))
+	if spent == "" {
+		spent = "spend known at the end, of "
 	}
-	if m.activity.Cut {
-		rows = append(rows, wrap("  earlier events are in "+m.run.EventsPath, w)...)
+	field("Budget", spent+"$"+budget+" · permission mode "+l.PermissionMode, green)
+	reuse := "created"
+	if l.WorktreeReused {
+		reuse = "reused"
+	}
+	field("Branch", l.Branch+" from "+l.Base[:min(len(l.Base), 12)]+" ("+reuse+")", cyan)
+	started := l.Started.Local().Format("15:04:05 Mon 2 Jan")
+	if r := v.Result; r != nil {
+		started += " · ended " + r.Finished.Local().Format("15:04:05") + " after " + age(r.Finished.Sub(l.Started))
+	}
+	field("Started", started, lipgloss.NewStyle())
+	rows = append(rows, m.metricRows(w)...)
+
+	rows = append(rows, blank)
+	for i, r := range wrap(st.state, w-7) {
+		label := "       "
+		if i == 0 {
+			label = "State  "
+		}
+		rows = append(rows, faint.Render(label)+tones[st.group].Render(r))
+	}
+	if st.next != "" {
+		for i, r := range wrap(st.next, w-7) {
+			label := "       "
+			if i == 0 {
+				label = "Next   "
+			}
+			rows = append(rows, faint.Render(label)+r)
+		}
+	}
+	if m.facts {
+		rows = append(rows, blank, bold(line("Details · d hides them", w)))
+		for _, f := range attempt.Facts(m.run, func(s string) string { return s }) {
+			rows = append(rows, wrap(f, w)...)
+		}
+	} else {
+		rows = append(rows, faint.Render(line("Details: bounds, provenance, events and raw files · d shows them", w)))
+	}
+	rows = append(rows, blank)
+
+	report := func(w int) []string {
+		out := []string{bold(line("Final report", w))}
+		switch {
+		case a.Report != "":
+			return append(out, m.rendered("report\x00"+l.Attempt, a.Report, w)...)
+		case v.Status == attempt.Running:
+			return append(out, wrap("None yet: it arrives when the attempt ends.", w)...)
+		}
+		return append(out, wrap("None: the log's end holds no result event with a report.", w)...)
+	}
+	activity := func(w int) []string {
+		out := []string{bold(line(fmt.Sprintf("Activity, newest first (%d)", len(a.Entries)), w))}
+		if len(a.Entries) == 0 {
+			out = append(out, line("  none yet", w))
+		}
+		for i := len(a.Entries) - 1; i >= 0; i-- {
+			out = append(out, entryRow(a.Entries[i], w))
+		}
+		if a.Cut {
+			for _, r := range wrap("earlier events are in "+m.run.EventsPath, w) {
+				out = append(out, faint.Render(r))
+			}
+		}
+		return out
+	}
+	if w < wideWidth {
+		rows = append(rows, report(w)...)
+		return append(append(rows, blank), activity(w)...)
+	}
+	lw := (w - 3) / 2
+	left, right := report(lw), activity(w-3-lw)
+	for i := range max(len(left), len(right)) {
+		lr, rr := strings.Repeat(" ", lw), strings.Repeat(" ", w-3-lw)
+		if i < len(left) {
+			lr = clip(left[i], lw)
+		}
+		if i < len(right) {
+			rr = right[i]
+		}
+		rows = append(rows, lr+faint.Render(" │ ")+rr)
 	}
 	return rows
+}
+
+// metricRows is what the run has used, as labelled values flowed into rows
+// of w cells. A count taken from a cut window is a lower bound, shown ≥;
+// an unknown value is –, never 0.
+func (m *Model) metricRows(w int) []string {
+	a := &m.activity
+	mt := a.Metrics
+	count := func(n int) string {
+		if a.Cut {
+			return "≥" + number(n)
+		}
+		return number(n)
+	}
+	tokens := count(mt.InputTokens) + " in · – out"
+	if mt.Total {
+		tokens = number(mt.InputTokens) + " in · " + number(mt.OutputTokens) + " out"
+	}
+	ctx := "–"
+	if mt.Context > 0 {
+		ctx = number(mt.Context)
+		if mt.Window > 0 {
+			ctx += " of " + number(mt.Window) + " " + gauge(float64(mt.Context)/float64(mt.Window))
+		}
+	}
+	chips := [][2]string{
+		{"Turns", count(mt.Turns)},
+		{"Tokens", tokens},
+		{"Context", ctx},
+		{"Subagents", count(mt.Subagents)},
+		{"Compactions", count(mt.Compactions)},
+		{"Tools", count(mt.Tools)},
+		{"Errors", count(mt.ToolErrors)},
+	}
+	var rows []string
+	row, used := "  ", 2
+	for _, c := range chips {
+		cw := ansi.StringWidth(c[0]) + 1 + ansi.StringWidth(c[1]) + 3
+		if used+cw > w && used > 2 {
+			rows = append(rows, clip(row, w))
+			row, used = "  ", 2
+		}
+		row += faint.Render(c[0]) + " " + bold(c[1]) + "   "
+		used += cw
+	}
+	return append(rows, clip(row, w))
+}
+
+// number is a count in at most four characters and a unit.
+func number(n int) string {
+	switch {
+	case n >= 1e6:
+		return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(n)/1e6), ".0") + "M"
+	case n >= 1e4:
+		return fmt.Sprintf("%dk", n/1000)
+	case n >= 1e3:
+		return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(n)/1e3), ".0") + "k"
+	}
+	return fmt.Sprint(n)
+}
+
+// gauge is a fraction as ten cells and a percentage.
+func gauge(f float64) string {
+	f = min(max(f, 0), 1)
+	n := int(f*10 + 0.5)
+	return strings.Repeat("▰", n) + strings.Repeat("▱", 10-n) + fmt.Sprintf(" %d%%", int(f*100+0.5))
+}
+
+// kinds mark each kind of activity with a glyph and a colour.
+var kinds = map[string]struct {
+	glyph string
+	tone  lipgloss.Style
+}{
+	"start":  {"▶", green},
+	"text":   {"•", lipgloss.NewStyle()},
+	"tool":   {"›", cyan},
+	"error":  {"✗", red},
+	"notice": {"·", faint},
+	"result": {"■", green},
+}
+
+// entryRow is one activity entry in w cells: its local time, or blanks when
+// the provider gave none, then the entry with its repeats counted.
+func entryRow(e attempt.Entry, w int) string {
+	stamp := strings.Repeat(" ", 8)
+	if !e.Time.IsZero() {
+		stamp = e.Time.Local().Format("15:04:05")
+	}
+	k, ok := kinds[e.Kind]
+	if !ok {
+		k = kinds["notice"]
+	}
+	if e.Kind == "result" && e.Text != "result: success" {
+		k.tone = red
+	}
+	times := "" // kept whole: the text is cut before it
+	if e.Count > 1 {
+		times = fmt.Sprintf(" (×%d)", e.Count)
+	}
+	room, tw := max(w-9, 1), ansi.StringWidth(times)
+	text := ansi.Truncate(safe(k.glyph+" "+e.Text), max(room-tw, 1), "…")
+	pad := max(room-ansi.StringWidth(text)-tw, 0)
+	return faint.Render(stamp) + " " + k.tone.Render(text) + faint.Render(times) + strings.Repeat(" ", pad)
 }
 
 // launched is what a launch reports once it is running.

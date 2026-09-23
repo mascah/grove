@@ -549,7 +549,7 @@ def attempt_lifecycle(root, wt, base):
     s.send(b"A")
     mark = s.expect("Attempts of G-001", mark)
     s.send(ENTER)
-    s.expect("Outcome: running", mark)
+    s.expect("Running.", mark)
     mark = s.expect("step 19999", mark)  # the newest of 20,000 events, shown while it runs
     for _ in range(20):  # keys stay immediate however much the provider writes
         s.send(b"\x1b[6~")
@@ -569,7 +569,7 @@ def attempt_lifecycle(root, wt, base):
     s.send(b"A")
     mark = s.expect("Attempts of G-001", mark)
     s.send(ENTER)
-    mark = s.expect("Outcome: running", mark)
+    mark = s.expect("Running.", mark)
     check(count() == 1, "reconnecting started nothing")
     s.send(b"x")
     mark = s.expect("Stop attempt", mark)
@@ -577,10 +577,10 @@ def attempt_lifecycle(root, wt, base):
     s.expect(f"Stop of attempt {first}", mark)
     mark = s.expect("The board has been re-read.", mark)
     s.send(ESC)
-    mark = s.expect("stopped (exit 130)", mark)  # only the changed cells are redrawn
+    mark = s.expect("Stopped (exit 130)", mark)  # only the changed cells are redrawn
     check(os.path.exists(os.path.join(root, ".claude", "worktrees", "worktree-G-001", "partial.txt")), "Stop kept the partial work")
     s.send(ESC)
-    mark = s.expect("$0.00  worktree-G-001", mark)  # the list, redrawn where it differs
+    mark = s.expect("0 need you · 0 running · 1 settled", mark)  # the list, redrawn where it differs
     s.send(ESC)
     mark = s.expect("R launches one", mark)
     # The next attempt persists a question and ends: a wait, which a launch then refuses.
@@ -593,7 +593,7 @@ def attempt_lifecycle(root, wt, base):
     s.expect("started; owner pid", mark)
     mark = s.expect("The board has been re-read.", mark)  # Esc waits for the re-read; both may be one frame
     s.send(ESC)
-    mark = s.expect("waiting on question G-002", mark)
+    mark = s.expect("answer question G-002", mark)
     s.send(b"R")
     mark = s.expect("blocked by open question G-002", mark)
     check(count() == 2, "the wait started nothing more")
@@ -617,7 +617,7 @@ def attempt_lifecycle(root, wt, base):
     s.expect("started; owner pid", mark)
     mark = s.expect("The board has been re-read.", mark)  # Esc waits for the re-read; both may be one frame
     s.send(ESC)
-    s.expect("candidate ready", mark)  # the poll saw it end
+    s.expect("judge candidate", mark)  # the poll saw it end
     s.expect("Review: candidate", mark)  # and the board was re-read: the detail is a review
     s.send(b"q")
     code, out = s.finish()

@@ -82,7 +82,7 @@ reported instead; the board never creates a checkout.
 
 Work's detail also names its attempts
 ([G-046](../grove/G-046-managed-runs.md)): how many, and the latest with its
-outcome. `R` on proposed or active work asks for a budget in USD, then a
+state and time. `R` on proposed or active work asks for a budget in USD, then a
 permission mode, both typed each time since neither has a default, and
 launches one attempt as [`run`](commands.md#attempts) does; it runs on the
 branch the record's current state stands on when that is not the target, in
@@ -93,23 +93,54 @@ and work with an attempt still running or orphaned; `run`'s own refusals
 follow, and one more: the record in this checkout changed since the board
 read it.
 
-`A` lists the attempts of the open work, or on the board every attempt,
-newest first, and Enter opens one: its outcome, the facts `attempt` prints,
-the provider's final report rendered like a record body, and its recent
-activity newest first, one short line per event from the last 1 MiB of its
-events, so a flood of output costs one bounded read. The outcome is derived,
-never written: `running`, `orphaned`, `interrupted`, or for a finished
-attempt a `candidate ready` (only when the attempt ended with its record
-committed in review with a candidate, which the owner records at exit),
-`stopped`, `failed` (no result event, an error result or a nonzero exit),
-`waiting on question` (the work's latest attempt, while an open question
-blocks it) or `ended without a handoff`; a clean exit alone is never ready,
-and a record that says review without being committed is reported as such.
-`x` asks, then stops a running or orphaned attempt as `stop` does, keeping its
-partial work; `o` opens its work record. The attempts are files the board
-only reads: quitting leaves an attempt running, and the next session shows
-the same one. While one runs, they are re-read every 2 s, a running card is
-tagged `● running`, and when one ends the board is re-read.
+`A` lists the attempts of the open work, or on the board every attempt
+([G-109](../grove/G-109-attempts-usability.md)), in three groups, newest first
+within each: **Needs you**, **Running** and **Settled**. Each row gives the
+work's ID and title, a short state and how long it has run or how long ago it
+ended. The title goes below 60 columns, and the state is cut last. Only the
+latest attempt of work that is still proposed, active or in review needs you:
+a candidate to judge, a question to answer, a failure, an interruption, an
+end without a handoff, or feedback given that awaits the next launch. An
+orphan always needs you, since its process runs unowned. A stopped attempt,
+an earlier attempt of the same work and any attempt of work now done or
+abandoned are settled, and each says why, such as `done: candidate 1614e89`
+or `candidate 71a650e, superseded`.
+
+Enter opens one attempt. At the top are the work's ID and title, a coloured
+state and the run's configuration: attempt, model and provider version,
+budget with what it cost, permission mode, branch and base, start and end.
+What the run used follows: turns, tokens, context size against the model's
+window, subagents, compactions, tool calls and tool errors. Then come `State`, the
+outcome in a sentence with why it is settled, and `Next`, the keys that act
+on it. `d` shows or hides the details: the facts `attempt` prints, the raw
+`events.jsonl` and `stderr` paths included. Last come the provider's final
+report, rendered like a record body, and the activity, newest first. From
+100 columns they sit side by side, the report on the left. Each activity row
+has the event's local time where the provider gave one, and consecutive
+identical rows are one row with a count, such as `system: thinking_tokens
+(×14)`.
+
+The activity and the figures come from one bounded read of the last 1 MiB of
+the events, so a flood of output costs the same. A count from a window that
+began inside the file is shown as `≥N`, and an unknown figure as `–`, never
+as 0. Tokens are the result event's totals once the run has ended; while it
+runs, only the input tokens are summed, since Claude reports a message's
+output before writing it. The figures are provider-neutral fields
+(`attempt.Metrics`) that the reader of Claude's stream fills.
+
+The outcome is derived, never written: `running`, `orphaned`,
+`interrupted`, or for a finished attempt a `candidate ready` (only when the
+attempt ended with its record committed in review with a candidate, which
+the owner records at exit), `stopped`, `failed` (no result event, an error
+result or a nonzero exit), `waiting on question` (the work's latest attempt,
+while an open question blocks it) or `ended without a handoff`. A clean exit
+alone is never ready, and a record that says review without being committed
+is reported as such. `x` asks, then stops a running or orphaned attempt as
+`stop` does, keeping its partial work, and `o` opens its work record. The
+board only reads the attempts' files: quitting leaves an attempt running,
+and the next session shows the same one. While one runs, they are re-read
+every 2 s, a running card is tagged `● running`, and when one ends the board
+is re-read.
 
 ## Timeline
 
@@ -184,6 +215,7 @@ render is cached per record content and width.
 | `A` | board or any detail | List attempts: of that work, or every attempt |
 | `x` | attempts list or one attempt | Stop the attempt |
 | `o` | attempts list or one attempt | Open its work record |
+| `d` | one attempt | Show or hide its details |
 | `v` | detail | Open the record's versions |
 | `b` | board | Choose the current view or one checkout's board |
 | `s` | everywhere | List every branch and checkout read, with diagnostics; reachable while a banner marks an incomplete result |

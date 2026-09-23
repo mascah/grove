@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -99,6 +100,7 @@ func openRuns(t *testing.T, f *fake, r *runs, w, h int) *Model {
 	t.Helper()
 	m := New(t.Context(), "/repo/.", r.add(f.backend()))
 	m.every = time.Millisecond
+	m.clock = func() time.Time { return time.Date(2026, 9, 23, 3, 0, 0, 0, time.UTC) }
 	cmd := m.Init() // the runtime's order: Init, then the size
 	m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	settle(m, cmd)
@@ -409,27 +411,38 @@ func TestAttemptScreensReconnectAndStop(t *testing.T) {
 	f := &fake{res: fx.twoBranches()}
 	r := &runs{}
 	running := view("W-002", "20260923T010000Z", attempt.Running, nil)
-	older := view("W-001", "20260922T010000Z", attempt.Finished, &attempt.Result{ExitCode: 0, Events: attempt.Events{Result: &attempt.Final{Subtype: "success", CostUSD: 0.5}}, Record: &attempt.State{Status: "review", Candidate: "abcdef1"}})
+	older := view("W-001", "20260922T010000Z", attempt.Finished, &attempt.Result{Finished: time.Date(2026, 9, 22, 2, 0, 0, 0, time.UTC), ExitCode: 0, Events: attempt.Events{Result: &attempt.Final{Subtype: "success", CostUSD: 0.5}}, Record: &attempt.State{Status: "review", Candidate: "abcdef1"}})
 	r.set(running, older)
-	r.activity = attempt.Activity{Lines: []string{"started: model m", "tool: Bash go test", "evil \x1b]0;title\a text"}, Report: "## Done\n\nIt \x1b[31mworks."}
+	r.activity = attempt.Activity{Entries: []attempt.Entry{{Kind: "start", Text: "started: model m"}, {Kind: "tool", Text: "Bash go test", Time: time.Date(2026, 9, 23, 1, 2, 3, 0, time.UTC)}, {Kind: "notice", Text: "system: thinking_tokens", Count: 14}, {Kind: "text", Text: "evil \x1b]0;title\a text"}}, Report: "## Done\n\nIt \x1b[31mworks."}
 	m := openRuns(t, f, r, 120, 36) // a new session: the attempts are the same files
 	if !m.ticking {
 		t.Fatal("a running attempt schedules the next read")
 	}
 	settle(m, press(m, "A"))
 	s := plain(m)
-	for _, want := range []string{"Attempts in this repository  (2)", "> W-002.20260923T010000Z  running  worktree-W-002", "W-001.20260922T010000Z  candidate ready: W-001 in review on worktree-W-001 with candidate abcdef1  $0.50"} {
+	// W-001 is active on the board: its candidate had feedback, so the
+	// next attempt is the owner's to launch.
+	for _, want := range []string{"Attempts in this repository (2) · 1 need you · 1 running · 0 settled", " Needs you", "> W-001  Inspect records", "feedback given: R again      25h ago", "  W-002  Create records", "running                    2h so far"} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("the list lacks %q:\n%s", want, s)
 		}
 	}
+	press(m, "down")
 	settle(m, press(m, "enter"))
 	s = plain(m)
-	for _, want := range []string{"Attempt W-002.20260923T010000Z of W-002", "Outcome: running", "Bounds: budget 2 USD, permission mode auto", "Final report", "## Done", `evil \x1b]0;title\a text`, "Activity, newest first (3)"} {
+	for _, want := range []string{"W-002  Create records", "● running  2h so far", "Attempt  W-002.20260923T010000Z", "Budget   spend known at the end, of $2 · permission mode auto", "Model    not reported yet", "State  Running.", "Next   x stops it", "d shows them", "Final report", "## Done", `evil \x1b]0;title\a text`, "Activity, newest first (4)", time.Date(2026, 9, 23, 1, 2, 3, 0, time.UTC).Local().Format("15:04:05") + " › Bash go test", "         · system: thinking_tokens (×14)"} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("the attempt lacks %q:\n%s", want, s)
 		}
 	}
+	if strings.Contains(s, "Bounds:") {
+		t.Fatal("the details are folded")
+	}
+	press(m, "d")
+	if s := plain(m); !strings.Contains(s, "Bounds: budget 2 USD, permission mode auto") || !strings.Contains(s, "d hides them") {
+		t.Fatalf("d shows the details:\n%s", s)
+	}
+	press(m, "d")
 	if raw := m.render(); strings.Contains(raw, "\x1b]0;") || strings.Contains(raw, "\x1b[31mworks") {
 		t.Fatal("provider text reached the terminal unescaped")
 	}
@@ -464,7 +477,7 @@ func TestAttemptScreensReconnectAndStop(t *testing.T) {
 	_, cmd := m.Update(attemptTick{})
 	settle(m, cmd)
 	settle(m, early) // its reply is outdated by the restart
-	if m.gen == gen || f.inspects != inspects+2 || m.pending != "" || m.ticking || !strings.Contains(plain(m), "Outcome: stopped (exit 130)") {
+	if m.gen == gen || f.inspects != inspects+2 || m.pending != "" || m.ticking || !strings.Contains(plain(m), "State  Stopped (exit 130).") || !strings.Contains(plain(m), "✓ stopped by x") {
 		t.Fatalf("gen %d→%d inspects %d→%d pending %q ticking %v\n%s", gen, m.gen, inspects, f.inspects, m.pending, m.ticking, plain(m))
 	}
 	press(m, "x")
@@ -472,11 +485,11 @@ func TestAttemptScreensReconnectAndStop(t *testing.T) {
 		t.Fatal(plain(m))
 	}
 	press(m, "o")
-	if m.screen != detailScreen || m.openID() != "W-002" || !strings.Contains(plain(m), "Attempts: 1, latest W-002.20260923T010000Z stopped (exit 130) · A lists them") {
+	if m.screen != detailScreen || m.openID() != "W-002" || !strings.Contains(plain(m), "Attempts 1 · latest: stopped by x, 2h ago · A lists them") {
 		t.Fatalf("o opens the work's record:\n%s", plain(m))
 	}
 	press(m, "A")
-	if s := plain(m); !strings.Contains(s, "Attempts of W-002  (1)") || strings.Contains(s, "W-001.") {
+	if s := plain(m); !strings.Contains(s, "Attempts of W-002 (1)") || strings.Contains(s, "W-001.") {
 		t.Fatalf("A on a work lists its attempts:\n%s", s)
 	}
 	press(m, "esc")
@@ -497,10 +510,12 @@ func TestAttemptActivityIsBounded(t *testing.T) {
 	r := &runs{}
 	r.set(view("W-002", "20260923T010000Z", attempt.Running, nil))
 	for i := range 200 {
-		r.activity.Lines = append(r.activity.Lines, fmt.Sprintf("tool: Bash %s %d", strings.Repeat("長", 80), i))
+		r.activity.Entries = append(r.activity.Entries, attempt.Entry{Kind: "tool", Text: fmt.Sprintf("Bash %s %d", strings.Repeat("長", 80), i), Count: (i + 1) % 3})
 	}
 	r.activity.Cut = true
-	for _, w := range []int{40, 80, 160} {
+	r.activity.Report = strings.Repeat("A long report line with `code` and **bold** text that wraps.\n\n", 40)
+	r.activity.Metrics = attempt.Metrics{Turns: 205, OutputTokens: 93069, Context: 412345, Window: 1000000, Subagents: 3, Tools: 88}
+	for _, w := range []int{40, 80, 99, 100, 160} {
 		m := openRuns(t, &fake{res: fx.twoBranches()}, r, w, 20)
 		m.openAttempt("W-002.20260923T010000Z")
 		settle(m, m.wantAttempts()) // opened directly, so the read is asked for here
@@ -513,19 +528,125 @@ func TestAttemptActivityIsBounded(t *testing.T) {
 				t.Fatalf("width %d: a row of %d cells: %q", w, ansi.StringWidth(row), ansi.Strip(row))
 			}
 		}
+		if s := plain(m); w == 160 && (!strings.Contains(s, "Turns ≥205   Tokens ≥0 in · – out   Context 412k of 1M ▰▰▰▰▱▱▱▱▱▱ 41%   Subagents ≥3") || !strings.Contains(s, "│          › Bash") || !strings.Contains(s, "(×2)")) {
+			t.Fatalf("the metrics and the timeline beside the report:\n%s", s)
+		}
 		press(m, "pgdown", "pgdown", "pgdown")
 		if m.scroll == 0 {
 			t.Fatal("PgDn scrolls")
 		}
-		for range 50 {
-			press(m, "pgdown")
-		}
+		m.scroll = 1 << 20 // the end, as PgDn would reach it, without paging there
+		m.clampScroll()
 		if s := plain(m); !strings.Contains(s, "earlier events are in") {
 			t.Fatalf("width %d: the end says where the rest is:\n%s", w, s)
 		}
 		press(m, "esc")
 		if m.screen != boardScreen {
 			t.Fatal("Esc leaves")
+		}
+	}
+}
+
+// Where each attempt stands now (G-117): only the latest attempt of work
+// still proposed, active or in review needs the owner, and an orphan always
+// does; every settled attempt says why.
+func TestAttemptStandings(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	res := fx.twoBranches()
+	add := func(id, title, status, candidate string, blocks ...string) {
+		v := version(fx.cMain, id, title, status)
+		v.Record.Candidate, v.Record.Blocks = candidate, blocks
+		res.Groups = append(res.Groups, versions.Group{ID: id, Versions: []versions.Version{v}})
+	}
+	add("W-101", "Judge me", "review", "c0ffee12")
+	add("W-102", "Merged", "done", "c0ffee12")
+	add("W-103", "Moved on", "done", "d00d")
+	add("W-104", "Retried", "active", "")
+	add("W-105", "Given feedback", "active", "c0ffee12")
+	add("W-106", "Dropped", "abandoned", "")
+	add("Q-002", "Red or blue?", "open", "", "W-107")
+	add("W-107", "Asked", "active", "")
+	m := openRuns(t, &fake{res: res}, &runs{}, 120, 36)
+	ok := &attempt.Final{Subtype: "success"}
+	ready := func(id, stamp string) attempt.View {
+		return view(id, stamp, attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12"}})
+	}
+	failed := view("W-104", "1", attempt.Finished, &attempt.Result{ExitCode: 1, Events: attempt.Events{Result: &attempt.Final{Subtype: "error_max_budget_usd", IsError: true}}})
+	cases := []struct {
+		v                  attempt.View
+		group              int
+		short, state, next string
+	}{
+		{view("W-002", "1", attempt.Running, nil), runningNow, "running", "Running.", "x stops it; the report arrives when it ends"},
+		{view("W-002", "0", attempt.Orphaned, nil), needsYou, "orphaned: x stops it", "Orphaned: its owner is gone and the provider still runs (x stops it).", "x stops it"},
+		{ready("W-101", "1"), needsYou, "judge candidate c0ffee1", "Candidate ready: W-101 in review on worktree-W-101 with candidate c0ffee1.", "o opens W-101: a approves, f gives feedback"},
+		{ready("W-102", "1"), settled, "done: candidate c0ffee1", "Candidate ready: W-102 in review on worktree-W-102 with candidate c0ffee1. Candidate c0ffee1 was integrated: W-102 is done.", ""},
+		{ready("W-103", "1"), settled, "candidate c0ffee1, superseded", "Candidate ready: W-103 in review on worktree-W-103 with candidate c0ffee1. W-103 has moved on: it is done with candidate d00d.", ""},
+		{failed, settled, "failed: budget exhausted, superseded", "Failed: error_max_budget_usd (exit 1). A later attempt of W-104 followed this one.", ""},
+		{view("W-104", "2", attempt.Interrupted, nil), needsYou, "interrupted", "Interrupted: the owner and the provider are gone without a result.", "d shows the details and the raw log; R on W-104 launches again"},
+		{ready("W-105", "1"), needsYou, "feedback given: R again", "Candidate ready: W-105 in review on worktree-W-105 with candidate c0ffee1. W-105 is active now: it had feedback.", "o opens W-105: R launches the next attempt"},
+		{view("W-106", "1", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "active"}}), settled, "work abandoned since", "Ended without a handoff: W-106 is active on worktree-W-106, with no candidate. W-106 is abandoned now; nothing needs you.", ""},
+		{view("W-107", "1", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "active"}}), needsYou, "answer question Q-002", "Waiting on question Q-002 (Red or blue?).", "o opens W-107, whose detail lists the question"},
+		{view("W-107", "0", attempt.Finished, &attempt.Result{ExitCode: 130, Stopped: true}), settled, "stopped by x", "Stopped (exit 130).", ""},
+		{view("W-001", "1", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "active"}}), needsYou, "ended, no handoff", "Ended without a handoff: W-001 is active on worktree-W-001, with no candidate.", "o opens W-001; the report says why"},
+		{ready("W-999", "1"), needsYou, "judge candidate c0ffee1", "Candidate ready: W-999 in review on worktree-W-999 with candidate c0ffee1.", "o opens W-999: a approves, f gives feedback"},
+	}
+	for _, c := range cases {
+		m.attempts = append(m.attempts, c.v)
+	}
+	// Newest first: each work's second attempt here is its latest.
+	slices.SortStableFunc(m.attempts, func(a, b attempt.View) int { return strings.Compare(b.Launch.Attempt, a.Launch.Attempt) })
+	for _, c := range cases {
+		got := m.standingOf(&c.v)
+		if got != (standing{c.group, c.short, c.state, c.next}) {
+			t.Errorf("%s:\n got %+v\nwant %+v", c.v.Launch.Attempt, got, standing{c.group, c.short, c.state, c.next})
+		}
+	}
+	if got := m.titleOf("W-999"); got != "(title unread)" {
+		t.Fatal(got)
+	}
+}
+
+// Two hundred attempts with long titles: every row keeps its width, the
+// title goes before the state is cut, and the cursor stays in view.
+func TestAttemptListFits(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	res := fx.twoBranches()
+	for _, g := range res.Groups {
+		for i := range g.Versions {
+			g.Versions[i].Record.Title = strings.Repeat("A very long title 長 ", 10)
+		}
+	}
+	r := &runs{}
+	var views []attempt.View
+	for i := range 200 {
+		views = append(views, view("W-002", fmt.Sprintf("2026092%dT%06dZ", i%2, 200-i), attempt.Finished, &attempt.Result{ExitCode: 130, Stopped: true}))
+	}
+	r.set(views...)
+	for _, size := range [][2]int{{40, 10}, {59, 24}, {60, 24}, {80, 24}, {160, 48}} {
+		w, h := size[0], size[1]
+		m := openRuns(t, &fake{res: res}, r, w, h)
+		settle(m, press(m, "A"))
+		for range 150 {
+			press(m, "down")
+		}
+		rows := strings.Split(m.render(), "\n")
+		if len(rows) != h {
+			t.Fatalf("%dx%d: %d rows", w, h, len(rows))
+		}
+		for _, row := range rows {
+			if ansi.StringWidth(row) != w {
+				t.Fatalf("%dx%d: a row of %d cells: %q", w, h, ansi.StringWidth(row), ansi.Strip(row))
+			}
+		}
+		s := plain(m)
+		if !strings.Contains(s, "> W-002") || !strings.Contains(s, "stopped by x") {
+			t.Fatalf("%dx%d: the cursor's row and its state show:\n%s", w, h, s)
+		}
+		if strings.Contains(s, "A very long") != (w >= 60) {
+			t.Fatalf("%dx%d: the title shows from 60 columns:\n%s", w, h, s)
 		}
 	}
 }

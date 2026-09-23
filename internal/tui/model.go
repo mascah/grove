@@ -237,11 +237,13 @@ type Model struct {
 	runID, runErr   string // the attempt screen's attempt and its last read's failure
 	run             *attempt.View
 	activity        attempt.Activity
-	listBack        screen // where Esc leaves the attempts screen for
-	runBack         screen // and the attempt screen
-	resultBack      screen // the screen an action started from
-	workBack        screen // where Esc leaves a record o opened from an attempt
-	workDepth       int    // that record's place on the stack, 0 when none
+	facts           bool             // the attempt screen shows its details
+	clock           func() time.Time // now, for how long attempts have run
+	listBack        screen           // where Esc leaves the attempts screen for
+	runBack         screen           // and the attempt screen
+	resultBack      screen           // the screen an action started from
+	workBack        screen           // where Esc leaves a record o opened from an attempt
+	workDepth       int              // that record's place on the stack, 0 when none
 
 	// Workspace is the explicitly selected, freshly resolved result, if any.
 	Workspace *versions.Workspace
@@ -249,7 +251,7 @@ type Model struct {
 
 // New returns a model that starts by inspecting every record of root.
 func New(ctx context.Context, root string, backend Backend) *Model {
-	return &Model{ctx: ctx, root: root, backend: backend, attemptsStale: true, every: pollEvery}
+	return &Model{ctx: ctx, root: root, backend: backend, attemptsStale: true, every: pollEvery, clock: time.Now}
 }
 
 func (m *Model) Init() tea.Cmd { return tea.Batch(m.inspect(), m.wantAttempts()) }

@@ -255,8 +255,8 @@ func (m *Model) render() string {
 			"↑↓  Enter show  x stop  o record  Esc back  q quit")
 	case m.screen == attemptScreen:
 		rows, hints = m.scrolled(m.attemptRows(w), body, w), pick(w,
-			"↑/↓ PgUp/PgDn scroll   x stop it   o open its record   r refresh   Esc back   q quit",
-			"↑↓ scroll  x stop  o record  Esc back  q quit")
+			"↑/↓ PgUp/PgDn scroll   d details   x stop it   o open its record   r refresh   Esc back   q quit",
+			"↑↓ scroll  d details  x stop  o work  Esc back  q quit")
 	default:
 		shelf := "elsewhere"
 		if m.current() {
