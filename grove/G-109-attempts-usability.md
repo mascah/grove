@@ -2,10 +2,11 @@
 id: "G-109"
 type: work
 title: "Make Attempts easy to scan and act on"
-status: active
+status: review
 created: "2026-09-23T16:05:07Z"
-updated: "2026-09-23T20:10:09Z"
+updated: "2026-09-23T20:35:55Z"
 relates_to: ["G-045", "G-046", "G-107", "G-110"]
+candidate: "2235092fdbea4af7e30ec43b811996d92f01e5d0"
 ---
 
 ## Outcome
