@@ -4,9 +4,10 @@ type: work
 title: "Make Attempts easy to scan and act on"
 status: review
 created: "2026-09-23T16:05:07Z"
-updated: "2026-09-23T20:35:55Z"
+updated: "2026-09-23T22:32:44Z"
 relates_to: ["G-045", "G-046", "G-107", "G-110"]
 candidate: "2235092fdbea4af7e30ec43b811996d92f01e5d0"
+approved: "2235092fdbea4af7e30ec43b811996d92f01e5d0"
 ---
 
 ## Outcome
@@ -235,3 +236,5 @@ and in the `main` checkout:
 ```sh
 go run ./cmd/grove integrate G-109
 ```
+
+Verdict on candidate 2235092, 2026-09-23: good pass, much more usable now.
