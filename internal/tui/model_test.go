@@ -107,6 +107,14 @@ type fake struct {
 	// history, when set, makes the backend offer History and logs its calls.
 	history   func(ctx context.Context, commit, path string) ([]versions.Commit, error)
 	histories []string
+	// changes and diff, when set, offer the review reads and log their calls;
+	// the actions log theirs in acts and return facts, or fail.
+	changes func(target, candidate, tip, path string) (*versions.Changes, error)
+	diff    func(from, to, path string) (string, error)
+	actions bool
+	fail    error
+	reads   []string
+	acts    []string
 }
 
 func (f *fake) backend() Backend {
@@ -119,7 +127,7 @@ func (f *fake) backend() Backend {
 			return f.history(ctx, commit, path)
 		}
 	}
-	return Backend{
+	b := Backend{
 		History: history,
 		Inspect: func(ctx context.Context, root, id string) (*versions.Result, error) {
 			f.mu.Lock()
@@ -137,6 +145,38 @@ func (f *fake) backend() Backend {
 			return f.ws, nil
 		},
 	}
+	log := func(list *[]string, entry string) {
+		f.mu.Lock()
+		*list = append(*list, entry)
+		f.mu.Unlock()
+	}
+	if f.changes != nil {
+		b.Changes = func(_ context.Context, root, target, candidate, tip, path string) (*versions.Changes, error) {
+			log(&f.reads, "changes "+target+" "+candidate+" "+tip[:1]+" "+path)
+			return f.changes(target, candidate, tip, path)
+		}
+	}
+	if f.diff != nil {
+		b.Diff = func(_ context.Context, root, from, to, path string) (string, error) {
+			log(&f.reads, "diff "+from+" "+to+" "+path)
+			return f.diff(from, to, path)
+		}
+	}
+	if f.actions {
+		b.Approve = func(_ context.Context, root, id, verdict string) ([]string, error) {
+			log(&f.acts, "approve "+root+" "+id+" "+verdict)
+			return []string{"approved: " + id + " in " + root}, f.fail
+		}
+		b.Feedback = func(_ context.Context, root, id, text string) ([]string, error) {
+			log(&f.acts, "feedback "+root+" "+id+" "+text)
+			return []string{"feedback: " + id + " is active again in " + root, "next: /grove-work " + id}, f.fail
+		}
+		b.Integrate = func(_ context.Context, root, id string, cleanup bool) ([]string, error) {
+			log(&f.acts, fmt.Sprintf("integrate %s %s cleanup=%v", root, id, cleanup))
+			return []string{"approval: found", "merge: fast-forward"}, f.fail
+		}
+	}
+	return b
 }
 
 func keyMsg(k string) tea.KeyPressMsg {

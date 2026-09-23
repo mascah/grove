@@ -29,8 +29,9 @@ assignment sets `active` when implementation starts (step 5) and ends by
 handing a candidate commit into `review` (step 8). Only the integrator writes
 `done`, on the target after the merge, since Done means accepted and merged.
 The CLI refuses it where the candidate is not already in HEAD, which keeps a
-checkout without the code from closing the work; it cannot tell the target
-from the work branch, so writing done there is this guide's rule. Preparation,
+checkout without the code from closing the work, and where the checkout is
+on a branch other than the configured target; `grove integrate` writes it
+after the merge it performs. Preparation,
 independent review, waiting and a failed attempt are facts recorded inside
 `active`, never statuses. A roadmap plan is not an assignment of all its
 members.
@@ -320,9 +321,9 @@ candidate to human judgment:
    changed behavior against each acceptance item; the decisions taken and
    why; the verification commands, their results and the commit they ran at;
    each review record with its findings and their dispositions; unresolved
-   issues and limits; and the integrator's next action as runnable commands,
-   including the edit that quotes the verdict in the record before `done`,
-   since the integrator runs them as given.
+   issues and limits; and the integrator's next action as runnable commands
+   (`grove approve` in this checkout, then `grove integrate` in the
+   target's), since the integrator runs them as given.
 2. Set the status with that commit as the candidate, and commit that change
    alone, so `git diff --stat CANDIDATE HEAD` shows one file:
    `grove update G-030 --expect REVISION --set status=review --set candidate=COMMIT`.
@@ -354,22 +355,27 @@ only the record) and that each review's `examined` is the candidate, or an
 earlier commit whose difference the handoff explains. Then record one honest
 disposition:
 
-- **Feedback that needs implementation:** write it into Next and set
-  `status=active` on the branch. Earlier evidence and reviews stay; the next
-  attempt produces a new candidate.
-- **Approval and integration:** merge the branch into the target the way the
-  repository's instructions say, then in the target's checkout run
-  `grove update G-030 --expect REVISION --set status=done`, quoting the
-  verdict in the record, and commit there (at a shell, `grove update G-030
-  --set status=done --commit` after the verdict edit does both). `update` refuses a candidate that
-  HEAD does not contain; a squash or rebase that landed another commit names
-  it with `--set candidate=COMMIT` in the same call.
+- **Feedback that needs implementation:** `grove feedback G-030 "TEXT"` in
+  the branch's clean checkout appends the feedback to the record, sets
+  `status=active`, keeps the candidate and drops any approval, and prints
+  where to continue. Earlier evidence and reviews stay; the next attempt
+  produces a new candidate.
+- **Approval and integration:** `grove approve G-030 "VERDICT"` in the
+  branch's clean checkout binds the verdict to the candidate, then `grove
+  integrate G-030` in the target's clean checkout merges the branch (a plain
+  merge; a conflict is aborted and refused with the target unchanged),
+  writes `done` there and commits it alone, and with `--cleanup` removes the
+  worktree and branch where Git agrees. It prints approval, merge, done and
+  cleanup as separate facts. The board's detail of the record offers the
+  same as `a`, `f` and `i`. A squash or rebase that lands another commit is a
+  manual merge followed by `grove update G-030 --set status=done --set
+  candidate=COMMIT --commit` on the target.
 - **Rejection:** `status=abandoned`, with the decision and its reasons in the
   record or a decision record it links.
 
-A further commit on the branch after the handoff is a new candidate: set
-`candidate` to it and reconsider before any approval, since approval is of
-one commit. A `done` record without a candidate predates this rule and claims
+A further commit on the branch after the handoff is a new candidate, which
+`approve` refuses until `candidate` names it: set it and reconsider, since
+approval is of one commit. A `done` record without a candidate predates this rule and claims
 only branch-local completion; delivery of such a prerequisite is established
 by ancestry, as step 2 says.
 

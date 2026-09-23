@@ -209,11 +209,21 @@ func (m *Model) render() string {
 	switch {
 	case m.res == nil:
 		rows, hints = m.emptyBody(w), "r retry   q quit"
+	case m.screen == detailScreen && m.group() != nil && m.reviewable():
+		rows, hints = m.detailBody(w, body), pick(w,
+			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   a approve   f feedback   i integrate   v versions   s   r   Esc back   q quit",
+			"↑↓ PgUp/PgDn  Tab pane  Enter open  a approve  f feedback  i integrate  v  Esc  q",
+			"↑↓  Tab  Enter  a  f  i  v  Esc  q quit")
 	case m.screen == detailScreen && m.group() != nil:
 		rows, hints = m.detailBody(w, body), pick(w,
-			"↑/↓ PgUp/PgDn scroll or move   Tab content, linked, timeline   Enter open   v versions and places   s sources   r refresh   Esc back   q quit",
+			"↑/↓ PgUp/PgDn scroll or move   Tab content, linked, changes, timeline   Enter open   v versions and places   s sources   r refresh   Esc back   q quit",
 			"↑↓ PgUp/PgDn  Tab pane  Enter open  v versions  s  r  Esc back  q quit",
 			"↑↓  Tab  Enter open  v  Esc back  q quit")
+	case m.screen == resultScreen && m.result != nil:
+		rows, hints = m.scrolled(m.resultRows(w), body, w), pick(w, "↑/↓ PgUp/PgDn scroll   Esc back to the record   q quit", "↑↓ scroll  Esc back  q quit")
+		if m.pending == "inspect" {
+			hints = pick(w, "↑/↓ PgUp/PgDn scroll   Esc waits for the re-read   q quit", "↑↓ scroll  Esc waits  q quit")
+		}
 	case m.screen == versionsScreen && m.group() != nil:
 		rows, hints = m.versionsBody(w, body), pick(w,
 			"↑/↓ rows   Enter list places, or select a workspace   Tab details   PgUp/PgDn scroll   s what was read   r refresh   Esc board   q quit",
@@ -237,8 +247,12 @@ func (m *Model) render() string {
 			"←→↑↓  Enter open  / search  a  Tab "+shelf+"  b  s  r  q quit",
 			"Enter open  / a Tab b s r  q quit")
 	}
+	last := line(hints, w)
+	if m.prompt != nil {
+		last = m.promptRow(w)
+	}
 	out := append([]string{bold(line(m.header(), w)), line(m.banner(), w)}, fit(rows, body, w)...)
-	return strings.Join(append(out, line(hints, w)), "\n")
+	return strings.Join(append(out, last), "\n")
 }
 
 func (m *Model) header() string {
@@ -281,6 +295,8 @@ func (m *Model) banner() string {
 		parts = append(parts, "Reading branches and checkouts…")
 	case "resolve":
 		parts = append(parts, "Resolving the selected workspace…")
+	case "act":
+		parts = append(parts, actingText(m.acting))
 	}
 	if m.notice != "" {
 		parts = append(parts, m.notice)
@@ -746,6 +762,8 @@ func (m *Model) clampScroll() {
 	case m.res == nil:
 	case m.screen == sourcesScreen:
 		rows, n = len(m.sourceRows(m.width)), m.height-3
+	case m.screen == resultScreen && m.result != nil:
+		rows, n = len(m.resultRows(m.width)), m.height-3
 	case m.screen == versionsScreen:
 		w := m.width
 		if w >= wideWidth {

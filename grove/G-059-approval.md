@@ -18,9 +18,10 @@ must be reconsidered.
 
 Not a [review](G-058-review.md), which informs it; not passing checks, which
 cannot supply judgment; and not [integration](G-060-integration.md), which
-follows it. Grove has no approval field: the owner's verdict is quoted in the
-work record, naming the candidate, and the record reaches done only with that
-candidate merged.
+follows it. Since G-044, `grove approve` records it: the work record's
+`approved` field names the candidate, the verdict is appended to the body,
+and `check` rejects an approval of any other commit, so a changed candidate
+needs its own. `grove feedback` withdraws it and returns the work to active.
 
 ## Relationships
 

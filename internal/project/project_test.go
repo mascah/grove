@@ -469,6 +469,7 @@ func TestRecordProblems(t *testing.T) {
 func TestReviewLifecycleAndCandidate(t *testing.T) {
 	t.Parallel()
 	commit := "candidate: \"0123456789abcdef0123456789abcdef01234567\"\n"
+	approved := "approved: \"0123456789abcdef0123456789abcdef01234567\"\n"
 	for _, tc := range []struct{ name, source, want string }{
 		{"review needs a candidate", typed("G-002", "work", "review", ""), "grove/G-002.md: candidate: required while status is review"},
 		{"review with one", typed("G-002", "work", "review", commit), ""},
@@ -478,6 +479,13 @@ func TestReviewLifecycleAndCandidate(t *testing.T) {
 		{"unquoted", typed("G-002", "work", "active", "candidate: 1234567\n"), "candidate: expected a nonempty string"},
 		{"only on work", typed("G-002", "plan", "current", commit), "candidate: unknown field"},
 		{"review is a work status only", typed("G-002", "plan", "review", ""), "status: unsupported lifecycle value for plan"},
+		{"approved in review", typed("G-002", "work", "review", commit+approved), ""},
+		{"approved in done", typed("G-002", "work", "done", commit+approved), ""},
+		{"approved must name the candidate", typed("G-002", "work", "review", "candidate: \"abcdef0\"\n"+approved), "approved: must name the candidate"},
+		{"approved needs a candidate", typed("G-002", "work", "done", approved), "approved: must name the candidate"},
+		{"approved before review", typed("G-002", "work", "active", commit+approved), "approved: applies only while status is review or done"},
+		{"approved not a commit", typed("G-002", "work", "review", commit+"approved: \"HEAD\"\n"), "approved: expected a quoted Git commit"},
+		{"approved only on work", typed("G-002", "review", "current", approved), "approved: unknown field"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -489,6 +497,9 @@ func TestReviewLifecycleAndCandidate(t *testing.T) {
 			}
 			if tc.want == "" && strings.Contains(tc.source, "candidate:") && p.Records[0].Candidate != "0123456789abcdef0123456789abcdef01234567" {
 				t.Fatalf("candidate not read: %+v", p.Records[0])
+			}
+			if tc.want == "" && strings.Contains(tc.source, "approved:") && p.Records[0].Approved != p.Records[0].Candidate {
+				t.Fatalf("approved not read: %+v", p.Records[0])
 			}
 		})
 	}

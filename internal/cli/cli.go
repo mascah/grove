@@ -19,6 +19,7 @@ import (
 	"github.com/mascah/grove"
 	"github.com/mascah/grove/internal/create"
 	"github.com/mascah/grove/internal/handoff"
+	"github.com/mascah/grove/internal/integrate"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/update"
 	"github.com/mascah/grove/internal/versions"
@@ -30,6 +31,7 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove guide work|shape | version\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID [--expect REVISION] (--set FIELD=VALUE | --unset FIELD)... [--commit]\n" +
+	"       grove [--project DIR] approve ID VERDICT | feedback ID TEXT | integrate ID [--cleanup]\n" +
 	"       grove [--project DIR] convert PATH --type TYPE --title TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
 	"       grove [--project DIR] workspace --source SELECTOR [--json]\n" +
@@ -71,6 +73,21 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             as is work's candidate, required in review and, reachable from HEAD, for done.\n" +
 	"             update accepts type=TYPE with whatever else the new type requires in the\n" +
 	"             same update; the ID and path never change.\n" +
+	"  approve    Record the owner's verdict on a work record in review, in a checkout of the\n" +
+	"             branch that holds it: sets approved to the candidate, appends the verdict\n" +
+	"             to the body, and commits that file alone. Refused where HEAD lacks the\n" +
+	"             candidate, the record has uncommitted changes, or a commit after the\n" +
+	"             candidate changed another file (that tip is a new candidate).\n" +
+	"  feedback   Return a work record in review to active with the text appended to the body,\n" +
+	"             committed alone in that same checkout; an approval is unset and the\n" +
+	"             candidate kept, so earlier reviews still compare to it. Prints where to\n" +
+	"             continue. Both print what update prints.\n" +
+	"  integrate  Merge the one branch holding an approved candidate of ID into the target\n" +
+	"             branch grove.yaml names, in that target's clean checkout, and mark ID done\n" +
+	"             there, committed alone. Prints one line per fact as it holds: approval,\n" +
+	"             merge (fast-forward or merge commit; a conflict is aborted and refused),\n" +
+	"             done, and with --cleanup the worktree and branch removed, or kept with\n" +
+	"             Git's reason. Every refusal comes before the merge; nothing undoes one.\n" +
 	"  convert    The one deliberate identity change. A Markdown document outside the record\n" +
 	"             root becomes a new record with the document as its body and formerly: PATH;\n" +
 	"             the original is left in place. Prints {from, from_path, id, path}. Bodies\n" +
@@ -148,14 +165,28 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		return runWorkspace(p.Root, a, out, errOut)
 	case "context":
 		return runContext(p.Root, a, out, errOut)
-	case "update":
-		res, err := update.Apply(p.Root, a.request, time.Now(), nil)
+	case "update", "approve", "feedback":
+		var res update.Result
+		var err error
+		switch a.command {
+		case "update":
+			res, err = update.Apply(p.Root, a.request, time.Now(), nil)
+		case "approve":
+			res, err = update.Approve(p.Root, a.id, a.title, time.Now())
+		default:
+			res, err = update.Feedback(p.Root, a.id, a.title, time.Now())
+		}
 		if err != nil {
 			report(errOut, err)
 			return 1
 		}
+		if a.command == "feedback" {
+			// The actionable continuation: the work is active again here.
+			branch, _ := update.Branch(p.Root)
+			fmt.Fprintf(errOut, "Next: %s is active on branch %s in %s; continue there with /grove-work %s\n", res.ID, visible(cmp.Or(branch, "(detached HEAD)")), visible(p.Root), res.ID)
+		}
 		object := map[string]any{"id": res.ID, "path": res.Path, "revision": res.Revision, "changed": res.Changed}
-		if a.request.Commit {
+		if a.request.Commit || a.command != "update" { // approve and feedback always commit
 			object["commit"] = nil // a no-op commits nothing
 			if res.Commit != "" {
 				object["commit"] = res.Commit
@@ -171,6 +202,15 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 				committed = "; commit " + res.Commit
 			}
 			fmt.Fprintf(errOut, "grove: write output: %s (%s %s; revision %s%s)\n", err, state, visible(res.Path), res.Revision, committed)
+			return 1
+		}
+		return 0
+	case "integrate":
+		err := integrate.Run(integrate.Request{Root: p.Root, ID: a.id, Cwd: cwd, Cleanup: a.cleanup}, time.Now(), func(fact string) {
+			fmt.Fprintln(out, visible(fact))
+		})
+		if err != nil {
+			report(errOut, err)
 			return 1
 		}
 		return 0
@@ -245,7 +285,7 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 
 type invocation struct {
 	project, command, id, kind, title, slug, source string
-	help, json                                      bool
+	help, json, cleanup                             bool
 	request                                         update.Request
 	convert                                         update.ConvertRequest
 	ids                                             []string // context
@@ -398,6 +438,13 @@ func parseArgs(args []string) (a invocation, err error) {
 			a.request.Commit = true
 			continue
 		}
+		if arg == "--cleanup" {
+			if a.cleanup {
+				return a, fmt.Errorf("--cleanup may only be supplied once")
+			}
+			a.cleanup = true
+			continue
+		}
 		matched := false
 		for _, o := range options {
 			var err error
@@ -440,6 +487,9 @@ func parseArgs(args []string) (a invocation, err error) {
 	if (a.request.Expect != "" || a.request.Commit || len(fields) != 0) && a.command != "update" {
 		return a, fmt.Errorf("--expect, --set, --unset, and --commit apply only to update")
 	}
+	if a.cleanup && a.command != "integrate" {
+		return a, fmt.Errorf("--cleanup applies only to integrate")
+	}
 	switch a.command {
 	case "":
 	case "list", "check", "brief", "init", "version":
@@ -452,9 +502,9 @@ func parseArgs(args []string) (a invocation, err error) {
 		} else {
 			a.id = positional[1]
 		}
-	case "show":
+	case "show", "integrate":
 		if len(positional) != 2 {
-			err = fmt.Errorf("show requires exactly one record ID")
+			err = fmt.Errorf("%s requires exactly one record ID", a.command)
 		} else {
 			a.id = positional[1]
 		}
@@ -488,6 +538,13 @@ func parseArgs(args []string) (a invocation, err error) {
 			err = fmt.Errorf("new requires a record type and a title")
 		} else {
 			a.kind, a.title = positional[1], positional[2]
+		}
+	case "approve", "feedback":
+		what := map[string]string{"approve": "the verdict", "feedback": "the feedback text"}[a.command]
+		if len(positional) != 3 {
+			err = fmt.Errorf("%s requires a record ID and %s", a.command, what)
+		} else {
+			a.id, a.title = positional[1], positional[2]
 		}
 	case "update":
 		switch {

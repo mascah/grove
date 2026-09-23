@@ -127,8 +127,9 @@ implemented:
   what the review looked at. Whether the reviewed content has changed since is
   a comparison a reader makes, not stored state, against the work's
   `candidate` ([Work lifecycle](#work-lifecycle)). A review record is
-  evidence, never approval; there is no disposition field and no `report`
-  type, since the work record's Evidence is the report.
+  evidence, never approval: approval is the work record's `approved` field
+  with the verdict appended to its body. There is no `report` type, since
+  the work record's Evidence is the report.
 - Optional `brief: PATH` in `grove.yaml` names the one project brief: a clean
   project-relative `.md` path without `..`, anywhere in the project, including
   directly under the record root (`grove/brief.md`). It is not a record and
@@ -416,8 +417,8 @@ timestamps, prints the root-relative path, and fails without deleting the file
 if the project no longer validates. It requires Git and never overwrites.
 `show <id> --json` prints one object with `id`, `path`, `revision`, and
 `source`. `update <id> [--expect REVISION] [--commit]` with `--set FIELD=VALUE` and
-`--unset FIELD` changes `title`, `status`, `relates_to`, work planning fields
-and `candidate`, question `blocks`, plan and review `work`, or review `examined` by editing only those frontmatter entries plus `updated`;
+`--unset FIELD` changes `title`, `status`, `relates_to`, work planning fields,
+`candidate` and `approved`, question `blocks`, plan and review `work`, or review `examined` by editing only those frontmatter entries plus `updated`;
 [G-009](../grove/G-009-update-records.md) owns its request, preservation,
 locking, and failure-reporting contract, and prints `{id, path, revision, changed}`.
 [G-079](../grove/G-079-update-a-record-by-hand-without.md) made `--expect`
@@ -547,18 +548,35 @@ implementation, independent review and waiting are activities inside
   and Next carry the handoff the work guide describes, so a new session can
   judge it without the originating chat. A failed or interrupted attempt does
   not enter Review: it stays `active` with a checkpoint.
-- **Approval** is the owner's verdict, quoted in the record and naming the
-  candidate. Feedback that asks for more implementation sets `active` with
-  the feedback in Next; nothing earlier is removed.
+- **Approval** is the owner's verdict on one candidate. `approve ID VERDICT`,
+  in a clean checkout of the branch that holds the record in review, sets
+  the optional work field **`approved`**, a quoted commit that must equal
+  `candidate` and is valid only while the status is `review` or `done`, and
+  appends `Verdict on candidate X, DATE: VERDICT` as the body's last
+  paragraph, committed alone. A changed candidate cannot inherit it: `check`
+  rejects an `approved` that differs from `candidate`, and `approve` refuses
+  a tip that changed any file but the record after the candidate. Feedback
+  that asks for more implementation, `feedback ID TEXT` in the same checkout,
+  sets `active`, unsets `approved`, keeps `candidate` so earlier reviews
+  still compare to it, and appends `Feedback on candidate X, DATE: TEXT`;
+  nothing earlier is removed.
 - **Done** means the candidate was accepted and merged into the target, for
   research and design deliverables too, since those are files. `update` writes
   `done`, or changes a done record's candidate, only when the candidate is an
   ancestor of the checkout's `HEAD` (`git merge-base --is-ancestor`), so a
   checkout that lacks the code cannot close the work; a record that stays
-  done cannot lose its candidate. The integrator writes done in the target's
-  checkout after the merge. A squash or rebase that lands a different commit
-  names that commit as the candidate in the same update. The check needs Git,
-  as `update` already does; `check` verifies the form only.
+  done cannot lose its candidate. With a configured `target`, `update` also
+  refuses `done` in a checkout on any other branch. `integrate ID` does the
+  integration: in a clean checkout of the target it finds the one branch
+  holding an approved candidate of ID, merges it with a plain `git merge`
+  (a conflict is aborted and refused before anything changes), writes done
+  there committed alone, and with `--cleanup` removes the branch's worktree
+  and the branch only where Git agrees and the worktree holds no ignored
+  files. The merge is of the commit the checks read, so a branch that moves
+  meanwhile is not merged. A squash or rebase that lands a
+  different commit is a manual merge that names that commit as the candidate
+  in the same `update`. The check needs Git, as `update` already does;
+  `check` verifies the form only.
 - **Historical Done.** A `done` work record without `candidate` was completed
   before this rule and asserts only that its outcome was achieved in that
   record's own branch context, as its Evidence says; it is not proof of a
@@ -567,13 +585,15 @@ implementation, independent review and waiting are activities inside
   is established by Git ancestry or observed behavior, as before.
 - Not enforced by software: the order of transitions; that Abandoned needs a
   human decision; that a review record exists before Review; that done is
-  written on the target and not on the work branch, where the candidate is
-  an ancestor too; and that a reopened record's candidate is moved to its new
-  commits before it is closed again, which the guide's `git diff --stat
-  CANDIDATE TIP` check catches. These are guide rules, since software cannot
-  verify a person or know the target, and the owner edits by hand. No `target`
-  configuration, approval field or automatic merge exists;
-  [G-044](../grove/G-044-review-integration.md) owns integration actions.
+  written on the target where `grove.yaml` names none; and that a reopened
+  record's candidate is moved to its new commits before it is closed again,
+  which the guide's `git diff --stat CANDIDATE TIP` check and `approve`'s
+  refusal catch. These are guide rules, since software cannot verify a
+  person, and the owner edits by hand.
+  [G-044](../grove/G-044-review-integration.md) added `approved`, `approve`,
+  `feedback` and `integrate` on 2026-09-23 with the plan
+  [G-098](../grove/G-098-g-044-review-integration-plan.md); the merge is
+  local, and every action is a person's command or key.
 
 Body organization is for readers. The first CLI should not infer readiness or
 completion from exact headings, populated prose, or checked boxes. Validate
@@ -590,8 +610,9 @@ branches and worktrees, and locates the existing checkout holding a selected
 version. The [integrated CLI review](../grove/G-022-integrated-cli-review.md) found
 contract defects that G-014/G-015/G-016 repair; their
 [evidence](../grove/G-028-repairs-review.md) lists the remaining limits.
-[G-017](../grove/G-017-terminal-picker.md) adds a read-only terminal board over
-these operations; it changes no schema and writes no record. Editing from an
+[G-017](../grove/G-017-terminal-picker.md) adds a terminal board over these
+operations; it changes no schema, and since G-044 writes a record only through
+the three review actions, each behind a prompt. Editing fields from an
 interactive view and automatic checkout creation are future investments.
 
 Plans and reviews are records. Report records, artifact

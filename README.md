@@ -6,7 +6,8 @@ A local project workspace for humans and agents, built around a CLI and durable 
 project records, shows each record's versions across local branches,
 locates the checkout holding a selected version, and sets up another
 repository with `init`, carrying the workflow guides inside the binary. Run without a command, it
-opens a read-only terminal Kanban board over the same operations. `context`
+opens a terminal Kanban board over the same operations, which reads everything
+and writes only through the three review actions behind prompts. `context`
 assembles staged context for selected work, the `grove-work` skill carries it
 out, and the `grove-shape` skill shapes proposals.**
 
@@ -16,7 +17,10 @@ review → integrate loop on real nullsec work. Start with
 work. Its proposed capabilities are not commands available in this build.
 The board opens on a project-wide current view of work. Work has the Review status: an
 implementation ends with its work record in Review, naming its `candidate`
-commit, and `done` is written where that candidate was merged.
+commit, and `done` is written where that candidate was merged. `approve`,
+`feedback` and `integrate` record the verdict, return work with feedback, and
+merge an approved candidate locally; the record's detail on the board offers
+the same as `a`, `f` and `i`.
 
 Start with [the restart brief](grove/brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
@@ -47,6 +51,9 @@ go run ./cmd/grove brief               # the brief grove.yaml names
 go run ./cmd/grove show G-003 --json
 go run ./cmd/grove update G-003 --expect sha256:HEX --set status=active --unset size
 go run ./cmd/grove update G-003 --set status=done --commit  # at a shell: no lookup, one commit
+go run ./cmd/grove approve G-003 "Meets the outcome"    # in the branch's checkout: approved=candidate, verdict appended, committed
+go run ./cmd/grove feedback G-003 "Handle the empty case"  # back to active with the text appended; prints where to continue
+go run ./cmd/grove integrate G-003 --cleanup            # in the target's checkout: merge, done, then the worktree and branch removed
 go run ./cmd/grove versions G-003 --json
 go run ./cmd/grove workspace --source SELECTOR --json
 go run ./cmd/grove --project "$(go run ./cmd/grove workspace --source SELECTOR)" show G-003
@@ -70,6 +77,25 @@ optional field. Project/file context and errors go to stderr, so
 stdout can be redirected. Exit codes are 0 for success, 1 for inspection/output
 errors, and 2 for invalid command usage.
 
+`approve ID VERDICT` and `feedback ID TEXT` judge a work record in `review`
+from a clean checkout of the branch that holds it: `approve` sets `approved`
+to the candidate and appends `Verdict on candidate X, DATE: …` to the body;
+`feedback` sets `active`, unsets `approved`, keeps the candidate, appends
+`Feedback on candidate X, DATE: …` and prints on stderr where to continue
+(`/grove-work ID` in that checkout). Each commits the record alone and prints
+what `update` prints. Both refuse a checkout whose HEAD lacks the candidate or
+whose record has uncommitted changes, and `approve` refuses a tip that changed
+any other file after the candidate, since that tip is a new candidate.
+`integrate ID [--cleanup]` runs in a clean checkout of the target branch that
+`grove.yaml` names: it finds the one branch holding an approved candidate of
+ID, merges it with a plain `git merge` (a conflict is aborted and refused,
+leaving the target as it was), writes `done` there committed alone, and with
+`--cleanup` removes the branch's worktree and the branch, keeping either with
+Git's reason when Git refuses, and keeping a worktree that holds ignored
+files, which Git would delete. It prints one line per fact as it holds
+(`approval:`, `merge:`, `done:`, `cleanup:`); a refusal comes before the merge,
+and nothing undoes a merge that happened.
+
 Without `--project`, discovery searches upward for `grove.yaml` and stops at
 the current Git checkout boundary. Plain directories also work. Any invalid
 record makes the command fail; no partial list or record is printed.
@@ -82,9 +108,11 @@ their own rules. A plan or review names its work in a `work` list, set with
 selected work without reading them; a review can record the Git commit it
 `examined`. Work moves `proposed`, `active`, `review`, `done`, with
 `abandoned` for an explicit human decision. `review` requires `candidate`, the
-commit offered for judgment, and `update` writes `done` only with a candidate
-that the checkout's HEAD contains: Done means accepted and merged, so the
-integrator writes it in the target's checkout after the merge, where the
+commit offered for judgment; `approved`, which `approve` sets, must name that
+same candidate, so a changed candidate needs its own approval. `update` writes
+`done` only with a candidate that the checkout's HEAD contains, and only in a
+checkout on the configured target: Done means accepted and merged, so
+`integrate` writes it in the target's checkout after the merge, where the
 check holds it to the code that landed. A `done` record without a candidate
 predates that meaning. `new page "Title"` creates general knowledge with a title and no
 status; pages are never work cards and `context` reads one only through
@@ -357,11 +385,28 @@ it; a review adds what it `examined` and whether that is the candidate),
 `work` for a plan or review, `needs` and `needed by` (`depends_on` either
 way), `blocked by` and `blocks` (a question's `blocks`), `part of` and
 `member` (`members`), and `related` (`relates_to` either way). Tab moves
-focus from the content to the linked records, to the timeline, and back;
-↑/↓ and PgUp/PgDn scroll the content or move the cursor. Enter on a linked
-record opens its own detail, of any type, and Esc returns; Enter on a
-timeline commit shows the record as it was at that commit, and Esc returns
-to now. Below 100 columns the detail shows one pane at a time and Tab cycles
+focus from the content to the linked records, to the changes, to the
+timeline, and back; ↑/↓ and PgUp/PgDn scroll the content or move the cursor.
+Enter on a linked record opens its own detail, of any type, and Esc returns;
+Enter on a timeline commit shows the record as it was at that commit, and
+Esc returns to now.
+
+Work in `review` is a candidate to judge, and its detail is the handoff: the
+header adds a Review block (the candidate, whether it is approved, whether
+only the record changed since it or the tip is a new candidate, whether the
+target holds it, and which checkout each action runs in), the content opens
+at its `## Evidence`, and the sidebar lists the candidate's changed files
+against the target with their added and removed line counts. Enter on a file
+shows its diff in the content pane, escaped like record text with added,
+removed and hunk lines coloured, and Esc returns to the content. `a` asks for
+a verdict and approves the candidate in the branch's checkout, `f` asks for
+feedback and returns the work to `active` there, and `i` confirms the merge
+into the target from the target's checkout, then asks whether to remove the
+branch's worktree and branch. Each runs the same operation as the command,
+one at a time; a result screen shows its facts, or why it was refused, and
+the board is re-read. A candidate without a clean checkout of its branch, or
+a target without one, is reported instead; the board never creates a
+checkout. Below 100 columns the detail shows one pane at a time and Tab cycles
 them. A page, term, decision, question, plan or review opens in the same
 screen, with the fields its type has.
 
@@ -412,8 +457,9 @@ per record content and width.
 
 Keys: arrows or `h` `j` `k` `l` move; Tab switches between the columns and
 Deleted or Elsewhere, between the detail's panes, or between versions and
-details; `/` searches; `a` shows or hides Abandoned; `v` opens a detail's
-versions; PgUp/PgDn scroll; `s` lists every branch and checkout read with its
+details; `/` searches; `a` shows or hides Abandoned on the board, and approves in the
+detail of work in review, where `f` gives feedback and `i` integrates; `v`
+opens a detail's versions; PgUp/PgDn scroll; `s` lists every branch and checkout read with its
 diagnostics, which stay reachable while a banner marks an incomplete result;
 `r` re-reads; Esc goes back, and quits from the board; `q` quits. Below 100
 columns one status column shows at a time; below 40x10 the board asks for
