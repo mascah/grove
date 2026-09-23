@@ -494,6 +494,20 @@ def attempts_of(root):
     return found
 
 
+def stop_attempts(root):
+    """Kill every attempt's owner and provider group, so a failed scenario leaves none running."""
+    top = os.path.join(root, ".git", "grove", "attempts")
+    for name in os.listdir(top) if os.path.isdir(top) else []:
+        for file, key, sign in (("attempt.json", "owner_pid", 1), ("child.json", "pgid", -1)):
+            try:
+                with open(os.path.join(top, name, file)) as f:
+                    pid = json.load(f).get(key, 0)
+                if pid > 0:
+                    os.kill(sign * pid, signal.SIGKILL)
+            except (OSError, ValueError):
+                pass
+
+
 def attempt_lifecycle(root, wt, base):
     """R launches a bounded attempt of a fake provider that floods its events; the board quits while it runs, a new session reconnects to the same attempt and stops it; the next waits on a question that then refuses a launch; once it is answered, R continues on the same branch to a candidate in review."""
     for key, value in (("user.name", "t"), ("user.email", "t@t"), ("commit.gpgsign", "false"), ("maintenance.auto", "false")):
@@ -594,8 +608,8 @@ def attempt_lifecycle(root, wt, base):
     s.expect("worktree: reusing", mark)
     mark = s.expect("started; owner pid", mark)
     s.send(ESC)
-    mark = s.expect("candidate ready", mark)  # the poll saw it end, and the board was re-read
-    s.expect("G-001 · review", mark)
+    s.expect("candidate ready", mark)  # the poll saw it end
+    s.expect("Review: candidate", mark)  # and the board was re-read: the detail is a review
     s.send(b"q")
     code, out = s.finish()
     s.restored()
@@ -637,6 +651,7 @@ def main():
             if s.proc.poll() is None:
                 s.proc.kill()
                 s.proc.wait()
+        stop_attempts(os.path.join(base, "repo", "main"))
         shutil.rmtree(base, ignore_errors=True)
     sys.exit(1 if failed else 0)
 

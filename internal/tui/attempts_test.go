@@ -113,6 +113,7 @@ func TestLaunchFromTheDetail(t *testing.T) {
 	fx := newFixture()
 	f := &fake{res: fx.twoBranches()}
 	f.res.Target = "main"
+	onTarget(f.res, "W-002")
 	r := &runs{}
 	m := openRuns(t, f, r, 120, 36)
 	if r.reads != 1 || f.inspects != 1 {
@@ -178,6 +179,75 @@ func TestLaunchFromTheDetail(t *testing.T) {
 	settle(m, press(m, "enter"))
 	if s := plain(m); !strings.Contains(s, "NOT DONE: W-002 changed since it was read") {
 		t.Fatalf("a refusal shows:\n%s", s)
+	}
+}
+
+// onTarget marks every version of id as the target's bytes, as Inspect does
+// for content the target holds.
+func onTarget(res *versions.Result, id string) {
+	for i := range res.Groups {
+		if res.Groups[i].ID == id {
+			for j := range res.Groups[i].Versions {
+				res.Groups[i].Versions[j].OnTarget = true
+			}
+		}
+	}
+}
+
+// Where a launch runs follows the current state, not the order the places
+// were read in: the same bytes on the target and on another branch start
+// afresh, whichever branch sorts first; work only on a branch continues
+// there, in its checkout, with the revision of the checkout Grove was opened
+// in, a linked worktree included; without a target, this checkout is the base.
+func TestLaunchPlace(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	where := func(res *versions.Result, id string) attempt.Request {
+		t.Helper()
+		r := &runs{}
+		m := openRuns(t, &fake{res: res}, r, 120, 36)
+		m.root = "/repo/" + strings.TrimPrefix(strings.TrimPrefix(res.GitDir, "/repo/.git/"), "/repo/.git")
+		m.openDetail(id)
+		press(m, "R")
+		if m.prompt == nil {
+			t.Fatalf("%s: no prompt:\n%s", id, plain(m))
+		}
+		typeText(m, "1")
+		press(m, "enter")
+		typeText(m, "auto")
+		settle(m, press(m, "enter"))
+		return r.launches[0]
+	}
+	// Inspect orders committed branches by name: feature before main.
+	res := fx.twoBranches()
+	res.Target = "main"
+	onTarget(res, "W-002")
+	for i := range res.Groups {
+		if g := &res.Groups[i]; g.ID == "W-002" {
+			g.Versions = append(g.Versions[2:], g.Versions[:2]...)
+		}
+	}
+	if got := where(res, "W-002"); got.Branch != "" || got.Worktree != "" || got.Expect != res.Groups[1].Versions[3].Revision {
+		t.Fatalf("the target holds W-002, so it starts afresh: %+v", got)
+	}
+	// Opened in the feature checkout, a linked worktree: W-010 is only there.
+	res = fx.twoBranches()
+	res.Target, res.GitDir = "main", fx.feat.GitDir
+	var feat *versions.Version
+	for i := range res.Groups {
+		for j := range res.Groups[i].Versions {
+			if v := &res.Groups[i].Versions[j]; res.Groups[i].ID == "W-010" && v.Source == fx.feat {
+				feat = v
+			}
+		}
+	}
+	if got := where(res, "W-010"); got.Branch != "feature" || got.Worktree != "/repo/feat" || got.Expect != feat.Revision || got.Root != "/repo/feat" {
+		t.Fatalf("W-010 continues on feature from this checkout: %+v", got)
+	}
+	// No target: this checkout's own state is the base.
+	res = fx.twoBranches()
+	if got := where(res, "W-002"); got.Branch != "" {
+		t.Fatalf("without a target the checkout's state starts afresh: %+v", got)
 	}
 }
 
@@ -277,6 +347,9 @@ func TestAttemptOutcomes(t *testing.T) {
 	q := version(fx.cMain, "Q-002", "Red or blue?", "open")
 	q.Record.Blocks = []string{"W-009"}
 	res.Groups = append(res.Groups, versions.Group{ID: "Q-002", Versions: []versions.Version{q}})
+	// W-001's attempt branch was read: its tip holds the record in review.
+	tip := version(source("committed", "", "worktree-W-001"), "W-001", "Inspect records", "review")
+	res.Groups[0].Versions = append(res.Groups[0].Versions, tip)
 	m := openRuns(t, &fake{res: res}, &runs{}, 120, 36)
 	ok := &attempt.Final{Subtype: "success"}
 	cases := []struct {
@@ -298,7 +371,22 @@ func TestAttemptOutcomes(t *testing.T) {
 			"failed: error_max_budget_usd (exit 1)"},
 		{view("W-002", "10", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: &attempt.Final{Subtype: "success"}}, Record: &attempt.State{Status: "review"}}),
 			"ended without a handoff: W-002 is review on worktree-W-002, with no candidate"},
+		// The record says review in files never committed, and the run failed.
+		{view("W-002", "11", attempt.Finished, &attempt.Result{ExitCode: 1, Dirty: true, Events: attempt.Events{Result: &attempt.Final{Subtype: "error_max_budget_usd", IsError: true}}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12"}}),
+			"failed: error_max_budget_usd (exit 1); its record says review, uncommitted"},
+		{view("W-002", "12", attempt.Finished, &attempt.Result{Dirty: true, Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12"}}),
+			"ended without a handoff: W-002 is review on worktree-W-002, with no candidate; its record says review, uncommitted"},
+		// A question open now does not make a stopped attempt, or an earlier one, a wait.
+		{view("W-009", "13", attempt.Finished, &attempt.Result{ExitCode: 130, Stopped: true, Events: attempt.Events{Result: ok}}), "stopped (exit 130)"},
+		{view("W-009", "0", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "active"}}),
+			"ended without a handoff: W-009 is active on worktree-W-009, with no candidate"},
+		// On a branch the board read, the tip decides: leftover untracked files do not.
+		{view("W-001", "14", attempt.Finished, &attempt.Result{Dirty: true, Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12", Revision: tip.Revision}}),
+			"candidate ready: W-001 in review on worktree-W-001 with candidate c0ffee1"},
+		{view("W-001", "15", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12", Revision: "sha256:other"}}),
+			"ended without a handoff: W-001 is review on worktree-W-001, with no candidate; its record says review, uncommitted"},
 	}
+	m.attempts = []attempt.View{view("W-009", "6", attempt.Finished, nil), view("W-009", "0", attempt.Finished, nil)}
 	for _, c := range cases {
 		if got := m.outcomeOf(&c.v); got != c.want {
 			t.Errorf("%s: %q, want %q", c.v.Launch.Attempt, got, c.want)
@@ -360,14 +448,18 @@ func TestAttemptScreensReconnectAndStop(t *testing.T) {
 		t.Fatalf("Esc returns to the attempt: %d", m.screen)
 	}
 	// The poll sees the attempt end: the board is re-read, and polling stops.
+	// An inspection already under way when it ends may predate its last
+	// commit, so it is started again.
 	stopped := view("W-002", "20260923T010000Z", attempt.Finished, &attempt.Result{ExitCode: 130, Stopped: true})
 	r.set(stopped, older)
-	inspects := f.inspects
+	early := press(m, "r")
+	gen, inspects := m.gen, f.inspects
 	m.ticking = false
 	_, cmd := m.Update(attemptTick{})
 	settle(m, cmd)
-	if f.inspects != inspects+1 || m.ticking || !strings.Contains(plain(m), "Outcome: stopped (exit 130)") {
-		t.Fatalf("inspects %d→%d ticking %v\n%s", inspects, f.inspects, m.ticking, plain(m))
+	settle(m, early) // its reply is outdated by the restart
+	if m.gen == gen || f.inspects != inspects+2 || m.pending != "" || m.ticking || !strings.Contains(plain(m), "Outcome: stopped (exit 130)") {
+		t.Fatalf("gen %d→%d inspects %d→%d pending %q ticking %v\n%s", gen, m.gen, inspects, f.inspects, m.pending, m.ticking, plain(m))
 	}
 	press(m, "x")
 	if m.prompt != nil || !strings.Contains(plain(m), "is finished; nothing to stop") {
@@ -384,6 +476,10 @@ func TestAttemptScreensReconnectAndStop(t *testing.T) {
 	press(m, "esc")
 	if m.screen != detailScreen {
 		t.Fatal("Esc returns to the record")
+	}
+	press(m, "esc")
+	if m.screen != attemptScreen || len(m.stack) != 0 {
+		t.Fatalf("Esc from the record o opened returns to the attempt: screen %d stack %v", m.screen, m.stack)
 	}
 }
 

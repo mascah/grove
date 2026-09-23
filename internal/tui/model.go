@@ -240,6 +240,8 @@ type Model struct {
 	listBack        screen // where Esc leaves the attempts screen for
 	runBack         screen // and the attempt screen
 	resultBack      screen // the screen an action started from
+	workBack        screen // where Esc leaves a record o opened from an attempt
+	workDepth       int    // that record's place on the stack, 0 when none
 
 	// Workspace is the explicitly selected, freshly resolved result, if any.
 	Workspace *versions.Workspace

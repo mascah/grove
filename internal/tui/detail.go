@@ -28,6 +28,9 @@ type entry struct {
 // openDetail shows a record above whatever is open: a card from the board,
 // or a linked record from another detail.
 func (m *Model) openDetail(id string) {
+	if len(m.stack) == 0 {
+		m.workDepth = 0 // a record opened afresh returns to the board
+	}
 	m.stack = append(m.stack, id)
 	m.screen, m.side, m.dscroll, m.asOf, m.diff = detailScreen, -1, 0, "", ""
 	m.leaveVersions()
@@ -42,6 +45,9 @@ func (m *Model) leaveDetail() {
 		m.diff, m.dscroll = "", 0
 	case m.asOf != "":
 		m.asOf, m.dscroll = "", 0
+	case m.workDepth != 0 && len(m.stack) == m.workDepth:
+		m.stack = m.stack[:len(m.stack)-1]
+		m.screen, m.workDepth, m.side, m.dscroll = m.workBack, 0, -1, 0
 	case len(m.stack) > 1:
 		m.stack = m.stack[:len(m.stack)-1]
 		m.side, m.dscroll = -1, 0

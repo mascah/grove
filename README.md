@@ -470,10 +470,12 @@ final report rendered like a record body, and its recent activity newest
 first, one short line per event from the last 1 MiB of its events, so a
 flood of output costs one bounded read. The outcome is derived, never
 written: `running`, `orphaned`, `interrupted`, or for a finished attempt a
-`candidate ready` (only when the record on its branch is in review with a
-candidate), `waiting on question`, `stopped`, `failed` (no result event, an
-error result or a nonzero exit) or `ended without a handoff`; a clean exit
-alone is never ready. `x` asks, then stops a running or orphaned attempt as
+`candidate ready` (only when its branch's tip holds the record in review
+with a candidate, as the result read it), `stopped`, `failed` (no result
+event, an error result or a nonzero exit), `waiting on question` (the work's
+latest attempt, while an open question blocks it) or `ended without a
+handoff`; a clean exit alone is never ready, and a record that says review
+without being committed is reported as such. `x` asks, then stops a running or orphaned attempt as
 `stop` does, keeping its partial work; `o` opens its work record. The
 attempts are files the board only reads: quitting leaves an attempt
 running, and the next session shows the same one. While one runs, they are

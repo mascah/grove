@@ -767,11 +767,13 @@ func ListDir(dir, id string) ([]View, error) {
 
 // Show reads one attempt by its id and adds whether its inputs changed.
 func Show(root, attempt string) (*View, error) {
-	return ShowContext(context.Background(), root, attempt)
+	return ShowContext(context.Background(), root, attempt, true)
 }
 
-// ShowContext is Show whose Git processes end with ctx, reported as ctx.Err().
-func ShowContext(ctx context.Context, root, attempt string) (*View, error) {
+// ShowContext is Show whose Git processes end with ctx, reported as
+// ctx.Err(); without events, an unfinished attempt's events are not scanned,
+// whose cost grows with the file.
+func ShowContext(ctx context.Context, root, attempt string, events bool) (*View, error) {
 	if !attemptPattern.MatchString(attempt) {
 		return nil, fmt.Errorf("%s is not an attempt id (WORK.YYYYMMDDTHHMMSSZ, from attempts)", attempt)
 	}
@@ -779,7 +781,7 @@ func ShowContext(ctx context.Context, root, attempt string) (*View, error) {
 	if err != nil {
 		return nil, err
 	}
-	v, err := read(filepath.Join(common, "grove", "attempts", attempt), true)
+	v, err := read(filepath.Join(common, "grove", "attempts", attempt), events)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, fmt.Errorf("attempt %s does not exist in this repository", attempt)

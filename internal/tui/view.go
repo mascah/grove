@@ -211,14 +211,17 @@ func (m *Model) render() string {
 		rows, hints = m.emptyBody(w), "r retry   q quit"
 	case m.screen == detailScreen && m.group() != nil && m.backend.Attempts != nil && m.openRecord() != nil && m.openRecord().Type == "work":
 		// Work adds its attempts: A lists them, R launches one where it can.
-		judge, keys := "", ""
+		run, runKey, judge, keys := "", "", "", ""
+		if s := m.openRecord().Status; m.backend.Launch != nil && (s == "proposed" || s == "active") {
+			run, runKey = "R launch   ", "R  "
+		}
 		if m.reviewable() {
 			judge, keys = "a approve   f feedback   i integrate   ", "a  f  i  "
 		}
 		rows, hints = m.detailBody(w, body), pick(w,
-			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   R launch   A attempts   "+judge+"v versions   s   r   Esc back   q quit",
-			"↑↓ PgUp/PgDn  Tab pane  Enter open  R launch  A attempts  "+keys+"v  Esc  q",
-			"↑↓  Tab  Enter  R  A  "+keys+"v  Esc  q quit")
+			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   "+run+"A attempts   "+judge+"v versions   s   r   Esc back   q quit",
+			"↑↓ PgUp/PgDn  Tab pane  Enter open  "+run+"A attempts  "+keys+"v  Esc  q",
+			"↑↓  Tab  Enter  "+runKey+"A  "+keys+"v  Esc  q quit")
 	case m.screen == detailScreen && m.group() != nil && m.reviewable():
 		rows, hints = m.detailBody(w, body), pick(w,
 			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   a approve   f feedback   i integrate   v versions   s   r   Esc back   q quit",

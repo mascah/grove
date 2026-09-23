@@ -11,6 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/mascah/grove/internal/attempt"
+	"github.com/mascah/grove/internal/versions"
 )
 
 // Managed attempts (G-046): R on proposed or active work launches one
@@ -91,7 +92,9 @@ func (m *Model) gotAttempts(msg attemptsMsg) tea.Cmd {
 	}
 	m.clampScroll()
 	var cmds []tea.Cmd
-	if ended && !m.busy() {
+	// An inspection already under way may predate the attempt's last commit,
+	// so it is started again; a resolve or an action is left to finish.
+	if ended && m.pending != "resolve" && m.pending != "act" {
 		cmds = append(cmds, m.inspect())
 	}
 	if !m.ticking && slices.ContainsFunc(m.attempts, func(v attempt.View) bool { return live(&v) }) {
@@ -143,11 +146,17 @@ func (m *Model) outcomeOf(v *attempt.View) string {
 		return string(v.Status)
 	}
 	work := v.Launch.Work
-	if r.Record != nil && r.Record.Status == "review" && r.Record.Candidate != "" {
+	review := r.Record != nil && r.Record.Status == "review" && r.Record.Candidate != ""
+	// The record is read from the worktree's files, so it is the handoff only
+	// once committed: the branch's tip holds those bytes as the board read
+	// it, or, for a branch the board did not read, nothing there is
+	// uncommitted.
+	if held, known := m.committedOn(work, v.Launch.Branch, r.Record); review && (held || !known && !r.Dirty) {
 		return fmt.Sprintf("candidate ready: %s in review on %s with candidate %s", work, v.Launch.Branch, short7(r.Record.Candidate))
 	}
-	if q := m.blockingQuestion(work); q != "" {
-		return "waiting on question " + q
+	unsaid := ""
+	if review {
+		unsaid = "; its record says review, uncommitted"
 	}
 	exit := fmt.Sprintf("exit %d", r.ExitCode)
 	if r.Signal != "" {
@@ -155,17 +164,37 @@ func (m *Model) outcomeOf(v *attempt.View) string {
 	}
 	switch f := r.Events.Result; {
 	case r.Stopped:
-		return "stopped (" + exit + ")"
+		return "stopped (" + exit + ")" + unsaid
 	case f == nil:
-		return "failed: no result event (" + exit + ")"
+		return "failed: no result event (" + exit + ")" + unsaid
 	case f.IsError || r.ExitCode != 0:
-		return "failed: " + f.Subtype + " (" + exit + ")"
+		return "failed: " + f.Subtype + " (" + exit + ")" + unsaid
+	}
+	// A question open now is this attempt's wait only if it is the work's
+	// latest: an earlier one ended before whatever came after.
+	if list := m.attemptsOf(work); len(list) == 0 || list[0].Launch.Attempt == v.Launch.Attempt {
+		if q := m.blockingQuestion(work); q != "" {
+			return "waiting on question " + q + unsaid
+		}
 	}
 	status := "unreadable"
 	if r.Record != nil {
 		status = r.Record.Status
 	}
-	return fmt.Sprintf("ended without a handoff: %s is %s on %s, with no candidate", work, status, v.Launch.Branch)
+	return fmt.Sprintf("ended without a handoff: %s is %s on %s, with no candidate%s", work, status, v.Launch.Branch, unsaid)
+}
+
+// committedOn reports whether branch's tip holds rec as work's record, and
+// whether the board read that branch at all.
+func (m *Model) committedOn(work, branch string, rec *attempt.State) (held, known bool) {
+	if g := m.groupOf(work); g != nil && rec != nil {
+		for _, v := range g.Versions {
+			if v.Source.Kind == "committed" && v.Source.Ref == "refs/heads/"+branch {
+				return v.Revision == rec.Revision, true
+			}
+		}
+	}
+	return false, false
 }
 
 // blockingQuestion names an open question that blocks work in the records
@@ -283,7 +312,9 @@ func (m *Model) openWork(id string) {
 		m.notice = id + " is not on any readable branch or checkout"
 		return
 	}
+	back := m.screen
 	m.openDetail(id)
+	m.workBack, m.workDepth = back, len(m.stack) // Esc from this record returns to the attempt
 }
 
 // askStop asks before stopping an attempt that may be running.
@@ -329,30 +360,33 @@ func (m *Model) launch() {
 			return
 		}
 	}
-	// The base is the target, or without one this checkout's branch; work
-	// standing on any other branch continues there.
-	req, base := attempt.Request{Root: m.root, ID: g.ID}, m.res.Target
+	// This checkout is the live source in the Git directory the board was
+	// read from: Start reads its record and checks it against Expect.
+	var here *versions.Version
 	for i := range g.Versions {
-		if h := &g.Versions[i]; h.Source.Kind == "live" && h.Source.Locator == "." {
-			if h.Record != nil {
-				req.Expect = h.Revision
-			}
-			if base == "" {
-				base = branchOf(h)
-			}
+		if h := &g.Versions[i]; h.Source.Kind == "live" && h.Source.GitDir == m.res.GitDir {
+			here = h
 		}
 	}
-	if b := branchOf(v); b != "" && b != base {
+	if here == nil || here.Record == nil {
+		m.notice = g.ID + " is not in this checkout (" + m.root + "); open Grove in a checkout that holds it to launch"
+		return
+	}
+	req := attempt.Request{Root: m.root, ID: g.ID, Expect: here.Revision}
+	// Work whose current state the base does not hold continues on that
+	// state's branch. The base is the target, or without one this checkout;
+	// the same bytes on several branches are one state, which starts afresh.
+	onBase := v.OnTarget
+	if m.res.Target == "" {
+		onBase = v.Revision == here.Revision
+	}
+	if b := branchOf(v); b != "" && !onBase {
 		req.Branch = b
 		for _, s := range m.res.Sources {
 			if s.Kind == "live" && s.Ref == v.Source.Ref {
 				req.Worktree = s.Worktree
 			}
 		}
-	}
-	if req.Expect == "" {
-		m.notice = g.ID + " is not in this checkout (" + m.root + "); open Grove in a checkout that holds it to launch"
-		return
 	}
 	m.prompt = &prompt{kind: "budget", id: g.ID, root: m.root, req: &req}
 }
@@ -473,7 +507,7 @@ func launched(l *attempt.Launch) []string {
 func liveAttempts(b *Backend) {
 	b.Attempts = func(_ context.Context, dir string) ([]attempt.View, error) { return attempt.ListDir(dir, "") }
 	b.Attempt = func(ctx context.Context, root, id string) (*attempt.View, attempt.Activity, error) {
-		v, err := attempt.ShowContext(ctx, root, id)
+		v, err := attempt.ShowContext(ctx, root, id, false) // the activity is the bounded read of the events
 		if err != nil {
 			return nil, attempt.Activity{}, err
 		}

@@ -29,7 +29,8 @@ here.
   record detail of work gains one header row naming its latest attempt and
   the keys, so a person returning after closing the TUI finds the attempt
   from the card they already know, and board cards of work with a running
-  or orphaned attempt carry a `▶ running` or `orphaned` tag.
+  or orphaned attempt carry a `● running` or `● orphaned` tag (`▶` already
+  marks focus).
 - **Keys.** `R` on the detail of proposed or active work opens the launch
   prompt; `A` on the board lists every attempt, on a work detail that
   work's; Enter on an attempt row opens it; `x` on an attempt or its row
@@ -63,9 +64,11 @@ here.
   slot so it never cancels an inspection: `attempt.List` of the whole
   repository and, with the attempt screen open, `attempt.Show` of that one
   plus a bounded tail of its events. At most one in flight; collected at
-  close with the other reads. It runs at start, on opening either screen,
-  after a launch or stop, and every 2 s while an attempt is running or
-  orphaned or either screen is open; nothing ticks otherwise. When an
+  close with the other reads. It runs once the board is read, on opening
+  either screen, after a launch or stop, on `r`, and every 2 s while an
+  attempt is running or orphaned; nothing ticks otherwise. The list reads
+  the attempts directory under the common directory the board found, so it
+  starts no Git process; the open attempt's read starts one, cancellably. When an
   attempt known to be running is read finished, the board is re-read so
   the branch's record shows its new state. `List` stops scanning events
   (`attempts` never printed them); `Show` still does.
