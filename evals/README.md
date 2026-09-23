@@ -66,8 +66,9 @@ and remote stay too. `report.md` summarizes every run, lists cases not run,
 and says when the harness was unavailable. Its harness column (exit status,
 timeout, an error result, permission denials) separates a run the harness
 never carried out, such as a missing login or a budget stop, from an agent's
-behaviour. Ctrl-C or SIGTERM stops the runner and kills the running session;
-a runner failure on one run is reported and the next run still starts.
+behaviour. Ctrl-C, SIGTERM or SIGHUP stops the runner and kills the running session;
+a runner failure on one run is reported, with what the run cost, and the
+next run still starts.
 
 ## Checks
 
@@ -95,7 +96,9 @@ program is `grove` and whose subcommand is that word; every file it read; and th
 no step needed, meaning anything but `AGENTS.md`, `CLAUDE.md`, `grove.yaml`,
 the brief, `tasks.py`, `tasks/` and the records it wrote. Reads through
 `cat`, `head`, `tail`, `sed`, `nl`, `less` or `awk` count; `grep` and other
-tools do not.
+tools do not. A `grove` run through a wrapper such as `timeout` or
+inside `$(…)` is missed, and a heredoc line starting with `grove` is counted:
+read the transcript before resting a conclusion on one fact.
 
 ## Rubric
 

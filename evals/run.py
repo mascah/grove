@@ -102,7 +102,7 @@ def snapshot(clone, remote):
     return {
         "branch": git(clone, "branch", "--show-current"),
         "head": git(clone, "rev-parse", "HEAD"),
-        "main": git(clone, "rev-parse", "refs/heads/main"),
+        "main": git(clone, "rev-parse", "--verify", "-q", "refs/heads/main", check=False) or "(deleted)",
         "status": git(clone, "status", "--porcelain", "--untracked-files=all"),
         "remote": git(remote, "for-each-ref", "--format=%(refname) %(objectname)"),
     }
@@ -203,7 +203,7 @@ def retrieval(transcript, clone, created):
         rel.append(full if p.startswith("..") else re.sub(r"^\.claude/worktrees/[^/]+/", "", p))
     used = set()  # grove subcommands actually invoked, not words that merely follow "grove" in a command
     for cmd in commands:
-        for part in re.split(r"&&|\|\||;|\||\n", cmd):
+        for part in re.split(r"&&|\|\||;|\||\n", cmd.replace("\\\n", " ")):
             try:
                 words = shlex.split(part)
             except ValueError:
@@ -213,7 +213,7 @@ def retrieval(transcript, clone, created):
             if not words or os.path.basename(words[0]) != "grove":
                 continue
             words = words[1:]
-            while words and words[0] in ("--project", "--json"):
+            while words and (words[0] in ("--project", "--json") or words[0].startswith("--project=")):
                 words = words[2:] if words[0] == "--project" else words[1:]
             used.update(words[:1])
     return {
@@ -260,8 +260,6 @@ def one(args, grove, template, work, case_name, n, meta):
             proc.wait()
     init = next((ev for ev in events(transcript) if ev.get("type") == "system" and ev.get("subtype") == "init"), {})
     result = next((ev for ev in events(transcript) if ev.get("type") == "result"), {})
-    after = state(clone, remote, grove, rdir, before["main"])
-    created = {p for b in after["proposals"].values() for p in b["touched"]}
     run = {
         "case": case_name, "run": n, "topic": case["topic"], "command": command,
         "exit": proc.returncode, "timed_out": timed_out, "wall_seconds": round(time.time() - started, 1),
@@ -271,19 +269,23 @@ def one(args, grove, template, work, case_name, n, meta):
         "result_subtype": result.get("subtype"), "is_error": result.get("is_error"),
         "permission_denials": len(result.get("permission_denials") or []),
         "message": result.get("result", ""),
-        "checks": checks(case, before, after, result.get("result", "")),
-        "retrieval": retrieval(transcript, clone, created),
     }
-    json.dump(dict(after, before=before), open(os.path.join(rdir, "state.json"), "w"), indent=1)
+    try:  # the session has spent by now: a failure reading its effects must not lose what it cost
+        after = state(clone, remote, grove, rdir, before["main"])
+        json.dump(dict(after, before=before), open(os.path.join(rdir, "state.json"), "w"), indent=1)
+        run["checks"] = checks(case, before, after, run["message"])
+        run["retrieval"] = retrieval(transcript, clone, {p for b in after["proposals"].values() for p in b["touched"]})
+    except Exception as err:
+        run.update(error=str(err), checks={"runner": f"fail: {err}"})
     json.dump(run, open(os.path.join(rdir, "run.json"), "w"), indent=1)
     return run
 
 
 def harness(r):
     """How the harness process ended, so a login failure or budget stop is not read as the agent's behaviour."""
-    if "error" in r:
+    if "exit" not in r:
         return "runner error"
-    notes = [f"exit {r['exit']}"] + (["timed out"] if r["timed_out"] else []) + ([f"error {r['result_subtype']}"] if r["is_error"] or r["result_subtype"] is None else [])
+    notes = (["runner error"] if "error" in r else []) + [f"exit {r['exit']}"] + (["timed out"] if r["timed_out"] else []) + ([f"error {r['result_subtype']}"] if r["is_error"] or r["result_subtype"] is None else [])
     return " ".join(notes + ([f"{r['permission_denials']} denials"] if r["permission_denials"] else []))
 
 
@@ -442,7 +444,8 @@ def selftest():
 
 
 def main():
-    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))  # unwinds like Ctrl-C, so a running harness is killed
+    for sig in (signal.SIGTERM, signal.SIGHUP):  # unwind like Ctrl-C, so a running harness is killed
+        signal.signal(sig, lambda n, _: sys.exit(128 + n))
     if sys.argv[1:2] == ["_fake"]:
         return fake(sys.argv[2:])
     parser = argparse.ArgumentParser(prog="evals/run.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
