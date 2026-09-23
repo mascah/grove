@@ -6,8 +6,9 @@ A local project workspace for humans and agents, built around a CLI and durable 
 project records, shows each record's versions across local branches,
 locates the checkout holding a selected version, and sets up another
 repository with `init`, carrying the workflow guides inside the binary. Run without a command, it
-opens a terminal Kanban board over the same operations, which reads everything
-and writes only through the three review actions behind prompts. `context`
+opens a terminal Kanban board over the same operations, which reads everything,
+writes only through the three review actions behind prompts, and starts or
+stops an implementation attempt only behind prompts too. `context`
 assembles staged context for selected work, the `grove-work` skill carries it
 out, and the `grove-shape` skill shapes proposals.**
 
@@ -20,7 +21,9 @@ implementation ends with its work record in Review, naming its `candidate`
 commit, and `done` is written where that candidate was merged. `approve`,
 `feedback` and `integrate` record the verdict, return work with feedback, and
 merge an approved candidate locally; the record's detail on the board offers
-the same as `a`, `f` and `i`.
+the same as `a`, `f` and `i`. `run` starts one bounded headless attempt of a
+work item that outlives the terminal, which the board launches with `R`, lists
+with `A` and stops with `x`.
 
 Start with [the restart brief](grove/brief.md) and
 [the accepted record model](docs/record-model.md). The brief records the selected
@@ -451,6 +454,32 @@ checkout. Below 100 columns the detail shows one pane at a time and Tab cycles
 them. A page, term, decision, question, plan or review opens in the same
 screen, with the fields its type has.
 
+Work's detail also names its attempts (G-046): how many, and the latest
+with its outcome. `R` on proposed or active work asks for a budget in USD,
+then a permission mode, both typed each time since neither has a default,
+and launches one attempt as `run` does; it runs on the branch the record's
+current state stands on when that is not the target, in that branch's
+checkout, so after feedback the next attempt continues on the candidate's
+branch, and otherwise in a new `worktree-ID`. It is refused up front for
+work in review, done or abandoned, work an open question blocks, and work
+with an attempt still running or orphaned; `run`'s own refusals follow, and
+one more: the record in this checkout changed since the board read it. `A` lists the
+attempts of the open work, or on the board every attempt, newest first, and
+Enter opens one: its outcome, the facts `attempt` prints, the provider's
+final report rendered like a record body, and its recent activity newest
+first, one short line per event from the last 1 MiB of its events, so a
+flood of output costs one bounded read. The outcome is derived, never
+written: `running`, `orphaned`, `interrupted`, or for a finished attempt a
+`candidate ready` (only when the record on its branch is in review with a
+candidate), `waiting on question`, `stopped`, `failed` (no result event, an
+error result or a nonzero exit) or `ended without a handoff`; a clean exit
+alone is never ready. `x` asks, then stops a running or orphaned attempt as
+`stop` does, keeping its partial work; `o` opens its work record. The
+attempts are files the board only reads: quitting leaves an attempt
+running, and the next session shows the same one. While one runs, they are
+re-read every 2 s, a running card is tagged `● running`, and when one ends
+the board is re-read.
+
 The timeline is the record's history from Git: the commits that changed its
 file, newest first, each with its date, the status the record held at that
 commit, its short ID, and its subject, following renames. It is the history
@@ -478,8 +507,9 @@ or its JSON with `--json`; checkout, branch, record, and revision on stderr).
 A refusal (the version changed, its checkout is missing or ambiguous, the
 record was deleted there) stays on screen with its reason until `r`
 refreshes, after which a version must be selected again. The details pane
-there begins with the focused version's history. The board never creates a
-worktree, edits a record, or starts an editor, shell, or agent.
+there begins with the focused version's history. Selecting never creates a
+worktree, edits a record, or starts an editor, shell, or agent; only `R`
+starts an agent, behind its prompts.
 
 `/` on the board searches every record of the project in its current state,
 of every type, including hidden Abandoned work, Done beyond its page, pages
@@ -499,7 +529,8 @@ per record content and width.
 Keys: arrows or `h` `j` `k` `l` move; Tab switches between the columns and
 Deleted or Elsewhere, between the detail's panes, or between versions and
 details; `/` searches; `a` shows or hides Abandoned on the board, and approves in the
-detail of work in review, where `f` gives feedback and `i` integrates; `v`
+detail of work in review, where `f` gives feedback and `i` integrates; `R`
+launches an attempt of work, `A` lists attempts, and `x` stops one; `v`
 opens a detail's versions; PgUp/PgDn scroll; `s` lists every branch and checkout read with its
 diagnostics, which stay reachable while a banner marks an incomplete result;
 `r` re-reads; Esc goes back, and quits from the board; `q` quits. Below 100
@@ -510,8 +541,9 @@ exits 1; a usage error exits 2.
 The board draws on stderr and reads stdin, so both must be terminals, while
 stdout may be redirected: `cd "$(go run ./cmd/grove)"`. Without a terminal it
 refuses at once with exit 1 and names the noninteractive commands. Text from
-records, paths, and Git is shown with control characters escaped. It writes no
-files, including the framework's debug logs.
+records, paths, Git, and an attempt's provider is shown with control
+characters escaped. Besides its prompted actions it writes no files, including
+the framework's debug logs.
 
 Use `go test -short ./...` while iterating and `go test -count=1 -timeout 120s
 ./...` plus `go vet ./...` as evidence; `-race` is per package only, since a

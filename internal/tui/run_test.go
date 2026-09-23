@@ -16,7 +16,7 @@ import (
 func TestTerminal(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
-		t.Skip("builds the binary and drives nine pseudo-terminal sessions")
+		t.Skip("builds the binary and drives ten pseudo-terminal scenarios")
 	}
 	python, err := exec.LookPath("python3")
 	if err != nil || runtime.GOOS == "windows" {

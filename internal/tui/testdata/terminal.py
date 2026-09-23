@@ -449,7 +449,165 @@ def review_and_integrate(root, wt, base):
 
 review_and_integrate.mutates = True  # approval and the merge change the repository on purpose
 
-SCENARIOS = [select_and_show, leave_without_selecting, refuses_without_terminal, blocked_git, hangup, output_failure, resize, writes_no_logs, review_and_integrate]
+FAKE_CLAUDE = r"""#!/bin/sh
+[ "$1" = --version ] && { echo 'fake 0.1'; exit 0; }
+echo start >> "@STARTS@"
+trap 'echo "{\"type\":\"result\",\"subtype\":\"error_during_execution\",\"is_error\":true}"; exit 130' INT
+echo '{"type":"system","subtype":"init","model":"fake-model"}'
+if [ -e "@QUESTION@" ] && [ ! -e grove/G-002-colour.md ]; then
+  printf -- '---\nid: G-002\ntype: question\ntitle: Which colour?\nstatus: open\nblocks: ["G-001"]\n---\nRed or blue?\n' > grove/G-002-colour.md
+  git add grove/G-002-colour.md
+  git -c user.name=t -c user.email=t@t -c commit.gpgsign=false -c maintenance.auto=false commit -qm question
+  echo '{"type":"result","subtype":"success","is_error":false,"result":"Waiting on G-002."}'
+  exit 0
+fi
+if [ -e "@FINISH@" ]; then
+  head=$(git rev-parse HEAD)
+  printf -- '---\nid: G-001\ntype: work\ntitle: First on main\nstatus: review\ncandidate: "%s"\n---\nAn outcome.\n' "$head" > grove/work/G-001-first.md
+  git -c user.name=t -c user.email=t@t -c commit.gpgsign=false -c maintenance.auto=false commit -qam review
+  echo '{"type":"result","subtype":"success","is_error":false,"total_cost_usd":0.25,"result":"## Handoff\n\nReady for review."}'
+  exit 0
+fi
+awk 'BEGIN { for (i = 0; i < 20000; i++) printf "{\"type\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"step %d\"}]}}\n", i }'
+echo partial > partial.txt
+n=0
+while [ $n -lt 600 ]; do sleep 0.1; n=$((n+1)); done
+"""
+
+
+def attempts_of(root):
+    """Each attempt directory of the repository, by name, with whether an owner holds its lock."""
+    found = {}
+    top = os.path.join(root, ".git", "grove", "attempts")
+    for name in sorted(os.listdir(top)) if os.path.isdir(top) else []:
+        if name.endswith(".tmp") or not os.path.isdir(os.path.join(top, name)):
+            continue
+        fd = os.open(os.path.join(top, name, "owner.lock"), os.O_RDWR)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            running = False
+        except BlockingIOError:
+            running = True
+        finally:
+            os.close(fd)
+        found[name] = (running, os.path.exists(os.path.join(top, name, "result.json")))
+    return found
+
+
+def attempt_lifecycle(root, wt, base):
+    """R launches a bounded attempt of a fake provider that floods its events; the board quits while it runs, a new session reconnects to the same attempt and stops it; the next waits on a question that then refuses a launch; once it is answered, R continues on the same branch to a candidate in review."""
+    for key, value in (("user.name", "t"), ("user.email", "t@t"), ("commit.gpgsign", "false"), ("maintenance.auto", "false")):
+        git(root, "config", key, value)
+    git(root, "worktree", "remove", "--force", wt)
+    git(root, "branch", "-qD", "feature")
+    with open(os.path.join(root, "grove.yaml"), "w") as f:
+        f.write("schema_version: 3\nrecords: grove\ntarget: main\n")
+    git(root, "commit", "-qam", "target")
+    tools = os.path.join(base, "tools-attempt")
+    os.makedirs(tools)
+    starts, finish, question = os.path.join(tools, "starts"), os.path.join(tools, "finish"), os.path.join(tools, "question")
+    fake = os.path.join(tools, "claude")
+    with open(fake, "w") as f:
+        f.write(FAKE_CLAUDE.replace("@STARTS@", starts).replace("@FINISH@", finish).replace("@QUESTION@", question))
+    os.chmod(fake, 0o755)
+    env = clean_env(GROVE_CLAUDE=fake)
+    count = lambda: open(starts).read().count("start") if os.path.exists(starts) else 0
+
+    s = Session(root, env=env)
+    s.expect("Board: current view")
+    s.send(ENTER)
+    mark = s.expect("Attempts: none")
+    s.send(b"R")
+    mark = s.expect("budget in USD", mark)
+    s.send(b"1" + ENTER)
+    mark = s.expect("permission mode", mark)
+    s.send(b"auto" + ENTER)
+    s.expect("Launch of an attempt of G-001", mark)
+    mark = s.expect("started; owner pid", mark)
+    s.send(ESC)
+    mark = s.expect("A lists them", mark)
+    s.send(b"A")
+    mark = s.expect("Attempts of G-001", mark)
+    s.send(ENTER)
+    mark = s.expect("Outcome: running", mark)
+    mark = s.expect("step 19999", mark)  # the newest of 20,000 events, polled while it runs
+    for _ in range(20):  # keys stay immediate however much the provider writes
+        s.send(b"\x1b[6~")
+    s.send(b"q")
+    code, out = s.finish()
+    s.restored()
+    check(code == 0 and out == b"", f"quit while running: exit {code}, stdout {out!r}")
+    found = attempts_of(root)
+    check(len(found) == 1 and list(found.values())[0] == (True, False) and count() == 1, f"the attempt outlives the board: {found}, {count()} starts")
+    first = list(found)[0]
+
+    s = Session(root, env=env)  # reconnect: the same attempt, never a second start
+    s.expect("Board: current view")
+    s.expect("running")  # the card's tag
+    s.send(ENTER)
+    mark = s.expect("A lists them")
+    s.send(b"A")
+    mark = s.expect("Attempts of G-001", mark)
+    s.send(ENTER)
+    mark = s.expect("Outcome: running", mark)
+    check(count() == 1, "reconnecting started nothing")
+    s.send(b"x")
+    mark = s.expect("Stop attempt", mark)
+    s.send(b"y")
+    mark = s.expect(f"Stop of attempt {first}", mark)
+    s.send(ESC)
+    mark = s.expect("stopped (exit 130)", mark)  # only the changed cells are redrawn
+    check(os.path.exists(os.path.join(root, ".claude", "worktrees", "worktree-G-001", "partial.txt")), "Stop kept the partial work")
+    s.send(ESC)
+    mark = s.expect("$0.00  worktree-G-001", mark)  # the list, redrawn where it differs
+    s.send(ESC)
+    mark = s.expect("R launches one", mark)
+    # The next attempt persists a question and ends: a wait, which a launch then refuses.
+    open(question, "w").close()
+    s.send(b"R")
+    mark = s.expect("budget in USD", mark)
+    s.send(b"1" + ENTER)
+    mark = s.expect("permission mode", mark)
+    s.send(b"auto" + ENTER)
+    mark = s.expect("started; owner pid", mark)
+    s.send(ESC)
+    mark = s.expect("waiting on question G-002", mark)
+    s.send(b"R")
+    mark = s.expect("blocked by open question G-002", mark)
+    check(count() == 2, "the wait started nothing more")
+    # The owner answers on the branch; after a refresh the work continues there.
+    wt1 = os.path.join(root, ".claude", "worktrees", "worktree-G-001")
+    path = os.path.join(wt1, "grove", "G-002-colour.md")
+    with open(path) as f:
+        text = f.read()
+    with open(path, "w") as f:
+        f.write(text.replace("status: open", "status: resolved"))
+    git(wt1, "commit", "-qam", "answer: blue")
+    s.send(b"r")
+    mark = s.expect("resolved", mark)
+    open(finish, "w").close()
+    s.send(b"R")
+    mark = s.expect("budget in USD", mark)
+    s.send(b"1" + ENTER)
+    mark = s.expect("permission mode", mark)
+    s.send(b"auto" + ENTER)
+    s.expect("worktree: reusing", mark)
+    mark = s.expect("started; owner pid", mark)
+    s.send(ESC)
+    mark = s.expect("candidate ready", mark)  # the poll saw it end, and the board was re-read
+    s.expect("G-001 · review", mark)
+    s.send(b"q")
+    code, out = s.finish()
+    s.restored()
+    check(code == 0 and out == b"", f"exit {code}, stdout {out!r}")
+    found = attempts_of(root)
+    check(len(found) == 3 and all(v == (False, True) for v in found.values()) and count() == 3, f"three attempts, all ended: {found}, {count()} starts")
+
+
+attempt_lifecycle.mutates = True  # attempts, a worktree and the fake's commit change the repository on purpose
+
+SCENARIOS = [select_and_show, leave_without_selecting, refuses_without_terminal, blocked_git, hangup, output_failure, resize, writes_no_logs, review_and_integrate,
+             attempt_lifecycle]
 
 
 def main():

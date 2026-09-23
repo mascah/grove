@@ -319,6 +319,10 @@ func (m *Model) launch() {
 		m.notice = g.ID + " is " + v.Record.Status + "; only proposed or active work is launched"
 		return
 	}
+	if q := m.blockingQuestion(g.ID); q != "" {
+		m.notice = g.ID + " is blocked by open question " + q + "; resolve it before another attempt"
+		return
+	}
 	for _, a := range m.attemptsOf(g.ID) {
 		if live(&a) {
 			m.notice = fmt.Sprintf("attempt %s of %s is %s; A shows it, x stops it", a.Launch.Attempt, g.ID, a.Status)

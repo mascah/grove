@@ -388,7 +388,7 @@ an untracked background agent running as an implied continuation.
 | --- | --- |
 | Claude, interactive | `/grove-work G-030 G-031` |
 | Claude, headless | `claude -p "/grove-work G-030 --interaction headless"` |
-| Grove-owned attempt | `grove run G-030 --budget USD --permission-mode MODE`: the headless row as a process that outlives the terminal, in the work's worktree; `grove attempts`, `attempt`, `stop` |
+| Grove-owned attempt | `grove run G-030 --budget USD --permission-mode MODE`, or `R` on the work's detail on the board: the headless row as a process that outlives the terminal, in the work's worktree; `grove attempts`, `attempt`, `stop`, or `A` and `x` on the board |
 | Codex, interactive | `$grove-work G-030 G-031` |
 | Any agent without skills | "Read the repository's agent instructions and the output of `grove guide work`, then follow that guide for `G-030 --interaction headless`." |
 | Inspect first, no agent | `grove context G-030` |
@@ -396,7 +396,7 @@ an untracked background agent running as an implied continuation.
 Every row ends in this file and the same `context` command; the mode travels
 as the `--interaction` argument and is passed on to `context`, which records it
 in its output. The skills are explicit-invocation only. Grove starts an
-agent only through `grove run`, one explicitly assigned work ID per attempt:
+agent only through `grove run` or the board's `R`, one explicitly assigned work ID per attempt:
 the caller's assignment is the authorization, the attempt binds the worktree,
 identity, budget, permission profile, raw logs, Stop and owner-loss handling,
 and its result is facts about the process, never acceptance; the record's

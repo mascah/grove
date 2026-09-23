@@ -612,14 +612,17 @@ contract defects that G-014/G-015/G-016 repair; their
 [evidence](../grove/G-028-repairs-review.md) lists the remaining limits.
 [G-017](../grove/G-017-terminal-picker.md) adds a terminal board over these
 operations; it changes no schema, and since G-044 writes a record only through
-the three review actions, each behind a prompt. Editing fields from an
+the three review actions, each behind a prompt; since G-046 it also launches,
+lists and stops attempts, the launch and stop behind prompts. Editing fields from an
 interactive view and automatic checkout creation are future investments.
 
 Plans and reviews are records. Report records and artifact
 ingestion are deferred. Attempts are not records: `grove run` (G-045) keeps
 each attempt's inputs, raw events and result as files under the Git common
 directory, shared by every worktree and never committed, and the work
-record's own status on the attempt's branch is the only handoff. Ordinary
+record's own status on the attempt's branch is the only handoff. The board
+(G-046) reads the same files and derives an outcome from them for display;
+it writes nothing about an attempt. Ordinary
 Markdown links and prose can carry other supporting material in the meantime. The work planning metadata above is accepted for
 the starting schema; attachment deferral does not require
 deferring useful planning fields. Assignees and richer record types remain

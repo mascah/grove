@@ -216,6 +216,17 @@ func TestLaunchRefusals(t *testing.T) {
 	if len(r2.launches) != 0 {
 		t.Fatal("nothing launched")
 	}
+	// An open question that blocks the work is a wait, not a launch.
+	res := fx.twoBranches()
+	q := version(fx.cMain, "Q-002", "Red or blue?", "open")
+	q.Record.Blocks = []string{"W-002"}
+	res.Groups = append(res.Groups, versions.Group{ID: "Q-002", Versions: []versions.Version{q}})
+	m = openRuns(t, &fake{res: res}, &runs{}, 120, 36)
+	m.openDetail("W-002")
+	press(m, "R")
+	if m.prompt != nil || !strings.Contains(plain(m), "W-002 is blocked by open question Q-002 (Red or blue?); resolve it before another attempt") {
+		t.Fatalf("a blocking question refuses:\n%s", plain(m))
+	}
 }
 
 // After feedback the record is active on its candidate's branch: R
