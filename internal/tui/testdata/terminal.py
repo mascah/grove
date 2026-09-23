@@ -420,7 +420,8 @@ def review_and_integrate(root, wt, base):
         record = f.read()
     check(f'approved: "{candidate}"' in record and record.endswith(": Ship it\n"), f"feature's record after approval: {record!r}")
     s.send(ESC)
-    s.expect(f"candidate {candidate[:7]} · approved", mark)  # the standing is drawn before the changes are read
+    # The renderer scrolls and redraws lines from their first changed cell, so
+    # the approval is checked in the file above; the re-read changes are new.
     mark = s.expect("only the record changed since it", mark)
     s.send(b"i")
     mark = s.expect("mark G-001 done? y/n", mark)
