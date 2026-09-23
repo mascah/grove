@@ -22,13 +22,25 @@ import (
 	"github.com/mascah/grove/internal/versions"
 )
 
-// Backend is every effect the interface has besides drawing.
+// Backend is every effect the interface has besides drawing. The reads are
+// the board's; the three actions are G-044's, each run in the checkout the
+// review view names and returning the facts to show.
 type Backend struct {
 	Inspect func(ctx context.Context, root, id string) (*versions.Result, error)
 	Resolve func(ctx context.Context, root, selector string) (*versions.Workspace, error)
 	// History lists the commits behind an open card's focused version. It is
 	// read when a card is open, never for the board; nil leaves the section out.
 	History func(ctx context.Context, root, commit, path string) ([]versions.Commit, error)
+	// Changes reads a candidate's files against the target and what the tip
+	// changed after it, when a detail with a candidate is open; nil leaves
+	// the section out. Diff reads one of those files.
+	Changes func(ctx context.Context, root, target, candidate, tip, recordPath string) (*versions.Changes, error)
+	Diff    func(ctx context.Context, root, from, to, path string) (string, error)
+	// Approve, Feedback and Integrate write: in root, the checkout of the
+	// branch judged, or of the target. Nil leaves the action out.
+	Approve   func(ctx context.Context, root, id, verdict string) ([]string, error)
+	Feedback  func(ctx context.Context, root, id, text string) ([]string, error)
+	Integrate func(ctx context.Context, root, id string, cleanup bool) ([]string, error)
 }
 
 type screen int
@@ -40,6 +52,7 @@ const (
 	chooserScreen
 	sourcesScreen
 	searchScreen
+	resultScreen
 )
 
 var statuses = [5]string{"proposed", "active", "review", "done", "abandoned"}
@@ -162,13 +175,16 @@ type Model struct {
 	notice  string // one-shot message, cleared by the next key
 
 	gen       int    // the newest request; older replies are ignored
-	pending   string // "", "inspect", "resolve", or "history": one read at a time
+	pending   string // "", "inspect", "resolve", "history", "changes", "diff" or "act": one at a time
 	resolving string // the exact selector a pending resolve was asked for
-	reading   string // the history key a pending history read was asked for
+	reading   string // the key a pending history, changes or diff read was asked for
+	acting    string // the running action, for the banner
 	cancel    context.CancelFunc
-	hist      map[string]lineage  // by commit and path, for the current result only
-	md        map[string][]string // rendered Markdown by key and width, for the current result only
-	done      bool                // the session is ending: start nothing more
+	hist      map[string]lineage     // by commit and path, for the current result only
+	changes   map[string]changesRead // by candidate, tip, target and path, likewise
+	diffs     map[string]diffRead    // by base, candidate and path, likewise
+	md        map[string][]string    // rendered Markdown by key and width, for the current result only
+	done      bool                   // the session is ending: start nothing more
 
 	board         sourceKey
 	hasBoard      bool // a checkout's own board; otherwise the current view
@@ -183,6 +199,9 @@ type Model struct {
 	side         int      // the detail's sidebar cursor; -1 while the content has focus
 	dscroll      int      // the detail's content scroll
 	asOf         string   // a timeline commit whose content the detail shows; "" is now
+	diff         string   // a changed file whose diff the detail shows; "" is the content
+	prompt       *prompt  // the open question on the last row, if any
+	result       *outcome // the last action's outcome, on the result screen
 	query        string   // the search's text
 	hit          int      // the search's cursor
 	verKey       string   // a row's key; "" is the ID header, which selects nothing
@@ -236,15 +255,18 @@ func (m *Model) resolve(selector string) tea.Cmd {
 	return cmd
 }
 
-// busy reports a read that a key must wait for. A history read is not one:
-// whatever the person asks for next replaces it.
-func (m *Model) busy() bool { return m.pending == "inspect" || m.pending == "resolve" }
+// busy reports a read or action that a key must wait for. A history,
+// changes or diff read is not one: whatever the person asks for next
+// replaces it.
+func (m *Model) busy() bool {
+	return m.pending == "inspect" || m.pending == "resolve" || m.pending == "act"
+}
 
 // wantHistory starts reading the focused version's history when a card is
 // showing, no other read is pending, and that history is not already held or
 // being read. The board never asks for one.
 func (m *Model) wantHistory() tea.Cmd {
-	if m.backend.History == nil || m.done || m.screen != versionsScreen && m.screen != detailScreen || m.busy() {
+	if m.backend.History == nil || m.done || m.screen != versionsScreen && m.screen != detailScreen || m.pending != "" && m.pending != "history" {
 		return nil
 	}
 	commit, path := historyAt(m.historyOf())
@@ -314,13 +336,21 @@ func (m *Model) stop() {
 		m.cancel()
 	}
 	m.gen++
-	m.pending, m.resolving, m.reading, m.cancel = "", "", "", nil
+	m.pending, m.resolving, m.reading, m.acting, m.cancel = "", "", "", "", nil
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	cmd := m.update(msg)
+	// One read at a time, in this order: a detail's history, then its
+	// changes, then a chosen diff; the next starts when the last delivered.
 	if cmd == nil {
 		cmd = m.wantHistory()
+	}
+	if cmd == nil {
+		cmd = m.wantChanges()
+	}
+	if cmd == nil {
+		cmd = m.wantDiff()
 	}
 	return m, cmd
 }
@@ -336,6 +366,7 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 			return nil
 		}
 		m.pending, m.cancel, m.hist, m.md, m.asOf = "", nil, map[string]lineage{}, nil, ""
+		m.changes, m.diffs, m.diff = map[string]changesRead{}, map[string]diffRead{}, ""
 		if msg.err != nil {
 			m.res, m.failure = nil, msg.err.Error()
 			m.screen, m.cardID = boardScreen, ""
@@ -367,9 +398,46 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		m.pending, m.reading, m.cancel = "", "", nil
 		m.hist[msg.key] = lineage{msg.commits, msg.err}
 		m.clampScroll()
+	case changesMsg:
+		if msg.gen != m.gen || m.pending != "changes" {
+			return nil
+		}
+		m.pending, m.reading, m.cancel = "", "", nil
+		m.changes[msg.key] = changesRead{msg.c, msg.err}
+		m.clampScroll()
+	case diffMsg:
+		if msg.gen != m.gen || m.pending != "diff" {
+			return nil
+		}
+		m.pending, m.reading, m.cancel = "", "", nil
+		m.diffs[msg.key] = diffRead{msg.text, msg.err}
+		m.clampScroll()
+	case actMsg:
+		if msg.gen != m.gen || m.pending != "act" {
+			return nil
+		}
+		m.pending, m.acting, m.cancel = "", "", nil
+		title := map[string]string{"approve": "Approved " + m.openID(), "feedback": "Feedback recorded on " + m.openID(), "integrate": "Integration of " + m.openID()}[msg.kind]
+		m.result = &outcome{title: title, facts: msg.facts}
+		if msg.err != nil {
+			m.result.err = msg.err.Error()
+		}
+		m.screen, m.scroll = resultScreen, 0
+		// Whatever was written, the board is re-read; the outcome stays up.
+		return m.inspect()
 	case tea.KeyPressMsg:
-		if m.screen == searchScreen && msg.String() != "ctrl+c" {
-			m.notice = ""
+		if msg.String() == "ctrl+c" {
+			return m.key("ctrl+c")
+		}
+		m.notice = ""
+		if m.pending == "act" {
+			m.notice = actingText(m.acting) + " Keys wait for it."
+			return nil
+		}
+		if m.prompt != nil {
+			return m.promptKey(msg)
+		}
+		if m.screen == searchScreen {
 			m.searchKey(msg)
 			return nil
 		}
@@ -420,6 +488,11 @@ func (m *Model) key(k string) tea.Cmd {
 			}
 			m.screen = detailScreen
 			m.leaveVersions()
+		case resultScreen:
+			m.result, m.scroll = nil, 0
+			if m.screen = boardScreen; len(m.stack) != 0 {
+				m.screen = detailScreen
+			}
 		default:
 			m.screen, m.scroll = m.back, 0
 		}
@@ -434,7 +507,7 @@ func (m *Model) key(k string) tea.Cmd {
 		return m.versionsKey(k)
 	case chooserScreen:
 		m.chooserKey(k)
-	case sourcesScreen:
+	case sourcesScreen, resultScreen:
 		m.scrollKey(k)
 	}
 	return nil

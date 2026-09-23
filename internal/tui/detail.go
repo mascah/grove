@@ -21,6 +21,7 @@ import (
 type entry struct {
 	role, id, title, status string
 	note                    string // a review: what it examined, against the candidate
+	change                  *versions.Change
 	commit                  *versions.Commit
 }
 
@@ -28,14 +29,17 @@ type entry struct {
 // or a linked record from another detail.
 func (m *Model) openDetail(id string) {
 	m.stack = append(m.stack, id)
-	m.screen, m.side, m.dscroll, m.asOf = detailScreen, -1, 0, ""
+	m.screen, m.side, m.dscroll, m.asOf, m.diff = detailScreen, -1, 0, "", ""
 	m.leaveVersions()
+	m.startAtEvidence()
 }
 
-// leaveDetail steps back: from a commit's content to now, then to the record
-// opened before, then to the board.
+// leaveDetail steps back: from a diff or a commit's content to now, then to
+// the record opened before, then to the board.
 func (m *Model) leaveDetail() {
 	switch {
+	case m.diff != "":
+		m.diff, m.dscroll = "", 0
 	case m.asOf != "":
 		m.asOf, m.dscroll = "", 0
 	case len(m.stack) > 1:
@@ -48,21 +52,33 @@ func (m *Model) leaveDetail() {
 
 func (m *Model) detailKey(k string) {
 	entries := m.entries()
-	linked := slices.IndexFunc(entries, func(e entry) bool { return e.commit == nil })
+	linked := slices.IndexFunc(entries, func(e entry) bool { return e.commit == nil && e.change == nil })
+	changes := slices.IndexFunc(entries, func(e entry) bool { return e.change != nil })
 	timeline := slices.IndexFunc(entries, func(e entry) bool { return e.commit != nil })
 	switch k {
 	case "tab":
-		// Content, then the linked records, then the timeline, then content.
+		// Content, then the linked records, the changes, the timeline, then content.
+		var next int
 		switch {
-		case m.side < 0 && linked >= 0:
-			m.side = linked
-		case m.side < 0 && timeline >= 0, m.side >= 0 && m.side < timeline:
-			m.side = timeline
-		case m.side < 0 && m.width < wideWidth:
-			m.side = 0 // a narrow terminal shows the sidebar even with nothing to select
+		case m.side < 0:
+			next = -1
+			for _, first := range []int{linked, changes, timeline} {
+				if first >= 0 {
+					next = first
+					break
+				}
+			}
+			if next < 0 && m.width < wideWidth {
+				next = 0 // a narrow terminal shows the sidebar even with nothing to select
+			}
+		case changes > m.side:
+			next = changes
+		case timeline > m.side:
+			next = timeline
 		default:
-			m.side = -1
+			next = -1
 		}
+		m.side = next
 	case "up", "k", "down", "j", "pgup", "pgdown":
 		if m.side < 0 {
 			m.dscroll = m.moved(m.dscroll, k)
@@ -76,13 +92,22 @@ func (m *Model) detailKey(k string) {
 		}
 		switch e := entries[m.side]; {
 		case e.commit != nil && e.commit.Source != nil:
-			m.asOf, m.dscroll = e.commit.ID, 0
+			m.asOf, m.diff, m.dscroll = e.commit.ID, "", 0
+		case e.change != nil:
+			// A rename's diff is read at its new path.
+			path := e.change.Path
+			if i := strings.LastIndex(path, " → "); i >= 0 {
+				path = path[i+len(" → "):]
+			}
+			m.diff, m.asOf, m.dscroll = path, "", 0
 		case e.commit == nil && e.id != "":
 			m.openDetail(e.id)
 		}
 	case "v":
 		m.screen = versionsScreen
 		m.leaveVersions()
+	case "a", "f", "i":
+		m.action(k)
 	}
 }
 
@@ -224,7 +249,7 @@ func (m *Model) historyItems(v *versions.Version) (items []histItem, message str
 }
 
 // entries lists the sidebar's selectable lines in order: linked records,
-// then the timeline's commits.
+// then the changed files, then the timeline's commits.
 func (m *Model) entries() []entry {
 	g := m.group()
 	if g == nil {
@@ -236,6 +261,7 @@ func (m *Model) entries() []entry {
 		r = v.Record
 	}
 	out := m.linked(g.ID, r)
+	out = append(out, m.changeEntries(v)...)
 	if v != nil {
 		items, _ := m.historyItems(v)
 		for _, it := range items {
@@ -304,6 +330,12 @@ func (m *Model) detailHead(v *versions.Version, w int) []string {
 	inner = append(inner, wrap(title, iw)[:min(len(wrap(title, iw)), rows)]...)
 	if meta := m.detailMeta(g, v); meta != "" && !compact {
 		inner = append(inner, wrap(meta, iw)[:min(len(wrap(meta, iw)), rows)]...)
+	}
+	// A candidate in review shows its standing and where the actions run.
+	if !compact && r != nil && r.Type == "work" && r.Status == "review" {
+		for _, row := range m.reviewRows(g, v) {
+			inner = append(inner, wrap(row, iw)[:min(len(wrap(row, iw)), rows)]...)
+		}
 	}
 	b := lipgloss.ThickBorder()
 	edge := func(l, mid, r string) string { return accent.Render(l + strings.Repeat(mid, iw+2) + r) }
@@ -378,7 +410,10 @@ func (m *Model) detailMeta(g *versions.Group, v *versions.Version) string {
 func (m *Model) content(v *versions.Version, w, n int) []string {
 	all := m.contentRows(v, w)
 	head := fmt.Sprintf("Content  %d-%d of %d", min(m.dscroll+1, len(all)), min(m.dscroll+n-1, len(all)), len(all))
-	if m.asOf != "" {
+	switch {
+	case m.diff != "":
+		head = fmt.Sprintf("Diff of %s (Esc returns to the content)  %d-%d of %d", m.diff, min(m.dscroll+1, len(all)), min(m.dscroll+n-1, len(all)), len(all))
+	case m.asOf != "":
 		head = fmt.Sprintf("Content as of %s (Esc returns to now)  %d-%d of %d", m.asOf[:min(len(m.asOf), 7)], min(m.dscroll+1, len(all)), min(m.dscroll+n-1, len(all)), len(all))
 	}
 	if m.side < 0 {
@@ -394,6 +429,9 @@ func (m *Model) content(v *versions.Version, w, n int) []string {
 func (m *Model) contentRows(v *versions.Version, w int) []string {
 	if v == nil {
 		return nil
+	}
+	if m.diff != "" {
+		return m.diffContent(v, w)
 	}
 	if m.asOf != "" {
 		commit, path := historyAt(v)
@@ -446,6 +484,7 @@ func (m *Model) sidebar(v *versions.Version, w, n int) []string {
 			rows = append(rows, line("             "+e.note, w))
 		}
 	}
+	m.changesSection(v, w, heading, item, func(text string) { rows = append(rows, wrap(text, w)...) })
 	if v != nil {
 		heading("Timeline on " + label(v.Source))
 		items, message := m.historyItems(v)

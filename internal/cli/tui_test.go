@@ -13,7 +13,6 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/mascah/grove/internal/tui"
-	"github.com/mascah/grove/internal/versions"
 )
 
 func TestBoardInvocation(t *testing.T) {
@@ -79,7 +78,7 @@ type boardSession struct {
 
 func openBoard(t *testing.T, root string) boardSession {
 	t.Helper()
-	m := tui.New(t.Context(), root, tui.Backend{Inspect: versions.InspectContext, Resolve: versions.ResolveContext, History: versions.HistoryContext})
+	m := tui.New(t.Context(), root, tui.Live())
 	m.Update(tea.WindowSizeMsg{Width: 160, Height: 40}) // five columns: 27-character titles need 32 cells each
 	s := boardSession{t, m}
 	s.run(m.Init())
@@ -98,7 +97,7 @@ func (s boardSession) run(cmd tea.Cmd) (quit bool) {
 }
 
 func (s boardSession) press(keys ...string) (quit bool) {
-	named := map[string]tea.KeyPressMsg{"enter": {Code: tea.KeyEnter}, "down": {Code: tea.KeyDown}, "up": {Code: tea.KeyUp}, "esc": {Code: tea.KeyEscape}}
+	named := map[string]tea.KeyPressMsg{"enter": {Code: tea.KeyEnter}, "down": {Code: tea.KeyDown}, "up": {Code: tea.KeyUp}, "esc": {Code: tea.KeyEscape}, "tab": {Code: tea.KeyTab}}
 	for _, k := range keys {
 		msg, ok := named[k]
 		if !ok {
@@ -296,4 +295,80 @@ func boardWorkflow(t *testing.T, broken bool) {
 			t.Fatal("refusal, refresh, and reselection changed files")
 		}
 	}
+}
+
+// The review workflow on real Git: G-001 is in review on feature with a
+// candidate that adds a file. From the board in main's checkout the owner
+// reads the candidate's standing, its changed files and a diff, approves it
+// (written on feature), then integrates it into main, where it is done.
+func TestBoardReviewWorkflow(t *testing.T) {
+	t.Parallel()
+	root := gitFixture(t)
+	for _, kv := range [][2]string{{"user.name", "t"}, {"user.email", "t@t"}, {"commit.gpgsign", "false"}, {"maintenance.auto", "false"}} {
+		gitIn(t, root, "config", kv[0], kv[1])
+	}
+	write(t, root, "grove.yaml", "schema_version: 3\nrecords: docs/records\ntarget: main\n")
+	gitIn(t, root, "commit", "-qam", "chore: target")
+	wt := filepath.Join(filepath.Dir(root), "feature-wt")
+	gitIn(t, root, "worktree", "add", "-q", "-b", "feature", wt)
+	write(t, wt, "code.txt", "hello <b>\x1b]0;evil\a\n")
+	write(t, wt, "docs/records/work/renamed.md", strings.Replace(work, "status: proposed", "status: active", 1))
+	gitIn(t, wt, "add", "-A")
+	gitIn(t, wt, "commit", "-qm", "feat: the work")
+	candidate := gitIn(t, wt, "rev-parse", "HEAD")
+	var out, errOut bytes.Buffer
+	if code := Run([]string{"--project", wt, "update", "G-001", "--set", "status=review", "--set", "candidate=" + candidate, "--commit"}, root, &out, &errOut); code != 0 {
+		t.Fatal(errOut.String())
+	}
+	short := candidate[:7]
+
+	s := openBoard(t, root)
+	s.want("Board: current view, target main", "Review 1")
+	s.press("l", "l", "enter")
+	s.want("G-001 · review", "candidate "+short+" · not on main",
+		"Review: candidate "+short+" · not yet approved · only the record changed since it · not on main",
+		"a approve and f feedback run on branch feature in "+wt, "integrate runs into main in "+root,
+		"Changes against main from ", "code.txt  +1 −0", "docs/records/work/renamed.md  +1 −1", "a approve   f feedback   i integrate")
+	s.press("tab")
+	for !strings.Contains(s.screen(), "> code.txt") {
+		s.press("down")
+	}
+	s.press("enter")
+	s.want("Diff of code.txt (Esc returns to the content)", `+hello <b>\x1b]0;evil\a`)
+	if strings.Contains(s.m.View().Content, "\x1b]0;") {
+		t.Fatal("the diff's control sequence reached the screen")
+	}
+	s.press("esc")
+	s.lacks("Diff of")
+
+	// Approval is written on feature, and the board re-read shows it.
+	s.press("a")
+	s.want("Approve G-001 on branch feature · verdict")
+	for _, c := range "Ship it" {
+		s.press(string(c))
+	}
+	s.press("enter")
+	s.want("Approved G-001", "approved: G-001's candidate, in commit ", "The board has been re-read. Esc returns to the record.")
+	if got := gitIn(t, wt, "show", "HEAD:docs/records/work/renamed.md"); !strings.Contains(got, "approved: \""+candidate+"\"") || !strings.Contains(got, "Verdict on candidate "+short+", ") || !strings.HasSuffix(got, ": Ship it") {
+		t.Fatalf("feature's record after approval:\n%s", got)
+	}
+	s.press("esc")
+	s.want("Review: candidate " + short + " · approved · only the record changed since it · not on main")
+
+	// Integration merges feature into main and writes done there.
+	s.press("i")
+	s.want("Merge branch feature into main in " + root + " and mark G-001 done? y/n")
+	s.press("y")
+	s.want("Also remove the worktree " + wt + " and delete branch feature? y/n")
+	s.press("n")
+	s.want("Integration of G-001", "approval: candidate "+short+" of G-001 approved on branch feature (Verdict on candidate "+short+", ", "merge: fast-forward main from ", "done: G-001 done at commit ")
+	if got := gitIn(t, root, "show", "HEAD:docs/records/work/renamed.md"); !strings.Contains(got, "status: done") || !strings.Contains(got, "approved: \""+candidate+"\"") {
+		t.Fatalf("main's record after integration:\n%s", got)
+	}
+	if _, err := os.Stat(wt); err != nil {
+		t.Fatal("n should keep the worktree")
+	}
+	s.press("esc")
+	s.want("G-001 · done", "candidate "+short+" · on main")
+	s.lacks("a approve")
 }
