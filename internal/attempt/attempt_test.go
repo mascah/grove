@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/mascah/grove/internal/repo"
+	"golang.org/x/sys/unix"
 )
 
 // TestMain lets the test binary be the owner the launcher starts, exactly as
@@ -243,7 +244,7 @@ func TestRunToResult(t *testing.T) {
 		t.Fatalf("the provider saw %q (%v); only CLAUDE_CONFIG_DIR may reach it of the CLAUDE*, GROVE_ATTEMPT_OWNER and GIT_* variables", env, err)
 	}
 	log, _ := os.ReadFile(filepath.Join(v.Dir, "owner.log"))
-	sid, _ := syscall.Getsid(0)
+	sid, _ := unix.Getsid(0)
 	if !strings.Contains(string(log), fmt.Sprintf("owner pid %d sid %d;", l.Owner, l.Owner)) || strings.Contains(string(log), fmt.Sprintf(" sid %d;", sid)) {
 		t.Fatalf("the owner must lead its own session, apart from the launcher's %d:\n%s", sid, log)
 	}

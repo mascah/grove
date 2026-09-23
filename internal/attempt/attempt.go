@@ -41,6 +41,7 @@ import (
 
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/repo"
+	"golang.org/x/sys/unix"
 )
 
 // OwnerEnv names the attempt directory to a Grove binary that should run as
@@ -1009,6 +1010,6 @@ func orDetached(branch string) string {
 func short(commit string) string { return commit[:min(len(commit), 7)] }
 
 func sid() int {
-	id, _ := syscall.Getsid(0)
+	id, _ := unix.Getsid(0)
 	return id
 }
