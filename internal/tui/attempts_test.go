@@ -596,7 +596,7 @@ func TestAttemptStandings(t *testing.T) {
 		{view("W-107", "0", attempt.Finished, &attempt.Result{ExitCode: 130, Stopped: true}), settled, "stopped by x", "Stopped (exit 130).", ""},
 		{view("W-001", "1", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "active"}}), needsYou, "ended, no handoff", "Ended without a handoff: W-001 is active on worktree-W-001, with no candidate.", "o opens W-001; the report says why"},
 		// Continued outside an attempt to another candidate: a approves that one, not this.
-		{ready("W-108", "1"), settled, "candidate c0ffee1, superseded", "Candidate ready: W-108 in review on worktree-W-108 with candidate c0ffee1. W-108 has moved on: it is review with candidate beefcaf.", ""},
+		{ready("W-108", "1"), settled, "candidate c0ffee1, superseded", "Candidate ready: W-108 in review on worktree-W-108 with candidate c0ffee1. W-108 has moved on: it is in review with candidate beefcaf.", ""},
 		{ready("W-999", "1"), needsYou, "judge candidate c0ffee1", "Candidate ready: W-999 in review on worktree-W-999 with candidate c0ffee1.", "o opens W-999: a approves, f gives feedback"},
 	}
 	for _, c := range cases {

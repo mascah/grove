@@ -276,7 +276,7 @@ func (m *Model) standingOf(v *attempt.View) standing {
 		s.state += " Candidate " + short7(cand) + " was integrated: " + work + " is done."
 	case cand != "" && (!latest || status == "done" || status == "abandoned" || status == "review" && current != "" && !sameCommit(cand, current)):
 		s.short = "candidate " + short7(cand) + ", superseded"
-		s.state += " " + work + " has moved on: it is " + orUnread(status) + " with candidate " + short7(orUnread(current)) + "."
+		s.state += " " + work + " has moved on: it is " + inStatus(status) + " with candidate " + short7(orUnread(current)) + "."
 	case status == "done" || status == "abandoned":
 		s.short = "work " + status + " since"
 		s.state += " " + work + " is " + status + " now; nothing needs you."
@@ -330,6 +330,14 @@ func shortOf(kind string, v *attempt.View) string {
 // sameCommit compares two spellings of a commit, either possibly short.
 func sameCommit(a, b string) bool {
 	return a != "" && b != "" && (strings.HasPrefix(a, b) || strings.HasPrefix(b, a))
+}
+
+// inStatus reads a status after "it is".
+func inStatus(s string) string {
+	if s == "review" {
+		return "in review"
+	}
+	return orUnread(s)
 }
 
 func orUnread(s string) string {
@@ -795,7 +803,7 @@ func (m *Model) attemptRows(w int) []string {
 		for i := len(a.Entries) - 1; i >= 0; i-- {
 			out = append(out, entryRow(a.Entries[i], w))
 		}
-		if a.Cut {
+		if a.Cut || a.Dropped {
 			for _, r := range wrap("earlier events are in "+m.run.EventsPath, w) {
 				out = append(out, faint.Render(r))
 			}

@@ -622,7 +622,7 @@ func TestReadActivityBounded(t *testing.T) {
 		t.Fatal(err)
 	}
 	n, e := len(a.Entries), a.Entries
-	if n != maxActivity || !a.Cut || a.Report != "## Done\nAll of it." {
+	if n != maxActivity || a.Cut || !a.Dropped || a.Report != "## Done\nAll of it." {
 		t.Fatalf("%d entries, cut %v, report %q", n, a.Cut, a.Report)
 	}
 	if e[n-1] != (Entry{Kind: "result", Text: "result: success", Count: 1}) || e[n-3].Kind != "error" || e[n-4] != (Entry{Kind: "tool", Text: "Bash go test", Count: 1}) || e[n-5].Text != "step 299" {

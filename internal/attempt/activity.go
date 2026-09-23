@@ -26,6 +26,7 @@ type Activity struct {
 	Report  string  `json:"report,omitempty"`
 	Model   string  `json:"model,omitempty"` // as the provider reported it at the start
 	Cut     bool    `json:"cut"`             // the window began inside the file: earlier events are not shown or counted
+	Dropped bool    `json:"dropped"`         // older entries were dropped to keep maxActivity; the metrics still count them
 	Metrics Metrics `json:"metrics"`
 }
 
@@ -110,7 +111,7 @@ func ReadActivity(path string, window int64) (Activity, error) {
 	}
 	m.Turns, m.Subagents = max(len(c.turns), c.queries), max(len(c.agents), c.spawned)
 	if len(a.Entries) > maxActivity {
-		a.Entries, a.Cut = a.Entries[len(a.Entries)-maxActivity:], true
+		a.Entries, a.Dropped = a.Entries[len(a.Entries)-maxActivity:], true
 	}
 	return a, nil
 }
