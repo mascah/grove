@@ -4,9 +4,10 @@ type: work
 title: "Reconcile current documentation and give each fact one owner"
 status: review
 created: "2026-09-23T15:51:37Z"
-updated: "2026-09-23T18:36:22Z"
+updated: "2026-09-23T18:58:28Z"
 relates_to: ["G-036", "G-108", "G-109", "G-110"]
 candidate: "1614e89e802cf15e4b99e68d816ac67043d7d35d"
+approved: "1614e89e802cf15e4b99e68d816ac67043d7d35d"
 ---
 
 ## Outcome
@@ -339,3 +340,5 @@ Whether the README serves an external newcomer is
 [G-110](G-110-external-preview.md)'s judgment.
 
 Feedback on candidate 71a650e, 2026-09-23: Missed the intent. The record asked for reconciliation and got it, but never said that the README and AGENTS.md are routers, not books, so they still are: the README is 34.6k characters, a prose retelling of grove --help plus a full board manual. There is no word cap; the test is that the right content is in the right place and someone else can understand it. The README keeps a command overview but does not retell --help, which needs its own work and does not replace the README. The board's key-by-key manual leaves the README. AGENTS.md matters less. Acceptance revised in the next commit.
+
+Verdict on candidate 1614e89, 2026-09-23: good step in the right direction
