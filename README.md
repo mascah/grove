@@ -18,7 +18,8 @@ This build:
   approved one locally;
 - runs one bounded headless agent attempt of a work item as a process that
   outlives the terminal, and lists and stops attempts;
-- opens a terminal board, with no command, over all of the above.
+- opens a terminal board, with no command, over the current view, versions,
+  record detail and search, the review actions and attempts.
 
 Where to go next:
 
@@ -34,7 +35,7 @@ Where to go next:
 
 ## Use the CLI
 
-Requires Go 1.26 or later. Run from this repository:
+Requires Go 1.26.8 or later (`go.mod`). Run from this repository:
 
 ```sh
 go run ./cmd/grove                 # the terminal board; needs a terminal
@@ -61,7 +62,7 @@ go run ./cmd/grove workspace --source SELECTOR --json
 go run ./cmd/grove --project "$(go run ./cmd/grove workspace --source SELECTOR)" show G-003
 ```
 
-The first three commands read live files without modifying them; `new` adds
+`list`, `show` and `check` read live files without modifying them; `new` adds
 one file and prints its path. `list` shows ID, type,
 status, and title, and with `--status VALUE` (repeatable) only the records
 in any given status, refusing a value outside the record model's status

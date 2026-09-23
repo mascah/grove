@@ -38,8 +38,9 @@ on stderr; to tell a usage error (2) from a failure (1), build once with
   headless proposal branch is `worktree-shape-SLUG` in a linked worktree
   under `.claude/worktrees/`.
 - **Execute** assigned work IDs with `/grove-work G-030` or `$grove-work
-  G-030`, which load `docs/work-execution.md`. `grove run` (or `R` on the
-  board) starts the headless form as a Grove-owned attempt.
+  G-030`, which load `docs/work-execution.md`. `grove run G-030` (or `R` on
+  the board) starts `/grove-work G-030 --interaction headless` as a
+  Grove-owned attempt that outlives the terminal.
 - **Retrieve context in stages.** Start from `grove context IDs`: it reads the
   selected records in full and lists the rest. Read plans, prerequisites,
   questions, the record model and the brief when the guide's step needs them.
@@ -76,7 +77,8 @@ record's status.
 
 - **Identity.** `schema_version: 3` is the only schema, and Grove keeps no
   backward compatibility before its first release; inspect an old commit with
-  the CLI in that commit. Never hand-author or renumber an ID. `new` allocates
+  the CLI in that commit. Never hand-author or renumber an ID, and do not
+  move or rename record files: IDs and paths stay stable (G-064). `new` allocates
   from one counter in Git's common directory, shared by every linked worktree,
   and `new` and `update` serialize through a shared write lock (G-007, G-009).
   Keep `convert` for documents outside the record root.
@@ -107,8 +109,8 @@ record's status.
   current view derives from Git ancestry in `internal/versions/current.go`
   (G-042), and `b` still chooses one checkout's own board.
 - **Evidence and authority.** `../skills/` and `../nullsec/` are evidence and
-  potential compatibility targets, not part of an implementation's write
-  scope. Nullsec runs on this Grove: read its records with the installed
+  potential compatibility targets, not automatically part of an
+  implementation's write scope; follow their own instructions. Nullsec runs on this Grove: read its records with the installed
   `grove` from nullsec's checkout (`grove brief`, `grove list`, `grove
   context G-NNN`); its `G-` numbers are its own, so name the repository when an
   ID could be either. `../skills/` keeps the uninstalled predecessor's files;

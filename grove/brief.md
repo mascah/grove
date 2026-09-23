@@ -20,8 +20,8 @@ worktrees. The first adoption milestone, a complete interactive
 shape → implement → review → integrate loop,
 [G-036](G-036-interactive-adoption.md), was closed by the owner on 2026-09-22.
 Its nullsec acceptance was not exercised in nullsec: the owner accepted this
-repository's own use of the loop in its place, and nullsec has since cut over
-to this Grove ([G-041](G-041-nullsec-pilot.md)). Keyborg, selected in G-035
+repository's own use of the loop in its place. Nullsec's cutover to this
+Grove ([G-041](G-041-nullsec-pilot.md)) was part of that milestone. Keyborg, selected in G-035
 as the second adoption test, has no work record yet.
 
 The next audience, selected by the owner in a shaping conversation on
@@ -181,7 +181,8 @@ changed since.
 The installed `grove` is a build of this CLI from a named commit and can lag
 this checkout; use `go run ./cmd/grove` here. The predecessor is uninstalled.
 The archived FastAPI/PostgreSQL application
-(`../grove-archive-2026-09-18/`, last commit `be40e46`) is historical, with no service,
+(the sibling checkout `grove-archive-2026-09-18/`, last commit `be40e46`) is
+historical, with no service,
 credential, deployment or backlog authority over this project.
 
 ## Suggested sequence

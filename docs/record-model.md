@@ -60,8 +60,8 @@ commit (`go run ./cmd/grove` there); the current CLI reports such a branch in
 
 **Allocation.** Numbers come from the one counter file `grove/neutral-ids` in
 the Git common directory, under `grove/lock`, in the form `G 12`, with the
-floor scan (every `.md` beneath the record root in every local ref and
-worktree, nested included) and recovery notices described under
+floor scan (record files beneath the record root on every branch,
+remote-tracking ref and tag, and in every worktree, nested included) and recovery notices described under
 [Identity and dates](#identity-and-dates). A `grove/next-ids` file left by the
 deleted typed counters is never read or written.
 
@@ -318,11 +318,12 @@ one checkout remain an error even when their contents match. Genuine branch
 copies of one record retain their identity.
 
 Counter state never silently restarts at 1. Each allocation floors the
-counter by the highest ID in use: committed records on every local ref and
-live records in every worktree, nested folders included. A missing counter is
-initialized from that floor, and a counter below it continues above it, each
-with a notice on stderr; a notice says that reservations for records never
-written or since deleted cannot be recovered. A corrupt counter refuses
+counter by the highest ID in use: an `id:` line in any text file beneath the
+record root on every branch, remote-tracking ref and tag, and every live
+record in every worktree, nested folders included. A missing counter is
+initialized from that floor with a notice on stderr that reservations for
+records never written or since deleted cannot be recovered; a counter below
+the floor continues above it, with a notice. A corrupt counter refuses
 allocation until it is fixed or removed. Concurrent imports and manual edits
 are outside the allocator's exclusivity guarantee. Reading needs no Git or
 allocator state; allocation outside Git is not provided.
