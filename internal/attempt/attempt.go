@@ -602,8 +602,11 @@ func reconcile(dir string, l *Launch, res *Result, logf func(string, ...any)) {
 	}
 	res.Record, res.RecordError = recordState(filepath.Join(l.Worktree, l.Prefix), l.Work)
 	if res.Record != nil {
-		if out, err := repo.Git(filepath.Join(l.Worktree, l.Prefix), "status", "--porcelain", "--", res.Record.Path); err == nil {
-			res.RecordUncommitted = strings.TrimSpace(out) != ""
+		// Unverified counts as uncommitted: readiness is never assumed.
+		out, err := repo.Git(filepath.Join(l.Worktree, l.Prefix), "status", "--porcelain", "--", res.Record.Path)
+		res.RecordUncommitted = err != nil || strings.TrimSpace(out) != ""
+		if err != nil {
+			logf("owner: record status: %v", err)
 		}
 	}
 	if err := writeJSON(filepath.Join(dir, "result.json"), res); err != nil {

@@ -482,7 +482,10 @@ def attempts_of(root):
     for name in sorted(os.listdir(top)) if os.path.isdir(top) else []:
         if name.endswith(".tmp") or not os.path.isdir(os.path.join(top, name)):
             continue
-        fd = os.open(os.path.join(top, name, "owner.lock"), os.O_RDWR)
+        try:
+            fd = os.open(os.path.join(top, name, "owner.lock"), os.O_RDWR)
+        except OSError:  # a launch between renaming its directory and creating the lock
+            continue
         try:
             fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
             running = False

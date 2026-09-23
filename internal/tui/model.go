@@ -535,6 +535,7 @@ func (m *Model) key(k string) tea.Cmd {
 			m.leaveVersions()
 		case resultScreen:
 			if m.pending == "inspect" {
+				m.notice = "re-reading the board; Esc waits for it"
 				return nil // the record shown next must be the re-read one
 			}
 			m.result, m.scroll = nil, 0
