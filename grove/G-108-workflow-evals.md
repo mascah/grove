@@ -2,9 +2,9 @@
 id: "G-108"
 type: work
 title: "Establish behavioral evaluations for Grove context and workflows"
-status: proposed
+status: active
 created: "2026-09-23T16:05:04Z"
-updated: "2026-09-23T16:48:11Z"
+updated: "2026-09-23T19:50:36Z"
 relates_to: ["G-078", "G-040", "G-107", "G-110"]
 ---
 ## Outcome
