@@ -24,12 +24,14 @@ import (
 
 // Request is one update to one record. Set entries keep request order. An
 // empty Expect applies to whatever the file holds under the write lock; a
-// caller whose read may be old passes the revision it read. Commit commits
-// the record's file alone after a change.
+// caller whose read may be old passes the revision it read. Append is a
+// paragraph added at the end of the body, the one body edit; it changes no
+// existing byte. Commit commits the record's file alone after a change.
 type Request struct {
 	ID, Expect string
 	Set        []Field
 	Unset      []string
+	Append     string
 	Commit     bool
 }
 
@@ -96,8 +98,11 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 		return Result{}, err
 	}
 	result := Result{ID: r.ID, Path: r.Path, Revision: current}
-	if len(changes) == 0 {
+	if len(changes) == 0 && req.Append == "" {
 		return result, nil
+	}
+	if req.Append != "" && (!utf8.ValidString(req.Append) || strings.TrimSpace(req.Append) == "") {
+		return Result{}, errors.New("the appended paragraph must be nonempty valid UTF-8")
 	}
 	stamp := now.UTC().Truncate(time.Second)
 	for _, existing := range []struct {
@@ -113,6 +118,11 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 	candidate, err := Edit(r.Source, changes)
 	if err != nil {
 		return Result{}, fmt.Errorf("%s: %w", r.Path, err)
+	}
+	if req.Append != "" {
+		if candidate, err = appended(candidate, req.Append); err != nil {
+			return Result{}, fmt.Errorf("%s: %w", r.Path, err)
+		}
 	}
 	next, ds := project.ParseRecord(r.Path, candidate)
 	if len(ds) != 0 {
@@ -160,6 +170,22 @@ func commit(root, path, message string) (string, error) {
 	return strings.TrimSpace(head), nil
 }
 
+// appended adds one paragraph at the end of the body in the file's own line
+// ending: a blank line, then the text, then the ending.
+func appended(source []byte, text string) ([]byte, error) {
+	_, _, newline, err := frontmatter(source)
+	if err != nil {
+		return nil, err
+	}
+	out := append([]byte{}, source...)
+	if len(out) != 0 && out[len(out)-1] != '\n' {
+		out = append(out, newline...)
+	}
+	out = append(out, newline...)
+	text = strings.ReplaceAll(strings.ReplaceAll(strings.TrimSpace(text), "\r\n", "\n"), "\n", newline)
+	return append(append(out, text...), newline...), nil
+}
+
 // message names the request, as in "docs(G-076): set status=done candidate=abc unset size",
 // on one line whatever a value holds.
 func message(id string, req Request) string {
@@ -172,6 +198,9 @@ func message(id string, req Request) string {
 	}
 	if len(req.Unset) != 0 {
 		words = append(append(words, "unset"), req.Unset...)
+	}
+	if req.Append != "" {
+		words = append(words, "note")
 	}
 	return fmt.Sprintf("docs(%s): %s", id, strings.Join(words, " "))
 }
