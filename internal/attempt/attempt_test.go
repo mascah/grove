@@ -225,7 +225,7 @@ func TestRunToResult(t *testing.T) {
 	if r.ExitCode != 0 || r.Stopped || !r.Dirty || r.Head != l.Base { // dirty: the fake left env.txt untracked
 		t.Fatalf("result %+v", r)
 	}
-	if r.Record == nil || r.Record.Status != "proposed" || r.RecordError != "" {
+	if r.Record == nil || r.Record.Status != "proposed" || r.RecordError != "" || r.Record.Path != "grove/G-001-first.md" || r.RecordUncommitted {
 		t.Fatalf("record %+v %q", r.Record, r.RecordError)
 	}
 	ev := r.Events
@@ -259,11 +259,13 @@ func TestRunToResult(t *testing.T) {
 		t.Fatalf("list %v %v", views, err)
 	}
 
-	// Provider failures, in the same checkout: an error result with exit 1, no result event with exit 2, no executable at all.
-	fake(t, initLine+"\n"+resultLine("error_max_budget_usd", true)+"\nexit 1")
+	// Provider failures, in the same checkout: an error result with exit 1
+	// after an uncommitted record edit, no result event with exit 2, no
+	// executable at all.
+	fake(t, initLine+"\necho edited >> grove/G-001-first.md\n"+resultLine("error_max_budget_usd", true)+"\nexit 1")
 	l, _ = start(t, root, now.Add(time.Minute))
 	v = await(t, root, l.Attempt, Finished)
-	if v.Result.ExitCode != 1 || v.Result.Events.Result == nil || !v.Result.Events.Result.IsError || v.Result.Events.Result.Subtype != "error_max_budget_usd" {
+	if v.Result.ExitCode != 1 || v.Result.Events.Result == nil || !v.Result.Events.Result.IsError || v.Result.Events.Result.Subtype != "error_max_budget_usd" || !v.Result.RecordUncommitted {
 		t.Fatalf("%+v", v.Result)
 	}
 	// No result event at all, and a nonzero exit.

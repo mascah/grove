@@ -495,9 +495,11 @@ def attempts_of(root):
 
 
 def stop_attempts(root):
-    """Kill every attempt's owner and provider group, so a failed scenario leaves none running."""
+    """Kill the owner and provider group of every attempt still running, so a failed scenario leaves none; a finished one's pids may belong to others by now."""
     top = os.path.join(root, ".git", "grove", "attempts")
-    for name in os.listdir(top) if os.path.isdir(top) else []:
+    for name, (running, _) in attempts_of(root).items():
+        if not running:
+            continue
         for file, key, sign in (("attempt.json", "owner_pid", 1), ("child.json", "pgid", -1)):
             try:
                 with open(os.path.join(top, name, file)) as f:

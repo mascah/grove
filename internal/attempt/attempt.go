@@ -129,8 +129,11 @@ type Result struct {
 	Events       Events    `json:"events"`
 	Head         string    `json:"head"`  // the worktree's HEAD after the exit
 	Dirty        bool      `json:"dirty"` // uncommitted or untracked changes
-	Record       *State    `json:"record"`
-	RecordError  string    `json:"record_error,omitempty"`
+	// RecordUncommitted: the record's file differs from the worktree's HEAD,
+	// so what Record says is not yet on the branch.
+	RecordUncommitted bool   `json:"record_uncommitted,omitempty"`
+	Record            *State `json:"record"`
+	RecordError       string `json:"record_error,omitempty"`
 }
 
 // State is the work record as the worktree holds it.
@@ -138,6 +141,7 @@ type State struct {
 	Status    string `json:"status"`
 	Candidate string `json:"candidate,omitempty"`
 	Revision  string `json:"revision"`
+	Path      string `json:"path,omitempty"` // project-relative
 }
 
 // Status classifies an attempt from its files and the kernel alone.
@@ -597,6 +601,11 @@ func reconcile(dir string, l *Launch, res *Result, logf func(string, ...any)) {
 		res.Dirty = strings.TrimSpace(dirty) != ""
 	}
 	res.Record, res.RecordError = recordState(filepath.Join(l.Worktree, l.Prefix), l.Work)
+	if res.Record != nil {
+		if out, err := repo.Git(filepath.Join(l.Worktree, l.Prefix), "status", "--porcelain", "--", res.Record.Path); err == nil {
+			res.RecordUncommitted = strings.TrimSpace(out) != ""
+		}
+	}
 	if err := writeJSON(filepath.Join(dir, "result.json"), res); err != nil {
 		logf("owner: result: %v", err)
 	}
@@ -617,7 +626,7 @@ func recordState(root, id string) (*State, string) {
 					problems = append(problems, d.String())
 				}
 			}
-			return &State{Status: r.Status, Candidate: r.Candidate, Revision: project.Revision(r.Source)}, strings.Join(problems, "; ")
+			return &State{Status: r.Status, Candidate: r.Candidate, Revision: project.Revision(r.Source), Path: r.Path}, strings.Join(problems, "; ")
 		}
 	}
 	msg := id + " is not in the worktree"

@@ -470,8 +470,8 @@ final report rendered like a record body, and its recent activity newest
 first, one short line per event from the last 1 MiB of its events, so a
 flood of output costs one bounded read. The outcome is derived, never
 written: `running`, `orphaned`, `interrupted`, or for a finished attempt a
-`candidate ready` (only when its branch's tip holds the record in review
-with a candidate, as the result read it), `stopped`, `failed` (no result
+`candidate ready` (only when the attempt ended with its record committed
+in review with a candidate, which the owner records at exit), `stopped`, `failed` (no result
 event, an error result or a nonzero exit), `waiting on question` (the work's
 latest attempt, while an open question blocks it) or `ended without a
 handoff`; a clean exit alone is never ready, and a record that says review

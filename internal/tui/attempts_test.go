@@ -244,6 +244,16 @@ func TestLaunchPlace(t *testing.T) {
 	if got := where(res, "W-010"); got.Branch != "feature" || got.Worktree != "/repo/feat" || got.Expect != feat.Revision || got.Root != "/repo/feat" {
 		t.Fatalf("W-010 continues on feature from this checkout: %+v", got)
 	}
+	// A fresh start reuses the default branch's checkout wherever it is.
+	res = fx.twoBranches()
+	res.Target = "main"
+	onTarget(res, "W-002")
+	elsewhere := source("live", "wt2", "worktree-W-002")
+	elsewhere.Worktree = "/elsewhere/W-002"
+	res.Sources = append(res.Sources, elsewhere)
+	if got := where(res, "W-002"); got.Branch != "worktree-W-002" || got.Worktree != "/elsewhere/W-002" {
+		t.Fatalf("the default branch's checkout is reused: %+v", got)
+	}
 	// No target: this checkout's own state is the base.
 	res = fx.twoBranches()
 	if got := where(res, "W-002"); got.Branch != "" {
@@ -347,9 +357,6 @@ func TestAttemptOutcomes(t *testing.T) {
 	q := version(fx.cMain, "Q-002", "Red or blue?", "open")
 	q.Record.Blocks = []string{"W-009"}
 	res.Groups = append(res.Groups, versions.Group{ID: "Q-002", Versions: []versions.Version{q}})
-	// W-001's attempt branch was read: its tip holds the record in review.
-	tip := version(source("committed", "", "worktree-W-001"), "W-001", "Inspect records", "review")
-	res.Groups[0].Versions = append(res.Groups[0].Versions, tip)
 	m := openRuns(t, &fake{res: res}, &runs{}, 120, 36)
 	ok := &attempt.Final{Subtype: "success"}
 	cases := []struct {
@@ -372,19 +379,18 @@ func TestAttemptOutcomes(t *testing.T) {
 		{view("W-002", "10", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: &attempt.Final{Subtype: "success"}}, Record: &attempt.State{Status: "review"}}),
 			"ended without a handoff: W-002 is review on worktree-W-002, with no candidate"},
 		// The record says review in files never committed, and the run failed.
-		{view("W-002", "11", attempt.Finished, &attempt.Result{ExitCode: 1, Dirty: true, Events: attempt.Events{Result: &attempt.Final{Subtype: "error_max_budget_usd", IsError: true}}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12"}}),
-			"failed: error_max_budget_usd (exit 1); its record says review, uncommitted"},
-		{view("W-002", "12", attempt.Finished, &attempt.Result{Dirty: true, Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12"}}),
-			"ended without a handoff: W-002 is review on worktree-W-002, with no candidate; its record says review, uncommitted"},
+		{view("W-002", "11", attempt.Finished, &attempt.Result{ExitCode: 1, Dirty: true, RecordUncommitted: true, Events: attempt.Events{Result: &attempt.Final{Subtype: "error_max_budget_usd", IsError: true}}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12"}}),
+			"failed: error_max_budget_usd (exit 1); its record says review with candidate c0ffee1, uncommitted"},
+		{view("W-002", "12", attempt.Finished, &attempt.Result{Dirty: true, RecordUncommitted: true, Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12"}}),
+			"ended without a handoff: W-002 is review on worktree-W-002; its record says review with candidate c0ffee1, uncommitted"},
 		// A question open now does not make a stopped attempt, or an earlier one, a wait.
 		{view("W-009", "13", attempt.Finished, &attempt.Result{ExitCode: 130, Stopped: true, Events: attempt.Events{Result: ok}}), "stopped (exit 130)"},
 		{view("W-009", "0", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "active"}}),
 			"ended without a handoff: W-009 is active on worktree-W-009, with no candidate"},
-		// On a branch the board read, the tip decides: leftover untracked files do not.
-		{view("W-001", "14", attempt.Finished, &attempt.Result{Dirty: true, Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12", Revision: tip.Revision}}),
+		// The record's own file decides, as the owner found it at the end:
+		// leftover untracked files do not, and nothing committed later does.
+		{view("W-001", "14", attempt.Finished, &attempt.Result{Dirty: true, Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12", Revision: "sha256:then"}}),
 			"candidate ready: W-001 in review on worktree-W-001 with candidate c0ffee1"},
-		{view("W-001", "15", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12", Revision: "sha256:other"}}),
-			"ended without a handoff: W-001 is review on worktree-W-001, with no candidate; its record says review, uncommitted"},
 	}
 	m.attempts = []attempt.View{view("W-009", "6", attempt.Finished, nil), view("W-009", "0", attempt.Finished, nil)}
 	for _, c := range cases {

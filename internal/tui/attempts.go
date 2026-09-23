@@ -148,15 +148,14 @@ func (m *Model) outcomeOf(v *attempt.View) string {
 	work := v.Launch.Work
 	review := r.Record != nil && r.Record.Status == "review" && r.Record.Candidate != ""
 	// The record is read from the worktree's files, so it is the handoff only
-	// once committed: the branch's tip holds those bytes as the board read
-	// it, or, for a branch the board did not read, nothing there is
-	// uncommitted.
-	if held, known := m.committedOn(work, v.Launch.Branch, r.Record); review && (held || !known && !r.Dirty) {
+	// if the owner found it committed when the process ended. Later commits
+	// to the branch, such as an approval, change nothing about that.
+	if review && !r.RecordUncommitted {
 		return fmt.Sprintf("candidate ready: %s in review on %s with candidate %s", work, v.Launch.Branch, short7(r.Record.Candidate))
 	}
 	unsaid := ""
 	if review {
-		unsaid = "; its record says review, uncommitted"
+		unsaid = "; its record says review with candidate " + short7(r.Record.Candidate) + ", uncommitted"
 	}
 	exit := fmt.Sprintf("exit %d", r.ExitCode)
 	if r.Signal != "" {
@@ -177,24 +176,14 @@ func (m *Model) outcomeOf(v *attempt.View) string {
 			return "waiting on question " + q + unsaid
 		}
 	}
-	status := "unreadable"
+	status, none := "unreadable", ", with no candidate"
 	if r.Record != nil {
 		status = r.Record.Status
 	}
-	return fmt.Sprintf("ended without a handoff: %s is %s on %s, with no candidate%s", work, status, v.Launch.Branch, unsaid)
-}
-
-// committedOn reports whether branch's tip holds rec as work's record, and
-// whether the board read that branch at all.
-func (m *Model) committedOn(work, branch string, rec *attempt.State) (held, known bool) {
-	if g := m.groupOf(work); g != nil && rec != nil {
-		for _, v := range g.Versions {
-			if v.Source.Kind == "committed" && v.Source.Ref == "refs/heads/"+branch {
-				return v.Revision == rec.Revision, true
-			}
-		}
+	if review {
+		none = ""
 	}
-	return false, false
+	return fmt.Sprintf("ended without a handoff: %s is %s on %s%s%s", work, status, v.Launch.Branch, none, unsaid)
 }
 
 // blockingQuestion names an open question that blocks work in the records
@@ -380,12 +369,13 @@ func (m *Model) launch() {
 	if m.res.Target == "" {
 		onBase = v.Revision == here.Revision
 	}
+	ref := "refs/heads/worktree-" + g.ID // a fresh start reuses the default branch's checkout, wherever it is
 	if b := branchOf(v); b != "" && !onBase {
-		req.Branch = b
-		for _, s := range m.res.Sources {
-			if s.Kind == "live" && s.Ref == v.Source.Ref {
-				req.Worktree = s.Worktree
-			}
+		req.Branch, ref = b, v.Source.Ref
+	}
+	for _, s := range m.res.Sources {
+		if s.Kind == "live" && s.Ref == ref {
+			req.Branch, req.Worktree = strings.TrimPrefix(ref, "refs/heads/"), s.Worktree
 		}
 	}
 	m.prompt = &prompt{kind: "budget", id: g.ID, root: m.root, req: &req}

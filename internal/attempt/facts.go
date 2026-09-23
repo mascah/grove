@@ -68,7 +68,11 @@ func Facts(v *View, visible func(string) string) []string {
 		}
 		line("Worktree after: HEAD %s, %s", short(r.Head), dirty)
 		if r.Record != nil {
-			line("Record on the branch: %s %s, candidate %s, revision %s", l.Work, visible(r.Record.Status), visible(orNone(r.Record.Candidate)), r.Record.Revision)
+			uncommitted := ""
+			if r.RecordUncommitted {
+				uncommitted = ", uncommitted"
+			}
+			line("Record on the branch: %s %s, candidate %s, revision %s%s", l.Work, visible(r.Record.Status), visible(orNone(r.Record.Candidate)), r.Record.Revision, uncommitted)
 			if r.RecordError != "" {
 				line("Record problems: %s", visible(r.RecordError))
 			}
