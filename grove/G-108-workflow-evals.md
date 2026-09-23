@@ -142,7 +142,12 @@ and not answerable from the brief, while the companion topic's choice is.
 Follow-on candidates, shaped only if the skeleton's report says so: a case
 whose proposal must find and apply a constraint held in a listed
 prerequisite or plan amid plausible distractors, the only candidate that
-tests the `context` listing directly; an unchanged-wait rerun; a bounded
+tests the `context` listing directly; the end-to-end knowledge sequence from the
+second external assessment of 2026-09-23, once
+[G-114](G-114-capture-and-reuse-terms-question.md) lands: shaping settles a
+term, work meets an unanswered choice, the answer becomes a decision, review
+catches a contradiction, and a fresh session retrieves the corrected
+knowledge, checked on the clone's records and links; an unchanged-wait rerun; a bounded
 work run through `grove run`; checkpoint
 continuation after inputs change; stale review evidence; instruction-like
 linked material; the Codex row; and the owner-configuration comparison.
