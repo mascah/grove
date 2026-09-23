@@ -27,7 +27,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -385,9 +384,9 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		return nil, err
 	}
 	defer log.Close()
-	// The owner closes the ready pipe once its signal handler is installed,
-	// so a Stop after Start returns is always seen; the pipe also closes if
-	// the owner dies first, which the lock then shows.
+	// The owner writes a byte to the ready pipe once its signal handler is
+	// installed and the lock is its own, so a Stop after Start returns is
+	// always seen; the pipe closes empty if the owner dies first.
 	ready, readyW, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -409,14 +408,23 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	l.Owner = owner.Process.Pid
 	// Reaped when it exits, so a long-lived launcher such as the board keeps
 	// no zombie; a CLI launcher exits first and the owner is reparented.
-	go owner.Wait()
-	drained := make(chan struct{})
-	go func() { io.ReadAll(ready); close(drained) }()
+	exited := make(chan struct{})
+	go func() { owner.Wait(); close(exited) }()
+	reported := make(chan bool, 1)
+	go func() { n, _ := ready.Read(make([]byte, 1)); reported <- n == 1 }()
+	var started bool
 	select {
-	case <-drained:
+	case started = <-reported:
+		if !started {
+			// A dying process may close the pipe before it releases the lock
+			// (Linux does), so wait until it is reaped: only then does the
+			// lock read as free, for List and for Show.
+			<-exited
+		}
 	case <-time.After(10 * time.Second): // an owner that neither reports nor dies; the lock decides
+		started = locked(filepath.Join(adir, "owner.lock"))
 	}
-	if !locked(filepath.Join(adir, "owner.lock")) {
+	if !started {
 		return l, fmt.Errorf("the owner (pid %d) exited while starting; see %s (worktree %s is kept)", l.Owner, filepath.Join(adir, "owner.log"), worktree)
 	}
 	if err := writeJSON(filepath.Join(adir, "attempt.json"), l); err != nil {
@@ -515,7 +523,9 @@ func Own(dir string) int {
 	syscall.CloseOnExec(3) // the child must not inherit the lock: it would read as running after the owner is gone
 	lock := os.NewFile(3, "owner.lock")
 	defer lock.Close()
-	os.NewFile(4, "ready").Close() // tells the launcher the handler is installed
+	ready := os.NewFile(4, "ready")
+	ready.Write([]byte{1}) // tells the launcher the handler is installed and the lock is ours
+	ready.Close()
 	var l Launch
 	if err := readJSON(filepath.Join(dir, "attempt.json"), &l); err != nil {
 		logf("owner: %v", err)
