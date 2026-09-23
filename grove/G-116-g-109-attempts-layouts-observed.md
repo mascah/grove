@@ -269,3 +269,53 @@ For the chosen option; B drops steps 2's grouping and 3's toggle.
    the final revision; actual renders at 40×10, 80×24 and 160×48 recorded
    in G-109's evidence. The owner's judgment in a terminal (acceptance 5) is
    theirs, and no real-provider trial is run without a bounded mandate.
+
+## Revised after G-117's answer
+
+The owner answered on 2026-09-23 in G-117. They accepted **Option A's list**
+and with it the `Needs you` rule of part 2. They did not accept A's attempt
+screen, and asked for:
+
+- a clearer presentation of the run's configuration at the top, with
+  colours and visual indicators;
+- a prettier activity timeline, possibly as a right-hand column;
+- consecutive repeats of one event collapsed into one row with a counter,
+  such as `system: thinking_tokens (×14)`, which replaces part 3's proposal
+  to count system notices instead of listing them;
+- readable timestamps, in the style of `bench_worker.py` in the owner's
+  `bench` repository, which prefixes each row with the local `HH:MM:SS`;
+- metrics: tokens used, current context size, subagents, compactions, turns
+  and similar;
+- none of this coupled to Claude alone, since other harnesses must follow.
+
+The owner left open what the left-hand column holds. This attempt does not
+ask again. It fills that column with the content of A's screen that the
+owner did not object to: State, Next and the final report, which the
+timeline would otherwise push down. The owner judges the result in Review
+(acceptance 5), and `grove feedback` redirects it. Decisions taken here:
+
+1. **Header.** The work's ID and title in bold, a coloured state badge
+   (`●` running, `◆` needs you, `✓` or `·` settled), the time line, then a
+   run panel with aligned, coloured labels: attempt, model and provider
+   version, budget with the cost spent, permission mode, branch and base,
+   and the start time. The full `attempt.Facts` stay behind `d`, unchanged.
+2. **Metrics.** A provider-neutral `attempt.Metrics` (turns, input and
+   output tokens, context and its window, subagents, compactions, tool
+   calls, tool errors), filled by the reader of the Claude stream from the
+   same bounded window, so the board never scans a whole log. The result
+   event's totals are exact. A count taken from a cut window is shown as
+   `≥N`, and an unknown one as `–`, never as zero. The TUI knows only
+   `Metrics`, so another harness's reader fills the same fields.
+3. **Timeline.** Each `Activity` entry carries its event's own timestamp,
+   where the provider gives one (Claude's assistant and user events do; its
+   system events do not, so those rows show no time rather than a
+   borrowed one), and a count of consecutive identical rows. The rows are
+   newest first, `HH:MM:SS` in local time, with tools, errors and text told
+   apart by colour and a glyph.
+4. **Columns.** From 100 columns, the width at which the board shows
+   details beside rows, State and Next span the full width, then the report
+   sits on the left and the timeline on the right. Below 100 they stack:
+   report, then timeline.
+
+Steps 1, 2 and 4 above stand as written. Step 3 becomes this section's
+design. Step 5's checks apply to it.

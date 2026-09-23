@@ -2,9 +2,9 @@
 id: "G-109"
 type: work
 title: "Make Attempts easy to scan and act on"
-status: proposed
+status: active
 created: "2026-09-23T16:05:07Z"
-updated: "2026-09-23T16:08:00Z"
+updated: "2026-09-23T20:10:09Z"
 relates_to: ["G-045", "G-046", "G-107", "G-110"]
 ---
 
@@ -72,20 +72,9 @@ inside presentation work.
 
 ## Next
 
-Waiting on question [G-117](G-117-which-attempts-list-and-detail-l.md): the
-owner chooses a layout. Nothing is implemented.
-
-Checkpoint, 2026-09-23, headless attempt `G-109.20260923T194926Z`:
-selected G-109 alone, on branch `worktree-G-109` from `main` `6208e82`,
-starting from this record at `sha256:5a72acaa…`. Preparation is done:
-plan [G-116](G-116-g-109-attempts-layouts-observed.md) records the current
-screens, rendered from this repository's six real attempts by a throwaway
-model test that was deleted and never committed. It lists six findings,
-draws options A and B at 80×24 with every state G-109's acceptance names
-(sanitized `X-` examples where no real attempt exists), and gives the
-implementation steps. It also records that no report-retention repair is
-needed. G-117 asks for the layout, the rule for what needs the owner, and
-whether provider `system:` notices are counted rather than listed; it
-recommends A with both rules. No commands are still running. Once G-117 is
-resolved, rerun `/grove-work G-109`: the record goes active and G-116's
-Steps apply to the chosen option.
+Implementing, headless attempt of 2026-09-23 on branch `worktree-G-109`
+from `1a56af3`. [G-117](G-117-which-attempts-list-and-detail-l.md) is
+resolved: the owner accepted list A and redirected the attempt screen.
+[G-116](G-116-g-109-attempts-layouts-observed.md)'s section "Revised after
+G-117's answer" records the design this attempt implements and the one
+open point it fills (the left column) for the owner to judge in Review.
