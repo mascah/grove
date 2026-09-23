@@ -20,6 +20,8 @@ GIT_LOCATION = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", 
 ENTER, DOWN, ESC, CTRL_C = b"\r", b"\x1b[B", b"\x1b", b"\x03"
 ALT_ON, ALT_OFF = b"\x1b[?1049h", b"\x1b[?1049l"
 
+SESSIONS = []  # every grove started, killed on the way out so a failed scenario leaves none running
+
 WORK = "---\nid: G-001\ntype: work\ntitle: {title}\nstatus: {status}\n---\nAn outcome.\n"
 
 
@@ -80,6 +82,7 @@ class Session:
         self.screen = b""
         self.proc = subprocess.Popen([GROVE, *args], cwd=cwd, env=env or clean_env(), stdin=streams[stdin],
                                      stdout=subprocess.PIPE, stderr=streams[stderr])
+        SESSIONS.append(self)
 
     def pump(self, wait=0.05):
         fds = [fd for fd in (self.master, self.master2) if fd is not None]
@@ -413,6 +416,10 @@ def main():
                 failed += 1
                 print(f"FAIL  {scenario.__name__}: {e}")
     finally:
+        for s in SESSIONS:
+            if s.proc.poll() is None:
+                s.proc.kill()
+                s.proc.wait()
         shutil.rmtree(base, ignore_errors=True)
     sys.exit(1 if failed else 0)
 
