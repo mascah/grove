@@ -100,9 +100,67 @@ signal), and CodeQL.
 5. The owner judges the fix complete when the push-time vulnerability
    notice no longer appears.
 
+## Evidence
+
+Implemented 2026-09-23 on `worktree-G-105` from `main` 8310af1 (the record
+at `sha256:ad7123fd…`; no plan, as Next said). Commits after the `active`
+update e7dd366:
+
+- `8226c34 fix(attempt): use x/sys Getsid so the package builds on Linux`:
+  both call sites use `unix.Getsid`; x/sys becomes a direct requirement.
+- `b8f7bb3 build(deps): Go 1.26.8 and module advisories`: exactly the
+  trial's `go.mod` (Go 1.26.8, lipgloss 2.0.6, x/ansi 0.11.8, goldmark
+  1.8.6, yaml 3.0.5, x/sys 0.48.0, x/net 0.59.0, x/sync 0.23.0, x/text
+  0.42.0, ultraviolet 20260811164956).
+- `64f0a0c test: make three Linux-only failures independent of wrap and
+  timing`, and `1be9030` from the review. The Docker Linux suite, which the
+  trial had not run, showed that the Getsid compile error had hidden three
+  more ubuntu failures, all in tests: `TestBoardReviewWorkflow` wanted a path
+  on the card's line where a short `/tmp` wraps it (now read unwrapped);
+  `terminal.py`'s `attempt_lifecycle` advanced its mark past a frame that
+  already held `step 19999`; and `TestStopAfterReconnect`'s fake writes its
+  start mark before its INT trap, so a started provider can die of SIGINT
+  (exit -1, signal `interrupt`) instead of exiting 130, and the check now
+  accepts both. No product code changed beyond Getsid.
+
+Verification at `1be9030` on macOS (go1.26.8): `gofmt -l .` empty,
+`go vet ./...`, `GOOS=linux go vet ./...`, `go mod tidy -diff`,
+`go build ./...`, `go run ./cmd/grove check` OK, `go test -count=1
+-timeout 120s ./...` all ok, `go run golang.org/x/vuln/cmd/govulncheck@v1.8.0
+./...` "No vulnerabilities found", exit 0; no `syscall.Getsid` under
+`internal/`. Linux, `docker run … golang:1.26` (go1.26.8 linux/arm64, the
+`AGENTS.md` command): `go vet ./...` and the full suite passed twice at the
+tree committed as `64f0a0c`, `TestStopAfterReconnect -count=20` passed, and
+`internal/cli` and `internal/tui` passed again at `1be9030`.
+
+Against acceptance: 3 and 4 are met on the branch (`go 1.26.8`, govulncheck
+exit 0, no `syscall.Getsid`, Linux vet clean, Docker suite passes
+`internal/attempt`). 1, 2 and 5 can only be observed after the merge is
+pushed to `main`: the CI run, Dependabot closing PR #5 and #6 and alert #1,
+and the owner's push-time notice. Not run: CI itself (nothing was pushed), a
+Linux amd64 suite (the reviewer vetted amd64; the suite ran on arm64), and
+`-race` on `internal/attempt`.
+
+Review: [G-106](G-106-g-105-green-ci-review.md), independent, examined
+`64f0a0c`; nothing blocking, three notes, two fixed in `1be9030`. Open, out
+of scope: with a checkout path long enough to wrap the board's review card
+three rows deep, the card drops the row naming the integrate target (G-043
+and G-044's card).
+
 ## Next
 
-Assign. Small, no plan needed: the trial above is the implementation.
-Branch `worktree-G-105` from `main` ff43559 or later. The owner may prefer to
-apply the two commits directly on `main`, since the diff is 4 files and CI is
-the review; that is their call.
+In review. Candidate is the commit that set this record's evidence; the
+branch is `worktree-G-105`. To judge and integrate:
+
+```sh
+# in /Users/mascah/GitHub/mascah/grove/.claude/worktrees/worktree-G-105
+go run ./cmd/grove approve G-105 "VERDICT"
+# in main's checkout, /Users/mascah/GitHub/mascah/grove
+go run ./cmd/grove integrate G-105
+git push
+gh run list --branch main --limit 1
+gh api repos/mascah/grove/dependabot/alerts --jq '.[] | [.number, .state] | @tsv'
+gh pr list --state all --limit 5
+```
+
+Acceptance 1, 2 and 5 are read from those last three after the push.
