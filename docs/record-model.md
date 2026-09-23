@@ -60,7 +60,7 @@ commit (`go run ./cmd/grove` there); the current CLI reports such a branch in
 
 **Allocation.** Numbers come from the one counter file `grove/neutral-ids` in
 the Git common directory, under `grove/lock`, in the form `G 12`, with the
-floor scan (record files beneath the record root on every branch,
+floor scan (text files beneath the record root on every branch,
 remote-tracking ref and tag, and in every worktree, nested included) and recovery notices described under
 [Identity and dates](#identity-and-dates). A `grove/next-ids` file left by the
 deleted typed counters is never read or written.
