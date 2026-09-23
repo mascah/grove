@@ -55,7 +55,7 @@ Build one binary from a named commit, put it on `PATH`, and check which
 
 ```sh
 go build -o "$HOME/.local/bin/grove" ./cmd/grove   # from a clone at that commit
-GOBIN="$HOME/.local/bin" go install github.com/mascah/grove/cmd/grove@COMMIT  # or from the module
+GOBIN="$HOME/.local/bin" go install github.com/mascah/grove/cmd/grove@COMMIT  # or a pushed commit
 grove version     # must print "grove v…"; a usage error means another grove answered
 grove init        # at the checkout's top, or: grove --project /absolute/path init
 grove check
@@ -74,8 +74,8 @@ point Codex at the right binary.
 | Command behaviour | [Command reference](docs/commands.md), [record model](docs/record-model.md) |
 | The board | [docs/board.md](docs/board.md) |
 | Record types, fields, statuses, validation and lifecycle | [Record model](docs/record-model.md) |
-| Executing assigned work (`grove-work`) | [Work guide](docs/work-execution.md) |
-| Shaping ideas into proposed work (`grove-shape`) | [Shaping guide](docs/work-shaping.md) |
+| Executing assigned work (`grove-work`) | [Work guide](docs/work-execution.md), loaded by the [Claude](.claude/skills/grove-work/SKILL.md) and [Codex](.agents/skills/grove-work/SKILL.md) adapters; [G-032](grove/G-032-dogfood-review.md) records which invocations were exercised |
+| Shaping ideas into proposed work (`grove-shape`) | [Shaping guide](docs/work-shaping.md), loaded by the [Claude](.claude/skills/grove-shape/SKILL.md) and [Codex](.agents/skills/grove-shape/SKILL.md) adapters; [G-050](grove/G-050-shaping-review.md) records what was exercised |
 | Why Grove exists and its selected direction | [The brief](grove/brief.md) |
 | Progress and the next action on any work | That work's record: `grove list`, or `/` on the board |
 | Developing Grove, and its constraints | [AGENTS.md](AGENTS.md) |
@@ -83,13 +83,5 @@ point Codex at the right binary.
 
 ## Develop Grove
 
-[AGENTS.md](AGENTS.md) holds the development and verification policy. Run
-`lefthook install` once per clone: pre-commit formats staged Go files and runs
-`go vet` and `go mod tidy -diff`. The board's terminal checks drive the built
-binary through a pseudo-terminal with
-`python3 internal/tui/testdata/terminal.py BINARY` (Unix; skipped without
-`python3` and under `-short`). `just clean-merged` removes local branches
-merged into `main` and their clean worktrees after asking. GitHub Actions
-(`.github/workflows/ci.yml`) runs the checks on Ubuntu and macOS for every
-push to `main` and every pull request; it is a signal, not a gate.
-Dependabot opens weekly grouped update PRs.
+[AGENTS.md](AGENTS.md) holds the development and verification policy, the
+repository's hooks, CI and tooling.

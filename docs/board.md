@@ -169,17 +169,18 @@ render is cached per record content and width.
 
 | Key | Where | Action |
 | --- | --- | --- |
-| arrows, `h` `j` `k` `l` | everywhere | Move |
+| arrows, `j` `k` | everywhere but search, where letters are typed | Move |
+| `h` `l` | board | Move between columns |
 | Tab | board | Switch between the columns and Deleted or Elsewhere |
 | Tab | detail | Cycle the content, linked records, changes and timeline |
 | Tab | versions | Switch between versions and details |
 | Enter | anywhere with a cursor | Open the card, record, file diff, commit, attempt or fold; in versions, select that checkout |
-| PgUp/PgDn | lists and content | Scroll |
+| PgUp/PgDn | detail, versions, search, one attempt, sources | Scroll |
 | `/` | board | Search every record |
 | `a` | board | Show or hide Abandoned |
 | `a`, `f`, `i` | detail of work in review | Approve, give feedback, integrate |
 | `R` | detail of proposed or active work | Launch an attempt |
-| `A` | board or work detail | List attempts |
+| `A` | board or any detail | List attempts: of that work, or every attempt |
 | `x` | attempts list or one attempt | Stop the attempt |
 | `o` | attempts list or one attempt | Open its work record |
 | `v` | detail | Open the record's versions |

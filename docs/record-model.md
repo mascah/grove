@@ -3,8 +3,9 @@
 This is Grove's current record contract: configuration, record types, fields,
 statuses, validation and the lifecycle rules software enforces. How each rule
 was chosen is in the record linked beside it and in Git, not here; the
-[brief](../grove/brief.md) owns product direction, and the
-[README](../README.md) describes the commands.
+[brief](../grove/brief.md) owns product direction, `grove --help` gives each
+command's usage, and [the command reference](commands.md) covers the commands
+this document does not.
 
 ## Identity and placement apart from classification
 

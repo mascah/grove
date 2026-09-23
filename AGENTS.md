@@ -3,7 +3,7 @@
 Grove is a Go CLI and terminal board over Markdown records with YAML
 frontmatter, kept in ordinary files and Git, with no required running
 service. This file is this repository's development policy. Every other fact
-has one owner; read it when the task needs it, not up front:
+has one owner; read each when the task needs it, not up front:
 
 - [`grove/brief.md`](grove/brief.md): purpose, constraints and selected
   direction, with selected direction, observed evidence and proposed design
@@ -23,23 +23,26 @@ has one owner; read it when the task needs it, not up front:
 
 - Here, every `grove …` is `go run ./cmd/grove …` in the selected checkout;
   the installed `~/.local/bin/grove` is a build from the commit
-  `grove version` prints and can lag it.
+  `grove version` prints, rebuilt by hand, and can lag this checkout.
 - Create records only with `go run ./cmd/grove new`, never by hand-numbering,
-  and change status or fields only with `go run ./cmd/grove update`.
+  and change status or fields with `go run ./cmd/grove update`.
 - `go run` reports every failure as exit 1 and the command's code as
   `exit status N` on stderr; to tell usage (2) from failure (1), build once
   with `go build -o <temp path> ./cmd/grove` and run that.
 
 ## Shaping, executing and retrieving context
 
-- Shape with `/grove-shape TOPIC` (Claude) or `$grove-shape TOPIC` (Codex);
-  shaping never assigns, implements or merges.
-- Execute assigned IDs with `/grove-work G-030` or `$grove-work G-030`;
-  `grove run G-030` (board `R`) starts `/grove-work G-030 --interaction
-  headless` as a Grove-owned attempt that outlives the terminal.
-- Retrieve context in stages from `grove context IDs`, which reads the
-  selected records in full, lists the rest, and is facts, not authorization;
-  a listing is not a reading.
+- Shape with `/grove-shape TOPIC` (Claude) or `$grove-shape TOPIC` (Codex),
+  which load the shaping guide; shaping never assigns, implements or merges.
+- Execute assigned IDs with `/grove-work G-030` or `$grove-work G-030`, which
+  load the work guide; `grove run G-030` (board `R`) starts `/grove-work
+  G-030 --interaction headless` as a Grove-owned attempt that outlives the
+  terminal.
+- Retrieve context in stages: `grove context IDs` reads the selected records
+  in full and lists the rest; then read listed plans, prerequisites,
+  questions, the record model or the brief (`show ID`, `--include PATH`) when
+  the guide's step needs them. `context` writes nothing and is facts, not
+  authorization; a listing is not a reading.
 - The guides write commands as `grove …`, and this file is their policy
   here; the adapters in `.claude/skills/` and `.agents/skills/` only load
   this checkout's guide files and stay unmanaged on purpose.
@@ -63,12 +66,13 @@ has one owner; read it when the task needs it, not up front:
 
 ## Constraints
 
-Each rule's reasons live in the record named, and the rule applies whatever
-that record's status.
+Each rule's reasons live in the record or document named, and the rule
+applies whatever that record's status. A rule that names none is this file's
+own policy.
 
 - `schema_version: 3` is the only schema, with no backward compatibility
   before the first release; inspect an old commit with the CLI in that
-  commit.
+  commit (G-065).
 - Never hand-author or renumber an ID, and never move or rename a record
   file; keep `convert` for documents outside the record root (G-064).
 - `new` allocates from one counter in Git's common directory, shared by every
@@ -78,7 +82,7 @@ that record's status.
   ends in `review` with its `candidate` commit (G-038).
 - `done` is written on `main` after the merge, never on the work branch, and
   `update` refuses a candidate HEAD lacks and a checkout off the target
-  (G-038).
+  `grove.yaml` names (G-038).
 - `approve`, `feedback` and `integrate` (board `a`, `f`, `i`) record the
   verdict and merge (G-044).
 - Never backfill a candidate on a `done` record that has none (G-038).
@@ -91,7 +95,7 @@ that record's status.
 - Read a record's Git history only while its card is open, as a read any
   key may cancel, never during the board load (G-030).
 - Bare `grove` opens the board (Bubble Tea v2, `internal/tui`), and explicit
-  subcommands stay noninteractive.
+  subcommands stay noninteractive (G-017).
 - Keep the board's text escaping and exact source targeting, with freshness
   checks before acting on a selected version (G-017, G-011).
 - Escape a rendered body before glamour and filter it to glamour's own
@@ -101,17 +105,18 @@ that record's status.
   board (G-042).
 - `../skills/` and `../nullsec/` are evidence and potential compatibility
   targets, not automatically in an implementation's write scope; follow
-  their own instructions.
+  their own instructions (G-041).
 - Read nullsec's records with the installed `grove` from nullsec's checkout
   (`grove brief`, `grove list`, `grove context G-NNN`), and name the
-  repository when a `G-` ID could be either's.
+  repository when a `G-` ID could be either's (G-041).
 - Read `../skills/`, the uninstalled predecessor, as files; G-041 records how
   it was removed and how to restore it.
 - The archived application's service authority, architecture, credentials,
   deployment procedures and backlog are historical: do not revive them or
-  copy private local data into this repository.
+  copy private local data into this repository (the brief).
 - Keep deterministic validation and state changes in software where useful,
-  and do not assume software can replace judgment or prove acceptance.
+  and do not assume software can replace judgment or prove acceptance (the
+  brief).
 
 ## Changes and verification
 
@@ -131,5 +136,14 @@ that record's status.
   `-timeout 120s`; a hang in `syscall.forkExec` is that toolchain bug, not
   evidence, and kill any `*.test` process a timeout leaves behind.
 - No package over five seconds, and no test that builds, sleeps, or waits on
-  a shim without a `-short` skip and a comment saying why.
-- TUI work also needs terminal lifecycle and connected-workflow checks.
+  a shim without a `-short` skip and a comment saying why (G-071).
+- TUI work also needs terminal lifecycle and connected-workflow checks, which
+  `python3 internal/tui/testdata/terminal.py BINARY` drives through a
+  pseudo-terminal (Unix; skipped without `python3` and under `-short`).
+- Run `lefthook install` once per clone: pre-commit formats staged Go files
+  and runs `go vet` and `go mod tidy -diff`; there is no pre-push hook.
+- GitHub Actions (`.github/workflows/ci.yml`) runs the checks on Ubuntu and
+  macOS for every push to `main` and every pull request, as a signal, not a
+  gate, and Dependabot opens weekly grouped update PRs (G-081).
+- `just clean-merged` removes local branches merged into `main` and their
+  clean worktrees after asking.

@@ -3,8 +3,12 @@
 `grove --help` gives every command's usage. This document owns what it does
 not say about the commands below. The commands over records (`list`, `show`,
 `brief`, `check`, `new`, `update`, `convert`), project discovery and exit
-codes belong to [the record model](record-model.md#reading-and-writing-records),
-and `approve`, `feedback` and `integrate` to its
+codes belong to the record model: its
+[reading and writing](record-model.md#reading-and-writing-records),
+[configuration and discovery](record-model.md#configuration-and-discovery),
+[conversion](record-model.md#identity-and-placement-apart-from-classification)
+and [brief](record-model.md#knowledge-records-and-the-brief) sections. `approve`,
+`feedback` and `integrate` belong to its
 [work lifecycle](record-model.md#work-lifecycle). [The board](board.md) has
 its own document. Each command's acceptance, evidence and limits belong to
 the work record that delivered it.
@@ -137,8 +141,9 @@ prerequisites, related records, and linked documents in full):
 
 ## Attempts
 
-`run ID --budget USD --permission-mode MODE [--model MODEL] [--branch NAME]
-[--worktree DIR]` starts one bounded implementation attempt of proposed or
+Grove starts an agent only through `run` or the board's `R`, one assigned
+work ID per attempt. `run ID --budget USD --permission-mode MODE [--model
+MODEL] [--branch NAME] [--worktree DIR]` starts one bounded implementation attempt of proposed or
 active work as a Grove-owned `claude -p "/grove-work ID --interaction
 headless"` process that outlives the terminal
 ([G-101](../grove/G-101-attempt-mechanism.md),
@@ -153,13 +158,9 @@ by every worktree, never committed). Budget and permission mode are required:
 Grove sets no default spend or profile. Grove starts one process and never
 retries; subagents the provider starts share the budget.
 
-`run` refuses a record that is not proposed or active here or on the branch's
-worktree (a candidate in review there awaits the owner's judgment), an open
-question that blocks it in either place (the wait the headless guide
-persists, so rerunning with nothing changed refuses the same way),
-uncommitted changes to the record here, a running or orphaned attempt of the
-same work, and a worktree path that is something else. Every refusal comes
-before a write, except that what an existing branch holds is checked in its
+`grove --help` lists what `run` refuses. An open question that blocks the
+work is the wait the headless guide persists, so rerunning with nothing
+changed refuses the same way. Every refusal comes before a write, except that what an existing branch holds is checked in its
 checkout, so a branch that had no worktree keeps the one `run` made.
 
 `attempts [ID]` lists attempts newest first. `attempt ATTEMPT [--json]`
@@ -220,8 +221,10 @@ enclosing checkout's `.git` directory and stamps that checkout's revision and
 cleanliness instead (observed with go 1.26.2). The predecessor rejects
 `version` as an unknown command, so the line tells the two apart, and the
 line ends with a digest of the embedded guides, which names the workflow even
-when no revision was stamped. `go install …@COMMIT` resolves only a pushed
-commit.
+when no revision was stamped.
+
+`go install …@COMMIT` resolves only a pushed commit, and rebuilding an
+installed binary is manual.
 
 `guide work` and `guide shape` print the [work](work-execution.md) and
 [shaping](work-shaping.md) guides the binary carries, so the workflow version
