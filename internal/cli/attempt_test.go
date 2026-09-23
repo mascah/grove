@@ -21,7 +21,7 @@ func TestAttemptCommandsUsage(t *testing.T) {
 	}{
 		{[]string{"run", "G-001"}, 2, "run requires --budget USD and --permission-mode MODE"},
 		{[]string{"run", "G-001", "--budget", "1"}, 2, "run requires --budget USD and --permission-mode MODE"},
-		{[]string{"run", "G-001", "--budget", "-1", "--permission-mode", "auto"}, 2, "--budget must be a positive dollar amount"},
+		{[]string{"run", "G-001", "--budget", "NaN", "--permission-mode", "auto"}, 1, "--budget must be a positive decimal dollar amount"},
 		{[]string{"run", "--budget", "1", "--permission-mode", "auto"}, 2, "run requires exactly one work ID"},
 		{[]string{"show", "G-001", "--model", "x"}, 2, "--budget, --permission-mode, --model, --branch, and --worktree apply only to run"},
 		{[]string{"attempts", "a", "b"}, 2, "attempts takes at most one work ID"},

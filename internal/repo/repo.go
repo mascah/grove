@@ -153,14 +153,16 @@ func Command(ctx context.Context, dir string, args ...string) *exec.Cmd {
 	return cmd
 }
 
-// gitLocation names the variables that point Git at a repository or its parts.
-var gitLocation = []string{"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE"}
+// GitLocation names the variables that point Git at a repository or its
+// parts; Command drops them, and so must any other process Grove starts that
+// may run Git (an attempt's provider).
+var GitLocation = []string{"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE"}
 
 func environWithoutGitLocation(env []string) []string {
 	kept := make([]string, 0, len(env))
 	for _, entry := range env {
 		name, _, _ := strings.Cut(entry, "=")
-		if !slices.Contains(gitLocation, name) {
+		if !slices.Contains(GitLocation, name) {
 			kept = append(kept, entry)
 		}
 	}

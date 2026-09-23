@@ -90,11 +90,14 @@ func attemptText(v *attempt.View) string {
 		line("Finished: %s, %s%s", r.Finished.UTC().Format(time.RFC3339), exit, how)
 		dirty := "clean"
 		if r.Dirty {
-			dirty = "uncommitted changes"
+			dirty = "uncommitted or untracked changes"
 		}
 		line("Worktree after: HEAD %s, %s", short(r.Head), dirty)
 		if r.Record != nil {
-			line("Record on the branch: %s %s, candidate %s, revision %s", l.Work, r.Record.Status, orNone(r.Record.Candidate), r.Record.Revision)
+			line("Record on the branch: %s %s, candidate %s, revision %s", l.Work, visible(r.Record.Status), visible(orNone(r.Record.Candidate)), r.Record.Revision)
+			if r.RecordError != "" {
+				line("Record problems: %s", visible(r.RecordError))
+			}
 		} else {
 			line("Record on the branch: unreadable: %s", visible(r.RecordError))
 		}

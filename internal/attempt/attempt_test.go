@@ -66,10 +66,7 @@ func fixture(t *testing.T) string {
 	if err := os.Mkdir(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	git(t, root, "init", "-q", "-b", "main")
-	for _, kv := range [][2]string{{"user.name", "t"}, {"user.email", "t@t"}, {"commit.gpgsign", "false"}, {"maintenance.auto", "false"}} {
-		git(t, root, "config", kv[0], kv[1])
-	}
+	git(t, root, "init", "-q", "-b", "main") // identity comes from git()'s -c flags; the fakes that commit pass their own
 	write(t, root, "grove.yaml", config)
 	write(t, root, "grove/G-001-first.md", fmt.Sprintf(work, "proposed"))
 	git(t, root, "add", "-A")
@@ -89,7 +86,7 @@ func fake(t *testing.T, body string) (mark, release string) {
 		"SID=; while [ $# -gt 0 ]; do [ \"$1\" = --session-id ] && SID=$2; shift; done\n" +
 		"MARK=" + mark + "; RELEASE=" + release + "\n" +
 		"echo start >> \"$MARK\"\n" +
-		"env | grep -E '^(CLAUDE|GROVE_ATTEMPT|GIT_DIR)' | grep -v '^CLAUDE_CONFIG_DIR=' > env.txt\n" +
+		"env | grep -E '^(CLAUDE|GROVE_ATTEMPT|GIT_DIR|GIT_WORK_TREE)' > env.txt\n" +
 		body + "\n"
 	path := filepath.Join(dir, "claude")
 	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
@@ -162,9 +159,31 @@ func skipShort(t *testing.T) {
 	}
 }
 
+// awaitChild waits until the owner has recorded the provider's process group.
+func awaitChild(t *testing.T, root, attempt string) *View {
+	t.Helper()
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		v, err := Show(root, attempt)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if v.ChildPGID != 0 {
+			return v
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("attempt %s never recorded its provider", attempt)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
+
 func TestRunToResult(t *testing.T) {
 	skipShort(t)
 	root := fixture(t)
+	for _, kv := range [][2]string{{"CLAUDECODE", "1"}, {"CLAUDE_CODE_ENTRYPOINT", "cli"}, {"CLAUDE_PID", "1"}, {"GIT_DIR", "/nowhere"}, {"GIT_WORK_TREE", "/nowhere"}, {"CLAUDE_CONFIG_DIR", "/kept"}} {
+		t.Setenv(kv[0], kv[1]) // repo.Command drops the Git ones for the test's own Git processes
+	}
 	fake(t, initLine+"\necho '{\"type\":\"assistant\"}'\necho '{\"type\":\"weird\"}'\n"+resultLine("success", false))
 	l, facts := start(t, root, now)
 	if len(facts) != 1 || !strings.Contains(facts[0], "worktree-G-001 created at") {
@@ -188,7 +207,7 @@ func TestRunToResult(t *testing.T) {
 	}
 	v := await(t, root, l.Attempt, Finished)
 	r := v.Result
-	if r.ExitCode != 0 || r.Stopped || r.Dirty || r.Head != l.Base {
+	if r.ExitCode != 0 || r.Stopped || !r.Dirty || r.Head != l.Base { // dirty: the fake left env.txt untracked
 		t.Fatalf("result %+v", r)
 	}
 	if r.Record == nil || r.Record.Status != "proposed" || r.RecordError != "" {
@@ -205,8 +224,8 @@ func TestRunToResult(t *testing.T) {
 		t.Fatalf("events %+v", ev)
 	}
 	env, err := os.ReadFile(filepath.Join(l.Worktree, "env.txt"))
-	if err != nil || strings.TrimSpace(string(env)) != "" {
-		t.Fatalf("the provider saw %q (%v); no CLAUDE*, GROVE_ATTEMPT_OWNER or GIT_DIR variable may reach it", env, err)
+	if err != nil || strings.TrimSpace(string(env)) != "CLAUDE_CONFIG_DIR=/kept" {
+		t.Fatalf("the provider saw %q (%v); only CLAUDE_CONFIG_DIR may reach it of the CLAUDE*, GROVE_ATTEMPT_OWNER and GIT_* variables", env, err)
 	}
 	log, _ := os.ReadFile(filepath.Join(v.Dir, "owner.log"))
 	sid, _ := syscall.Getsid(0)
@@ -308,16 +327,34 @@ func TestStopAfterReconnect(t *testing.T) {
 	}
 }
 
+func TestStopBeforeTheProviderStarts(t *testing.T) {
+	skipShort(t)
+	root := fixture(t)
+	mark, _ := fake(t, waiting+resultLine("success", false))
+	l, _ := start(t, root, now)
+	// No read in between: the signal races the owner's start-up and must be
+	// seen either way.
+	if err := syscall.Kill(l.Owner, syscall.SIGTERM); err != nil {
+		t.Fatal(err)
+	}
+	v := await(t, root, l.Attempt, Finished)
+	if !v.Result.Stopped {
+		t.Fatalf("%+v", v.Result)
+	}
+	if n := starts(t, mark); n > 1 {
+		t.Fatalf("the provider started %d times", n)
+	}
+	if n := starts(t, mark); n == 1 && v.Result.ExitCode != 130 {
+		t.Fatalf("started then stopped, but exit %d", v.Result.ExitCode)
+	}
+}
+
 func TestOwnerLost(t *testing.T) {
 	skipShort(t)
 	root := fixture(t)
 	_, rel := fake(t, waiting+resultLine("success", false))
 	l, _ := start(t, root, now)
-	v := await(t, root, l.Attempt, Running)
-	for v.ChildPGID == 0 {
-		time.Sleep(20 * time.Millisecond)
-		v, _ = Show(root, l.Attempt)
-	}
+	v := awaitChild(t, root, l.Attempt)
 	if err := syscall.Kill(l.Owner, syscall.SIGKILL); err != nil {
 		t.Fatal(err)
 	}
@@ -339,11 +376,7 @@ func TestOwnerLost(t *testing.T) {
 
 	// Owner lost and nothing left alive: interrupted, and a new attempt may start.
 	l2, _ := start(t, root, now.Add(time.Minute))
-	v = await(t, root, l2.Attempt, Running)
-	for v.ChildPGID == 0 {
-		time.Sleep(20 * time.Millisecond)
-		v, _ = Show(root, l2.Attempt)
-	}
+	v = awaitChild(t, root, l2.Attempt)
 	syscall.Kill(l2.Owner, syscall.SIGKILL)
 	syscall.Kill(-v.ChildPGID, syscall.SIGKILL)
 	v = await(t, root, l2.Attempt, Interrupted)
@@ -420,17 +453,37 @@ func TestReviewOnTheBranchStopsTheNextRun(t *testing.T) {
 	}
 }
 
+// TestInputsChanged also covers a project below the checkout's top: the
+// guards, the record state and the inputs check must use the prefix.
 func TestInputsChanged(t *testing.T) {
 	skipShort(t)
-	root := fixture(t)
+	top := fixture(t)
+	root := filepath.Join(top, "sub")
+	if err := os.Mkdir(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	git(t, top, "mv", "grove.yaml", "grove", "sub/")
+	git(t, top, "commit", "-qm", "move the project below the top")
 	fake(t, initLine+"\n"+resultLine("success", false))
-	l, _ := start(t, root, now)
+	l, _ := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "acceptEdits"}, now, func(string) {})
+	if l.Prefix != "sub" || l.Worktree != filepath.Join(root, ".claude", "worktrees", "worktree-G-001") {
+		t.Fatalf("%+v", l)
+	}
 	v := await(t, root, l.Attempt, Finished)
-	if v.InputsChanged != "" {
-		t.Fatal(v.InputsChanged)
+	if v.InputsChanged != "" || v.Result.Record == nil || v.Result.Record.Status != "proposed" {
+		t.Fatalf("%q %+v %q", v.InputsChanged, v.Result.Record, v.Result.RecordError)
+	}
+	if _, err := os.Stat(filepath.Join(l.Worktree, "sub", "env.txt")); err != nil {
+		t.Fatal("the provider did not run in the project directory:", err)
+	}
+	// The branch's record enters review: a second run is refused from the project below the top.
+	write(t, l.Worktree, "sub/grove/G-001-first.md", strings.Replace(fmt.Sprintf(work, "review"), "---\n\n## Outcome", "candidate: \""+l.Base+"\"\n---\n\n## Outcome", 1))
+	git(t, l.Worktree, "commit", "-qam", "review")
+	if _, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "acceptEdits"}, now.Add(time.Minute), func(string) {}); err == nil || !strings.Contains(err.Error(), "G-001 is review on worktree-G-001") {
+		t.Fatal(err)
 	}
 	write(t, root, "grove/G-001-first.md", fmt.Sprintf(work, "active"))
-	git(t, root, "commit", "-qam", "activate")
+	git(t, top, "commit", "-qam", "activate")
 	v, _ = Show(root, l.Attempt)
 	if !strings.Contains(v.InputsChanged, "grove/G-001-first.md on main is sha256:") || !strings.Contains(v.InputsChanged, "launched from "+l.RecordRevision) {
 		t.Fatal(v.InputsChanged)

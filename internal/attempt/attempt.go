@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -69,6 +70,7 @@ type Launch struct {
 	Base           string    `json:"base"`            // the commit the worktree started from, or continues on
 	Branch         string    `json:"branch"`
 	Worktree       string    `json:"worktree"`        // absolute checkout the process runs in
+	Prefix         string    `json:"prefix"`          // the project's path inside the checkout, "" at its top
 	WorktreeReused bool      `json:"worktree_reused"` // it existed before this attempt
 	Command        []string  `json:"command"`         // the exact argv, command[0] the executable as resolved
 	Executable     string    `json:"executable"`      // command[0] as given (claude or GROVE_CLAUDE)
@@ -126,7 +128,7 @@ type Result struct {
 	ReconciledBy string    `json:"reconciled_by,omitempty"` // "stop" when written for a lost owner
 	Events       Events    `json:"events"`
 	Head         string    `json:"head"`  // the worktree's HEAD after the exit
-	Dirty        bool      `json:"dirty"` // uncommitted changes to tracked files
+	Dirty        bool      `json:"dirty"` // uncommitted or untracked changes
 	Record       *State    `json:"record"`
 	RecordError  string    `json:"record_error,omitempty"`
 }
@@ -172,6 +174,7 @@ type Request struct {
 }
 
 var idPattern = regexp.MustCompile(`^[A-Z]+-[0-9]+$`)
+var budgetPattern = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?$`)
 var attemptPattern = regexp.MustCompile(`^[A-Z]+-[0-9]+\.[0-9]{8}T[0-9]{6}Z$`)
 
 // Dir is where root's repository keeps attempts.
@@ -184,14 +187,19 @@ func Dir(root string) (string, error) {
 }
 
 // Start launches one attempt of req.ID and returns what was launched. Every
-// refusal comes before anything is written; after the worktree exists,
-// a failure to start the owner is reported with the worktree kept.
+// refusal comes before anything is written, except that the checks on what
+// an existing branch holds run in its checkout: a branch without a worktree
+// gets one first, which a refusal then keeps. A failure to start the owner
+// is reported with the worktree kept.
 func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if !idPattern.MatchString(req.ID) {
 		return nil, fmt.Errorf("%s is not a record ID", req.ID)
 	}
 	if req.BudgetUSD == "" || req.PermissionMode == "" {
 		return nil, errors.New("run requires --budget USD and --permission-mode MODE: Grove sets no default spend or permission profile")
+	}
+	if !budgetPattern.MatchString(req.BudgetUSD) || strings.Trim(req.BudgetUSD, "0.") == "" {
+		return nil, fmt.Errorf("--budget must be a positive decimal dollar amount, not %q", req.BudgetUSD)
 	}
 	p, ds := project.Load(req.Root, req.Root)
 	if len(ds) != 0 {
@@ -229,6 +237,17 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		return nil, fmt.Errorf("this checkout's HEAD could not be read: %v", err)
 	}
 	head = strings.TrimSpace(head)
+	top, err := repo.GitPath(root, "--show-toplevel")
+	if err != nil {
+		return nil, err
+	}
+	prefix, err := filepath.Rel(top, root)
+	if err != nil || strings.HasPrefix(prefix, "..") {
+		return nil, fmt.Errorf("the project %s is not inside its checkout %s", root, top)
+	}
+	if prefix == "." {
+		prefix = ""
+	}
 	dir, err := Dir(root)
 	if err != nil {
 		return nil, err
@@ -271,7 +290,9 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the provider executable is not available: %v", err)
 	}
-	version, err := exec.Command(resolved, "--version").Output()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	version, err := exec.CommandContext(ctx, resolved, "--version").Output()
 	if err != nil {
 		return nil, fmt.Errorf("%s --version failed: %v", exe, err)
 	}
@@ -292,15 +313,17 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	// review awaiting the owner, or the question the headless guide writes
 	// for a missing decision. Either is a wait, not a reason to spend again.
 	if reused || base != head {
-		if wp, _ := project.Load(worktree, worktree); wp != nil {
-			for _, c := range wp.Records {
-				if c.ID == req.ID && c.Status != "proposed" && c.Status != "active" {
-					return nil, fmt.Errorf("%s is %s on %s at %s; judge that candidate (approve, feedback) before another attempt", req.ID, c.Status, branch, worktree)
-				}
+		wp, wds := project.Load(filepath.Join(worktree, prefix), filepath.Join(worktree, prefix))
+		if wp == nil {
+			return nil, fmt.Errorf("the project on %s at %s does not load: %s", branch, worktree, wds[0].String())
+		}
+		for _, c := range wp.Records {
+			if c.ID == req.ID && c.Status != "proposed" && c.Status != "active" {
+				return nil, fmt.Errorf("%s is %s on %s at %s; judge that candidate (approve, feedback) before another attempt", req.ID, c.Status, branch, worktree)
 			}
-			if err := blocked(wp, req.ID); err != nil {
-				return nil, fmt.Errorf("%v (on %s at %s)", err, branch, worktree)
-			}
+		}
+		if err := blocked(wp, req.ID); err != nil {
+			return nil, fmt.Errorf("%v (on %s at %s)", err, branch, worktree)
 		}
 	}
 	command := []string{resolved, "-p", "/grove-work " + req.ID + " --interaction headless",
@@ -314,15 +337,20 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	l := &Launch{
 		Attempt: attempt, Work: req.ID, Project: root, Target: p.Target,
 		RecordPath: r.Path, RecordRevision: project.Revision(r.Source),
-		Base: base, Branch: branch, Worktree: worktree, WorktreeReused: reused,
+		Base: base, Branch: branch, Worktree: worktree, Prefix: prefix, WorktreeReused: reused,
 		Command: command, Executable: exe, ClaudeVersion: strings.TrimSpace(string(version)),
 		GroveVersion: groveVersion(), Model: req.Model, BudgetUSD: req.BudgetUSD,
 		PermissionMode: req.PermissionMode, SessionID: session, Started: now.UTC(),
 	}
-	if err := os.Mkdir(adir, 0o755); err != nil {
+	// The directory appears complete or not at all: a reader never sees an
+	// attempt without its attempt.json.
+	if err := os.Mkdir(adir+".tmp", 0o755); err != nil {
 		return nil, err
 	}
-	if err := writeJSON(filepath.Join(adir, "attempt.json"), l); err != nil {
+	if err := writeJSON(filepath.Join(adir+".tmp", "attempt.json"), l); err != nil {
+		return nil, err
+	}
+	if err := os.Rename(adir+".tmp", adir); err != nil {
 		return nil, err
 	}
 	// The lock is taken here and inherited, so it is held from before the
@@ -334,8 +362,8 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		return nil, err
 	}
 	defer lock.Close()
-	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		return nil, fmt.Errorf("attempt %s is already owned", attempt)
+	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX); err != nil { // waits out a reader's shared probe
+		return nil, err
 	}
 	self, err := os.Executable()
 	if err != nil {
@@ -346,18 +374,32 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		return nil, err
 	}
 	defer log.Close()
+	// The owner closes the ready pipe once its signal handler is installed,
+	// so a Stop after Start returns is always seen; the pipe also closes if
+	// the owner dies first, which the lock then shows.
+	ready, readyW, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+	defer ready.Close()
 	owner := exec.Command(self)
 	owner.Dir = worktree
 	owner.Env = append(environ(os.Environ(), OwnerEnv), OwnerEnv+"="+adir)
 	owner.Stdin = nil // /dev/null
 	owner.Stdout, owner.Stderr = log, log
-	owner.ExtraFiles = []*os.File{lock} // fd 3
+	owner.ExtraFiles = []*os.File{lock, readyW} // fd 3 and 4
 	owner.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	if err := owner.Start(); err != nil {
+		readyW.Close()
 		return nil, fmt.Errorf("the owner could not start: %v (worktree %s is kept)", err, worktree)
 	}
+	readyW.Close()
 	l.Owner = owner.Process.Pid
 	owner.Process.Release()
+	io.ReadAll(ready)
+	if !locked(filepath.Join(adir, "owner.lock")) {
+		return l, fmt.Errorf("the owner (pid %d) exited while starting; see %s (worktree %s is kept)", l.Owner, filepath.Join(adir, "owner.log"), worktree)
+	}
 	if err := writeJSON(filepath.Join(adir, "attempt.json"), l); err != nil {
 		return l, fmt.Errorf("the owner started as pid %d but attempt.json could not be rewritten: %v", l.Owner, err)
 	}
@@ -438,16 +480,23 @@ func prepareWorktree(root, branch, worktree, head string, report func(string)) (
 // provider in the worktree with its output in files, handles Stop, and
 // writes the result. It returns the process exit code.
 func Own(dir string) int {
-	lock := os.NewFile(3, "owner.lock")
-	if lock == nil {
-		fmt.Fprintln(os.Stderr, "owner: no inherited lock on fd 3")
-		return 1
-	}
-	syscall.CloseOnExec(3) // the child must not inherit the lock: it would read as running after the owner is gone
-	defer lock.Close()
+	// The signal handler comes first, so a Stop that arrives while the owner
+	// is still starting is seen rather than ending it with no result.
+	signals := make(chan os.Signal, 2)
+	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 	logf := func(format string, args ...any) {
 		fmt.Fprintf(os.Stderr, time.Now().UTC().Format(time.RFC3339)+" "+format+"\n", args...)
 	}
+	// The launcher passed its locked descriptor as fd 3; converting the lock
+	// on the same open file description succeeds only if it is ours.
+	if err := syscall.Flock(3, syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		logf("owner: fd 3 is not the attempt's lock: %v", err)
+		return 1
+	}
+	syscall.CloseOnExec(3) // the child must not inherit the lock: it would read as running after the owner is gone
+	lock := os.NewFile(3, "owner.lock")
+	defer lock.Close()
+	os.NewFile(4, "ready").Close() // tells the launcher the handler is installed
 	var l Launch
 	if err := readJSON(filepath.Join(dir, "attempt.json"), &l); err != nil {
 		logf("owner: %v", err)
@@ -464,15 +513,22 @@ func Own(dir string) int {
 		return 1
 	}
 	child := exec.Command(l.Command[0], l.Command[1:]...)
-	child.Dir = l.Worktree
+	child.Dir = filepath.Join(l.Worktree, l.Prefix)
 	// A session's own variables would make the provider a child of the
 	// launching session (CLAUDECODE guards nesting); the config directory is
 	// the one CLAUDE variable that describes the machine, not a session.
-	child.Env = environ(os.Environ(), OwnerEnv, "CLAUDE*", "!CLAUDE_CONFIG_DIR",
-		"GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE")
+	child.Env = environ(os.Environ(), append([]string{OwnerEnv, "CLAUDE*", "!CLAUDE_CONFIG_DIR"}, repo.GitLocation...)...)
 	child.Stdin = nil
 	child.Stdout, child.Stderr = events, stderr
 	child.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	select {
+	case s := <-signals:
+		logf("owner: %v received before the provider started; nothing runs", s)
+		res := Result{Finished: time.Now().UTC(), ExitCode: -1, Signal: "stopped before the provider started", Stopped: true}
+		reconcile(dir, &l, &res, logf)
+		return 0
+	default:
+	}
 	if err := child.Start(); err != nil {
 		logf("owner: the provider could not start: %v", err)
 		res := Result{Finished: time.Now().UTC(), ExitCode: -1, Signal: "not started: " + err.Error()}
@@ -489,8 +545,6 @@ func Own(dir string) int {
 
 	waited := make(chan error, 1)
 	go func() { waited <- child.Wait() }()
-	signals := make(chan os.Signal, 2)
-	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 	stopped := false
 	var werr error
 	select {
@@ -525,10 +579,10 @@ func reconcile(dir string, l *Launch, res *Result, logf func(string, ...any)) {
 	} else {
 		logf("owner: HEAD: %v", err)
 	}
-	if dirty, err := repo.Git(l.Worktree, "status", "--porcelain", "--untracked-files=no"); err == nil {
+	if dirty, err := repo.Git(l.Worktree, "status", "--porcelain"); err == nil { // untracked files included: partial work counts
 		res.Dirty = strings.TrimSpace(dirty) != ""
 	}
-	res.Record, res.RecordError = recordState(l.Worktree, l.Work)
+	res.Record, res.RecordError = recordState(filepath.Join(l.Worktree, l.Prefix), l.Work)
 	if err := writeJSON(filepath.Join(dir, "result.json"), res); err != nil {
 		logf("owner: result: %v", err)
 	}
@@ -543,7 +597,13 @@ func recordState(root, id string) (*State, string) {
 	}
 	for _, r := range p.Records {
 		if r.ID == id {
-			return &State{Status: r.Status, Candidate: r.Candidate, Revision: project.Revision(r.Source)}, ""
+			var problems []string
+			for _, d := range ds {
+				if d.Path == r.Path {
+					problems = append(problems, d.String())
+				}
+			}
+			return &State{Status: r.Status, Candidate: r.Candidate, Revision: project.Revision(r.Source)}, strings.Join(problems, "; ")
 		}
 	}
 	msg := id + " is not in the worktree"
@@ -673,6 +733,9 @@ func List(root, id string) ([]View, error) {
 			continue
 		}
 		v, err := read(filepath.Join(dir, name))
+		if errors.Is(err, os.ErrNotExist) {
+			continue // being written, or left without its attempt.json
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -699,7 +762,7 @@ func Show(root, attempt string) (*View, error) {
 		return nil, err
 	}
 	if v.Launch.Target != "" {
-		if source, err := repo.Git(root, "show", "refs/heads/"+v.Launch.Target+":"+v.Launch.RecordPath); err != nil {
+		if source, err := repo.Git(root, "show", "refs/heads/"+v.Launch.Target+":"+filepath.ToSlash(filepath.Join(v.Launch.Prefix, v.Launch.RecordPath))); err != nil {
 			v.InputsChanged = fmt.Sprintf("%s is not readable on %s: %v", v.Launch.RecordPath, v.Launch.Target, err)
 		} else if rev := project.Revision([]byte(source)); rev != v.Launch.RecordRevision {
 			v.InputsChanged = fmt.Sprintf("%s on %s is %s, launched from %s", v.Launch.RecordPath, v.Launch.Target, rev, v.Launch.RecordRevision)
@@ -714,10 +777,14 @@ func read(dir string) (*View, error) {
 		return nil, err
 	}
 	var child struct {
-		PGID int `json:"pgid"`
+		PGID  int `json:"pgid"`
+		Owner int `json:"owner_pid"`
 	}
 	if readJSON(filepath.Join(dir, "child.json"), &child) == nil {
 		v.ChildPGID = child.PGID
+		if v.Launch.Owner == 0 { // the launcher died before recording the pid; the owner recorded its own
+			v.Launch.Owner = child.Owner
+		}
 	}
 	var res Result
 	switch err := readJSON(filepath.Join(dir, "result.json"), &res); {
@@ -743,14 +810,15 @@ func read(dir string) (*View, error) {
 	return v, nil
 }
 
-// locked reports whether another process holds the flock on path.
+// locked reports whether an owner holds the exclusive flock on path. The
+// probe is shared, so concurrent readers never make each other see a holder.
 func locked(path string) bool {
 	f, err := os.OpenFile(path, os.O_RDWR, 0)
 	if err != nil {
 		return false
 	}
 	defer f.Close()
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_SH|syscall.LOCK_NB); err != nil {
 		return true
 	}
 	syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
@@ -783,7 +851,11 @@ func Stop(root, attempt string, report func(string)) error {
 		}
 		if syscall.Kill(-v.ChildPGID, 0) == nil {
 			syscall.Kill(-v.ChildPGID, syscall.SIGKILL)
+			deadline = time.Now().Add(stopGrace)
 			for syscall.Kill(-v.ChildPGID, 0) == nil {
+				if time.Now().After(deadline) {
+					return fmt.Errorf("process group %d of %s did not end after SIGKILL within %s; no result written", v.ChildPGID, attempt, stopGrace)
+				}
 				time.Sleep(50 * time.Millisecond)
 			}
 		}

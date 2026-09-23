@@ -98,8 +98,10 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             under .claude/worktrees/, created from this checkout's HEAD or reused), with\n" +
 	"             --max-budget-usd USD, --permission-mode MODE and --permission-prompts none, its\n" +
 	"             raw output in files under the Git common directory. Refused while an attempt\n" +
-	"             of ID runs, while an open question blocks ID, when the record has uncommitted\n" +
-	"             changes here, or when the worktree path is something else. Prints one line per\n" +
+	"             of ID runs or is orphaned, when ID is not proposed or active here or on its\n" +
+	"             branch (a candidate in review awaits judgment), while an open question blocks\n" +
+	"             ID in either place, when the record has uncommitted changes here, or when the\n" +
+	"             worktree path is something else. Prints one line per\n" +
 	"             fact and the attempt id. A result is facts, never acceptance: the record's own\n" +
 	"             status on the branch is the handoff.\n" +
 	"  attempts   List this repository's attempts, newest first, or those of one work ID:\n" +
@@ -402,12 +404,7 @@ func parseArgs(args []string) (a invocation, err error) {
 		{"--type", "record type", once(&a.convert.Type)},
 		{"--title", "title", once(&a.convert.Title)},
 		{"--source", "selector", once(&a.source)},
-		{"--budget", "dollar amount", func(value string) error {
-			if f, err := strconv.ParseFloat(value, 64); err != nil || f <= 0 {
-				return errors.New("must be a positive dollar amount")
-			}
-			return once(&a.run.BudgetUSD)(value)
-		}},
+		{"--budget", "dollar amount", once(&a.run.BudgetUSD)},
 		{"--permission-mode", "mode", once(&a.run.PermissionMode)},
 		{"--model", "model", once(&a.run.Model)},
 		{"--branch", "branch name", once(&a.run.Branch)},
