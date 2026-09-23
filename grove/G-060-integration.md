@@ -20,6 +20,11 @@ writes done only where that commit is already an ancestor of HEAD. A done
 record without a candidate is older and claims its outcome only in its own
 branch; it may never have been merged, and it keeps that meaning.
 
+Since G-044, `grove integrate` performs it from the target's checkout: a
+plain merge of the one branch holding an approved candidate, aborted on
+conflict, then done written and committed there, with the branch and its
+worktree removed only on request and only where Git agrees.
+
 ## Relationships
 
 Follows [approval](G-059-approval.md). Completes implementation

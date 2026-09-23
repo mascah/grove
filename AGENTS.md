@@ -50,8 +50,11 @@ read the brief when the record, a product question, or reconciliation needs it.
   work runs `proposed`, `active`, `review`, `done`; an implementation ends in
   `review` with its `candidate` commit, and `done` is written on `main` after
   the merge, never on the work branch: `update` refuses a candidate HEAD does
-  not contain, but cannot tell the branch from `main`, so that rule is this
-  policy's. A `done` record without a candidate predates that meaning; do not
+  not contain and a checkout off the configured target. G-044 added
+  `approve`, `feedback` and `integrate` (board keys `a`, `f`, `i` on a
+  record in review): `approved` must name the candidate, and `integrate`
+  merges the approved branch from `main`'s checkout and writes `done` there.
+  A `done` record without a candidate predates that meaning; do not
   backfill one. G-052 reconciled this repository on 2026-09-21:
   every record, former `docs/plans` and `docs/reviews` document included, has
   a neutral ID flat under `grove/`, the brief is `grove/brief.md`, and

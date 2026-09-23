@@ -256,6 +256,23 @@ option for all four.
 4. Cleanup opt-in after done, by Git's own refusals (design 4), by default,
    or never from Grove. **Opt-in.**
 
+## Adjustments
+
+Made while implementing, none changing the four designs:
+
+- The board's "pty scenario" is the connected-workflow test that drives the
+  real model against real Git (`internal/cli/tui_test.go`), now built from
+  `tui.Live()`, so the review detail, a diff, approval and integration run
+  through the same backend the terminal uses.
+- `feedback` prints its `Next:` continuation on stderr, and the board's
+  result screen shows it as a fact line; there is no runner to hand it to.
+- `update` gained `Branch(root)` for the done-off-target refusal, and
+  `approve` runs the same tip check the guide describes so a checkout ahead
+  of the candidate is refused with the new candidate named.
+- `integrate` reads the process's working directory to keep a worktree it is
+  running from; the board passes the same, so `i` from inside the branch's
+  worktree keeps that worktree with the reason shown.
+
 ## Limits
 
 Local integration only: no push, PR or deployment. Autonomous judging has no
