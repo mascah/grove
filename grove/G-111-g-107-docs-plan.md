@@ -78,10 +78,13 @@ Revised dispositions:
 | README "Adopt Grove in another repository" | Install steps mixed with `version` stamping, Codex `PATH` and `init` output rules | **Split**: the four steps stay in the README; the rules move to `docs/commands.md` |
 | README "The terminal board" | The full board manual, key by key | **Relocated** to `docs/board.md`, with the keys as a table; the README keeps two sentences and a link |
 | README skills sections | Guide summaries | **Cut** to the router's links to the guides and adapters |
-| README "Develop Grove" | Accurate | **Retained**, shortened to a routing paragraph |
+| README "Develop Grove" | Accurate; repository tooling | **Relocated** to AGENTS.md "Changes and verification", one line each, after review; the README keeps a link |
 | `AGENTS.md` | Several rules run to a paragraph of reasons | **Reconciled**: one line per rule, naming the record that owns the reasons; the routing list names `docs/commands.md` and `docs/board.md` |
 
-No text moves out of the record model, the brief or the guides. No constraint
+No text moves out of the guides. After review, the record model's two
+paragraphs that routed to the README and summarised `versions` and
+`workspace` route to `docs/commands.md` instead. The brief's sentence on the
+installed binary, which is repository policy that AGENTS.md owns, is cut. No constraint
 is dropped: each rule AGENTS.md kept stays, shorter. Rewording `grove --help`
 and a help overlay on the board are separate work, proposed in G-107's Next,
 not done here.
@@ -95,3 +98,9 @@ not done here.
 4. Done: see G-107 Evidence.
 5. Done: review [G-112](G-112-g-107-review.md), fixes `1398458` and
    `6a9f146`; handed into Review.
+6. Done, after the owner's feedback: plan revision `f0d68ea`;
+   `docs/board.md`, `docs/commands.md`, the README and AGENTS.md in
+   `49c8f5b`.
+7. Done: review [G-113](G-113-g-107-router-review.md), fixes `e07f98e` and
+   `833ac1b`.
+8. Done: see G-107 Evidence; handed into Review.

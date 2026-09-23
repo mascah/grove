@@ -199,15 +199,143 @@ Flagged for follow-up, outside this documentation scope: `grove --help`
 says the board "Reads only", though it approves, gives feedback, integrates,
 and starts and stops attempts behind prompts.
 
+### Second attempt, after the owner's feedback on `71a650e`
+
+Executed headless via `/grove-work G-107 --interaction headless` in Claude
+Code (Opus 5.5), 2026-09-23, on the same branch and worktree. It started from
+`4159e79`, where this record was at `sha256:e5dbfe49…` and plan G-111 at
+`sha256:1e74dd06…`.
+
+Commits:
+
+- `f0d68ea`: plan revision.
+- `49c8f5b`: the restructure.
+- `e07f98e`: round-1 fixes.
+- `833ac1b`: round-2 fixes.
+- `457dacc`: review record G-113.
+
+The candidate is the commit that adds this section.
+
+Against the revised acceptance:
+
+3. AGENTS.md states each rule as one bullet of one to three lines. It names
+   the record or document that owns the rule's reasons wherever one does:
+   G-007, G-009, G-011, G-017, G-030, G-031, G-038, G-042, G-043, G-044,
+   G-052, G-064, G-065, G-071, G-081, G-089, and the brief. The Constraints
+   header says that a rule naming none is AGENTS.md's own policy: the commit
+   and verification rules, and the sibling write scope. No record owns
+   those.
+
+   It routes to `docs/commands.md` and `docs/board.md`. Staged retrieval
+   names its second stage. The development tooling (lefthook, the terminal
+   driver, CI and `just clean-merged`) moved there from the README, one line
+   each.
+
+   Reading check: a fresh `general-purpose` subagent read only AGENTS.md at
+   `833ac1b` and answered correctly how to shape, how to execute
+   interactively and headlessly, how to retrieve context in stages, and
+   where command, board and schema facts live. An earlier check at
+   `49c8f5b` asked for the stages to be named, which `e07f98e` did.
+
+   The second check raised minor points, recorded here and not changed
+   after review:
+   - "every other fact has one owner" sits beside tooling facts that
+     AGENTS.md itself owns;
+   - `--include PATH` belongs to `context`, which the text does not say;
+   - "refuses a candidate HEAD lacks" is hard to parse;
+   - G-081 owns two unrelated rules.
+
+   Limit: this was a subagent in this session, not a separate interactive
+   session.
+4. The README is an introduction and router, down from 34,644 to 4,973
+   characters. It has:
+   - what Grove is;
+   - how to run it;
+   - one table row per command group, linking the section that owns it;
+   - two sentences on the board;
+   - four install steps;
+   - a table of where each subject is owned, including the adapters and
+     their evidence.
+
+   It needs no work IDs except G-032 and G-050 as the evidence for the
+   adapters, and G-069 for old IDs. It does not retell `grove --help`.
+
+   The board manual moved to `docs/board.md`, with a key table checked
+   against `internal/tui`. Command behaviour that no current document owned
+   (versions, workspace, context, attempts, init, version and guide) moved
+   to `docs/commands.md`. The per-command paragraphs on `list`, `show`,
+   `check`, `update`, `approve`, `feedback` and `integrate` were cut, since
+   the record model already states them; `docs/commands.md` links its
+   sections. `docs/commands.md` names one more observation than the old
+   README did: plans and reviews whose `work` names the selected ID. The
+   reviewer checked that against `internal/handoff/context.go`.
+5. Links and anchors: a script over AGENTS.md, the README, `docs/*.md` and
+   the brief found no problems. Over all records, it found no link problem
+   that `71a650e` did not already have.
+
+   The README and reference examples were run with a binary built at
+   `49c8f5b`: `--help`, `list`, `show G-003`, `check`, `brief`, `version`,
+   `guide work`, `guide shape`, `attempts`, `versions G-003`,
+   `context G-107`, and `workspace` piped into `--project … show`. All exit
+   0. The board without a terminal exits 1, as documented.
+
+   The guides and adapters are unchanged. The record model changed only in
+   two routing paragraphs, and the brief only by one sentence of repository
+   policy that AGENTS.md owns. No constraint was dropped, which the reviewer
+   checked rule by rule.
+
+Verification at `833ac1b` (later commits change only records):
+
+- `go vet ./...`: clean.
+- `gofmt -l .`: empty.
+- `go run ./cmd/grove check`: OK.
+- `go test -count=1 -timeout 120s ./...`: all packages pass. `attempt`,
+  `cli`, `tui`, `update` and `versions` take 5–13 s. That is inherited;
+  documentation cannot change it.
+
+Size (`wc -w`) from `4159e79` to `833ac1b`:
+
+| File | Before | After |
+| --- | --- | --- |
+| README | 5485 | 689 |
+| AGENTS.md | 1323 | 1303 |
+| Record model | 4682 | 4645 |
+| Brief | 1566 | 1543 |
+| New `docs/board.md` | – | 2021 |
+| New `docs/commands.md` | – | 2064 |
+
+The total barely moves, since the text moved rather than being cut. The
+change is that each subject now has one place, and the README and AGENTS.md
+are what a session reads first.
+
+Review: [G-113](G-113-g-107-router-review.md), three rounds (the cap) by an
+independent `reviewer` subagent. Twelve round-1 findings (four medium) and
+seven round-2 points were fixed and confirmed. Round 3 found nothing, and no
+findings are open.
+
 ## Next
 
-Returned to active by the owner's feedback below. The next pass starts from
-this branch, keeps the ownership and reconciliation work already on it, and
-restructures against the revised acceptance 3 and 4: the README becomes an
-introduction and router, the board manual and other reference text move to
-an owning document, and AGENTS.md keeps its rules as one line each. G-111's
-dispositions are revised where they change. `grove --help` improvements and
-a board help overlay are separate work; propose them, do not do them here.
-Then hand off into Review again with a new candidate.
+In review with the second candidate: branch `worktree-G-107` in
+`.claude/worktrees/worktree-G-107`, based on main `768efab`. The candidate
+is set in the `candidate` field. The integrator runs:
+
+```sh
+# in .claude/worktrees/worktree-G-107, after judging the Evidence above
+grove approve G-107 "VERDICT"      # or: grove feedback G-107 "TEXT"
+# then, in the main checkout
+grove integrate G-107 --cleanup
+```
+
+Proposed follow-up work outside this documentation scope, not created as
+records:
+
+- `grove --help` still says the board "Reads only".
+- `grove --help` could carry what `docs/commands.md` now holds, so that
+  document can shrink.
+- A help overlay on the board could show the key table from
+  `docs/board.md`.
+
+Whether the README serves an external newcomer is
+[G-110](G-110-external-preview.md)'s judgment.
 
 Feedback on candidate 71a650e, 2026-09-23: Missed the intent. The record asked for reconciliation and got it, but never said that the README and AGENTS.md are routers, not books, so they still are: the README is 34.6k characters, a prose retelling of grove --help plus a full board manual. There is no word cap; the test is that the right content is in the right place and someone else can understand it. The README keeps a command overview but does not retell --help, which needs its own work and does not replace the README. The board's key-by-key manual leaves the README. AGENTS.md matters less. Acceptance revised in the next commit.
