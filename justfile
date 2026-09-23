@@ -8,8 +8,8 @@ build:
     go build -o bin/grove ./cmd/grove
 
 # Build and run: `just run list --status active`. Unlike `go run`, keeps grove's exit code.
-run *args: build
-    @bin/grove "$@"
+run *args: 
+    go run ./cmd/grove "$@"
 
 # Replace the installed ~/.local/bin/grove with a build of this checkout.
 install:
