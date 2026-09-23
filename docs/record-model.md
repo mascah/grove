@@ -1,29 +1,24 @@
-# Starter record model
+# Record model
 
-Status: core model accepted, 2026-09-18, on the owner's response "yup this looks
-good" to the draft. This covers the representation, fields, relationships,
-lifecycles, and initial validation boundary below. The owner accepted the
-[on-disk defaults below](#on-disk-contract) on 2026-09-19, then replaced the
-random-ID/long-filename trial with shared sequential IDs and short filenames.
-The first Go CLI now reads and validates this model; G-003 records its evidence.
-[The restart brief](../grove/brief.md) owns product direction;
-`grove/` owns operational work, questions, and decision receipts.
+This is Grove's current record contract: configuration, record types, fields,
+statuses, validation and the lifecycle rules software enforces. How each rule
+was chosen is in the record linked beside it and in Git, not here; the
+[brief](../grove/brief.md) owns product direction, `grove --help` gives each
+command's usage, and [the command reference](commands.md) covers the commands
+this document does not.
 
 ## Identity and placement apart from classification
 
-[G-064](../grove/G-064-stable-knowledge.md) selected stable identity
-and placement, general knowledge pages, flat creation and recursive discovery
-independent of type folders. [G-065](../grove/G-065-flexible-records.md)
-implemented it as `schema_version: 3`, the one schema Grove now reads.
-[G-052](../grove/G-052-migrate-knowledge.md) converted every record of this
-repository to it and then deleted schemas 1 and 2, their type folders, typed
-`W-`/`Q-`/`D-`/`T-`/`P-`/`R-` IDs and per-type counters: Grove keeps no backward
-compatibility before its first release. [G-069](../grove/G-069-migration-map.md)
-is the old-to-new mapping. A commit from before the conversion is inspected
-with the CLI in that commit (`go run ./cmd/grove` there); the current CLI
-reports such a branch in `versions` and the board as a source it cannot
-inspect. Where a later section's dated history names typed IDs or type
-folders, this section is the current rule.
+`schema_version: 3` is the one schema Grove reads
+([G-064](../grove/G-064-stable-knowledge.md) selected it,
+[G-065](../grove/G-065-flexible-records.md) implemented it). Grove keeps no
+backward compatibility before its first release: schemas 1 and 2, their type
+folders, typed `W-`/`Q-`/`D-`/`T-`/`P-`/`R-` IDs and per-type counters were
+deleted by [G-052](../grove/G-052-migrate-knowledge.md), and
+[G-069](../grove/G-069-migration-map.md) maps this repository's old IDs and
+paths. A commit from before the conversion is inspected with the CLI in that
+commit (`go run ./cmd/grove` there); the current CLI reports such a branch in
+`versions` and the board as a source it cannot inspect.
 
 - **Discovery.** Every `.md` file beneath the record root, at any depth, is a
   record, except the configured brief. No folder names a type: the root and
@@ -66,8 +61,8 @@ folders, this section is the current rule.
 
 **Allocation.** Numbers come from the one counter file `grove/neutral-ids` in
 the Git common directory, under `grove/lock`, in the form `G 12`, with the
-floor scan (every `.md` beneath the record root in every local ref and
-worktree, nested included) and recovery notices described under
+floor scan (text files beneath the record root on every branch,
+remote-tracking ref and tag, and in every worktree, nested included) and recovery notices described under
 [Identity and dates](#identity-and-dates). A `grove/next-ids` file left by the
 deleted typed counters is never read or written.
 
@@ -103,11 +98,8 @@ rewriting, and per-type folders or prefixes.
 
 ## Knowledge records and the brief
 
-On 2026-09-20 [G-035](../grove/G-035-interactive-adoption.md) selected
-terms and linked work artifacts, and
-[G-051](../grove/G-051-typed-knowledge-records.md) selected their
-representation, which [G-037](../grove/G-037-knowledge-artifacts.md)
-implemented:
+Terms, plans and reviews ([G-051](../grove/G-051-typed-knowledge-records.md),
+implemented by [G-037](../grove/G-037-knowledge-artifacts.md)):
 
 | Type | Statuses (first is what `new` writes) | Extra fields |
 | --- | --- | --- |
@@ -143,13 +135,6 @@ Committed sources in `versions` and the board check only the form of `brief`,
 never that the file exists: they read `grove.yaml` and the record root, and
 only a live checkout is required to hold the brief.
 
-Plans and reviews written before this support were ordinary files in
-`docs/plans/` and `docs/reviews/` until
-[G-052](../grove/G-052-migrate-knowledge.md) converted them and moved the
-brief. [G-038](../grove/G-038-review-lifecycle.md) added the Review work
-status and the `candidate` field, and made Done mean accepted and merged; see
-[Work lifecycle](#work-lifecycle) for the rule and the historical meaning.
-
 ## Minimum representation
 
 Use one Markdown file per record, with YAML frontmatter for facts that the
@@ -159,10 +144,10 @@ CLI interprets and a freeform Markdown body for explanation.
 | --- | --- |
 | `id` | Stable identity; renaming the title or file does not change it |
 | `type` | `work`, `question`, `decision`, `term`, `plan`, `review`, or `page` |
-| `title` | A readable label for lists, search, and the eventual board |
+| `title` | A readable label for lists, search, and the board |
 | `status` | Explicit lifecycle state for that record type; a `page` has none |
 
-The accepted relationship fields cover the starter records:
+Relationship fields:
 
 - Work `depends_on`: prerequisite work IDs. Missing means no declared prerequisites.
 - Question `blocks`: work IDs whose outcome needs the answer. An unresolved
@@ -172,12 +157,9 @@ The accepted relationship fields cover the starter records:
 
 ## Work planning metadata
 
-On 2026-09-18, the owner proposed richer work metadata after comparing nullsec's
-W-032 release, specifically members, dependencies, priority, size, and a work
-sub-kind, to support useful UI behavior. The owner then accepted adding these
-optional fields and the distinctions below ("yeah this is great"). Concrete
-values were accepted with the on-disk defaults on 2026-09-19; no automatic
-execution policy is implied.
+Optional work fields for filtering, grouping and presentation; no automatic
+execution policy is implied. Their allowed values are under
+[Planning values](#planning-values).
 
 | Field | Meaning and use |
 | --- | --- |
@@ -185,15 +167,13 @@ execution policy is implied.
 | `priority` | Importance for selection, independent of dependencies |
 | `size` | Coarse scope/effort estimate, without automatic time estimates or execution policy |
 | `members` | Child work included in this outcome; expandable groups and member completion counts |
-| `depends_on` | Existing accepted field: prerequisite work that must be delivered before this work can proceed |
-| `created`, `updated` | Creation and modification timestamps for chronology; potentially common to all record types |
+| `depends_on` | Prerequisite work that must be delivered before this work can proceed |
+| `created`, `updated` | Creation and modification timestamps for chronology, allowed on every type |
 
 Keep these optional so quick capture remains useful. An absent size or priority
 means unspecified; do not silently turn it into an estimate or urgency decision.
-Dates should be written by CLI mutations when those exist. The on-disk contract
-below specifies the timestamp format and a proposed direct-editor policy.
 
-Preserve these distinctions when implementing the extension:
+These distinctions hold:
 
 - Membership describes decomposition. Member order can express presentation or
   preferred sequence, but only dependencies impose prerequisite ordering.
@@ -204,33 +184,22 @@ Preserve these distinctions when implementing the extension:
 - Derive member counts and blocker explanations from relationships and the
   selected branch context. Do not store parallel progress percentages or an
   independently editable `blocked` flag.
-- A spike/investigation is a kind, not a size. The predecessor's size vocabulary
-  partly chooses preparation depth; do not inherit those execution rules merely
-  by accepting a size field.
-- Validate member targets and membership cycles as well as dependency cycles.
-  Nesting and shared membership follow the rules below; cross-branch
-  resolution remains open.
-
-Evidence: `grove context --work W-032 --phase shape` in nullsec returned
-`kind: release`, `size: large`, `priority: 2`, `depends_on: []`, eight ordered
-members, creation/update dates, and parent-level acceptance. That context call
-also reported unrelated supporting sources omitted by its token budget; the
-owning work record itself was present and inspected. Its `scope` points to
-capability records, a type outside the current three-type starter model.
+- A spike/investigation is a kind, not a size. A size sets no preparation
+  depth or execution rule.
+- Member targets and membership cycles are validated as well as dependency
+  cycles. Nesting and shared membership follow the rules below; relationships
+  resolve within one checkout.
 
 ## On-disk contract
 
-Defaults accepted 2026-09-19 on the owner's response "YeaI accept those defaults":
-`grove.yaml` with schema version and configurable record root, the three type
-folders (since replaced by [flat placement](#identity-and-placement-apart-from-classification)), timestamps, and optional planning values. Later that day, the owner
-accepted sequential IDs allocated across local worktrees and short filenames
-after finding the original random-ID/timestamp filenames difficult to browse.
-These revised defaults govern the operational records. G-003 implements the
-discovery, validation, graph, and inspection behavior below; G-007 implements
-creation and allocation per [G-006](../grove/G-006-allocator-mechanism.md).
-[G-009](../grove/G-009-update-records.md) implements field updates with
-content revisions and a shared write lock; renames, moves, deletes, and body
-edits remain unimplemented. This section owns the schema; the brief owns direction.
+[G-001](../grove/G-001-starter-defaults.md) and
+[G-004](../grove/G-004-sequential-ids.md) record how these defaults were
+accepted. [G-003](../grove/G-003-inspect-records.md) implements discovery,
+validation and inspection, [G-007](../grove/G-007-create-records.md)
+creation and allocation per [G-006](../grove/G-006-allocator-mechanism.md),
+and [G-009](../grove/G-009-update-records.md) field updates with content
+revisions and a shared write lock. No command renames, moves (other than
+`convert`), deletes or edits the body of a record.
 
 ### Configuration and discovery
 
@@ -272,9 +241,9 @@ Without an explicit project, search from the current directory upward for the
 nearest `grove.yaml`, stopping at the current Git checkout root when inside one.
 Outside Git, search up to the filesystem root. An explicit `--project <dir>`
 selects the directory containing the configuration without upward searching.
-Git is not required to read a configured project. Never consult another
-worktree, the Git common directory, or the predecessor's configuration for
-these initial commands.
+Git is not required to read a configured project. `list`, `show` and `check`
+never consult another worktree, the Git common directory, or another tool's
+configuration.
 
 ### Folders and files
 
@@ -318,31 +287,29 @@ padding. Store IDs as strings and match references exactly; `show G-001`
 needs no abbreviated-ID lookup. Numeric ordering must not rely on
 lexicographic sorting once the counter expands.
 
-For Git projects, creation commands coordinate through the shared
-directory returned by `git rev-parse --path-format=absolute --git-common-dir`.
-Do not derive it from a worktree's `.git` path: linked worktrees have private
-metadata as well as a shared common directory. This is supported by
-[Git's worktree documentation](https://git-scm.com/docs/git-worktree#_details).
+Creation coordinates through the directory that
+`git rev-parse --path-format=absolute --git-common-dir` returns, never a
+worktree's own `.git` path, since linked worktrees have private metadata as
+well as a shared common directory
+([Git's worktree documentation](https://git-scm.com/docs/git-worktree#_details)).
+Allocation in one local repository:
 
-Allocation requirements for cooperating Grove commands in one local repository:
-
-1. Acquire an exclusive lock shared by every worktree and all record types.
-2. Reserve the next number and durably save the advanced
-   counter while holding the lock. If locking or persistence fails, do not issue
-   an ID or create a record.
-3. Release the lock, then create the record in its selected checkout without
+1. Take `grove/lock` in the common directory, one lock for every worktree and
+   every record type.
+2. Reserve the next number and durably save the advanced counter while holding
+   the lock. If locking or persistence fails, no ID is issued and no record is
+   created.
+3. Release the lock, then create the record in its checkout without
    overwriting an existing file. A failed or abandoned creation consumes the
-   reservation; gaps are acceptable and numbers are not deliberately recycled.
+   reservation; gaps are acceptable and numbers are not recycled.
 
-The counter belongs to the local repository's Grove project, not to a branch,
-worktree, or configured record-root path. It is local coordination state, not a
-tracked project record; no daemon is required. A Grove-owned directory under
-the Git common directory is the intended home. [G-006](../grove/G-006-allocator-mechanism.md)
-owns the accepted state encoding, lock primitive, and recovery protocol for
-[G-007](../grove/G-007-create-records.md) to test with the creation command. `grove new` initializes and maintains `grove/neutral-ids` under `grove/lock` in
-that common directory, and `new` and `update` serialize publication through
-`grove/write.lock` beside them; the read-only inspection commands never create
-any of these files, and none is ever unlinked.
+The counter, `grove/neutral-ids` in the form `G 12` (the next number), belongs
+to the local repository, not to a branch, worktree, or record-root path. It is
+local coordination state, not a tracked record, and needs no daemon;
+[G-006](../grove/G-006-allocator-mechanism.md) owns its encoding, lock
+primitive and recovery protocol. `new` and `update` serialize publication
+through `grove/write.lock` beside it. The read-only commands never create any
+of these files, and none is ever unlinked.
 
 Separate clones do not share reservations. Directly authored IDs also bypass
 allocation. Imported records and independently allocated clone histories require
@@ -351,18 +318,16 @@ two independently created records are the same item. Two files with one ID in
 one checkout remain an error even when their contents match. Genuine branch
 copies of one record retain their identity.
 
-Missing, corrupt, or restored-old counter state must not silently restart at 1.
-Before enabling creation, define explicit initialization/recovery that considers
-committed records across relevant refs and live records in linked worktrees.
-Scanning records can find used numbers but cannot recover reservations for
-deleted or never-written records; the recovery policy must expose that limit.
-Concurrent imports and manual edits are outside the allocator's exclusivity
-guarantee. Plain-directory reading remains supported without Git or allocator
-state; automatic allocation outside Git is deferred.
-
-The starter records were renumbered once before any new CLI existed. The mapping
-is retained in [G-004](../grove/G-004-sequential-ids.md); this is not a
-general ID-renaming feature.
+Counter state never silently restarts at 1. Each allocation floors the
+counter by the highest ID in use: an `id:` line in any text file beneath the
+record root on every branch, remote-tracking ref and tag, and every live
+record in every worktree, nested folders included. A missing counter is
+initialized from that floor with a notice on stderr that reservations for
+records never written or since deleted cannot be recovered; a counter below
+the floor continues above it, with a notice. A corrupt counter refuses
+allocation until it is fixed or removed. Concurrent imports and manual edits
+are outside the allocator's exclusivity guarantee. Reading needs no Git or
+allocator state; allocation outside Git is not provided.
 
 Keep `created` and `updated` optional on every type. When present, require quoted
 UTC timestamps in `YYYY-MM-DDTHH:MM:SSZ` form, and require `updated >= created`
@@ -381,11 +346,9 @@ optional: an agent session passes it because its read may be old, while a
 person at a shell, reading and writing within seconds under the same write
 lock, omits it and lets the update apply to the file as it is.
 
-### Initial planning values
+### Planning values
 
-Use these accepted values when a field is supplied:
-
-| Field | Initial allowed values | When absent |
+| Field | Allowed values | When absent |
 | --- | --- | --- |
 | `kind` | `feature`, `fix`, `refactor`, `investigation`, `tooling`, `release` | Unspecified |
 | `priority` | Integer 1 (highest) through 5 (lowest) | Unspecified |
@@ -396,16 +359,16 @@ The planning fields above belong only on work. `blocks` belongs only on
 questions; `relates_to`, `created`, and `updated` can appear on every type.
 Do not synthesize a default kind, priority, or size. An investigation uses
 `kind: investigation` and an independent size; there is no separate `spike`
-value in this starting vocabulary.
+value.
 
 Allow nested and shared membership; grouping does not assign exclusive
 ownership. Reject duplicate IDs within a relationship list and self-links.
 Check dependency and membership cycles separately; do not combine the two edge
 types into one precedence graph. A group may depend on delivery of its own
 members without making membership an execution prerequisite for each child.
-Cross-branch relationships remain outside this reader's scope.
+Relationships resolve within one checkout.
 
-### First commands
+### Reading and writing records
 
 `list`, `show <id>`, and `check` read the selected checkout's live files,
 including uncommitted records. Present the selected project path so the source
@@ -426,17 +389,13 @@ optional and added `--commit`, which after a change runs `git add` and
 `git commit` for the record's file alone with a generated message, adds
 `commit` to the result (`null` when nothing changed), and reports a commit Git
 refused as an applied, uncommitted update.
-`versions [ID] [--json]` reads the same project location on every local
-branch tip and in every registered worktree, validating each source alone by
-these rules, and prints one row or JSON object per observed version with a
-selector; [G-010](../grove/G-010-record-versions.md) owns its source,
-output, incomplete-result, and selector contract, and
-[G-042](../grove/G-042-current-view.md) marks each version current or older
-by Git ancestry, which the board's default view shows. `workspace --source
-SELECTOR [--json]` re-inspects that selection and prints the project
-directory of the existing checkout that still holds exactly that version;
-[G-011](../grove/G-011-record-workspace.md) owns its resolution and
-refusal contract. Both require Git and read only.
+`versions` reads the same project location on every local branch tip and in
+every registered worktree, validating each source alone by these rules, and
+`workspace` resolves one version it listed to its checkout; both require Git
+and read only. [The command reference](commands.md#versions) describes them;
+[G-010](../grove/G-010-record-versions.md),
+[G-042](../grove/G-042-current-view.md) and
+[G-011](../grove/G-011-record-workspace.md) own their contracts.
 
 - `list`: show ID, type, status, and title, ordered by `created` ascending with
   undated records last, then the ID's number as the tie-breaker.
@@ -444,7 +403,7 @@ refusal contract. Both require Git and read only.
   on `list`, keeps the records whose status equals any given value; a value
   outside the union of the type table's status vocabularies, or an empty one, is a
   usage error (exit 2), and a status no record holds prints the header alone.
-  Without it, every record is printed as before.
+  Without it, every record is printed.
 - `show <id>`: show the file path and complete Markdown source, including
   frontmatter and relationships. The original bytes go to stdout; project and
   file context go to stderr. Missing or ambiguous identity is an error.
@@ -454,7 +413,7 @@ refusal contract. Both require Git and read only.
 
 Require nonempty string values for required fields, valid lifecycle values, and the
 declared types for optional fields. Reject duplicate YAML keys and unknown
-frontmatter/configuration keys in this initial schema so misspellings cannot
+frontmatter/configuration keys so misspellings cannot
 silently change behavior. Keep arbitrary supporting material in the Markdown
 body; adding structured fields requires an explicit schema choice.
 
@@ -470,42 +429,11 @@ project. Exit codes are 0 for success/help, 1 for inspection or output errors, a
 2 for invalid usage. `check` reports the record count when validation succeeds.
 
 Load the complete record set before resolving relationships, and report invalid
-or missing targets within this checkout. Initial inspection commands use the
+or missing targets within this checkout. The inspection commands use the
 same validation boundary and return nonzero for an invalid project; `list` and
-`show` must not silently present a partial valid subset as the whole project.
-Concurrent direct edits can invalidate a read; this first reader does not
-promise a transactional snapshot or ownership of the files.
-
-### Why these defaults
-
-Type folders supported manual browsing until they became friction and G-064
-selected a flat root; a configurable root accommodates projects that keep
-knowledge under `docs/`. Shared sequential IDs make filenames
-and references readable for the initial local-worktree audience. The earlier
-random-ID/timestamp filename trial was rejected after actual browsing; a hidden
-random identity with numbered aliases would add a second identity without being
-needed for allocation within one repository. Reconsider allocation if independent
-clones become a normal collaboration path. One project schema marker avoids repeating
-versions in every file; mixed record versions and automatic migrations are
-deferred until a real schema change needs them.
-
-## Operational records
-
-The earlier illustrative examples have been replaced by real records:
-
-- [Work: inspect project records](../grove/G-003-inspect-records.md)
-  owns the first CLI's completed outcome and verification evidence.
-- [Question: branch versions](../grove/G-002-branch-versions.md)
-  retains the accepted grouping and explicit-version-selection policy; source
-  and routing implementation contracts remain in G-010 and G-011.
-- [Decision: starter defaults](../grove/G-001-starter-defaults.md)
-  records acceptance and points here for the schema rather than copying it.
-- [Work: create records](../grove/G-007-create-records.md) owns the
-  implemented creation command and shared allocation.
-- [Decision: sequential IDs](../grove/G-004-sequential-ids.md)
-  records the naming revision and starter-record ID migration.
-
-Branch-context direction and its evidence remain in the restart brief.
+`show` never present a partial valid subset as the whole project.
+Concurrent direct edits can invalidate a read; the reader does not promise a
+transactional snapshot or ownership of the files.
 
 ## Lifecycle and validation boundary
 
@@ -515,9 +443,9 @@ Branch-context direction and its evidence remain in the restart brief.
   durable decision instead of deleting the question's identity.
 - Decision: `proposed`, `accepted`, `rejected`, `superseded`. `superseded`
   is an accepted decision that a later one replaced: `relates_to` names the
-  replacement and the body says why, with no dedicated field.
-  [G-041](../grove/G-041-nullsec-pilot.md) added it for nullsec's two actual
-  replacements. Prior versions remain available in Git.
+  replacement and the body says why, with no dedicated field
+  ([G-041](../grove/G-041-nullsec-pilot.md)). Prior versions remain available
+  in Git.
 
 Reopening changes status explicitly. Directory movement does not determine
 completion. A resolved question stops blocking named work; an abandoned
@@ -525,10 +453,11 @@ prerequisite does not count as delivered.
 
 ### Work lifecycle
 
-[G-035](../grove/G-035-interactive-adoption.md) selected Proposed → Active →
-Review → Done, with Abandoned only through an explicit human decision;
-[G-038](../grove/G-038-review-lifecycle.md) implemented it on 2026-09-22
-with the plan [G-073](../grove/G-073-review-lifecycle-plan.md). Preparation,
+Proposed → Active → Review → Done, with Abandoned only through an explicit
+human decision ([G-035](../grove/G-035-interactive-adoption.md) selected it,
+[G-038](../grove/G-038-review-lifecycle.md) implemented it, and
+[G-044](../grove/G-044-review-integration.md) added `approved`, `approve`,
+`feedback` and `integrate`). Preparation,
 implementation, independent review and waiting are activities inside
 `active`, recorded in the body, never statuses. The settled terms
 [candidate](../grove/G-057-candidate.md), [review](../grove/G-058-review.md),
@@ -589,41 +518,23 @@ implementation, independent review and waiting are activities inside
   record's candidate is moved to its new commits before it is closed again,
   which the guide's `git diff --stat CANDIDATE TIP` check and `approve`'s
   refusal catch. These are guide rules, since software cannot verify a
-  person, and the owner edits by hand.
-  [G-044](../grove/G-044-review-integration.md) added `approved`, `approve`,
-  `feedback` and `integrate` on 2026-09-23 with the plan
-  [G-098](../grove/G-098-g-044-review-integration-plan.md); the merge is
-  local, and every action is a person's command or key.
+  person, and the owner edits by hand. The merge is local, and every action
+  is a person's command or key.
 
-Body organization is for readers. The first CLI should not infer readiness or
+Body organization is for readers. The CLI does not infer readiness or
 completion from exact headings, populated prose, or checked boxes. Validate
 required metadata, supported values, ID uniqueness within the current checkout,
 relationship targets/types, and work dependency cycles. Copies of one ID on
 different branches are versions to reconcile, not automatically ID collisions.
 
-## First dogfooding boundary
+## Not records
 
-The CLI now lists, shows, and validates the records tracking its own development
-in one checkout, creates records with shared IDs, updates their fields
-while refusing stale writes, shows each record's versions across local
-branches and worktrees, and locates the existing checkout holding a selected
-version. The [integrated CLI review](../grove/G-022-integrated-cli-review.md) found
-contract defects that G-014/G-015/G-016 repair; their
-[evidence](../grove/G-028-repairs-review.md) lists the remaining limits.
-[G-017](../grove/G-017-terminal-picker.md) adds a terminal board over these
-operations; it changes no schema, and since G-044 writes a record only through
-the three review actions, each behind a prompt; since G-046 it also launches,
-lists and stops attempts, the launch and stop behind prompts. Editing fields from an
-interactive view and automatic checkout creation are future investments.
-
-Plans and reviews are records. Report records and artifact
-ingestion are deferred. Attempts are not records: `grove run` (G-045) keeps
-each attempt's inputs, raw events and result as files under the Git common
-directory, shared by every worktree and never committed, and the work
-record's own status on the attempt's branch is the only handoff. The board
-(G-046) reads the same files and derives an outcome from them for display;
-it writes nothing about an attempt. Ordinary
-Markdown links and prose can carry other supporting material in the meantime. The work planning metadata above is accepted for
-the starting schema; attachment deferral does not require
-deferring useful planning fields. Assignees and richer record types remain
-future additions when the first workflow needs them.
+Attempts are not records: `grove run`
+([G-045](../grove/G-045-durable-attempt.md)) keeps each attempt's inputs, raw
+events and result as files under the Git common directory, shared by every
+worktree and never committed, and the work record's own status on the
+attempt's branch is the only handoff. The board
+([G-046](../grove/G-046-managed-runs.md)) reads the same files and derives an
+outcome from them for display; it writes nothing about an attempt. There is
+no report type, and no assignee field; ordinary Markdown links and prose carry
+other supporting material.

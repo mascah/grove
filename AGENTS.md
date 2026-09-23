@@ -1,152 +1,149 @@
 # Working on Grove
 
-This repository is a fresh product restart, with a Go CLI for read-only
-inspection, configuration, and operational records. `grove/brief.md` is
-the current source of intent; it distinguishes selected direction, observed
-evidence, and proposed design, and those distinctions must be preserved. Read
-it first for anything that shapes direction or is not bounded by a work record.
-Assigned work IDs start from their records instead (see Assigned work) and
-read the brief when the record, a product question, or reconciliation needs it.
+Grove is a Go CLI and terminal board over Markdown records with YAML
+frontmatter, kept in ordinary files and Git, with no required running
+service. This file is this repository's development policy. Every other fact
+has one owner; read each when the task needs it, not up front:
 
-- Keep the product useful through ordinary local files and a CLI without a
-  required running service. The core record model in `docs/record-model.md`
-  is accepted: Markdown with YAML frontmatter. Use Go for the first CLI.
-  The starter file defaults use short sequential IDs, replacing the random-ID
-  trial. Allocation coordinates across local worktrees through Git's common
-  metadata directory; reading records requires no allocator state.
-  G-003 implements the reader, G-007 record creation with shared allocation,
-  and G-009 field updates with content revisions and a shared write lock.
-  G-017 implements the terminal board that bare `grove` opens, with
-  Bubble Tea v2 in `internal/tui`; keep explicit subcommands noninteractive,
-  and the board's text escaping and exact source targeting intact. G-043 gave
-  it bordered cards, a Done column bounded to its page, Abandoned behind `a`,
-  a record detail (glamour-rendered body behind the same escaping, linked
-  records by field, the timeline) and `/` search; versions and workspace
-  selection sit behind `v`. A rendered body is escaped before glamour and
-  filtered to glamour's own styles after it; keep both layers. G-035 selects
-  a project-wide current view, which G-042 derives from Git ancestry in
-  `internal/versions/current.go`: the board opens on it, and `b` still chooses
-  one checkout's own board, retaining explicit source inspection and freshness
-  checks. Merge bases are read through the same `cat-file` process. G-031
-  reads every branch through one `git cat-file` process, scoped to what the
-  project loader reads; do not add a Git process per branch. G-030 reads a
-  record's Git history only while its card is open, as a read any key may
-  cancel; do not read history during the board load. G-040 added `init`,
-  `guide`, and `version`: the binary embeds both guides from `docs/`, `init`
-  writes a target's configuration and marked entrypoints, and this
-  repository's own adapters stay unmanaged on purpose, reading the guide
-  files that `go run` builds from. The runner contract remains open.
-- Keep deterministic validation and state changes in software where useful;
-  do not assume software can replace judgment instructions or prove acceptance.
-- Record settled choices in the brief while it remains small. Progress and the
-  concrete next action belong to each work record's Next, never the brief. Do
-  not create a second editable account of the same direction.
-  G-036 owns the selected interactive adoption milestone; its linked roadmap is
-  investment order, not a batch assignment. G-037 added term, plan, and review
-  records (G-051) and the `brief:` key that `grove brief` reads. G-064 selected
-  stable identity/placement and flexible knowledge, which G-065 implemented:
-  neutral `G-` IDs from one counter, `page` records, flat creation, recursive
-  discovery, and `update --set type=`. G-038 implemented G-035's lifecycle:
-  work runs `proposed`, `active`, `review`, `done`; an implementation ends in
-  `review` with its `candidate` commit, and `done` is written on `main` after
-  the merge, never on the work branch: `update` refuses a candidate HEAD does
-  not contain and a checkout off the configured target. G-044 added
-  `approve`, `feedback` and `integrate` (board keys `a`, `f`, `i` on a
-  record in review): `approved` must name the candidate, and `integrate`
-  merges the approved branch from `main`'s checkout and writes `done` there.
-  A `done` record without a candidate predates that meaning; do not
-  backfill one. G-052 reconciled this repository on 2026-09-21:
-  every record, former `docs/plans` and `docs/reviews` document included, has
-  a neutral ID flat under `grove/`, the brief is `grove/brief.md`, and
-  [G-069](grove/G-069-migration-map.md) maps each old ID and path to its
-  counterpart; use it to follow a reference in an old commit or message.
-  G-052 also deleted schemas 1 and 2 with their typed IDs, type folders and
-  counters: `schema_version: 3` is the only schema, Grove keeps no backward
-  compatibility before its first release, and an old commit is inspected with
-  the CLI in that commit. Ordinary operations keep IDs and paths stable: never
-  hand-author or renumber an ID, and keep `convert` for documents outside the
-  record root.
-- `../skills/` and `../nullsec/` are evidence and potential compatibility targets,
-  not automatically part of an implementation's write scope. Follow their
-  instructions. Nullsec runs on this Grove since G-041: read its records with
-  the installed `grove` from nullsec's checkout (`grove brief`, `grove list`,
-  `grove context G-NNN`). Its `G-` numbers are its own, so name the repository
-  when an ID could be either. `../skills/` keeps the predecessor's files, whose
-  CLI and plugins are uninstalled; read them as files.
-- The installed `grove` (`~/.local/bin/grove`) is a build of this CLI from a
-  named commit, which `grove version` prints; it can lag this checkout. Use
-  `go run ./cmd/grove` for this repository's `grove.yaml` and `grove/` records;
-  create records with `go run ./cmd/grove new`, never by hand-numbering, and
-  change status or fields with `go run ./cmd/grove update`. G-041 records how
-  the predecessor was removed and how to restore it.
-- The archived application's service authority, architecture, credentials,
-  deployment procedures, and backlog are historical. Do not revive them as
-  requirements for this project or copy private local data into this repository.
-- Use focused Conventional Commits. Preserve unrelated work and isolate
-  concurrent implementation in separate worktrees.
-- Verify claims against actual results. Documentation-only changes need link
-  and consistency checks. For Go changes iterate with `go test -short
-  ./<package>`, then run `go vet ./...`, `gofmt -l .`, `go run ./cmd/grove
-  check`, and one `go test -count=1 -timeout 120s ./...` as final evidence.
-  Rerun a failed package, not the suite. Reproduce a Linux-only failure with
-  `docker run --rm -v "$PWD":/src -w /src -e GOFLAGS=-buildvcs=false golang:1.26 go test ./...`. Never `-p 1`, and never `-race`
-  across the suite on macOS: the race runtime hangs in the forked child before
-  `exec` there, and the test timeout leaves it behind at full CPU. Run `-race`
-  only per package, only for a concurrency change, with `-timeout 120s`, and
-  treat a hang in `syscall.forkExec` as that toolchain bug, not evidence; kill
-  any `*.test` process a timeout leaves behind. Budget: no package over five
-  seconds, and no test that builds, sleeps, or waits on a shim without a
-  `-short` skip and a comment saying why. TUI work also needs terminal
-  lifecycle and connected-workflow checks.
-- Every Git process Grove or its tests start goes through `repo.Command`,
-  never a bare `exec.Command("git", …)`: it drops `GIT_DIR` and the other
-  variables that name a repository, because Git exports `GIT_DIR` to hooks
-  and a child that inherits it acts on the real repository. G-089 records the
-  incident: test fixtures run by lefthook's pre-push hook from a linked
-  worktree committed into this repository. The hook also scrubs them; keep
-  both layers.
+- [`grove/brief.md`](grove/brief.md): purpose, constraints and selected
+  direction, with selected direction, observed evidence and proposed design
+  kept apart. Read it for anything that shapes direction or is not bounded by
+  a work record.
+- [`README.md`](README.md): what Grove is and where each subject is owned.
+- [`docs/commands.md`](docs/commands.md) and [`docs/board.md`](docs/board.md):
+  command and board behaviour beyond `grove --help`.
+- [`docs/record-model.md`](docs/record-model.md): configuration, record schema,
+  validation and lifecycle.
+- [`docs/work-execution.md`](docs/work-execution.md) and
+  [`docs/work-shaping.md`](docs/work-shaping.md): the shared workflows.
+- Work records under `grove/`: each outcome, its acceptance, evidence and
+  Next. [G-069](grove/G-069-migration-map.md) maps old typed IDs and paths.
 
-## Assigned work
+## Invoking the CLI
 
-To carry out assigned work IDs, follow `docs/work-execution.md`; the
-`grove-work` skill adapters in `.claude/skills/` and `.agents/skills/` load it
-and are kept in this repository on purpose while the workflow is dogfooded.
-That guide is the workflow and writes commands as `grove …`. This section is
-this repository's policy for it, kept here so that neither the guide nor the
-adapters repeat it:
+- Here, every `grove …` is `go run ./cmd/grove …` in the selected checkout;
+  the installed `~/.local/bin/grove` is a build from the commit
+  `grove version` prints, rebuilt by hand, and can lag this checkout.
+- Create records only with `go run ./cmd/grove new`, never by hand-numbering,
+  and change status or fields with `go run ./cmd/grove update`.
+- `go run` reports every failure as exit 1 and the command's code as
+  `exit status N` on stderr; to tell usage (2) from failure (1), build once
+  with `go build -o <temp path> ./cmd/grove` and run that.
 
-- Every `grove …` in the guide is `go run ./cmd/grove …` in the selected
-  checkout, because the installed `grove` can lag the checkout (above).
-  `go run` reports every failure as exit 1 and prints the command's own code as `exit status N` on
-  stderr; to tell a usage error (2) from a failure (1), build once with
-  `go build -o <temp path> ./cmd/grove` and run that.
-- Do not invoke the predecessor's `grove:work`, `grove:close`, or
-  `grove:shape` skills or its close/archive commands for work here.
-  Comparisons with the predecessor are history in review records, not
-  required reading.
-- `context` is facts, not authorization, and must stay read-only. It reads the
-  selected records in full and lists the rest; read plans, prerequisites,
-  questions, `docs/record-model.md`, and the brief when the guide's step needs
-  them, not up front.
+## Shaping, executing and retrieving context
+
+- Shape with `/grove-shape TOPIC` (Claude) or `$grove-shape TOPIC` (Codex),
+  which load the shaping guide; shaping never assigns, implements or merges.
+- Execute assigned IDs with `/grove-work G-030` or `$grove-work G-030`, which
+  load the work guide; `grove run G-030` (board `R`) starts `/grove-work
+  G-030 --interaction headless` as a Grove-owned attempt that outlives the
+  terminal.
+- Retrieve context in stages: `grove context IDs` reads the selected records
+  in full and lists the rest; then read listed plans, prerequisites,
+  questions, the record model or the brief (`show ID`, `--include PATH`) when
+  the guide's step needs them. `context` writes nothing and is facts, not
+  authorization; a listing is not a reading.
+- The guides write commands as `grove …`, and this file is their policy
+  here; the adapters in `.claude/skills/` and `.agents/skills/` only load
+  this checkout's guide files and stay unmanaged on purpose.
+- Do not invoke the predecessor's `grove:work`, `grove:close` or
+  `grove:shape` skills or its close/archive commands.
 - Work branches are `worktree-G-030`, or `worktree-G-030-G-031` for several
-  IDs, in a linked worktree under `.claude/worktrees/`. The default base is
-  `main` only when it holds the selected records; the guide says what to do
-  when it does not. Do not merge or push unless the assignment says so.
-- New plans and review evidence are records: `go run ./cmd/grove new plan`
-  or `new review`, then `update` to set `work` (and a review's `examined`
-  commit). Reconcile the README or
-  `docs/record-model.md` when their contract changes, and the brief only when
-  the work changes the direction it selects, not to report progress.
-- Fixtures that create records belong in a disposable clone reached by an
-  explicit absolute `--project` path, never a `cd` that can fail: `new` in a
-  worktree of this repository advances the shared ID counter.
+  IDs, and a headless proposal branch is `worktree-shape-SLUG`, each in a
+  linked worktree under `.claude/worktrees/`.
+- The base is `main` only when it holds the selected records; otherwise the
+  work guide says what to do.
+- Do not merge or push unless the assignment says so.
+- Plans and reviews are records: `go run ./cmd/grove new plan` or
+  `new review`, then `update` to set `work` and a review's `examined`.
+- When a contract changes, reconcile the document that owns it; change the
+  brief only when the direction it selects changes, never to report
+  progress, and never keep a second editable account of that direction.
+- Progress and the next action belong in a record's Next, never the brief.
+- Fixtures that create records run in a disposable clone reached by an
+  explicit absolute `--project` path, never a `cd` that can fail, since `new`
+  in a worktree of this repository advances the shared ID counter.
 
-## Shaping work
+## Constraints
 
-To turn an idea or existing records into proposed work, follow
-`docs/work-shaping.md`; the `grove-shape` adapters beside `grove-work` load it.
-The Assigned work policy above applies unchanged: `grove …` is
-`go run ./cmd/grove …`, predecessor skills such as `grove:shape` are not used
-here, and fixtures that create records use a disposable clone. A headless
-proposal branch is `worktree-shape-SLUG` in a linked worktree under
-`.claude/worktrees/`. Shaping never assigns, implements, or merges.
+Each rule's reasons live in the record or document named, and the rule
+applies whatever that record's status. A rule that names none is this file's
+own policy.
+
+- `schema_version: 3` is the only schema, with no backward compatibility
+  before the first release; inspect an old commit with the CLI in that
+  commit (G-065, G-052).
+- Never hand-author or renumber an ID, and never move or rename a record
+  file; keep `convert` for documents outside the record root (G-064).
+- `new` allocates from one counter in Git's common directory, shared by every
+  linked worktree, and `new` and `update` serialize through a shared write
+  lock (G-007, G-009).
+- Work runs `proposed`, `active`, `review`, `done`, and an implementation
+  ends in `review` with its `candidate` commit (G-038).
+- `done` is written on `main` after the merge, never on the work branch, and
+  `update` refuses a candidate HEAD lacks and a checkout off the target
+  `grove.yaml` names (G-038).
+- `approve`, `feedback` and `integrate` (board `a`, `f`, `i`) record the
+  verdict and merge (G-044).
+- Never backfill a candidate on a `done` record that has none (G-038).
+- Every Git process Grove or its tests start goes through `repo.Command`,
+  never a bare `exec.Command("git", …)`, and a hook that runs tests scrubs
+  `GIT_DIR` and the other repository variables as well (G-089).
+- Read every branch through one `git cat-file` process scoped to what the
+  project loader reads, merge bases included, never a process per branch
+  (G-031, G-042).
+- Read a record's Git history only while its card is open, as a read any
+  key may cancel, never during the board load (G-030).
+- Bare `grove` opens the board (Bubble Tea v2, `internal/tui`), and explicit
+  subcommands stay noninteractive (G-017).
+- Keep the board's text escaping and exact source targeting, with freshness
+  checks before acting on a selected version (G-017, G-011).
+- Escape a rendered body before glamour and filter it to glamour's own
+  styles after; keep both layers (G-043).
+- The current view derives from Git ancestry in
+  `internal/versions/current.go`, and `b` still chooses one checkout's own
+  board (G-042).
+- `../skills/` and `../nullsec/` are evidence and potential compatibility
+  targets, not automatically in an implementation's write scope; follow
+  their own instructions.
+- Read nullsec's records with the installed `grove` from nullsec's checkout
+  (`grove brief`, `grove list`, `grove context G-NNN`), and name the
+  repository when a `G-` ID could be either's (G-041).
+- Read `../skills/`, the uninstalled predecessor, as files; G-041 records how
+  it was removed and how to restore it.
+- The archived application's service authority, architecture, credentials,
+  deployment procedures and backlog are historical: do not revive them or
+  copy private local data into this repository (the brief).
+- Keep deterministic validation and state changes in software where useful,
+  and do not assume software can replace judgment or prove acceptance (the
+  brief).
+
+## Changes and verification
+
+- Use focused Conventional Commits, preserve unrelated work, and isolate
+  concurrent implementation in separate worktrees.
+- Verify claims against actual results; documentation-only changes need link
+  and consistency checks.
+- For Go changes iterate with `go test -short ./<package>`, then run
+  `go vet ./...`, `gofmt -l .`, `go run ./cmd/grove check`, and one
+  `go test -count=1 -timeout 120s ./...` as final evidence.
+- Rerun a failed package, not the suite.
+- Reproduce a Linux-only failure with `docker run --rm -v "$PWD":/src -w /src
+  -e GOFLAGS=-buildvcs=false golang:1.26 go test ./...`.
+- Never `-p 1`, and never `-race` across the suite on macOS, where the race
+  runtime hangs in the forked child before `exec` (G-081).
+- Run `-race` only per package, only for a concurrency change, with
+  `-timeout 120s`; a hang in `syscall.forkExec` is that toolchain bug, not
+  evidence, and kill any `*.test` process a timeout leaves behind.
+- No package over five seconds, and no test that builds, sleeps, or waits on
+  a shim without a `-short` skip and a comment saying why (G-071).
+- TUI work also needs terminal lifecycle and connected-workflow checks, which
+  `python3 internal/tui/testdata/terminal.py BINARY` drives through a
+  pseudo-terminal (Unix; skipped without `python3` and under `-short`).
+- Run `lefthook install` once per clone: pre-commit formats staged Go files
+  and runs `go vet` and `go mod tidy -diff`; there is no pre-push hook.
+- GitHub Actions (`.github/workflows/ci.yml`) runs the checks on Ubuntu and
+  macOS for every push to `main` and every pull request, as a signal, not a
+  gate, and Dependabot opens weekly grouped update PRs (G-081).
+- `just clean-merged` removes local branches merged into `main` and their
+  clean worktrees after asking.

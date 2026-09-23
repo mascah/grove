@@ -1,8 +1,0 @@
-HISTORICAL HANDOFF — superseded 2026-09-20.
-
-W-010 is done and integrated. Do not execute the old combined assignment.
-For a new assignment, start with AGENTS.md, docs/work-execution.md and the current
-grove/work/W-011-shaping-entrypoint.md record. It names the preparation step.
-docs/plans/W-018-adoption-roadmap.md gives the selected adoption sequence.
-
-The original handoff is retained in Git at c9904ea:docs/prompts/W-010-W-011-implementation.txt.
