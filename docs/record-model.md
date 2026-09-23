@@ -615,9 +615,12 @@ operations; it changes no schema, and since G-044 writes a record only through
 the three review actions, each behind a prompt. Editing fields from an
 interactive view and automatic checkout creation are future investments.
 
-Plans and reviews are records. Report records, artifact
-ingestion, and agent attempts are deferred. Ordinary Markdown links and prose
-can carry other supporting material in the meantime. The work planning metadata above is accepted for
+Plans and reviews are records. Report records and artifact
+ingestion are deferred. Attempts are not records: `grove run` (G-045) keeps
+each attempt's inputs, raw events and result as files under the Git common
+directory, shared by every worktree and never committed, and the work
+record's own status on the attempt's branch is the only handoff. Ordinary
+Markdown links and prose can carry other supporting material in the meantime. The work planning metadata above is accepted for
 the starting schema; attachment deferral does not require
 deferring useful planning fields. Assignees and richer record types remain
 future additions when the first workflow needs them.

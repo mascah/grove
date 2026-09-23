@@ -4,12 +4,12 @@ type: work
 title: "Run one bounded implementation independently of the viewing terminal"
 status: active
 created: "2026-09-21T00:54:16Z"
-updated: "2026-09-23T02:24:20Z"
+updated: "2026-09-23T02:34:39Z"
 kind: feature
 size: large
 priority: 4
 depends_on: ["G-038", "G-040"]
-relates_to: ["G-035", "G-044", "G-046"]
+relates_to: ["G-035", "G-044", "G-046", "G-101"]
 formerly: "W-027"
 ---
 

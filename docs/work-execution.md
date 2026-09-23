@@ -388,16 +388,20 @@ an untracked background agent running as an implied continuation.
 | --- | --- |
 | Claude, interactive | `/grove-work G-030 G-031` |
 | Claude, headless | `claude -p "/grove-work G-030 --interaction headless"` |
+| Grove-owned attempt | `grove run G-030 --budget USD --permission-mode MODE`: the headless row as a process that outlives the terminal, in the work's worktree; `grove attempts`, `attempt`, `stop` |
 | Codex, interactive | `$grove-work G-030 G-031` |
 | Any agent without skills | "Read the repository's agent instructions and the output of `grove guide work`, then follow that guide for `G-030 --interaction headless`." |
 | Inspect first, no agent | `grove context G-030` |
 
 Every row ends in this file and the same `context` command; the mode travels
 as the `--interaction` argument and is passed on to `context`, which records it
-in its output. The skills are explicit-invocation only. Grove starts no agent:
-the headless row is a command for a person or a future supervised runner, which
-must separately define authorization, workspace binding, attempt identity,
-logs, cancellation, and recovery. Which of these rows has been exercised in a
+in its output. The skills are explicit-invocation only. Grove starts an
+agent only through `grove run`, one explicitly assigned work ID per attempt:
+the caller's assignment is the authorization, the attempt binds the worktree,
+identity, budget, permission profile, raw logs, Stop and owner-loss handling,
+and its result is facts about the process, never acceptance; the record's
+status on the branch, set by this guide's steps, is the handoff. Scheduling
+and batches remain callers to define. Which of these rows has been exercised in a
 real harness, and what this workflow keeps, adapts, and defers from the
 predecessor's `/work`, are recorded in Grove's own repository (G-032). That is
 history, not required reading for an assignment.

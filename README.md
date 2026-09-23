@@ -54,6 +54,9 @@ go run ./cmd/grove update G-003 --set status=done --commit  # at a shell: no loo
 go run ./cmd/grove approve G-003 "Meets the outcome"    # in the branch's checkout: approved=candidate, verdict appended, committed
 go run ./cmd/grove feedback G-003 "Handle the empty case"  # back to active with the text appended; prints where to continue
 go run ./cmd/grove integrate G-003 --cleanup            # in the target's checkout: merge, done, then the worktree and branch removed
+go run ./cmd/grove run G-003 --budget 5 --permission-mode auto  # one headless attempt in its worktree, outliving this terminal
+go run ./cmd/grove attempts G-003                       # running, finished, orphaned or interrupted; grove attempt ATTEMPT for one
+go run ./cmd/grove stop G-003.20260922T210000Z          # ends the turn, kills after 15 s, writes the result
 go run ./cmd/grove versions G-003 --json
 go run ./cmd/grove workspace --source SELECTOR --json
 go run ./cmd/grove --project "$(go run ./cmd/grove workspace --source SELECTOR)" show G-003
@@ -95,6 +98,40 @@ Git's reason when Git refuses, and keeping a worktree that holds ignored
 files, which Git would delete. It prints one line per fact as it holds
 (`approval:`, `merge:`, `done:`, `cleanup:`); a refusal comes before the merge,
 and nothing undoes a merge that happened.
+
+`run ID --budget USD --permission-mode MODE [--model MODEL] [--branch NAME]
+[--worktree DIR]` starts one bounded implementation attempt of proposed or
+active work as a Grove-owned `claude -p "/grove-work ID --interaction
+headless"` process that outlives the terminal: it creates `worktree-ID`
+under `.claude/worktrees/` from this checkout's HEAD, or reuses the branch's
+registered worktree so a next attempt continues from preserved partial work,
+then starts an owner process in its own session that runs the provider there
+with `--output-format stream-json`, `--max-budget-usd`, `--permission-mode`
+and `--permission-prompts none`, its stdout and stderr written straight to
+files under the Git common directory (`.git/grove/attempts/ATTEMPT/`, shared
+by every worktree, never committed). Budget and permission mode are required:
+Grove sets no default spend or profile. Grove starts one process and never
+retries; subagents the provider starts share the budget. `run` refuses,
+before writing anything, a record that is not proposed or active, an open
+question that blocks it (the wait the headless guide persists, so rerunning
+with nothing changed refuses the same way), uncommitted changes to the record
+here, a running or orphaned attempt of the same work, and a worktree path
+that is something else. `attempts [ID]` lists attempts newest first;
+`attempt ATTEMPT [--json]` prints one attempt's launch, event counts (parsed
+bounded: a line over 1 MiB is counted, not read), the provider's init and
+result fields, the result, the record as the branch holds it, whether the
+record on the target changed since launch, and the file paths; no provider
+text is printed. Liveness is the owner's file lock, never a pid: `running`
+while it is held, `finished` once `result.json` exists, `orphaned` when the
+owner is gone but the provider's process group lives, `interrupted` when
+nothing is left and no result was written (a machine restart reads so; no
+reboot recovery is selected). `stop ATTEMPT` sends SIGINT through the owner
+so the provider ends its turn, SIGKILL to its process group after 15 s, and
+writes the result; an orphaned attempt is stopped directly and reconciled.
+Stop touches neither the worktree nor the record. A result is facts, never
+acceptance: the record's own status on the branch, which the headless guide
+sets, is the handoff, and a process exit or a `result` event proves nothing
+about it. `GROVE_CLAUDE` names another executable, for fakes.
 
 Without `--project`, discovery searches upward for `grove.yaml` and stops at
 the current Git checkout boundary. Plain directories also work. Any invalid
