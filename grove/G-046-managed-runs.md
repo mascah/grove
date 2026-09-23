@@ -4,7 +4,7 @@ type: work
 title: "Launch and inspect managed attempts from the TUI"
 status: review
 created: "2026-09-21T00:54:16Z"
-updated: "2026-09-23T04:14:44Z"
+updated: "2026-09-23T04:34:57Z"
 kind: feature
 size: medium
 priority: 4
@@ -12,6 +12,7 @@ depends_on: ["G-044", "G-045"]
 relates_to: ["G-035", "G-043"]
 formerly: "W-028"
 candidate: "61edd53390c4459462e79ededf5a25eb0644a1f7"
+approved: "61edd53390c4459462e79ededf5a25eb0644a1f7"
 ---
 
 ## Outcome
@@ -155,3 +156,5 @@ GROVE_CLAUDE=/tmp/fake-claude /tmp/grove-G-046   # Enter on the card, R, 1, auto
 Approve: `go run ./cmd/grove approve G-046 "VERDICT"` in this worktree,
 then `go run ./cmd/grove integrate G-046` in `main`'s checkout. Feedback:
 `go run ./cmd/grove feedback G-046 "TEXT"` here.
+
+Verdict on candidate 61edd53, 2026-09-23: Only able to test the attempts views right now. Lets merge and I will test launching new background runs fro th TUI with fesh work.
