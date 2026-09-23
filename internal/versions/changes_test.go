@@ -2,6 +2,7 @@ package versions
 
 import (
 	"context"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -66,5 +67,29 @@ func TestChangesAgainstTheTarget(t *testing.T) {
 	}
 	if _, err := DiffContext(cancelled, root, base, candidate, "code.txt"); err != context.Canceled {
 		t.Fatalf("cancelled diff: %v", err)
+	}
+}
+
+// A project under a prefix: the record's own commits are not "other files",
+// code above the project is, and a diff reads the top-relative path.
+func TestChangesUnderAPrefix(t *testing.T) {
+	t.Parallel()
+	root, wt := nestedFixture(t)
+	project := filepath.Join(root, "sub")
+	candidate := git(t, wt, "rev-parse", "HEAD")
+	write(t, wt, "sub/grove/work/G-001-first.md", record("G-001", "work", "review", "Feature.\n"))
+	tip := commit(t, wt, "docs: review")
+	ctx := context.Background()
+	c, err := ChangesContext(ctx, project, "main", candidate, tip, "grove/work/G-001-first.md")
+	if err != nil || len(c.After) != 0 || len(c.Files) != 1 || c.Files[0].Path != "sub/grove/work/G-001-first.md" {
+		t.Fatalf("%+v %v", c, err)
+	}
+	if diff, err := DiffContext(ctx, project, c.Base, candidate, c.Files[0].Path); err != nil || !strings.Contains(diff, "+status: active") {
+		t.Fatalf("diff under a prefix: %v\n%s", err, diff)
+	}
+	write(t, wt, "code.txt", "above the project\n")
+	tip = commit(t, wt, "feat: code")
+	if others, err := Others(ctx, project, candidate, tip, "grove/work/G-001-first.md"); err != nil || strings.Join(others, ",") != "code.txt" {
+		t.Fatalf("others: %v %v", others, err)
 	}
 }

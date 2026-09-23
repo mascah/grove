@@ -191,8 +191,8 @@ func TestReviewApproveAndFeedbackFromTheBoard(t *testing.T) {
 		}
 	}
 	press(m, "esc") // waits for the re-read, so the record shown next is current
-	if m.screen != resultScreen || m.pending != "inspect" {
-		t.Fatal("Esc must wait for the re-read")
+	if m.screen != resultScreen || m.pending != "inspect" || !strings.Contains(plain(m), "Esc waits for the re-read") {
+		t.Fatal("Esc must wait for the re-read, and the hints say so")
 	}
 	deliverAll(m, next)
 	if s := plain(m); m.screen != resultScreen || !strings.Contains(s, "The board has been re-read. Esc returns to the record.") {

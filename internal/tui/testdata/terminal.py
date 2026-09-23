@@ -430,7 +430,8 @@ def review_and_integrate(root, wt, base):
     s.send(b"n")
     s.expect("Integration of G-001", mark)
     s.expect("merge: merge commit", mark)  # main gained the target commit after feature branched
-    mark = s.expect("done: G-001 done at commit", mark)
+    s.expect("done: G-001 done at commit", mark)
+    mark = s.expect("The board has been re-read.", mark)  # Esc waits for the re-read
     s.send(ESC)
     s.expect("· done", mark)
     s.send(b"q")

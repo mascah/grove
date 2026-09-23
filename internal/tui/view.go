@@ -221,6 +221,9 @@ func (m *Model) render() string {
 			"↑↓  Tab  Enter open  v  Esc back  q quit")
 	case m.screen == resultScreen && m.result != nil:
 		rows, hints = m.scrolled(m.resultRows(w), body, w), pick(w, "↑/↓ PgUp/PgDn scroll   Esc back to the record   q quit", "↑↓ scroll  Esc back  q quit")
+		if m.pending == "inspect" {
+			hints = pick(w, "↑/↓ PgUp/PgDn scroll   Esc waits for the re-read   q quit", "↑↓ scroll  Esc waits  q quit")
+		}
 	case m.screen == versionsScreen && m.group() != nil:
 		rows, hints = m.versionsBody(w, body), pick(w,
 			"↑/↓ rows   Enter list places, or select a workspace   Tab details   PgUp/PgDn scroll   s what was read   r refresh   Esc board   q quit",
