@@ -357,9 +357,9 @@ func TestBoardReviewWorkflow(t *testing.T) {
 
 	// Integration merges feature into main and writes done there.
 	s.press("i")
-	s.want("Merge branch feature into main in " + root + " and mark G-001 done? y/n")
+	s.want("Merge branch feature into main and mark G-001 done? y/n   (runs in ") // the temp path is truncated at 160 columns
 	s.press("y")
-	s.want("Also remove the worktree " + wt + " and delete branch feature? y/n")
+	s.want("Also delete branch feature and remove its worktree? y/n   (")
 	s.press("n")
 	s.want("Integration of G-001", "approval: candidate "+short+" of G-001 approved on branch feature (Verdict on candidate "+short+", ", "merge: fast-forward main from ", "done: G-001 done at commit ")
 	if got := gitIn(t, root, "show", "HEAD:docs/records/work/renamed.md"); !strings.Contains(got, "status: done") || !strings.Contains(got, "approved: \""+candidate+"\"") {

@@ -387,7 +387,64 @@ def writes_no_logs(root, wt, base):
     check(code == 0 and os.listdir(logs) == [], f"log files appeared: {os.listdir(logs)}")
 
 
-SCENARIOS = [select_and_show, leave_without_selecting, refuses_without_terminal, blocked_git, hangup, output_failure, resize, writes_no_logs]
+def review_and_integrate(root, wt, base):
+    """A candidate in review, judged from the board: standing, changes and a diff; a approves on feature; i merges into main and writes done."""
+    for key, value in (("user.name", "t"), ("user.email", "t@t"), ("commit.gpgsign", "false"), ("maintenance.auto", "false")):
+        git(root, "config", key, value)
+    with open(os.path.join(root, "grove.yaml"), "w") as f:
+        f.write("schema_version: 3\nrecords: grove\ntarget: main\n")
+    git(root, "commit", "-qam", "target")
+    with open(os.path.join(wt, "code.txt"), "w") as f:
+        f.write("hello\n")
+    git(wt, "add", "-A")
+    git(wt, "commit", "-qm", "feat: code")
+    candidate = subprocess.run([GIT, "-C", wt, "rev-parse", "HEAD"], check=True, capture_output=True, env=clean_env()).stdout.decode().strip()
+    subprocess.run([GROVE, "--project", wt, "update", "G-001", "--set", "status=review", "--set", f"candidate={candidate}", "--commit"],
+                   check=True, capture_output=True, cwd=base, env=clean_env())
+    s = Session(root)
+    s.expect("Board: current view")
+    s.send(b"ll" + ENTER)  # the Review column's card
+    mark = s.expect(f"Review: candidate {candidate[:7]} · not yet approved")  # the renderer redraws lines from their first changed cell, so expectations stay short
+    s.expect("code.txt  +1 −0")
+    s.send(b"\t" + ENTER)  # no linked records, so Tab lands on the first changed file
+    s.expect("Diff of code.txt", mark)  # siblings of one frame are searched from the same offset
+    mark = s.expect("+hello", mark)
+    s.send(ESC)  # alone: an Esc followed at once by a letter reads as Alt
+    mark = s.expect("An outcome.", mark)
+    s.send(b"a")
+    mark = s.expect("Approve G-001 on branch feature", mark)
+    s.send(b"Ship it" + ENTER)
+    s.expect("Approved G-001", mark)
+    mark = s.expect("The board has been re-read.", mark)
+    with open(os.path.join(wt, "grove", "work", "G-001-first.md")) as f:
+        record = f.read()
+    check(f'approved: "{candidate}"' in record and record.endswith(": Ship it\n"), f"feature's record after approval: {record!r}")
+    s.send(ESC)
+    s.expect(f"candidate {candidate[:7]} · approved", mark)  # the standing is drawn before the changes are read
+    mark = s.expect("only the record changed since it", mark)
+    s.send(b"i")
+    mark = s.expect("mark G-001 done? y/n", mark)
+    s.send(b"y")
+    mark = s.expect("remove its worktree? y/n", mark)
+    s.send(b"n")
+    s.expect("Integration of G-001", mark)
+    s.expect("merge: merge commit", mark)  # main gained the target commit after feature branched
+    mark = s.expect("done: G-001 done at commit", mark)
+    s.send(ESC)
+    s.expect("· done", mark)
+    s.send(b"q")
+    code, out = s.finish()
+    s.restored()
+    check(code == 0 and out == b"", f"exit {code}, stdout {out!r}")
+    with open(os.path.join(root, "grove", "work", "G-001-first.md")) as f:
+        record = f.read()
+    check("status: done" in record and f'approved: "{candidate}"' in record, f"main's record after integration: {record!r}")
+    check(os.path.isdir(wt), "n kept the worktree")
+
+
+review_and_integrate.mutates = True  # approval and the merge change the repository on purpose
+
+SCENARIOS = [select_and_show, leave_without_selecting, refuses_without_terminal, blocked_git, hangup, output_failure, resize, writes_no_logs, review_and_integrate]
 
 
 def main():
@@ -407,7 +464,7 @@ def main():
                 continue
             try:
                 scenario(root, wt, base)
-                check(tree(os.path.join(base, "repo")) == before, "files in the repository changed")
+                check(getattr(scenario, "mutates", False) or tree(os.path.join(base, "repo")) == before, "files in the repository changed")
                 print(f"ok    {scenario.__name__}")
             except AssertionError as e:
                 failed += 1

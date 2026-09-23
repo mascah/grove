@@ -513,9 +513,10 @@ func (m *Model) promptRow(w int) string {
 	case "feedback":
 		text = fmt.Sprintf("Feedback on %s, returning it to active on branch %s (Enter records it, Esc cancels): %s▏", p.id, p.branch, p.text)
 	case "integrate":
-		text = fmt.Sprintf("Merge branch %s into %s in %s and mark %s done? y/n", p.branch, p.target, p.root, p.id)
+		// The question first: a long checkout path is what truncation drops.
+		text = fmt.Sprintf("Merge branch %s into %s and mark %s done? y/n   (runs in %s)", p.branch, p.target, p.id, p.root)
 	default:
-		text = fmt.Sprintf("Also remove the worktree %s and delete branch %s? y/n", p.wt, p.branch)
+		text = fmt.Sprintf("Also delete branch %s and remove its worktree? y/n   (%s)", p.branch, p.wt)
 	}
 	return hot(line(text, w))
 }

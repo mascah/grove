@@ -217,7 +217,7 @@ func TestReviewIntegrateFromTheBoard(t *testing.T) {
 		t.Fatalf("a after approval:\n%s", s)
 	}
 	press(m, "i")
-	if s := plain(m); m.prompt == nil || !strings.Contains(s, "Merge branch feature into main in /repo and mark W-001 done? y/n") {
+	if s := plain(m); m.prompt == nil || !strings.Contains(s, "Merge branch feature into main and mark W-001 done? y/n   (runs in /repo)") {
 		t.Fatalf("i should confirm the merge:\n%s", s)
 	}
 	press(m, "n")
@@ -225,7 +225,7 @@ func TestReviewIntegrateFromTheBoard(t *testing.T) {
 		t.Fatalf("n cancels:\n%s", s)
 	}
 	press(m, "i", "y")
-	if s := plain(m); m.prompt == nil || !strings.Contains(s, "Also remove the worktree /repo/feat and delete branch feature? y/n") {
+	if s := plain(m); m.prompt == nil || !strings.Contains(s, "Also delete branch feature and remove its worktree? y/n   (/repo/feat)") {
 		t.Fatalf("y should ask about cleanup:\n%s", s)
 	}
 	deliverAll(m, press(m, "n"))
