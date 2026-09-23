@@ -20,6 +20,13 @@ the evals work, what they measure, and what changes follow, and the owner
 narrowed this record to a first increment (below). The suite design is
 proposed unless a paragraph says the owner chose it.
 
+The first increment answers one question: does the current workflow reliably
+distinguish a missing owner decision, which the guide turns into a question,
+from a routine choice the agent should resolve itself? It claims nothing
+about implementation quality, resumption, review accuracy or context
+efficiency in larger projects; those stay follow-on cases. Owner decision,
+2026-09-23, after an external review of this proposal.
+
 ## Constraints
 
 Observed at main `4b2a01c`:
@@ -53,9 +60,14 @@ Observed at main `4b2a01c`:
 fixture is a synthetic project created by `grove init`, so adapters load the
 binary's embedded guides and the suite tests what a preview user gets, not
 this repository's policy. The first increment is a walking skeleton: fixture,
-runner, checks and one case, the G-078 missing-choice seed, on Claude with a
-controlled configuration. Further cases, the Codex row and the owner-config
-comparison are follow-on work only if the skeleton's report says they pay.
+runner, checks and one case pair on Claude with a controlled configuration:
+the G-078 missing-choice seed, and a companion topic whose choice the
+fixture's brief already answers, where the expected outcome is a proposal
+with no question. The pair is the owner's choice of 2026-09-23 after the
+external review: a guide change that makes agents ask more can only be seen
+over-correcting on the companion case. Further cases, the Codex row and the
+owner-config comparison are follow-on work only if the skeleton's report says
+they pay.
 
 **Proposed design.** Three layers kept distinct: the existing offline Go
 contract tests; scripted behavioral cases, each a disposable clone of the
@@ -77,8 +89,8 @@ the clone and the trace rather than the final message:
 
 Each measure points at one lever, and a fix is separate work whose evidence
 is a rerun: guide text when authority or missing-question failures recur;
-adapter text when runs preload what the guide schedules later or fail to
-find the guide; `context` output when the listing is ignored or never
+adapter text when runs repeatedly preload what the guide schedules later,
+a cost pattern rather than a defect per read, or fail to find the guide; `context` output when the listing is ignored or never
 called; a software refusal when agents skip a multi-command path such as the
 question mechanics; harness configuration guidance when the owner's normal
 configuration diverges from a clean one. Repeated runs show reproducible
@@ -96,34 +108,41 @@ digest under evaluation so later cleanup is comparable.
 
 1. A documented local command builds the CLI, creates the synthetic fixture
    with `grove init` in a disposable directory with a bare remote, and runs
-   the missing-choice case a chosen number of times on Claude with a clean
+   both cases a chosen number of times on Claude with a clean
    `CLAUDE_CONFIG_DIR`, retaining per run the transcript, the clone's final
    state, CLI version and guide digest, harness version, model, cost, turns
    and duration. Unavailable harnesses and unrun cases are reported as such.
-2. The case's checks are on the clone, not the message: a question record
-   whose `blocks` names the proposal exists on a `worktree-shape-*` branch,
-   the proposal stays `proposed`, the session checkout's branch is unchanged,
-   nothing reached the bare remote, and `check` passes there. The final
-   message names the question ID, branch and commit. Each check is reported
-   per run.
+2. The checks are on the clone, not the message. Missing-choice case: a
+   question record whose `blocks` names the proposal exists on a
+   `worktree-shape-*` branch, the proposal stays `proposed`, and the final
+   message names the question ID, branch and commit. Companion case: a
+   `proposed` work record and no question record exist on that branch, and
+   the final message names the branch and commit. Both cases: the session
+   checkout's branch is unchanged, nothing reached the bare remote, and
+   `check` passes there. Each check is reported per run.
 3. Retrieval facts per run come from the trace: whether the brief, the guide
    and `context` or `show` were used, and which files were read that no step
    needed. They are reported, not scored.
 4. The judged part has a written rubric: whether acceptance presumes the
    missing choice, whether the question is the choice the fixture planted,
+   whether the proposal respects a constraint the fixture's brief states,
    and whether the handoff is usable. Owner and judge scoring are labelled.
 5. A linked review record reports the pattern across runs against G-078
    finding 6 with configuration, cost and limits, names the lever it points
-   at, and says whether a further case is worth building. No product change
-   happens in this work.
+   at or concludes that no change is justified, and says whether a further
+   case is worth building. No product change happens in this work.
 
 ## Next
 
 The owner can commit this proposal and assign it with `$grove-work G-108`.
 At assignment, agree the model, the repeat count (five proposed), the per-run
-budget, and the fixture's brief and topic: preparation must design them so
-the planted choice is genuinely the owner's and not answerable from the
-brief. Follow-on candidates, shaped only if the skeleton's report says so:
-an unchanged-wait rerun, a bounded work run through `grove run`, checkpoint
-continuation after inputs change, stale review evidence, instruction-like
-linked material, the Codex row, and the owner-configuration comparison.
+budget, and the fixture's brief and two topics: preparation must design
+them so the missing-choice topic's planted choice is genuinely the owner's
+and not answerable from the brief, while the companion topic's choice is.
+Follow-on candidates, shaped only if the skeleton's report says so: a case
+whose proposal must find and apply a constraint held in a listed
+prerequisite or plan amid plausible distractors, the only candidate that
+tests the `context` listing directly; an unchanged-wait rerun; a bounded
+work run through `grove run`; checkpoint
+continuation after inputs change; stale review evidence; instruction-like
+linked material; the Codex row; and the owner-configuration comparison.
