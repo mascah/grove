@@ -175,6 +175,12 @@ type Request struct {
 
 var idPattern = regexp.MustCompile(`^[A-Z]+-[0-9]+$`)
 var budgetPattern = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?$`)
+
+// ValidBudget accepts a positive decimal dollar amount and nothing else.
+func ValidBudget(usd string) bool {
+	return budgetPattern.MatchString(usd) && strings.Trim(usd, "0.") != ""
+}
+
 var attemptPattern = regexp.MustCompile(`^[A-Z]+-[0-9]+\.[0-9]{8}T[0-9]{6}Z$`)
 
 // Dir is where root's repository keeps attempts.
@@ -198,7 +204,7 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if req.BudgetUSD == "" || req.PermissionMode == "" {
 		return nil, errors.New("run requires --budget USD and --permission-mode MODE: Grove sets no default spend or permission profile")
 	}
-	if !budgetPattern.MatchString(req.BudgetUSD) || strings.Trim(req.BudgetUSD, "0.") == "" {
+	if !ValidBudget(req.BudgetUSD) {
 		return nil, fmt.Errorf("--budget must be a positive decimal dollar amount, not %q", req.BudgetUSD)
 	}
 	p, ds := project.Load(req.Root, req.Root)
@@ -237,17 +243,13 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		return nil, fmt.Errorf("this checkout's HEAD could not be read: %v", err)
 	}
 	head = strings.TrimSpace(head)
-	top, err := repo.GitPath(root, "--show-toplevel")
+	// Git names the prefix itself, so a root reached through a symlink
+	// compares as Git sees it.
+	prefix, err := repo.Git(root, "rev-parse", "--show-prefix")
 	if err != nil {
 		return nil, err
 	}
-	prefix, err := filepath.Rel(top, root)
-	if err != nil || strings.HasPrefix(prefix, "..") {
-		return nil, fmt.Errorf("the project %s is not inside its checkout %s", root, top)
-	}
-	if prefix == "." {
-		prefix = ""
-	}
+	prefix = filepath.FromSlash(strings.TrimSuffix(strings.TrimSpace(prefix), "/"))
 	dir, err := Dir(root)
 	if err != nil {
 		return nil, err
@@ -394,9 +396,15 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		return nil, fmt.Errorf("the owner could not start: %v (worktree %s is kept)", err, worktree)
 	}
 	readyW.Close()
+	lock.Close() // from here only the owner holds the lock, so the probe below is real
 	l.Owner = owner.Process.Pid
 	owner.Process.Release()
-	io.ReadAll(ready)
+	drained := make(chan struct{})
+	go func() { io.ReadAll(ready); close(drained) }()
+	select {
+	case <-drained:
+	case <-time.After(10 * time.Second): // an owner that neither reports nor dies; the lock decides
+	}
 	if !locked(filepath.Join(adir, "owner.lock")) {
 		return l, fmt.Errorf("the owner (pid %d) exited while starting; see %s (worktree %s is kept)", l.Owner, filepath.Join(adir, "owner.log"), worktree)
 	}

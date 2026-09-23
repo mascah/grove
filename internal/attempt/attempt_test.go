@@ -19,6 +19,9 @@ import (
 // cmd/grove does, so the lifecycle tests exercise the real owner process.
 func TestMain(m *testing.M) {
 	if dir := os.Getenv(OwnerEnv); dir != "" {
+		if os.Getenv("GROVE_TEST_OWNER_DIES") != "" { // an owner that exits before it does anything
+			os.Exit(3)
+		}
 		os.Exit(Own(dir))
 	}
 	os.Exit(m.Run())
@@ -422,7 +425,7 @@ func TestBlockingQuestionStopsTheNextRun(t *testing.T) {
 	skipShort(t)
 	root := fixture(t)
 	// The attempt persists a question that blocks its work, on its branch.
-	fake(t, initLine+"\nprintf '%s' '"+strings.ReplaceAll(question, "'", "'\\''")+"' > grove/G-002-q.md\ngit add -A && git -c user.name=t -c user.email=t@t -c commit.gpgsign=false commit -qm 'question' || exit 3\n"+resultLine("success", false))
+	fake(t, initLine+"\nprintf '%s' '"+strings.ReplaceAll(question, "'", "'\\''")+"' > grove/G-002-q.md\ngit add -A && git -c user.name=t -c user.email=t@t -c commit.gpgsign=false -c maintenance.auto=false commit -qm 'question' || exit 3\n"+resultLine("success", false))
 	l, _ := start(t, root, now)
 	v := await(t, root, l.Attempt, Finished)
 	if v.Result.ExitCode != 0 || v.Result.Head == l.Base {
@@ -453,7 +456,10 @@ func TestInputsChanged(t *testing.T) {
 	git(t, top, "mv", "grove.yaml", "grove", "sub/")
 	git(t, top, "commit", "-qm", "move the project below the top")
 	fake(t, initLine+"\n"+resultLine("success", false))
-	l, _ := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "acceptEdits"}, now, func(string) {})
+	l, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "acceptEdits"}, now, func(string) {})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if l.Prefix != "sub" || l.Worktree != filepath.Join(root, ".claude", "worktrees", "worktree-G-001") {
 		t.Fatalf("%+v", l)
 	}
@@ -467,7 +473,12 @@ func TestInputsChanged(t *testing.T) {
 	// The branch's record enters review: a second run is refused from the project below the top.
 	write(t, l.Worktree, "sub/grove/G-001-first.md", strings.Replace(fmt.Sprintf(work, "review"), "---\n\n## Outcome", "candidate: \""+l.Base+"\"\n---\n\n## Outcome", 1))
 	git(t, l.Worktree, "commit", "-qam", "review")
-	if _, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "acceptEdits"}, now.Add(time.Minute), func(string) {}); err == nil || !strings.Contains(err.Error(), "G-001 is review on worktree-G-001") {
+	// Reached through a symlink: Git still names the prefix, and the branch's review refuses.
+	link := filepath.Join(t.TempDir(), "link")
+	if err := os.Symlink(root, link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Start(Request{Root: link, ID: "G-001", BudgetUSD: "1", PermissionMode: "acceptEdits"}, now.Add(time.Minute), func(string) {}); err == nil || !strings.Contains(err.Error(), "G-001 is review on worktree-G-001") {
 		t.Fatal(err)
 	}
 	write(t, root, "grove/G-001-first.md", fmt.Sprintf(work, "active"))
@@ -527,6 +538,17 @@ func TestRefusals(t *testing.T) {
 	try(Request{BudgetUSD: "1", PermissionMode: "auto"}, wt+" exists but is not a registered worktree of worktree-G-001")
 	if views, err := List(root, ""); err != nil || len(views) != 0 {
 		t.Fatalf("refusals wrote attempts: %v %v", views, err)
+	}
+	// An owner that exits before doing anything is reported, not announced as started.
+	if err := os.RemoveAll(wt); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GROVE_TEST_OWNER_DIES", "1")
+	if l, err := Start(Request{BudgetUSD: "1", PermissionMode: "auto", Root: root, ID: "G-001"}, now.Add(time.Hour), func(string) {}); err == nil || !strings.Contains(err.Error(), "exited while starting") {
+		t.Fatalf("%+v %v", l, err)
+	}
+	if views, _ := List(root, ""); len(views) != 1 || views[0].Status != Interrupted {
+		t.Fatalf("%+v", views)
 	}
 	if _, err := Show(root, "G-001.20260922T183000Z"); err == nil || !strings.Contains(err.Error(), "does not exist in this repository") {
 		t.Fatal(err)

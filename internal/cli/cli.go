@@ -404,7 +404,12 @@ func parseArgs(args []string) (a invocation, err error) {
 		{"--type", "record type", once(&a.convert.Type)},
 		{"--title", "title", once(&a.convert.Title)},
 		{"--source", "selector", once(&a.source)},
-		{"--budget", "dollar amount", once(&a.run.BudgetUSD)},
+		{"--budget", "dollar amount", func(value string) error {
+			if !attempt.ValidBudget(value) {
+				return errors.New("must be a positive decimal dollar amount")
+			}
+			return once(&a.run.BudgetUSD)(value)
+		}},
 		{"--permission-mode", "mode", once(&a.run.PermissionMode)},
 		{"--model", "model", once(&a.run.Model)},
 		{"--branch", "branch name", once(&a.run.Branch)},
