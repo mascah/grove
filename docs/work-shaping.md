@@ -185,9 +185,10 @@ Run `grove check`, and confirm that every link you wrote resolves. Then return:
   the four kinds each substantive statement is where that is not obvious.
 - Open questions and whom they wait for; decisions and whose authority.
 - **Where it is:** checkout, branch, and commit, or "uncommitted in PATH".
-  Say where it can be seen today: a board or `list` run from that checkout, and
-  `grove versions ID` from any checkout of the repository. A board opened in
-  another checkout does not show it until it is merged there.
+  Say where it can be seen today: `list` from that checkout, and the board or
+  `grove versions ID` from any checkout of the repository, since both read
+  every local branch and worktree. A separate clone sees nothing until the
+  branch reaches it.
 - Knowledge that should outlive the proposal (direction-document changes,
   supporting documents), identified for the person to integrate selectively.
 - That nothing was assigned, promoted, implemented, launched, merged, or

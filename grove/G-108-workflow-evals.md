@@ -146,3 +146,19 @@ tests the `context` listing directly; an unchanged-wait rerun; a bounded
 work run through `grove run`; checkpoint
 continuation after inputs change; stale review evidence; instruction-like
 linked material; the Codex row; and the owner-configuration comparison.
+
+Candidate levers, proposed and untested: an external source-based assessment
+of the two guides against Bench's thirteen skills, read by the owner on
+2026-09-23, kept the two entrypoints and named five changes. They are levers
+for the review in acceptance 5 to point at, not scope. If the baseline shows
+the missing-choice failure, the candidate guide text for the rerun is a
+proportional examination in the shaping guide's step 3 that traces each
+acceptance item to attributed intent before writing it. Named checkpoint
+events (unit done, verification collected, findings dispositioned, blocker,
+handoff) belong to the checkpoint-continuation case, where the clone can check
+whether each implementation commit touched the record's Next. A reviewer's
+examination procedure belongs to the stale-review case. Conversational purpose
+and stopping rules in shaping are interactive behaviour the headless skeleton
+cannot see, and stay owner judgment. A debrief step needs no guide text yet:
+acceptance 5 is one, and its review record's form is the evidence for whether
+to generalize it.
