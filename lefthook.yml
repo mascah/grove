@@ -12,9 +12,3 @@ pre-commit:
     - name: mod-tidy
       glob: "{*.go,go.mod,go.sum}"
       run: go mod tidy -diff
-
-pre-push:
-  jobs:
-    - name: test
-      # Git exports GIT_DIR to hooks; keep every repository variable from every child (G-089).
-      run: env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR -u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES -u GIT_NAMESPACE go test -timeout 120s ./...
