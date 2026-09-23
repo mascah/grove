@@ -143,9 +143,9 @@ prerequisites, related records, and linked documents in full):
 
 Grove starts an agent only through `run` or the board's `R`, one assigned
 work ID per attempt. `run ID --budget USD --permission-mode MODE [--model
-MODEL] [--branch NAME] [--worktree DIR]` starts one bounded implementation attempt of proposed or
-active work as a Grove-owned `claude -p "/grove-work ID --interaction
-headless"` process that outlives the terminal
+MODEL] [--branch NAME] [--worktree DIR]` starts one bounded implementation
+attempt of proposed or active work as a Grove-owned `claude -p "/grove-work
+ID --interaction headless"` process that outlives the terminal
 ([G-101](../grove/G-101-attempt-mechanism.md),
 [G-045](../grove/G-045-durable-attempt.md)). It creates `worktree-ID` under
 `.claude/worktrees/` from this checkout's HEAD, or reuses the branch's
@@ -160,8 +160,9 @@ retries; subagents the provider starts share the budget.
 
 `grove --help` lists what `run` refuses. An open question that blocks the
 work is the wait the headless guide persists, so rerunning with nothing
-changed refuses the same way. Every refusal comes before a write, except that what an existing branch holds is checked in its
-checkout, so a branch that had no worktree keeps the one `run` made.
+changed refuses the same way. Every refusal comes before a write, except
+that what an existing branch holds is checked in its checkout, so a branch
+that had no worktree keeps the one `run` made.
 
 `attempts [ID]` lists attempts newest first. `attempt ATTEMPT [--json]`
 prints one attempt's launch, event counts (parsed bounded: a line over 1 MiB

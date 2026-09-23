@@ -178,8 +178,7 @@ the review actions and attempts. Terms, plans, reviews and pages are records.
 This is a dated observation, not a progress log: work records own what has
 changed since.
 
-The installed `grove` is a build of this CLI from a named commit and can lag
-this checkout; use `go run ./cmd/grove` here. The predecessor is uninstalled.
+The predecessor is uninstalled.
 The archived FastAPI/PostgreSQL application
 (the sibling checkout `grove-archive-2026-09-18/`, last commit `be40e46`) is
 historical, with no service,

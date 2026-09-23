@@ -72,7 +72,7 @@ own policy.
 
 - `schema_version: 3` is the only schema, with no backward compatibility
   before the first release; inspect an old commit with the CLI in that
-  commit (G-065).
+  commit (G-065, G-052).
 - Never hand-author or renumber an ID, and never move or rename a record
   file; keep `convert` for documents outside the record root (G-064).
 - `new` allocates from one counter in Git's common directory, shared by every
@@ -105,7 +105,7 @@ own policy.
   board (G-042).
 - `../skills/` and `../nullsec/` are evidence and potential compatibility
   targets, not automatically in an implementation's write scope; follow
-  their own instructions (G-041).
+  their own instructions.
 - Read nullsec's records with the installed `grove` from nullsec's checkout
   (`grove brief`, `grove list`, `grove context G-NNN`), and name the
   repository when a `G-` ID could be either's (G-041).
@@ -131,7 +131,7 @@ own policy.
 - Reproduce a Linux-only failure with `docker run --rm -v "$PWD":/src -w /src
   -e GOFLAGS=-buildvcs=false golang:1.26 go test ./...`.
 - Never `-p 1`, and never `-race` across the suite on macOS, where the race
-  runtime hangs in the forked child before `exec`.
+  runtime hangs in the forked child before `exec` (G-081).
 - Run `-race` only per package, only for a concurrency change, with
   `-timeout 120s`; a hang in `syscall.forkExec` is that toolchain bug, not
   evidence, and kill any `*.test` process a timeout leaves behind.
