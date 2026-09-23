@@ -2,9 +2,9 @@
 id: "G-044"
 type: work
 title: "Review candidates and integrate approved work locally"
-status: proposed
+status: active
 created: "2026-09-21T00:54:16Z"
-updated: "2026-09-21T15:45:43Z"
+updated: "2026-09-23T00:25:14Z"
 kind: feature
 size: large
 priority: 3

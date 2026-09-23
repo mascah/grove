@@ -243,16 +243,18 @@ the explicit subcommands' contracts.
 ## Open choices
 
 Put to the owner with this plan on 2026-09-22, each with the recommendation
-above first:
+above first, and answered the same day: the owner selected the recommended
+option for all four.
 
 1. Approval as an `approved` field bound to the candidate, with the verdict
    appended to the body (design 1), or verdict-at-integration only.
+   **The field.**
 2. A plain merge in the target's checkout, aborted on conflict (design 2),
-   or fast-forward only.
+   or fast-forward only. **Plain merge.**
 3. `integrate` writes done on the target and `update` refuses done off a
-   configured target (design 3), or `update` unchanged.
-4. Cleanup opt-in after done, by Git's own refusals (design 4), or by
-   default.
+   configured target (design 3), or `update` unchanged. **Both.**
+4. Cleanup opt-in after done, by Git's own refusals (design 4), by default,
+   or never from Grove. **Opt-in.**
 
 ## Limits
 
