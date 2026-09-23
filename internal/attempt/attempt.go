@@ -171,6 +171,7 @@ type Request struct {
 	Model          string
 	Branch         string // default worktree-ID
 	Worktree       string // default <root>/.claude/worktrees/<branch>
+	Expect         string // the record revision the caller read in root; "" checks nothing
 }
 
 var idPattern = regexp.MustCompile(`^[A-Z]+-[0-9]+$`)
@@ -237,6 +238,9 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		return nil, err
 	} else if strings.TrimSpace(dirty) != "" {
 		return nil, fmt.Errorf("%s has uncommitted changes in this checkout; commit them so the attempt sees them", r.Path)
+	}
+	if rev := project.Revision(r.Source); req.Expect != "" && rev != req.Expect {
+		return nil, fmt.Errorf("%s changed since it was read: %s is %s here, not %s; read it again before launching", req.ID, r.Path, rev, req.Expect)
 	}
 	head, err := repo.Git(root, "rev-parse", "HEAD")
 	if err != nil {
@@ -398,7 +402,9 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	readyW.Close()
 	lock.Close() // from here only the owner holds the lock, so the probe below is real
 	l.Owner = owner.Process.Pid
-	owner.Process.Release()
+	// Reaped when it exits, so a long-lived launcher such as the board keeps
+	// no zombie; a CLI launcher exits first and the owner is reparented.
+	go owner.Wait()
 	drained := make(chan struct{})
 	go func() { io.ReadAll(ready); close(drained) }()
 	select {
@@ -721,12 +727,18 @@ func (ev *Events) note(line []byte) {
 }
 
 // List reads every attempt of root's repository, newest first, or those of
-// one work ID.
+// one work ID, without scanning their events: Show does that for one.
 func List(root, id string) ([]View, error) {
 	dir, err := Dir(root)
 	if err != nil {
 		return nil, err
 	}
+	return ListDir(dir, id)
+}
+
+// ListDir is List of an attempts directory already located, such as the one
+// under the common directory a board has read. It starts no process.
+func ListDir(dir, id string) ([]View, error) {
 	entries, err := os.ReadDir(dir)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
@@ -740,7 +752,7 @@ func List(root, id string) ([]View, error) {
 		if !e.IsDir() || !attemptPattern.MatchString(name) || (id != "" && !strings.HasPrefix(name, id+".")) {
 			continue
 		}
-		v, err := read(filepath.Join(dir, name))
+		v, err := read(filepath.Join(dir, name), false)
 		if errors.Is(err, os.ErrNotExist) {
 			continue // being written, or left without its attempt.json
 		}
@@ -755,14 +767,19 @@ func List(root, id string) ([]View, error) {
 
 // Show reads one attempt by its id and adds whether its inputs changed.
 func Show(root, attempt string) (*View, error) {
+	return ShowContext(context.Background(), root, attempt)
+}
+
+// ShowContext is Show whose Git processes end with ctx, reported as ctx.Err().
+func ShowContext(ctx context.Context, root, attempt string) (*View, error) {
 	if !attemptPattern.MatchString(attempt) {
 		return nil, fmt.Errorf("%s is not an attempt id (WORK.YYYYMMDDTHHMMSSZ, from attempts)", attempt)
 	}
-	dir, err := Dir(root)
+	common, _, err := repo.LocateContext(ctx, root)
 	if err != nil {
 		return nil, err
 	}
-	v, err := read(filepath.Join(dir, attempt))
+	v, err := read(filepath.Join(common, "grove", "attempts", attempt), true)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, fmt.Errorf("attempt %s does not exist in this repository", attempt)
@@ -770,7 +787,11 @@ func Show(root, attempt string) (*View, error) {
 		return nil, err
 	}
 	if v.Launch.Target != "" {
-		if source, err := repo.Git(root, "show", "refs/heads/"+v.Launch.Target+":"+filepath.ToSlash(filepath.Join(v.Launch.Prefix, v.Launch.RecordPath))); err != nil {
+		source, err := repo.GitContext(ctx, root, "show", "refs/heads/"+v.Launch.Target+":"+filepath.ToSlash(filepath.Join(v.Launch.Prefix, v.Launch.RecordPath)))
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if err != nil {
 			v.InputsChanged = fmt.Sprintf("%s is not readable on %s: %v", v.Launch.RecordPath, v.Launch.Target, err)
 		} else if rev := project.Revision([]byte(source)); rev != v.Launch.RecordRevision {
 			v.InputsChanged = fmt.Sprintf("%s on %s is %s, launched from %s", v.Launch.RecordPath, v.Launch.Target, rev, v.Launch.RecordRevision)
@@ -779,7 +800,9 @@ func Show(root, attempt string) (*View, error) {
 	return v, nil
 }
 
-func read(dir string) (*View, error) {
+// read classifies one attempt; with events, an unfinished one also gets a
+// bounded read of its events so far, which List leaves to Show.
+func read(dir string, events bool) (*View, error) {
 	v := &View{Dir: dir, EventsPath: filepath.Join(dir, "events.jsonl"), StderrPath: filepath.Join(dir, "stderr.log")}
 	if err := readJSON(filepath.Join(dir, "attempt.json"), &v.Launch); err != nil {
 		return nil, err
@@ -809,6 +832,9 @@ func read(dir string) (*View, error) {
 		v.Status = Orphaned // ponytail: a reused pgid would read as alive; pids are not trusted for anything but this
 	default:
 		v.Status = Interrupted
+	}
+	if !events {
+		return v, nil
 	}
 	ev, err := ReadEvents(v.EventsPath)
 	if err != nil {

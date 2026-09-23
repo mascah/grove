@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/mascah/grove/internal/repo"
 )
@@ -509,6 +510,7 @@ func TestRefusals(t *testing.T) {
 	try(Request{PermissionMode: "auto"}, "run requires --budget USD and --permission-mode MODE")
 	try(Request{ID: "G-009", BudgetUSD: "1", PermissionMode: "auto"}, "G-009 is not in this checkout")
 	try(Request{ID: "nope", BudgetUSD: "1", PermissionMode: "auto"}, "nope is not a record ID")
+	try(Request{BudgetUSD: "1", PermissionMode: "auto", Expect: "sha256:old"}, "G-001 changed since it was read: grove/G-001-first.md is sha256:")
 	write(t, root, "grove/G-002-q.md", question)
 	git(t, root, "add", "-A")
 	git(t, root, "commit", "-qm", "question")
@@ -590,5 +592,44 @@ func TestReadEventsBounded(t *testing.T) {
 	}
 	if ev, err := ReadEvents(filepath.Join(t.TempDir(), "none")); err != nil || ev.Lines != 0 {
 		t.Fatalf("%+v %v", ev, err)
+	}
+}
+
+func TestReadActivityBounded(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "events.jsonl")
+	if a, err := ReadActivity(path, ActivityWindow); err != nil || len(a.Lines) != 0 || a.Cut {
+		t.Fatalf("%+v %v", a, err)
+	}
+	var b strings.Builder
+	b.WriteString(`{"type":"system","subtype":"init","model":"m"}` + "\n")
+	for i := range 300 {
+		fmt.Fprintf(&b, `{"type":"assistant","message":{"content":[{"type":"text","text":"step %d\nmore"},{"type":"tool_use","name":"Bash","input":{"command":"go test\n-v"}}]}}`+"\n", i)
+	}
+	b.WriteString(`{"type":"user","message":{"content":[{"type":"tool_result","is_error":true}]}}` + "\n")
+	b.WriteString(`{"type":"assistant","message":{"content":[{"type":"text","text":"` + strings.Repeat("é", 400) + `"}]}}` + "\n")
+	b.WriteString("not json\n")
+	b.WriteString(`{"type":"result","subtype":"success","is_error":false,"result":"## Done\nAll of it."}` + "\n")
+	b.WriteString(`{"type":"assistant","message":{"content":[{"type":"text","text":"still being writ`)
+	if err := os.WriteFile(path, []byte(b.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a, err := ReadActivity(path, ActivityWindow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := len(a.Lines)
+	if n != maxActivity || !a.Cut || a.Report != "## Done\nAll of it." {
+		t.Fatalf("%d lines, cut %v, report %q", n, a.Cut, a.Report)
+	}
+	if a.Lines[n-1] != "result: success" || a.Lines[n-3] != "tool error" || a.Lines[n-4] != "tool: Bash go test" || a.Lines[n-5] != "step 299" {
+		t.Fatalf("%q", a.Lines[n-5:])
+	}
+	if long := a.Lines[n-2]; len(long) > maxActivityLine+len("…") || !strings.HasSuffix(long, "…") || !utf8.ValidString(long) {
+		t.Fatalf("%q", long)
+	}
+	// A window that starts mid-file drops the line it cut into.
+	a, err = ReadActivity(path, 200)
+	if err != nil || !a.Cut || len(a.Lines) != 1 || a.Lines[0] != "result: success" {
+		t.Fatalf("%+v %v", a, err)
 	}
 }
