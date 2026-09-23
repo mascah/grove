@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
@@ -122,19 +123,29 @@ func start(t *testing.T, root string, at time.Time) (*Launch, []string) {
 	return l, facts
 }
 
+// await polls through List, which reads files only (Show adds a Git process
+// for the inputs check), and returns the Show of the attempt once it is want.
 func await(t *testing.T, root, attempt string, want Status) *View {
 	t.Helper()
 	deadline := time.Now().Add(20 * time.Second)
 	for {
-		v, err := Show(root, attempt)
+		views, err := List(root, "")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if v.Status == want {
-			return v
+		i := slices.IndexFunc(views, func(v View) bool { return v.Launch.Attempt == attempt })
+		if i < 0 {
+			t.Fatalf("attempt %s is not listed", attempt)
+		}
+		if v := views[i]; v.Status == want {
+			shown, err := Show(root, attempt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return shown
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("attempt %s is %s, not %s", attempt, v.Status, want)
+			t.Fatalf("attempt %s is %s, not %s", attempt, views[i].Status, want)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
@@ -243,6 +254,26 @@ func TestRunToResult(t *testing.T) {
 	if err != nil || len(views) != 1 || views[0].Status != Finished {
 		t.Fatalf("list %v %v", views, err)
 	}
+
+	// Provider failures, in the same checkout: an error result with exit 1, no result event with exit 2, no executable at all.
+	fake(t, initLine+"\n"+resultLine("error_max_budget_usd", true)+"\nexit 1")
+	l, _ = start(t, root, now.Add(time.Minute))
+	v = await(t, root, l.Attempt, Finished)
+	if v.Result.ExitCode != 1 || v.Result.Events.Result == nil || !v.Result.Events.Result.IsError || v.Result.Events.Result.Subtype != "error_max_budget_usd" {
+		t.Fatalf("%+v", v.Result)
+	}
+	// No result event at all, and a nonzero exit.
+	fake(t, initLine+"\necho '{\"type\":\"assistant\"}'\nexit 2")
+	l2, _ := start(t, root, now.Add(2*time.Minute))
+	v = await(t, root, l2.Attempt, Finished)
+	if v.Result.ExitCode != 2 || v.Result.Events.Result != nil || v.Result.Events.Lines != 2 {
+		t.Fatalf("%+v", v.Result)
+	}
+	// The provider cannot start at all.
+	t.Setenv(ClaudeEnv, filepath.Join(t.TempDir(), "missing"))
+	if _, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "acceptEdits"}, now.Add(3*time.Minute), func(string) {}); err == nil || !strings.Contains(err.Error(), "provider executable is not available") {
+		t.Fatalf("%v", err)
+	}
 }
 
 func TestCompetingStartAndReconnect(t *testing.T) {
@@ -325,26 +356,22 @@ func TestStopAfterReconnect(t *testing.T) {
 	if err := Stop(root, l.Attempt, func(string) {}); err == nil || !strings.Contains(err.Error(), "is finished; nothing to stop") {
 		t.Fatalf("second stop: %v", err)
 	}
-}
 
-func TestStopBeforeTheProviderStarts(t *testing.T) {
-	skipShort(t)
-	root := fixture(t)
-	mark, _ := fake(t, waiting+resultLine("success", false))
-	l, _ := start(t, root, now)
+	// A Stop right after Start, with no read in between, races the owner's start-up and must be seen either way.
+	l, _ = start(t, root, now.Add(time.Minute))
 	// No read in between: the signal races the owner's start-up and must be
 	// seen either way.
 	if err := syscall.Kill(l.Owner, syscall.SIGTERM); err != nil {
 		t.Fatal(err)
 	}
-	v := await(t, root, l.Attempt, Finished)
+	v = await(t, root, l.Attempt, Finished)
 	if !v.Result.Stopped {
 		t.Fatalf("%+v", v.Result)
 	}
-	if n := starts(t, mark); n > 1 {
+	if n := starts(t, mark); n > 2 {
 		t.Fatalf("the provider started %d times", n)
 	}
-	if n := starts(t, mark); n == 1 && v.Result.ExitCode != 130 {
+	if n := starts(t, mark); n == 2 && v.Result.ExitCode != 130 {
 		t.Fatalf("started then stopped, but exit %d", v.Result.ExitCode)
 	}
 }
@@ -391,29 +418,6 @@ func TestOwnerLost(t *testing.T) {
 	await(t, root, l3.Attempt, Finished)
 }
 
-func TestProviderFailure(t *testing.T) {
-	skipShort(t)
-	root := fixture(t)
-	fake(t, initLine+"\n"+resultLine("error_max_budget_usd", true)+"\nexit 1")
-	l, _ := start(t, root, now)
-	v := await(t, root, l.Attempt, Finished)
-	if v.Result.ExitCode != 1 || v.Result.Events.Result == nil || !v.Result.Events.Result.IsError || v.Result.Events.Result.Subtype != "error_max_budget_usd" {
-		t.Fatalf("%+v", v.Result)
-	}
-	// No result event at all, and a nonzero exit.
-	fake(t, initLine+"\necho '{\"type\":\"assistant\"}'\nexit 2")
-	l2, _ := start(t, root, now.Add(time.Minute))
-	v = await(t, root, l2.Attempt, Finished)
-	if v.Result.ExitCode != 2 || v.Result.Events.Result != nil || v.Result.Events.Lines != 2 {
-		t.Fatalf("%+v", v.Result)
-	}
-	// The provider cannot start at all.
-	t.Setenv(ClaudeEnv, filepath.Join(t.TempDir(), "missing"))
-	if _, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "acceptEdits"}, now.Add(2*time.Second), func(string) {}); err == nil || !strings.Contains(err.Error(), "provider executable is not available") {
-		t.Fatalf("%v", err)
-	}
-}
-
 func TestBlockingQuestionStopsTheNextRun(t *testing.T) {
 	skipShort(t)
 	root := fixture(t)
@@ -434,22 +438,6 @@ func TestBlockingQuestionStopsTheNextRun(t *testing.T) {
 	views, _ := List(root, "G-001")
 	if len(views) != 1 {
 		t.Fatalf("a refused run left %d attempts", len(views))
-	}
-}
-
-func TestReviewOnTheBranchStopsTheNextRun(t *testing.T) {
-	root := fixture(t)
-	fake(t, resultLine("success", false))
-	wt := filepath.Join(root, ".claude", "worktrees", "worktree-G-001")
-	git(t, root, "worktree", "add", "-q", "-b", "worktree-G-001", wt)
-	write(t, wt, "grove/G-001-first.md", strings.Replace(fmt.Sprintf(work, "review"), "---\n\n## Outcome", "candidate: \""+git(t, root, "rev-parse", "HEAD")+"\"\n---\n\n## Outcome", 1))
-	git(t, wt, "commit", "-qam", "review")
-	_, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "auto"}, now, func(string) {})
-	if err == nil || !strings.Contains(err.Error(), "G-001 is review on worktree-G-001 at "+wt+"; judge that candidate") {
-		t.Fatal(err)
-	}
-	if views, _ := List(root, ""); len(views) != 0 {
-		t.Fatal("a refusal wrote an attempt")
 	}
 }
 
@@ -524,8 +512,17 @@ func TestRefusals(t *testing.T) {
 	git(t, root, "commit", "-qam", "review")
 	try(Request{BudgetUSD: "1", PermissionMode: "auto"}, "G-001 is review; only proposed or active work runs")
 	git(t, root, "revert", "--no-edit", "HEAD")
-	// A directory in the way that is not the branch's worktree.
+	// The branch's own record already in review: judgment, not another attempt.
 	wt := filepath.Join(root, ".claude", "worktrees", "worktree-G-001")
+	git(t, root, "worktree", "add", "-q", "-b", "worktree-G-001", wt)
+	write(t, wt, "grove/G-001-first.md", strings.Replace(fmt.Sprintf(work, "review"), "---\n\n## Outcome", "candidate: \""+git(t, root, "rev-parse", "HEAD")+"\"\n---\n\n## Outcome", 1))
+	git(t, wt, "commit", "-qam", "review")
+	if _, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "auto"}, now, func(string) {}); err == nil || !strings.Contains(err.Error(), "G-001 is review on worktree-G-001 at "+wt+"; judge that candidate") {
+		t.Fatal(err)
+	}
+	git(t, root, "worktree", "remove", "--force", wt)
+	git(t, root, "branch", "-qD", "worktree-G-001")
+	// A directory in the way that is not the branch's worktree.
 	write(t, wt, "stray.txt", "x")
 	try(Request{BudgetUSD: "1", PermissionMode: "auto"}, wt+" exists but is not a registered worktree of worktree-G-001")
 	if views, err := List(root, ""); err != nil || len(views) != 0 {
