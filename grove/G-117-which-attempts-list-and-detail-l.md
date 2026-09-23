@@ -2,7 +2,7 @@
 id: "G-117"
 type: question
 title: "Which Attempts list and detail layout should G-109 implement?"
-status: open
+status: resolved
 created: "2026-09-23T19:51:07Z"
 updated: "2026-09-23T19:53:32Z"
 blocks: ["G-109"]
@@ -51,3 +51,5 @@ while attempts are few.
 Open; blocks G-109. Answer here (for example "A as drawn", or which parts
 change), set `status=resolved`, and relaunch G-109; implementation follows
 G-116's Steps for the chosen option.
+
+Answer: I like the list page layout. As far as the detail page, I'm expecting better presentation of the configuration of the run at the top of the page. More colors, visual indicators. As far as the activity timeline, I think we need to make this look much prettier as well. It could be a column on the right hand side of the page. What goes on the left im not sure of at the moment. The way we display events to the user makes it very difficult to parse at a glance. When an event repeats with nothing else between (i.e. `system: thinking_tokens` 20 times, instead of showing 20 rows we can just incrememnt a counter next to it until the next different event i.e. `system: thinking_tokens (x14)`). We should also have some nicely formatted timestamps as well so we know when things happened. We did a pretty good job of this in the old tmux orchestrator in /Users/mascah/GitHub/mascah/bench/scripts/bench_worker.py . Being able to see how many tokens have been used, current context size, number of sub agents, number of compactions, turns, other metrics etc would be helpful. We'll eventually want to make sure we're capturing the right data to be able properly understand what's happening, but also not entirely coupling ourselves to claude, we need to support other harnesses as well.
