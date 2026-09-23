@@ -74,3 +74,61 @@ func TestApproveAndFeedbackCommands(t *testing.T) {
 }
 
 func today() string { return time.Now().UTC().Format("2006-01-02") }
+
+func TestIntegrateUsage(t *testing.T) {
+	t.Parallel()
+	for _, args := range [][]string{
+		{"integrate"}, {"integrate", "G-001", "extra"}, {"integrate", "G-001", "--cleanup", "--cleanup"},
+		{"integrate", "G-001", "--json"}, {"integrate", "G-001", "--commit"}, {"list", "--cleanup"}, {"update", "G-001", "--set", "status=done", "--cleanup"},
+	} {
+		var out, errOut bytes.Buffer
+		if code := Run(args, t.TempDir(), &out, &errOut); code != 2 || out.Len() != 0 || !strings.Contains(errOut.String(), "Usage:") {
+			t.Fatalf("%v: code=%d stderr=%s", args, code, errOut.String())
+		}
+	}
+}
+
+// TestIntegrateCommand runs the whole loop through the CLI on one checkout:
+// review and approval on a branch, then integration from main, with one
+// fact per line, and a refusal reported with exit 1 and no facts.
+func TestIntegrateCommand(t *testing.T) {
+	t.Parallel()
+	root := gitFixture(t)
+	for _, kv := range [][2]string{{"user.name", "t"}, {"user.email", "t@t"}, {"commit.gpgsign", "false"}, {"maintenance.auto", "false"}} {
+		gitIn(t, root, "config", kv[0], kv[1])
+	}
+	run := func(args ...string) (int, string, string) {
+		t.Helper()
+		var out, errOut bytes.Buffer
+		code := Run(args, root, &out, &errOut)
+		return code, out.String(), errOut.String()
+	}
+	write(t, root, "grove.yaml", "schema_version: 3\nrecords: docs/records\ntarget: main\n")
+	gitIn(t, root, "commit", "-qam", "chore: target")
+	code, out, stderr := run("integrate", "G-001")
+	if code != 1 || out != "" || !strings.Contains(stderr, "grove: no branch holds G-001 in review; nothing to integrate") {
+		t.Fatalf("code=%d out=%q stderr=%s", code, out, stderr)
+	}
+	gitIn(t, root, "checkout", "-q", "-b", "feature")
+	run("update", "G-001", "--set", "status=active", "--commit")
+	candidate := gitIn(t, root, "rev-parse", "HEAD")
+	run("update", "G-001", "--set", "status=review", "--set", "candidate="+candidate, "--commit")
+	if code, _, stderr := run("approve", "G-001", "Yes"); code != 0 {
+		t.Fatal(stderr)
+	}
+	tip := gitIn(t, root, "rev-parse", "HEAD")
+	gitIn(t, root, "checkout", "-q", "main")
+	before := gitIn(t, root, "rev-parse", "HEAD")
+	code, out, stderr = run("integrate", "G-001", "--cleanup")
+	head := gitIn(t, root, "rev-parse", "HEAD")
+	want := "approval: candidate " + candidate[:7] + " of G-001 approved on branch feature (Verdict on candidate " + candidate[:7] + ", " + today() + ": Yes)\n" +
+		"merge: fast-forward main from " + before[:7] + " to " + tip[:7] + "\n" +
+		"done: G-001 done at commit " + head[:7] + "\n" +
+		"cleanup: deleted branch feature\n"
+	if code != 0 || out != want {
+		t.Fatalf("code=%d stderr=%s\nout:\n%s\nwant:\n%s", code, stderr, out, want)
+	}
+	if src := showJSON(t, root, "G-001")["source"].(string); !strings.Contains(src, "status: done\n") || !strings.Contains(src, "approved: \""+candidate+"\"\n") {
+		t.Fatalf("record on main:\n%s", src)
+	}
+}
