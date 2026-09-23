@@ -854,3 +854,69 @@ func TestUpdateOptionalExpectAndCommit(t *testing.T) {
 		t.Fatal("the file must hold the update and HEAD must not move")
 	}
 }
+
+// TestUpdateApprovedBindsToTheCandidate covers G-044's approval field: it is
+// written quoted, must name the candidate, and leaves with the review status,
+// so neither a changed candidate nor a reopened record keeps an approval.
+func TestUpdateApprovedBindsToTheCandidate(t *testing.T) {
+	t.Parallel()
+	root := gitProject(t)
+	head := git(t, root, "rev-parse", "HEAD")
+	refuse := func(want string, sets []Field, unsets ...string) {
+		t.Helper()
+		r := record(t, root, "G-001")
+		_, err := Apply(root, Request{ID: "G-001", Expect: project.Revision(r.Source), Set: sets, Unset: unsets}, now, nil)
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Fatalf("%v %v: got %v, want %q", sets, unsets, err, want)
+		}
+	}
+	apply(t, root, "G-001", []Field{{"candidate", head}}) // allowed on every status; approval is not
+	refuse("approved: applies only while status is review or done", []Field{{"approved", head}})
+	apply(t, root, "G-001", []Field{{"status", "review"}})
+	refuse("approved: must name the candidate", []Field{{"approved", "abcdef0"}})
+	apply(t, root, "G-001", []Field{{"approved", head}})
+	if r := record(t, root, "G-001"); r.Approved != head || !strings.Contains(string(r.Source), "approved: \""+head+"\"\n") {
+		t.Fatalf("approved must be written quoted: %+v", r)
+	}
+	refuse("approved: must name the candidate", []Field{{"candidate", "abcdef0"}})
+	refuse("approved: applies only while status is review or done", []Field{{"status", "active"}})
+	apply(t, root, "G-001", []Field{{"status", "active"}}, "approved")
+	if r := record(t, root, "G-001"); r.Approved != "" || r.Candidate != head || r.Status != "active" {
+		t.Fatalf("reopening with the approval unset: %+v", r)
+	}
+	apply(t, root, "G-001", []Field{{"status", "review"}, {"candidate", "abcdef0"}, {"approved", "abcdef0"}})
+	if r := record(t, root, "G-001"); r.Approved != "abcdef0" {
+		t.Fatalf("a new candidate approved in the same update: %+v", r)
+	}
+}
+
+// TestUpdateDoneStaysOnTheTarget covers the enforcement a configured target
+// allows: done is refused in a checkout on any other branch, or none.
+func TestUpdateDoneStaysOnTheTarget(t *testing.T) {
+	t.Parallel()
+	root := gitProject(t)
+	write(t, root, "grove.yaml", "schema_version: 3\nrecords: grove\ntarget: main\n")
+	git(t, root, "commit", "-qam", "target")
+	git(t, root, "checkout", "-q", "-b", "feature")
+	write(t, root, "grove/work/G-001-first.md", strings.Replace(work, "status: proposed", "status: active", 1))
+	git(t, root, "commit", "-qam", "implement")
+	candidate := git(t, root, "rev-parse", "HEAD")
+	refuse := func(want string) {
+		t.Helper()
+		r := record(t, root, "G-001")
+		_, err := Apply(root, Request{ID: "G-001", Expect: project.Revision(r.Source), Set: []Field{{"status", "done"}, {"candidate", candidate}}}, now, nil)
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Fatalf("got %v, want %q", err, want)
+		}
+	}
+	refuse("done is written on the target main after the merge; this checkout is on feature")
+	git(t, root, "checkout", "-q", "--detach")
+	refuse("this checkout is on no branch")
+	git(t, root, "checkout", "-q", "main")
+	refuse("is not an ancestor of this checkout's HEAD")
+	git(t, root, "merge", "-q", "--ff-only", "feature")
+	apply(t, root, "G-001", []Field{{"status", "done"}, {"candidate", candidate}})
+	if r := record(t, root, "G-001"); r.Status != "done" {
+		t.Fatalf("done on the target: %+v", r)
+	}
+}

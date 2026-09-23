@@ -4,6 +4,7 @@ package update
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -120,7 +121,7 @@ func Apply(root string, req Request, now time.Time, fault Fault) (Result, error)
 	if err := unchanged(r, next, changes); err != nil {
 		return Result{}, err
 	}
-	if err := integrated(root, r, next); err != nil {
+	if err := integrated(root, p.Target, r, next); err != nil {
 		return Result{}, err
 	}
 	records := slices.Clone(p.Records)
@@ -179,7 +180,7 @@ func message(id string, req Request) string {
 // parsed meaning already matches, so a no-op never rewrites the file.
 func plan(r *project.Record, req Request) ([]change, error) {
 	fields := map[string][]string{
-		"work":     {"title", "status", "relates_to", "kind", "priority", "size", "members", "depends_on", "candidate"},
+		"work":     {"title", "status", "relates_to", "kind", "priority", "size", "members", "depends_on", "candidate", "approved"},
 		"question": {"title", "status", "relates_to", "blocks"},
 		"decision": {"title", "status", "relates_to"},
 		"term":     {"title", "status", "relates_to"},
@@ -199,7 +200,7 @@ func plan(r *project.Record, req Request) ([]change, error) {
 		}
 	}
 	lists := map[string][]string{"relates_to": r.RelatesTo, "members": r.Members, "depends_on": r.DependsOn, "blocks": r.Blocks, "work": r.Work}
-	strs := map[string]string{"title": r.Title, "status": r.Status, "kind": r.Kind, "size": r.Size, "examined": r.Examined, "candidate": r.Candidate, "type": r.Type}
+	strs := map[string]string{"title": r.Title, "status": r.Status, "kind": r.Kind, "size": r.Size, "examined": r.Examined, "candidate": r.Candidate, "approved": r.Approved, "type": r.Type}
 	// type is free to change; formerly is fixed, since only convert writes it.
 	fixed := []string{"id", "created", "updated", "formerly"}
 	check := func(name string) error {
@@ -256,7 +257,7 @@ func plan(r *project.Record, req Request) ([]change, error) {
 				continue
 			}
 			value := strconv.Quote(f.Value)
-			if f.Name != "title" && f.Name != "examined" && f.Name != "candidate" && word.MatchString(f.Value) { // a commit like "abcdefa" must stay a quoted string
+			if f.Name != "title" && f.Name != "examined" && f.Name != "candidate" && f.Name != "approved" && word.MatchString(f.Value) { // a commit like "abcdefa" must stay a quoted string
 				value = f.Value // enumerated words stay plain; anything else is quoted for the schema check to reject
 			}
 			changes = append(changes, set(f.Name, value))
@@ -289,13 +290,23 @@ func plan(r *project.Record, req Request) ([]change, error) {
 // lifecycle, an accepted candidate that reached the target: writing done, or
 // changing the candidate of a done record, needs a candidate that this
 // checkout's HEAD already contains, so a checkout without the code cannot
-// close the work. Which branch is the target is the guide's rule, not the
-// CLI's: on the work branch itself the candidate is an ancestor too. A done
-// record without a candidate predates this meaning and its other fields stay
-// editable.
-func integrated(root string, before, after *project.Record) error {
+// close the work. Where grove.yaml names the target, done is also refused
+// off that branch, since on the work branch the candidate is an ancestor
+// too (G-044); without one, which branch is the target stays the guide's
+// rule. A done record without a candidate predates this meaning and its
+// other fields stay editable.
+func integrated(root, target string, before, after *project.Record) error {
 	if after.Type != "work" || after.Status != "done" || (before.Status == "done" && before.Candidate == after.Candidate) {
 		return nil
+	}
+	if target != "" {
+		branch, err := Branch(root)
+		if err != nil {
+			return fmt.Errorf("done is written on the target %s: this checkout's branch could not be read: %v", target, err)
+		}
+		if branch != target {
+			return fmt.Errorf("done is written on the target %s after the merge; this checkout is on %s", target, cmp.Or(branch, "no branch"))
+		}
 	}
 	if after.Candidate == "" {
 		if before.Status == "done" && before.Candidate != "" {
@@ -344,7 +355,7 @@ func fields(r *project.Record) map[string]string {
 		"id": r.ID, "type": r.Type, "title": r.Title, "status": r.Status, "kind": r.Kind, "size": r.Size,
 		"priority": priority, "created": created,
 		"relates_to": list(r.RelatesTo), "members": list(r.Members), "depends_on": list(r.DependsOn), "blocks": list(r.Blocks),
-		"work": list(r.Work), "examined": r.Examined, "candidate": r.Candidate, "formerly": r.Formerly,
+		"work": list(r.Work), "examined": r.Examined, "candidate": r.Candidate, "approved": r.Approved, "formerly": r.Formerly,
 	}
 }
 
@@ -458,4 +469,17 @@ func diagnostics(ds []project.Diagnostic) string {
 		lines[i] = d.String()
 	}
 	return strings.Join(lines, "\n")
+}
+
+// Branch is the checkout's branch name, or "" when HEAD is detached.
+func Branch(root string) (string, error) {
+	out, err := repo.Git(root, "symbolic-ref", "--short", "-q", "HEAD")
+	if err != nil {
+		var exit *exec.ExitError
+		if errors.As(err, &exit) && exit.ExitCode() == 1 { // -q: detached HEAD is exit 1 with nothing said
+			return "", nil
+		}
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
 }

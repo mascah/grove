@@ -26,6 +26,7 @@ type Record struct {
 	Work                    []string // plan and review: the work they belong to
 	Examined                string   // review: the Git commit it examined
 	Candidate               string   // work: the commit offered for judgment; required in review
+	Approved                string   // work: the candidate the owner approved; always equal to Candidate
 	Formerly                string   // the ID or document path convert replaced
 	Path                    string
 	Source                  []byte
@@ -300,6 +301,21 @@ func ParseRecord(path string, source []byte) (*Record, []Diagnostic) {
 			m.problem("candidate", "expected a quoted Git commit of 7 to 40 lowercase hex digits")
 		} else if r.Candidate == "" && r.Status == "review" {
 			m.problem("candidate", "required while status is review: the commit offered for judgment")
+		}
+		// Approval is of one commit (G-059): the field must name the candidate,
+		// so a changed candidate cannot inherit it, and it belongs only to a
+		// candidate awaiting integration or integrated. Feedback that reopens
+		// the work removes it in the same update.
+		allowed = append(allowed, "approved")
+		if r.Approved = m.stringField("approved", false); r.Approved != "" {
+			switch {
+			case !commitPattern.MatchString(r.Approved):
+				m.problem("approved", "expected a quoted Git commit of 7 to 40 lowercase hex digits")
+			case r.Approved != r.Candidate:
+				m.problem("approved", "must name the candidate: approval is of one commit, and a changed candidate needs its own")
+			case r.Status != "review" && r.Status != "done":
+				m.problem("approved", "applies only while status is review or done; unset it when reopening the work")
+			}
 		}
 	}
 	if r.Type == "question" {
