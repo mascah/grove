@@ -42,12 +42,13 @@ without a status. Questions, decisions, pages, terms, plans and reviews are
 never cards; `/` finds them.
 
 The header gives the time of the last read. `r` re-reads everything, and
-the board also re-reads by itself when its terminal window regains focus,
-unless a read is already under way; a terminal that does not report focus
-sends nothing, so there only `r` does. While an attempt runs, the board
-also follows the branch tips (see [Attempts](#attempts)). With no attempt
-running it starts no process by itself, and an uncommitted edit in a
-checkout's files shows only after a re-read.
+the board also re-reads when its terminal window regains focus, unless a
+read or an action is under way or a detail shows a timeline commit or a
+diff; a terminal that does not report focus sends nothing, so there only
+`r` does. While an attempt runs, the board also follows the branch tips (see
+[Attempts](#attempts)). Otherwise it starts no process except on focus or a
+key, and an uncommitted edit in a checkout's files shows only after a
+re-read.
 
 ## Record detail
 
@@ -165,7 +166,7 @@ every 2 s with one listing of the branch tips, a running card is tagged
 `● running` (`● orphaned` for an orphan) and has a border in a colour no
 column uses, and the board is re-read when one ends or a branch tip has moved
 since the last read, so a status an attempt commits moves its card while it
-runs.
+runs; a moved tip waits while a detail shows a timeline commit or a diff.
 
 ## Timeline
 

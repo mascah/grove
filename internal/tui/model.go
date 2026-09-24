@@ -378,6 +378,10 @@ func (m *Model) refresh() tea.Cmd {
 	return m.inspect()
 }
 
+// pinned reports a detail showing a timeline commit or a diff, which a
+// re-read would close; the board re-reads by itself only once it is left.
+func (m *Model) pinned() bool { return m.asOf != "" || m.diff != "" }
+
 // stop cancels any read in flight and outdates its reply.
 func (m *Model) stop() {
 	if m.cancel != nil {
@@ -470,8 +474,8 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		m.attemptsStale = m.attemptsStale || m.running()
 	case tea.FocusMsg:
 		// Coming back to the window is when the owner pressed r (G-124); a
-		// read already under way is left to finish. Blur does nothing.
-		if !m.busy() {
+		// read or action under way is left to finish. Blur does nothing.
+		if !m.done && !m.busy() && !m.pinned() {
 			return m.refresh()
 		}
 	case actMsg:

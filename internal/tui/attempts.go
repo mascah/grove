@@ -111,9 +111,10 @@ func (m *Model) gotAttempts(msg attemptsMsg) tea.Cmd {
 	// so it is started again; a resolve or an action is left to finish.
 	// A moved tip is left to an inspection under way: restarting it on every
 	// poll could keep a slow read from ever finishing, and the next poll
-	// compares again with what it read.
+	// compares again with what it read. It is left, too, while a detail
+	// shows a commit or a diff, until the person leaves it.
 	moved := msg.tips != nil && m.res != nil && !maps.Equal(msg.tips, tipsOf(m.res))
-	if m.pending != "resolve" && m.pending != "act" && (ended || moved && m.pending != "inspect") {
+	if m.pending != "resolve" && m.pending != "act" && (ended || moved && m.pending != "inspect" && !m.pinned()) {
 		cmds = append(cmds, m.inspect())
 	}
 	if !m.ticking && m.running() {

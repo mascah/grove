@@ -1141,4 +1141,12 @@ func TestFocusRereadsTheBoard(t *testing.T) {
 	if f.inspects != 2 || m.pending != "" || !strings.Contains(plain(m), "read 2 branches, 2 checkouts at 14:05:06") {
 		t.Fatalf("inspects %d pending %q\n%s", f.inspects, m.pending, plain(m))
 	}
+	// A detail showing a commit or a diff is not closed under the person.
+	for _, pin := range []*string{&m.asOf, &m.diff} {
+		*pin = "x"
+		if _, cmd := m.Update(tea.FocusMsg{}); cmd != nil || m.pending != "" {
+			t.Fatal("focus re-read a pinned detail")
+		}
+		*pin = ""
+	}
 }

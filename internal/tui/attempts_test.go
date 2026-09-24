@@ -796,6 +796,12 @@ func TestMovedTipRereadsTheBoard(t *testing.T) {
 		mu.Unlock()
 	}
 	move(strings.Repeat("9", 40))
+	m.diff = "grove/work/W-002.md" // a detail showing a diff is left as it is
+	poll(m)
+	if f.inspects != inspects {
+		t.Fatalf("a pinned detail was re-read: %d→%d", inspects, f.inspects)
+	}
+	m.diff = ""
 	poll(m)
 	poll(m)
 	if f.inspects != inspects+1 {
