@@ -77,7 +77,7 @@ everything an assignment could touch, and do not skip what a step requires.
 | Starting | This guide, the repository's agent instructions, and `grove context IDs`: the selected records, complete, plus listings. |
 | Deciding what can start | Any open blocking question or undelivered prerequisite the listing shows (`grove show ID`). |
 | Preparing or implementing a unit | Its current plan: the document the record itself names as its plan, or the `current` plan record that `context` lists as `plan for` it. |
-| Before implementing a unit | Every question blocking it, open or resolved, and every prerequisite it builds on, with the plan or review of a prerequisite whose interface it uses. |
+| Before implementing a unit | Every question blocking it, open or resolved, and every prerequisite it builds on, with the plan or review of a prerequisite whose interface it uses, and the terms and decisions it links. |
 | When the activity needs it | A related record, decision, review, or the direction document; the record model when a field's meaning or allowed values matter or the CLI refuses a change. A status change through `grove update` needs none of these. |
 | Not by default | Every related record, historical reviews, spent handoff prompts. |
 
@@ -301,15 +301,15 @@ behaviour; stop that unit before implementation instead.
 
 - **Interactive:** ask one concise question, with your recommendation, and
   continue independent work while waiting. Record a consequential answer as
-  step 5 says. A choice still unanswered at a wait or handoff is persisted
-  as in steps 1 and 2 below, since a checkpoint's pending judgments are not
-  where the next session looks for an open choice.
+  step 5 says. A choice still unanswered when the session ends or hands off
+  is persisted as in steps 1 and 2 below: in a checkpoint's pending
+  judgments it blocks nothing and shows nowhere as open.
 - **Headless:** do not invent the answer, pick a default for a product choice,
   launch another session, or loop. Persist the question where the owner will
   find it, in the execution checkout from step 3:
   1. `grove new question "…"`, then set what it blocks with
      `grove update G-… --expect REVISION --set 'blocks=["G-…"]'`. Put the
-     options, evidence, and your recommendation in its body.
+     options, evidence, your recommendation, and who can answer in its body.
   2. Checkpoint the affected work's Next, naming the question.
   3. Commit both. Finish any selected work that does not depend on the answer.
   4. Return the waiting condition: the question ID, the work it stops, the
