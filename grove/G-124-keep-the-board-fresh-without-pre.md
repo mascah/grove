@@ -2,12 +2,13 @@
 id: "G-124"
 type: work
 title: "Keep the board fresh without pressing r"
-status: active
+status: review
 created: "2026-09-24T01:23:28Z"
-updated: "2026-09-24T04:56:50Z"
+updated: "2026-09-24T05:09:19Z"
 kind: feature
 size: small
 relates_to: ["G-046", "G-109", "G-123"]
+candidate: "3d4597b02229ae36c623846959e6f49ff048d469"
 ---
 
 ## Outcome
