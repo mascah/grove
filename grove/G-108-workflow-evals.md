@@ -178,10 +178,11 @@ resolved:
   in the report rather than refusing a directory no login can satisfy.
   `d565fcf` accepts settings holding only `tui`, `theme` and
   `autoMemoryEnabled` and the `synced` entries; after the handoff review
-  ([G-126](G-126-g-108-handoff-review-the-login-c.md)) it also requires `autoMemoryEnabled` to be false, refuses
-  anything in a synced directory that its manifest does not name, and the
-  selftest exercises each refusal and the `surfaced, not blocking` reason
-  (`selftest: ok`).
+  ([G-126](G-126-g-108-handoff-review-the-login-c.md)) it also requires
+  `autoMemoryEnabled` to be present and false, refuses anything in a
+  synced directory that its manifest does not name or whose manifest is
+  unreadable, and the selftest exercises each refusal and the `surfaced,
+  not blocking` reason (`selftest: ok`).
 - The paid runs, exactly G-118's mandate, from this checkout at `d565fcf`:
   `python3 evals/run.py run --runs 5 --budget 5 --model claude-opus-5-5
   --permission-mode auto --config-dir ~/.cache/grove-evals/claude --out

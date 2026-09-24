@@ -338,8 +338,8 @@ def run(args):
     settings = json.load(open(settings)) if os.path.exists(settings) else {}
     settings = settings if isinstance(settings, dict) else {"not an object": settings}
     found += [f"settings.json key {k}" for k in sorted(settings.keys() - SETTINGS)]
-    if settings.get("autoMemoryEnabled"):  # memory is written under the config directory and would carry across runs
-        found.append("settings.json autoMemoryEnabled true")
+    if settings.get("autoMemoryEnabled") is not False:  # on by default; memory is written under the config directory and would carry across runs
+        found.append("settings.json autoMemoryEnabled is not false")
     # A login syncs the account's Anthropic skills and plugins under skills/synced/ID and plugins/synced/ID, listed
     # in each ID's manifest.json; they cannot be kept out and a preview user has them too, so they are recorded,
     # not refused. Anything else under skills/, or in a synced ID directory that its manifest does not name, is authored.
@@ -347,10 +347,14 @@ def run(args):
     synced = {}
     for kind in ("skills", "plugins"):
         for d in sorted(glob.glob(os.path.join(args.config_dir, kind, "synced", "[!.]*"))):
-            m = os.path.join(d, "manifest.json")
-            names = {e.get("name", "?") for e in json.load(open(m)).get(kind, [])} if os.path.exists(m) else set()
+            m, names = os.path.join(d, "manifest.json"), set()
+            try:
+                names = {e.get("name", "?") for e in json.load(open(m)).get(kind, [])} if os.path.exists(m) else set()
+            except (ValueError, AttributeError, TypeError):
+                found.append(f"{kind}/synced/{os.path.basename(d)}/manifest.json unreadable")
             synced[kind] = sorted(synced.get(kind, []) + sorted(names))
-            found += [f"{kind}/synced/{e}" for e in sorted(os.listdir(d)) if os.path.isdir(os.path.join(d, e)) and not e.startswith(".") and e not in names]
+            found += [f"{kind}/synced/{os.path.basename(d)}/{e}" for e in sorted(os.listdir(d)) if os.path.isdir(os.path.join(d, e)) and not e.startswith(".") and e not in names] \
+                if os.path.isdir(d) else [f"{kind}/synced/{os.path.basename(d)}"]
     if found:
         raise SystemExit(f"--config-dir {args.config_dir} is not clean: {', '.join(found)}")
     cases = args.case or list(CASES)
@@ -474,8 +478,9 @@ def selftest():
             assert f["guide"] and f["brief"] and f["list"] and not f["context_or_show"], f
             assert "tasks.py" in f["files_read"] and len(f["unneeded"]) == 1 and f["unneeded"][0].endswith(".claude/CLAUDE.md"), f
     assert open(os.path.join(tmp, "good", "report.md")).read().count("- config dir synced skills: pdf") == 1
-    for name, content in (("settings.json", '{"hooks": {}}'), ("settings.json", '{"autoMemoryEnabled": true}'), ("settings.json", "[]"),
-                          ("skills/mine/SKILL.md", ""), ("skills/synced/x/mine/SKILL.md", ""), ("plugins/synced/y/mine/plugin.json", "")):
+    for name, content in (("settings.json", '{"hooks": {}}'), ("settings.json", '{"autoMemoryEnabled": true}'), ("settings.json", '{"tui": "fullscreen"}'),
+                          ("settings.json", "[]"), ("skills/mine/SKILL.md", ""), ("skills/synced/x/mine/SKILL.md", ""), ("skills/synced/x/manifest.json", "{"),
+                          ("skills/synced/stray.json", ""), ("plugins/synced/y/mine/plugin.json", "")):
         os.makedirs(os.path.dirname(os.path.join(config, name)), exist_ok=True)
         saved = open(os.path.join(config, name)).read() if os.path.exists(os.path.join(config, name)) else None
         open(os.path.join(config, name), "w").write(content)

@@ -108,8 +108,8 @@ observed once, on Claude Opus 5, before the headless bound was tightened;
 at guides digest `3f5487904c61` on Claude Opus 5.5, the missing choice
 blocked in 5 of 5 runs and the companion asked nothing in 5 of 5. Both the
 model and the bound changed between the two observations and nothing here
-separates them: the pair only says the current guide on the current
-default model does not show the failure. G-118 names the bound's "must
+separates them: the pair only says the current guide on Claude Opus 5.5
+does not show the failure. G-118 names the bound's "must
 block" sentence as the lever and says the owner would prefer the second
 outcome, a shippable proposal with a non-blocking question or a proposed
 decision. That is a product choice about the guide, not a defect this

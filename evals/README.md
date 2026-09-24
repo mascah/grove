@@ -28,8 +28,9 @@ settings, plugins, skills and `CLAUDE.md` stay out. The runner refuses a
 directory holding any of them. A new directory has no login: log in once with
 `CLAUDE_CONFIG_DIR=DIR claude`, or export `ANTHROPIC_API_KEY` or
 `CLAUDE_CODE_OAUTH_TOKEN`, which pass through; every other `CLAUDE*`
-variable is removed. A login leaves a `settings.json`, accepted while it
-holds only `tui`, `theme` and `autoMemoryEnabled` set to false, and syncs
+variable is removed. `settings.json` must set `autoMemoryEnabled` to
+false, since memory is on by default and is written under the directory;
+it may also hold `tui` and `theme`, and nothing else. A login syncs
 the account's Anthropic skills and plugins under `skills/synced` and
 `plugins/synced`, which a preview user has too and which load into every
 session; the report records both, and anything there that the sync's
