@@ -342,7 +342,7 @@ func (m *Model) standingOf(v *attempt.View) standing {
 			s.short, s.next = "question answered: R again", "o opens "+work+": R launches the next attempt"
 		case "plan":
 			// Launching without the bound is the owner's approval of the plan.
-			s.short, s.next = "plan ready: read it, R implements", "o opens "+work+", whose detail lists its plan; R there launches the implementation from it, without the bound"
+			s.short, s.next = "plan ready: read it, then R", "o opens "+work+", whose detail lists its plan; R there launches the implementation from it, without the bound"
 		case "failed", "interrupted":
 			s.short, s.next = shortOf(kind, v), "d shows the details and the raw log; R on "+work+" launches again"
 		default:

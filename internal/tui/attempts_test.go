@@ -649,7 +649,7 @@ func TestAttemptStandings(t *testing.T) {
 		{ready("W-108", "1"), settled, "candidate c0ffee1, superseded", "Candidate ready: W-108 in review on worktree-W-108 with candidate c0ffee1. W-108 has moved on: it is in review with candidate beefcaf.", ""},
 		{ready("W-999", "1"), needsYou, "judge candidate c0ffee1", "Candidate ready: W-999 in review on worktree-W-999 with candidate c0ffee1.", "o opens W-999: a approves, f gives feedback"},
 		// Bounded at the plan: the owner reads it, and R without the bound implements.
-		{bounded(view("W-109", "1", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "proposed"}})), needsYou, "plan ready: read it, R implements",
+		{bounded(view("W-109", "1", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "proposed"}})), needsYou, "plan ready: read it, then R",
 			"Plan ready: W-109 stopped at its plan on worktree-W-109.", "o opens W-109, whose detail lists its plan; R there launches the implementation from it, without the bound"},
 		{bounded(view("W-109", "0", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "proposed"}})), settled, "stopped at its plan, superseded",
 			"Plan ready: W-109 stopped at its plan on worktree-W-109. A later attempt of W-109 followed this one.", ""},

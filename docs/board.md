@@ -126,8 +126,8 @@ latest attempt of work that is still proposed, active or in review needs you:
 a candidate to judge, a question to answer, a plan to read, a failure, an
 interruption, an end without a handoff, or feedback given or a question
 answered that awaits the next launch. An attempt bounded at its plan that
-ended cleanly, with no question and no candidate, is `plan ready: read it, R
-implements`: its work's detail lists the plan, and `R` there without the
+ended cleanly, with no question and no candidate, is `plan ready: read it,
+then R`: its work's detail lists the plan, and `R` there without the
 bound launches the implementation on the same branch, which is the owner's
 approval of that plan. An
 orphan always needs you, since its process runs unowned. A stopped attempt,
