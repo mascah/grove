@@ -264,13 +264,21 @@ func (m *Model) render() string {
 	case m.screen == sourcesScreen:
 		rows, hints = m.scrolled(m.sourceRows(w), body, w), pick(w, "↑/↓ PgUp/PgDn scroll   r refresh   Esc back   q quit", "↑↓ scroll  Esc back  q quit")
 	case m.screen == attemptsScreen:
+		answer, key := "", ""
+		if list, _, at := m.listed(); at >= 0 && m.waits(&list[at]) {
+			answer, key = "e answer   ", "e answer  "
+		}
 		rows, hints = m.attemptsBody(w, body), pick(w,
-			"↑/↓ attempts   Enter show it   x stop it   o open its record   r refresh   Esc back   q quit",
-			"↑↓  Enter show  x stop  o record  Esc back  q quit")
+			"↑/↓ attempts   Enter show it   "+answer+"x stop it   o open its record   r refresh   Esc back   q quit",
+			"↑↓  Enter show  "+key+"x stop  o record  Esc back  q quit")
 	case m.screen == attemptScreen:
+		answer, key := "", ""
+		if v := m.attemptOf(m.runID); v != nil && m.waits(v) {
+			answer, key = "e answer the question   ", "e answer  "
+		}
 		rows, hints = m.scrolled(m.attemptRows(w), body, w), pick(w,
-			"↑/↓ PgUp/PgDn scroll   d details   x stop it   o open its record   r refresh   Esc back   q quit",
-			"↑↓ scroll  d details  x stop  o work  Esc back  q quit")
+			"↑/↓ PgUp/PgDn scroll   "+answer+"d details   x stop it   o open its record   r refresh   Esc back   q quit",
+			"↑↓ scroll  "+key+"d details  x stop  o work  Esc back  q quit")
 	default:
 		shelf := "elsewhere"
 		if m.current() {

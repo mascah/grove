@@ -22,6 +22,7 @@ import (
 type editor struct {
 	mu      sync.Mutex
 	write   string // appended to the file by the editor; "" saves nothing
+	lock    bool   // the editor leaves the file read-only
 	fail    error  // the editor's exit
 	answer  error  // Answer's failure
 	edits   []string
@@ -41,6 +42,9 @@ func (e *editor) add(b Backend) Backend {
 				}
 				f.WriteString(e.write)
 				f.Close()
+			}
+			if e.lock {
+				os.Chmod(path, 0o444)
 			}
 			return done(e.fail)
 		}
@@ -143,7 +147,22 @@ func TestAnswerDeclinedUnsavedOrFailed(t *testing.T) {
 	if press(m, "n"); m.prompt != nil || !strings.Contains(plain(m), "Q-001 is not resolved; your edit stays uncommitted in ") || len(e.answers) != 0 {
 		t.Fatalf("n should decline:\n%s", plain(m))
 	}
-	fileIs(t, path, question+"\n## Answer\n\nBlue.\n")
+	edited := question + "\n## Answer\n\nBlue.\n"
+	fileIs(t, path, edited)
+	// Read again, the checkout holds the uncommitted answer: e reopens it,
+	// and with nothing more saved still offers the resolve.
+	for i := range f.res.Groups[0].Versions {
+		if v := &f.res.Groups[0].Versions[i]; v.Source.Kind == "live" {
+			v.Change, v.Revision, v.Record.Source = "modified", project.Revision([]byte(edited)), []byte(edited)
+		}
+	}
+	deliverAll(m, press(m, "r"))
+	e.write = ""
+	deliverAll(m, press(m, "e"))
+	if m.prompt == nil || m.prompt.kind != "resolve" || m.prompt.expect != project.Revision([]byte(edited)) {
+		t.Fatalf("e on the uncommitted answer should offer the resolve again:\n%s", plain(m))
+	}
+	fileIs(t, path, edited)
 
 	for _, c := range []struct {
 		fail   error
@@ -171,6 +190,16 @@ func TestAnswerDeclinedUnsavedOrFailed(t *testing.T) {
 		t.Fatalf("a failed editor that saved:\n%s", plain(m))
 	}
 	fileIs(t, path, question+"\n## Answer\n\nHalf.\n")
+
+	// A heading that cannot be taken back is reported, and nothing offered.
+	_, f, path = answerFixture(t)
+	e = &editor{lock: true}
+	m = openQuestion(t, f, e)
+	deliverAll(m, press(m, "e"))
+	if m.prompt != nil || !strings.Contains(plain(m), "the Answer heading could not be taken back") {
+		t.Fatalf("a failed take-back:\n%s", plain(m))
+	}
+	fileIs(t, path, question+"\n## Answer\n\n")
 }
 
 // Refusals write nothing and open no editor: the file changed since the
@@ -269,5 +298,23 @@ func TestAnswerFromTheAttempt(t *testing.T) {
 	}
 	if s := plain(m); !strings.Contains(s, "question answered: R again") || !strings.Contains(s, "Waited on question Q-001, answered since.") || !strings.Contains(s, "o opens W-001: R launches the next attempt") {
 		t.Fatalf("the answered attempt:\n%s", s)
+	}
+	// Only an answer written in or after the second the attempt ended, to a
+	// question not asked after it, is the one it waited for.
+	for _, c := range []struct {
+		asked, written time.Time
+		want           string
+	}{
+		{asked, later, "Q-001"},
+		{asked, ended.Truncate(time.Second), "Q-001"},
+		{asked, ended.Add(-time.Second), ""},
+		{later, later, ""},
+	} {
+		for i := range f.res.Groups[0].Versions {
+			f.res.Groups[0].Versions[i].Record.Created, f.res.Groups[0].Versions[i].Record.Updated = &c.asked, &c.written
+		}
+		if got := m.answeredSince("W-001", ended); got != c.want {
+			t.Errorf("asked %v, written %v: %q, want %q", c.asked, c.written, got, c.want)
+		}
 	}
 }

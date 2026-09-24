@@ -193,16 +193,18 @@ func (m *Model) judgeRoot(g *versions.Group, v *versions.Version) (root, branch,
 }
 
 // checkoutOf finds the checkout that holds the shown version to write it:
-// the one valid checkout on its branch, whose copy of the record matches its
-// HEAD. It returns that copy, or the reason there is none; doing names the
-// act for the reason ("judging", "answering").
+// the one valid checkout on its branch holding the record. It returns that
+// copy, or the reason there is none. doing is "judging", which needs the
+// copy to match HEAD, or "answering", whose uncommitted copy is the owner's
+// answer so far.
 func (m *Model) checkoutOf(g *versions.Group, v *versions.Version, doing string) (lv *versions.Version, branch, why string) {
+	judging := doing == "judging"
 	if v == nil || v.Record == nil {
-		return nil, "", "the current state holds no record to " + strings.TrimSuffix(doing, "ing")
+		return nil, "", "the current state holds no record to " + map[bool]string{true: "judge", false: "answer"}[judging]
 	}
 	branch = branchOf(v)
 	if branch == "" {
-		return nil, "", "the current state is on no branch; " + doing + " it needs a branch checkout"
+		return nil, "", "the current state is on no branch; " + map[bool]string{true: "a and f need", false: "e needs"}[judging] + " a branch checkout"
 	}
 	where := func(s *versions.Source) string {
 		if s.Locator == "." {
@@ -214,7 +216,7 @@ func (m *Model) checkoutOf(g *versions.Group, v *versions.Version, doing string)
 		return "the record has uncommitted changes in " + where(s) + "; commit or discard them before " + doing + " it"
 	}
 	if v.Source.Kind == "live" {
-		if v.Change != "unchanged" {
+		if judging && v.Change != "unchanged" {
 			return nil, branch, dirty(v.Source)
 		}
 		return v, branch, ""
@@ -233,11 +235,11 @@ func (m *Model) checkoutOf(g *versions.Group, v *versions.Version, doing string)
 	switch {
 	case len(found) > 1:
 		return nil, branch, fmt.Sprintf("%d checkouts are on branch %s, so which one to write is ambiguous", len(found), branch)
-	case len(found) == 0 && doing == "judging":
+	case len(found) == 0 && judging:
 		return nil, branch, "no checkout is on branch " + branch + "; git worktree add one, or run grove approve there"
 	case len(found) == 0:
 		return nil, branch, "no checkout is on branch " + branch + "; git worktree add one"
-	case found[0].Record == nil || found[0].Change != "unchanged":
+	case found[0].Record == nil || judging && found[0].Change != "unchanged":
 		return nil, branch, dirty(found[0].Source)
 	}
 	return found[0], branch, ""
@@ -610,7 +612,7 @@ func (m *Model) resultRows(w int) []string {
 
 // unresolved says what declining to resolve leaves.
 func unresolved(p *prompt) string {
-	return p.id + " is not resolved; your edit stays uncommitted in " + p.root
+	return p.id + " is not resolved; your edit stays uncommitted in " + p.root + ", and e reopens it to resolve"
 }
 
 func short7(commit string) string { return commit[:min(len(commit), 7)] }

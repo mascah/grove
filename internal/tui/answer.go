@@ -31,6 +31,7 @@ import (
 type editing struct {
 	id, root, branch, path string
 	before, given          []byte
+	earlier                bool // the file already held an uncommitted edit
 }
 
 // editedMsg is the editor's exit.
@@ -78,7 +79,7 @@ func (m *Model) answer() tea.Cmd {
 			given = before // the editor still opens; the answer finds its own place
 		}
 	}
-	m.editing = &editing{g.ID, root, branch, path, before, given}
+	m.editing = &editing{g.ID, root, branch, path, before, given, lv.Change != "unchanged"}
 	return m.backend.Edit(path, func(err error) tea.Msg { return editedMsg{err} })
 }
 
@@ -96,8 +97,9 @@ func withHeading(b []byte) []byte {
 }
 
 // edited takes the editor's exit: a failure or no change says so, and an
-// edit opens the prompt to resolve and commit it. The heading the board added
-// is taken back when nothing was written beneath it.
+// edit, or an earlier one still uncommitted, opens the prompt to resolve and
+// commit it. The heading the board added is taken back when nothing was
+// written beneath it.
 func (m *Model) edited(msg editedMsg) tea.Cmd {
 	e := m.editing
 	m.editing = nil
@@ -106,8 +108,11 @@ func (m *Model) edited(msg editedMsg) tea.Cmd {
 	}
 	after, err := os.ReadFile(e.path)
 	unused := err == nil && bytes.Equal(after, e.given)
-	if unused && !bytes.Equal(e.given, e.before) && os.WriteFile(e.path, e.before, 0o644) != nil {
-		unused = false // the heading stays, uncommitted, and is reported below
+	if unused {
+		if werr := e.takeBack(); werr != nil {
+			m.notice = "the Answer heading could not be taken back (" + werr.Error() + "); nothing was committed, and it stays in " + e.path
+			return m.refresh()
+		}
 	}
 	kept := "; nothing was committed, and the edit stays uncommitted in " + e.root
 	switch {
@@ -118,7 +123,7 @@ func (m *Model) edited(msg editedMsg) tea.Cmd {
 		m.notice = "the editor failed (" + msg.err.Error() + ")" + kept
 	case err != nil:
 		m.notice = err.Error() + "; nothing was committed"
-	case unused:
+	case unused && !e.earlier:
 		m.notice = "no change was saved to " + e.id + "; nothing was written"
 		return nil
 	default:
@@ -128,13 +133,31 @@ func (m *Model) edited(msg editedMsg) tea.Cmd {
 	return m.refresh()
 }
 
+// takeBack restores the file as read when it is still exactly as handed to
+// the editor: the Answer heading the board added is removed.
+func (e *editing) takeBack() error {
+	if bytes.Equal(e.given, e.before) {
+		return nil
+	}
+	if now, err := os.ReadFile(e.path); err != nil || !bytes.Equal(now, e.given) {
+		return err
+	}
+	return os.WriteFile(e.path, e.before, 0o644)
+}
+
+// waits reports an attempt waiting on a question that e can answer.
+func (m *Model) waits(v *attempt.View) bool {
+	kind, _ := m.outcome(v)
+	return m.backend.Edit != nil && kind == "question"
+}
+
 // answerFor opens the question an attempt waits on as o opens work, so Esc
 // returns to the attempt, and starts its edit.
 func (m *Model) answerFor(v *attempt.View) tea.Cmd {
 	if m.backend.Edit == nil {
 		return nil
 	}
-	if kind, _ := m.outcome(v); kind != "question" {
+	if !m.waits(v) {
 		m.notice = v.Launch.Attempt + " is not waiting on a question; e answers one"
 		return nil
 	}

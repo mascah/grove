@@ -182,23 +182,27 @@ and ends ([work guide](work-execution.md#when-a-human-decision-is-missing)).
 waiting on a question, which opens that question's detail above the attempt,
 answers it ([G-125](../grove/G-125-answer-a-blocking-question-from.md)). The
 detail's header names where `e` writes, or why it cannot: the one checkout on
-the branch the question's current state stands on, whose copy matches its
-HEAD and is still what the board read. No such checkout, two on the branch,
-uncommitted changes to the question there, or a file changed since the read
-is refused with the reason, and nothing is written.
+the branch the question's current state stands on, whose copy is still what
+the board read. No such checkout, two on the branch, or a file changed since
+the read is refused with the reason, and nothing is written.
 
 Otherwise the board appends a `## Answer` heading when the body has none,
 suspends itself, and runs `$VISUAL`, else `$EDITOR`, else `vi`, as Git does,
 on the question's file in that checkout, on the terminal itself. When the
-editor exits the board resumes and re-reads. An editor that saved nothing
-gets the heading taken back, and one that failed is reported; either way
-nothing more is written. After an edit, a prompt asks to resolve the question
-and commit it there: `y` runs `update --set status=resolved --commit` at the
-revision the editor left, so one commit on that branch holds the answer and
-the status, and the result names the work to launch next with `R`; `n` or
-Esc leaves the edit uncommitted in that checkout and says so. The attempt
-then shows `question answered: R again`. Only questions are edited, and only
-in the owner's editor; the board has no text editing of its own.
+editor exits the board resumes. An editor that saved nothing gets the heading
+taken back, also when the session ends meanwhile, and one that failed is
+reported; either way nothing more is written. After an edit the board
+re-reads, and a prompt asks to resolve the question and commit it there: `y`
+runs `update --set status=resolved --commit` at the revision the editor left,
+so one commit on that branch holds the answer and the status, and the result
+names the work to launch next with `R`; `n` or Esc leaves the edit
+uncommitted in that checkout and says so, and `e` then reopens it and offers
+the resolve again, saved or not. The attempt then shows `question answered:
+R again`, which is read from the question's `updated`, as `update` sets it: a
+status changed by hand without it leaves the attempt `ended without a
+handoff`, and a later update of an answered question can mark a later attempt
+answered too. Only questions are edited, and only in the owner's editor; the
+board has no text editing of its own.
 
 ## Timeline
 

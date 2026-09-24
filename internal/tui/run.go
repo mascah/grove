@@ -52,6 +52,11 @@ func Run(ctx context.Context, root string, input, screen *os.File) (*versions.Wo
 	// Quitting does not stop a command that is still reading.
 	cancel()
 	m.reads.close()
+	// A session ended while the editor had a question, by a hangup, never
+	// saw it exit: an unused Answer heading is taken back as it would be.
+	if m.editing != nil {
+		m.editing.takeBack()
+	}
 	switch {
 	case out.err != nil:
 		return nil, fmt.Errorf("the terminal stopped accepting output, so nothing was selected: %w", out.err)
