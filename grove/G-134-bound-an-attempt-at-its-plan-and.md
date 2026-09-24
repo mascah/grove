@@ -4,9 +4,10 @@ type: work
 title: "Bound an attempt at its plan and choose each phase's model and reviewer"
 status: review
 created: "2026-09-24T21:48:22Z"
-updated: "2026-09-24T22:26:45Z"
+updated: "2026-09-24T22:33:06Z"
 relates_to: ["G-045", "G-046", "G-055", "G-101", "G-108", "G-109", "G-114", "G-135"]
 candidate: "da8a936cd0478ddfe5b27a7a9a06b37d399fcd75"
+approved: "da8a936cd0478ddfe5b27a7a9a06b37d399fcd75"
 ---
 
 ## Outcome
@@ -339,3 +340,5 @@ Follow-on, from before the assignment, still open: the bounded run as the
 first work-row case of the G-108 evaluation suite; role profiles and a
 second harness wait on G-135's report. [G-110](G-110-external-preview.md)
 remains a poor first target for the experiment.
+
+Verdict on candidate da8a936, 2026-09-24: approved
