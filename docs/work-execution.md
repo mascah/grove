@@ -33,8 +33,8 @@ checkout without the code from closing the work, and where the checkout is
 on a branch other than the configured target; `grove integrate` writes it
 after the merge it performs. Preparation,
 independent review, waiting and a failed attempt are facts recorded in the
-record, never statuses; preparation comes before `active`, so an assignment
-bounded at its plan (step 4) leaves the status as it found it. A roadmap plan is not an assignment of all its
+record, never statuses, and an assignment bounded at its plan (step 4)
+leaves the status as it found it. A roadmap plan is not an assignment of all its
 members.
 
 ## Inputs
@@ -215,8 +215,9 @@ An assignment given `--until plan` ends here. Commit the plan, or the "no
 plan needed" note, and any question; checkpoint in the record's Next the
 plan's path and revision and the runnable continuation, the same assignment
 without the bound; leave the status as you found it; and return. The bound
-is the caller's end of the mandate, not a gate the plan needs, and the
-continuation that follows it is the caller's reading of the plan. Rerun
+is the caller's end of the mandate, not a gate the plan needs; launching the
+continuation after reading the plan is the caller's approval of the plan
+revision the checkpoint names. Rerun
 with nothing changed, it returns the same checkpoint.
 
 ## 5. Implement through evidence

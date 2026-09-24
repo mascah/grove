@@ -227,10 +227,12 @@ func (m *Model) outcome(v *attempt.View) (kind, text string) {
 			return "answered", "waited on question " + q + ", answered since" + unsaid
 		}
 	}
-	// Bounded at its plan, a clean end with no question and no candidate is
-	// the plan awaiting the owner's reading, not a missing handoff.
-	if v.Launch.Until == "plan" && !review {
-		return "plan", "plan ready: " + work + " stopped at its plan on " + v.Launch.Branch + unsaid
+	// Bounded at its plan, a clean end with no question and no candidate, the
+	// record readable and committed and nothing left uncommitted, is the plan
+	// awaiting the owner, not a missing handoff; anything less is no plan to
+	// approve by launching again.
+	if v.Launch.Until == "plan" && !review && r.Record != nil && !r.RecordUncommitted && !r.Dirty {
+		return "plan", "plan ready: " + work + " stopped at its plan on " + v.Launch.Branch
 	}
 	status, none := "unreadable", ", with no candidate"
 	if r.Record != nil {

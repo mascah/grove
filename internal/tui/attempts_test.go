@@ -446,6 +446,13 @@ func TestAttemptOutcomes(t *testing.T) {
 			"plan ready: W-002 stopped at its plan on worktree-W-002"},
 		{bounded(view("W-002", "16", attempt.Finished, &attempt.Result{ExitCode: 1, Events: attempt.Events{Result: &attempt.Final{Subtype: "error_max_budget_usd", IsError: true}}})),
 			"failed: error_max_budget_usd (exit 1)"},
+		// A plan only in the worktree, or a record left unreadable, is no plan to approve.
+		{bounded(view("W-002", "17", attempt.Finished, &attempt.Result{Dirty: true, Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "proposed"}})),
+			"ended without a handoff: W-002 is proposed on worktree-W-002, with no candidate"},
+		{bounded(view("W-002", "18", attempt.Finished, &attempt.Result{Dirty: true, RecordUncommitted: true, Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "active"}})),
+			"ended without a handoff: W-002 is active on worktree-W-002, with no candidate"},
+		{bounded(view("W-002", "19", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}})),
+			"ended without a handoff: W-002 is unreadable on worktree-W-002, with no candidate"},
 	}
 	m.attempts = []attempt.View{view("W-009", "6", attempt.Finished, nil), view("W-009", "0", attempt.Finished, nil)}
 	for _, c := range cases {
