@@ -224,8 +224,9 @@ The same steps, with these bounds:
 
 - **Mandate.** The caller states the topic or IDs and `--interaction headless`.
   That is a research-and-proposal mandate. It cannot authorize its own
-  proposals' implementation, promote a status, accept a decision, merge, or
-  start another session.
+  proposals' implementation, promote a status, accept a decision (recording
+  an answer someone gave is not accepting one; step 5), merge, or start
+  another session.
 - **Missing human choice.** Do not invent the answer or write acceptance that
   presumes it. A scope or design choice that the acceptance depends on is
   such a choice even when the proposal could be assigned without it, and a
