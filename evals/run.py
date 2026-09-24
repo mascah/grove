@@ -12,7 +12,7 @@
 fake `codex` and asserts that the checks pass and fail where they should. evals/README.md says
 what a run retains, what each check means, and how to score the rubric.
 """
-import argparse, datetime, glob, json, os, re, shlex, shutil, signal, subprocess, sys, tempfile, time, tomllib
+import argparse, datetime, glob, json, os, pwd, re, shlex, shutil, signal, subprocess, sys, tempfile, time, tomllib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIXTURE = os.path.join(ROOT, "evals", "fixture")
@@ -104,6 +104,15 @@ def codex_home(home):
         elif key != "tui":
             found.append(f"config.toml key {key}")
     return found
+
+
+def codex_env(home, grove):
+    """Codex runs each command in the user's login shell, whose profile can put an installed grove before the built
+    one (G-135 review): an empty ZDOTDIR keeps a zsh user's own startup files out, and run_on verifies the result."""
+    e = {k: v for k, v in env().items() if not k.startswith("CODEX_") or k == "CODEX_API_KEY"}
+    zdotdir = os.path.join(os.path.dirname(os.path.dirname(grove)), "zdotdir")
+    os.makedirs(zdotdir, exist_ok=True)
+    return dict(e, CODEX_HOME=home, ZDOTDIR=zdotdir, PATH=os.path.dirname(grove) + os.pathsep + e.get("PATH", ""))
 
 
 def system_skills(home):
@@ -246,6 +255,9 @@ def calls(transcript, harness):
 def retrieval(transcript, harness, clone, created):
     """Facts from the trace's tool calls: what the session used and read. Reported, never scored."""
     commands, files = calls(transcript, harness)
+    if harness == "codex" and not commands:  # every Codex read is a command: none means the trace's shape was not recognized, or nothing ran
+        return dict.fromkeys(("guide", "brief", "list", "context_or_show", "files_read", "unneeded"), None) | {
+            "commands": [], "reason": "unavailable: the trace has no completed command_execution item"}
     for cmd in commands:
         for part in re.split(r"&&|\|\||;|\|", cmd):
             try:
@@ -301,8 +313,7 @@ def one(args, grove, template, work, case_name, n, meta):
         command = [args.codex, "exec", "--json", "--ignore-user-config", "--disable", "memories", "-m", args.model,
                    "-c", f"model_reasoning_effort={args.effort}", *mode, "-o", os.path.join(rdir, "last-message.txt"),
                    f"$grove-shape {case['topic']} --interaction headless"]
-        e = {k: v for k, v in env().items() if not k.startswith("CODEX_") or k == "CODEX_API_KEY"}
-        e["CODEX_HOME"] = args.config_dir
+        e = codex_env(args.config_dir, grove)
     else:
         command = [args.claude, "-p", f"/grove-shape {case['topic']} --interaction headless",
                    "--output-format", "stream-json", "--verbose", "--no-session-persistence",
@@ -310,7 +321,7 @@ def one(args, grove, template, work, case_name, n, meta):
                    "--permission-mode", args.permission_mode, "--permission-prompts", "none"]
         e = env()
         e["CLAUDE_CONFIG_DIR"] = args.config_dir
-    e["PATH"] = os.path.dirname(grove) + os.pathsep + e.get("PATH", "")
+        e["PATH"] = os.path.dirname(grove) + os.pathsep + e.get("PATH", "")
     transcript = os.path.join(rdir, "transcript.jsonl")
     started, timed_out = time.time(), False
     with open(transcript, "w") as out, open(os.path.join(rdir, "stderr.txt"), "w") as err:
@@ -374,7 +385,7 @@ def codex_facts(transcript, rdir, args):
         "permission_mode_reported": {k: context.get(k) for k in ("approval_policy", "sandbox_policy")} if context else None,
         "reported_reason": reason,
         "cost_usd": None, "cost_reason": "Codex reports tokens, not dollars",
-        "tokens": {k: sum(u.get(k) or 0 for u in usage) for k in ("input_tokens", "cached_input_tokens", "output_tokens")} if usage else None,
+        "tokens": {k: sum(u.get(k) or 0 for u in usage) for k in dict.fromkeys(k for u in usage for k in u if isinstance(u[k], int))} if usage else None,
         "turns": len(usage), "tool_calls": sum(i.get("type") in ("command_execution", "file_change", "mcp_tool_call", "web_search") for i in items),
         "duration_ms": None, "duration_reason": "Codex reports no duration; wall_seconds is the runner's",
         "result_subtype": {"turn.completed": "completed", "turn.failed": "failed"}.get(end.get("type")), "is_error": end.get("type") != "turn.completed",
@@ -402,15 +413,18 @@ def report(path, meta, runs, unrun):
         if not rs:
             continue
         keys = list(dict.fromkeys(k for r in rs for k in r["checks"]))
-        lines += [f"## {name}: {CASES[name]['topic']}", "", "| run | harness | " + " | ".join(keys) + " | cost | tokens in/cached/out | turns | seconds | guide | brief | list | context/show | unneeded reads |",
-                  "|" + " --- |" * (len(keys) + 11)]
+        lines += [f"## {name}: {CASES[name]['topic']}", "", "| run | harness | " + " | ".join(keys) + " | model reported | cost | tokens | turns | seconds | guide | brief | list | context/show | unneeded reads |",
+                  "|" + " --- |" * (len(keys) + 12)]
         for r in rs:
-            f = r.get("retrieval") or dict.fromkeys(("guide", "brief", "list", "context_or_show"), "-") | {"unneeded": []}
+            f = r.get("retrieval") or {}
+            f = f if f.get("unneeded") is not None else dict.fromkeys(("guide", "brief", "list", "context_or_show"), f.get("reason", "-")) | {"unneeded": []}
             cost = "not reported" if r.get("cost_reason") else r.get("cost_usd")
-            tokens = "/".join(str(v) for v in r["tokens"].values()) if r.get("tokens") else "-"
+            tokens = ", ".join(f"{k.removesuffix('_tokens')} {v}" for k, v in r["tokens"].items()) if r.get("tokens") else "-"
+            model = "/".join(str(v) for v in (r.get("model_reported"), r.get("effort_reported")) if v) or r.get("reported_reason") or "-"
+            turns = f"{r.get('turns')} ({r['tool_calls']} tool calls)" if "tool_calls" in r else r.get("turns")
             seconds = r["duration_ms"] / 1000 if r.get("duration_ms") else r.get("wall_seconds") or 0
             lines.append(f"| {r['run']} | {harness(r)} | " + " | ".join(mark(r["checks"].get(k)) for k in keys)
-                         + f" | {cost} | {tokens} | {r.get('turns')} | {seconds:.0f} | {f['guide']} | {f['brief']} | {f['list']} | {f['context_or_show']} | {', '.join(f['unneeded']) or '-'} |")
+                         + f" | {model} | {cost} | {tokens} | {turns} | {seconds:.0f} | {f['guide']} | {f['brief']} | {f['list']} | {f['context_or_show']} | {', '.join(f['unneeded']) or '-'} |")
         lines += ["", "Failures:", ""]
         lines += [f"- run {r['run']} {k}: {v}" for r in rs for k, v in r["checks"].items() if v != "pass"] or ["- none"]
         lines += ["", "Rubric (evals/README.md), scorer `owner` or `judge`:", "", "| run | scorer | presumes choice | planted question | brief constraint | handoff | notes |", "| --- | --- | --- | --- | --- | --- | --- |"]
@@ -502,14 +516,21 @@ def run_on(args, found, recorded=None):
         raise SystemExit(meta[args.harness] + f"\nreport: {work}/report.md")
     if codex:
         args.codex = exe
-        home = dict({k: v for k, v in env().items() if not k.startswith("CODEX_") or k == "CODEX_API_KEY"}, CODEX_HOME=args.config_dir)
-        version = sh(exe, "--version", environ=home).stdout.strip()
-        login = sh(exe, "login", "status", environ=home, check=False)
-        meta.update({"login": (login.stdout + login.stderr).strip() or f"exit {login.returncode}", "config dir system skills": system_skills(args.config_dir)})
     else:
         args.claude = exe
         version = sh(exe, "--version", environ=dict(env(), CLAUDE_CONFIG_DIR=args.config_dir)).stdout.strip()
     grove, template, grove_version = build(work)
+    if codex:
+        home = codex_env(args.config_dir, grove)
+        shell = pwd.getpwuid(os.getuid()).pw_shell
+        found = sh(shell, "-lc", "command -v grove", environ=home, check=False).stdout.strip()
+        if found != grove:
+            raise SystemExit(f"{shell} -lc resolves grove to {found or 'nothing'}, not the built {grove}: the session would not run the guides under evaluation")
+        version = sh(exe, "--version", environ=home).stdout.strip()
+        login = sh(exe, "login", "status", environ=home, check=False)
+        meta.update({"login": (login.stdout + login.stderr).strip() or f"exit {login.returncode}",
+                     "credential variables set": ", ".join(k for k in ("CODEX_API_KEY", "OPENAI_API_KEY") if home.get(k)) or "none",
+                     "login shell": f"{shell} -lc resolves grove to the built binary", "config dir system skills": system_skills(args.config_dir)})
     meta.update({args.harness: version, GROVE: grove_version, "base commit": git(ROOT, "rev-parse", "HEAD") + (" with uncommitted changes" if git(ROOT, "status", "--porcelain") else ""),
                  "fixture commit": git(template, "rev-parse", "HEAD")})
     print(f"output {work}; " + (f"at most {meta['cap (seconds)']} seconds of Codex time, and Codex bounds no dollars" if codex
@@ -633,7 +654,7 @@ def selftest():
         for mode in ("good", "bad", "surfaced", "worse"):
             os.environ["GROVE_EVAL_FAKE"] = mode
             args = argparse.Namespace(harness=harness, runs=1, budget=None if harness == "codex" else "0.01", model="fake-model", effort="high" if harness == "codex" else None,
-                                      permission_mode="approve-for-me" if harness == "codex" else "fake", max_seconds=60 if harness == "codex" else None,
+                                      permission_mode=("approve-for-me" if mode in ("good", "bad") else "workspace-write") if harness == "codex" else "fake", max_seconds=60 if harness == "codex" else None,
                                       config_dir=home if harness == "codex" else config, case=[], out=os.path.join(tmp, "out-" + harness, mode), claude=shims["claude"], codex=shims["codex"])
             for r in run(args):
                 failed = {k for k, v in r["checks"].items() if v != "pass"}
@@ -641,7 +662,7 @@ def selftest():
                 if mode in reasons and r["case"] == "missing-choice":
                     assert r["checks"]["question-blocks-proposal"].startswith(reasons[mode]), r["checks"]
                 if harness == "codex":
-                    assert r["model_reported"] == "fake-model" and r["effort_reported"] == "high" and r["permission_mode_reported"]["approval_policy"] == "on-request", r
+                    assert r["model_reported"] == "fake-model" and r["effort_reported"] == "high" and r["permission_mode_reported"]["approval_policy"] == ("on-request" if mode in ("good", "bad") else "never"), r
                     assert r["cost_usd"] is None and r["cost_reason"] and r["tokens"]["output_tokens"] == 10 and not r["is_error"] and r["turns"] == 1, r
                     assert os.path.exists(os.path.join(tmp, "out-" + harness, mode, f"{r['case']}-1", "rollout.jsonl"))
                 f = r["retrieval"]
@@ -653,7 +674,10 @@ def selftest():
                 assert "tasks.py" in f["files_read"] and "grove/brief.md" in f["files_read"] and len(f["unneeded"]) == 1 and f["unneeded"][0].endswith(outside), f
     assert open(os.path.join(tmp, "out-claude", "good", "report.md")).read().count("- config dir synced skills: pdf") == 1
     text = open(os.path.join(tmp, "out-codex", "good", "report.md")).read()
-    assert "- config dir system skills: openai-docs" in text and "| not reported | 100/60/10 |" in text and "- login: Logged in" in text, text
+    assert "- config dir system skills: openai-docs" in text and "| fake-model/high | not reported | input 100, cached_input 60, output 10 | 1 (" in text, text
+    assert "- login: Logged in" in text and "resolves grove to the built binary" in text, text
+    open(os.path.join(tmp, "empty.jsonl"), "w").close()
+    assert retrieval(os.path.join(tmp, "empty.jsonl"), "codex", tmp, set())["reason"].startswith("unavailable"), "a Codex trace without commands"
     for harness, change, reason in (("codex", {"max_seconds": None}, "needs --max-seconds"), ("codex", {"budget": "1"}, "--budget is Claude's"),
                                     ("codex", {"effort": None}, "needs --effort"), ("codex", {"permission_mode": "auto"}, "one of"),
                                     ("claude", {"effort": "high"}, "are Codex's"), ("claude", {"max_seconds": 60}, "are Codex's"), ("claude", {"budget": None}, "needs --budget")):

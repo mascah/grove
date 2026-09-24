@@ -56,14 +56,21 @@ requests, the nearest to Claude's `auto`.
 `--config-dir` becomes `CODEX_HOME`; every other `CODEX_*` variable but
 `CODEX_API_KEY` is removed. Log in once with `CODEX_HOME=DIR codex login`, or
 `codex login --with-api-key` reading the key from stdin, or export
-`CODEX_API_KEY`; the report records `codex login status`. The runner refuses
+`CODEX_API_KEY`; the report records `codex login status` and which of
+`CODEX_API_KEY` and `OPENAI_API_KEY` are set. Codex runs each command in the
+user's login shell, whose profile can put an installed `grove` before the
+built one: the runner gives it an empty `ZDOTDIR`, which keeps a zsh user's
+startup files out, and refuses to start unless `SHELL -lc 'command -v
+grove'` then finds the built binary. The runner refuses
 a directory holding `AGENTS.md`, `AGENTS.override.md`, `rules`, `prompts`,
 `hooks.json`, `hooks`, a non-empty `memories`, any `skills` entry but
 `.system`, or a `config.toml` with anything but the `tui` state a login
 writes and the per-directory `trust_level` Codex writes for each clone.
 Codex installs its bundled skills under `skills/.system` on the first run;
-the report lists them. Cost is "not reported": Codex reports tokens, which
-the report shows as input, cached input and output.
+the report lists them. Skills Codex discovers outside `CODEX_HOME`, such as
+under `~/.agents`, are not checked. Cost is "not reported": Codex reports
+tokens, which the report shows per kind; tokens spent by `approve-for-me`'s
+reviewer are not among them.
 
 ## What a run does
 
@@ -133,10 +140,12 @@ printed the guide (`grove guide shape`), read the brief (`grove brief` or the
 file), and ran `list`, `context` or `show`, counting only a command whose
 program is `grove` and whose subcommand is that word; every file it read; and the reads
 no step needed, meaning anything but `AGENTS.md`, `CLAUDE.md`, `grove.yaml`,
-the brief, `tasks.py`, `tasks/` and the records it wrote. Reads through
+the brief, `tasks.py`, `tasks/`, the Codex adapter
+`.agents/skills/grove-shape/SKILL.md` and the records it wrote. Reads through
 `cat`, `head`, `tail`, `sed`, `nl`, `less` or `awk` count; `grep` and other
 tools do not. Codex has no read tool: every read is a command, which it
-wraps as `SHELL -lc 'SCRIPT'` and the runner unwraps. A `grove` run through a wrapper such as `timeout` or
+wraps as `SHELL -lc 'SCRIPT'` and the runner unwraps; a Codex trace
+with no command is reported unavailable, not as reading nothing. A `grove` run through a wrapper such as `timeout` or
 inside `$(…)` is missed, and a heredoc line starting with `grove` is counted:
 read the transcript before resting a conclusion on one fact.
 
