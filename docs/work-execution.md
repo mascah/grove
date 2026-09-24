@@ -212,10 +212,12 @@ that blocks it, resolved ones included, since the answer is the constraint;
 every prerequisite it builds on; the plan or review of a prerequisite whose
 interface it uses; and the terms and decisions it links. The listing told you
 these exist. It did not tell you what they require, and work that contradicts
-an unread answer is not done. Before introducing or changing a concept, read
-the terms and decisions that touch it; a conflict with a settled term or an
-accepted decision is a missing human decision, and an existing term under
-another word is the one to use.
+an unread answer is not done. Before introducing or changing a domain
+concept, read the terms and decisions that touch it, found as the shaping
+guide's step 2 finds them (`grove list` and a text search of the record
+bodies), since `context` lists only what the record links; a conflict with a
+settled term or an accepted decision is a missing human decision, and an
+existing term under another word is the one to use.
 
 The assignment authorizes routine technical decisions inside the documented
 outcome. Do not ask again for blanket permission. Update a plan when evidence
@@ -224,10 +226,10 @@ assignment.
 
 Capture what settles as the [shaping guide](work-shaping.md#5-write-the-records)
 (`grove guide shape`, step 5) describes, in the execution checkout and on its
-threshold: a concept whose meaning the work settles gets a term record; a
-resolved question the work depends on whose answer is consequential and that
-no decision holds becomes a decision attributed to whoever answered, linked
-from the question; and the record names the terms and decisions that govern
+threshold: a domain concept whose meaning the work settles gets a term
+record; a resolved question the work depends on whose answer makes a
+consequential choice that no decision holds becomes a decision attributed to
+whoever answered, linked from the question; and the record names the terms and decisions that govern
 it in `relates_to`. Writing nothing is right when nothing settled.
 
 Set each record active through the CLI when its implementation starts.
@@ -259,15 +261,16 @@ once on the final combined revision; for several records, review the combined
 diff for regressions across shared helpers while keeping each unit's evidence
 separate. The reviewer does not edit the interfaces under review. If the
 harness cannot supply an independent reviewer, say so; a self-review is never
-labelled independent. Review also checks knowledge: whether the candidate
-introduces a concept no term defines, contradicts a settled term or an
-accepted decision, depends on a choice still open, or implements a
-consequential choice no decision explains. Each is a finding for the author
-to reconcile, not one the reviewer settles. A small documentation-only change
-may be self-checked against its acceptance, reported as exactly that. When no
-independent reviewer exists, leave work active if its record or plan requires
-the review; otherwise status follows acceptance and the missing review is
-reported as open.
+labelled independent. A small documentation-only change may be self-checked
+against its acceptance, reported as exactly that. When no independent reviewer
+exists, leave work active if its record or plan requires the review; otherwise
+status follows acceptance and the missing review is reported as open.
+
+Every review, a self-check included, also checks knowledge: whether the
+candidate introduces a domain concept the project should share that no term
+defines, contradicts a settled term or an accepted decision, depends on a
+choice still open, or implements a consequential choice no decision explains.
+Each is a finding for the author to reconcile, not one the reviewer settles.
 
 Fix consequential findings with regressions, then re-review. Allow at most
 three fix/review rounds per review gate. After the third, stop: preserve the
@@ -301,9 +304,9 @@ behaviour; stop that unit before implementation instead.
 
 - **Interactive:** ask one concise question, with your recommendation, and
   continue independent work while waiting. Record a consequential answer as
-  step 5 says. A choice still unanswered when the session ends or hands off
-  is persisted as in steps 1 and 2 below: in a checkpoint's pending
-  judgments it blocks nothing and shows nowhere as open.
+  step 5 says. Create, checkpoint and commit a choice still unanswered when
+  the session ends or hands off, as the headless list below does: in a
+  checkpoint's pending judgments it shows nowhere as open.
 - **Headless:** do not invent the answer, pick a default for a product choice,
   launch another session, or loop. Persist the question where the owner will
   find it, in the execution checkout from step 3:

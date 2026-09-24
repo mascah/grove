@@ -176,16 +176,19 @@ stops with `--set 'blocks=["G-…"]'`; put the options, evidence, your
 recommendation, and who can answer in its body. Persist a consequential
 choice still open when the session ends or hands off without an answer, in
 either mode: one left in the conversation is lost, and one left in a work
-record's Next blocks nothing and shows nowhere as open.
+record's Next shows nowhere as open.
 Do not create questions for technical unknowns you can investigate, or for
 choices the person made during the session.
 
 When a question is answered, keep it: the answer stays in its body and its
-status becomes `resolved`. If the answer is consequential by the threshold
-below, record it as a decision attributed to whoever answered and link it
-from the question's `relates_to`, so the choice does not live only in a
-resolved question's body. Recording an answer someone gave is not the session
-making the decision, so a headless session may record it too.
+status becomes `resolved`. If the answer makes a choice that is consequential
+by the threshold below, record that choice as a decision attributed to
+whoever answered, `accepted` because they made it, and link it from the
+question's `relates_to`, so the choice does not live only in a resolved
+question's body. Record only what the answer decides: a preference, a
+deferral or a part left open stays in the question or becomes a new one.
+Recording an answer someone gave is not the session making the decision, so
+a headless session may record it too.
 
 **Decisions** need actual authority. Record one as `accepted` only when a named
 person made a consequential choice, in this session or in a source you can

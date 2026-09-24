@@ -108,8 +108,8 @@ implemented by [G-037](../grove/G-037-knowledge-artifacts.md)):
 | `review` | `current`, `superseded` | `work`, `examined` |
 
 - A term's title is the term; its body gives meaning, relationships and
-  boundaries, not execution instructions or implementation state, which the
-  [shaping guide](work-shaping.md#5-write-the-records) says where to keep.
+  boundaries, not execution instructions or implementation state; the
+  [shaping guide](work-shaping.md#5-write-the-records) says where those belong.
   Two terms whose titles match, ignoring case and surrounding space, are an
   error.
 - `work` is an optional list of work IDs the plan or review belongs to, checked
