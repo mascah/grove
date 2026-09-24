@@ -31,6 +31,10 @@ var accents = [len(statuses)]lipgloss.Style{
 	lipgloss.NewStyle().Foreground(lipgloss.Color("8")),
 }
 
+// runningAccent borders a card whose work has an attempt that may be running,
+// in a colour no status column uses; its tag says the same in text.
+var runningAccent = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+
 // cardBox draws one card as a bordered box of rows rows and w cells: its ID
 // with any tag at the right, the title on two rows, and the metadata row
 // unless rows leaves no room. The focused card has a heavy border and a
@@ -206,6 +210,10 @@ func (m *Model) render() string {
 	body := h - 3
 	var rows []string
 	var hints string
+	side, sideKey := "", "" // w hides the detail's sidebar where there is one beside the content
+	if w >= wideWidth {
+		side, sideKey = "w sidebar   ", "w sidebar  "
+	}
 	switch {
 	case m.res == nil:
 		rows, hints = m.emptyBody(w), "r retry   q quit"
@@ -219,18 +227,18 @@ func (m *Model) render() string {
 			judge, keys = "a approve   f feedback   i integrate   ", "a  f  i  "
 		}
 		rows, hints = m.detailBody(w, body), pick(w,
-			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   "+run+"A attempts   "+judge+"v versions   s   r   Esc back   q quit",
-			"↑↓ PgUp/PgDn  Tab pane  Enter open  "+run+"A attempts  "+keys+"v  Esc  q",
+			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   "+run+"A attempts   "+judge+side+"v versions   s   r   Esc back   q quit",
+			"↑↓ PgUp/PgDn  Tab pane  Enter open  "+run+"A attempts  "+keys+sideKey+"v  Esc  q",
 			"↑↓  Tab  Enter  "+runKey+"A  "+keys+"v  Esc  q quit")
 	case m.screen == detailScreen && m.group() != nil && m.reviewable():
 		rows, hints = m.detailBody(w, body), pick(w,
-			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   a approve   f feedback   i integrate   v versions   s   r   Esc back   q quit",
-			"↑↓ PgUp/PgDn  Tab pane  Enter open  a approve  f feedback  i integrate  v  Esc  q",
+			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   a approve   f feedback   i integrate   "+side+"v versions   s   r   Esc back   q quit",
+			"↑↓ PgUp/PgDn  Tab pane  Enter open  a approve  f feedback  i integrate  "+sideKey+"v  Esc  q",
 			"↑↓  Tab  Enter  a  f  i  v  Esc  q quit")
 	case m.screen == detailScreen && m.group() != nil:
 		rows, hints = m.detailBody(w, body), pick(w,
-			"↑/↓ PgUp/PgDn scroll or move   Tab content, linked, changes, timeline   Enter open   v versions and places   s sources   r refresh   Esc back   q quit",
-			"↑↓ PgUp/PgDn  Tab pane  Enter open  v versions  s  r  Esc back  q quit",
+			"↑/↓ PgUp/PgDn scroll or move   Tab content, linked, changes, timeline   Enter open   "+side+"v versions and places   s sources   r refresh   Esc back   q quit",
+			"↑↓ PgUp/PgDn  Tab pane  Enter open  "+sideKey+"v versions  s  r  Esc back  q quit",
 			"↑↓  Tab  Enter open  v  Esc back  q quit")
 	case m.screen == resultScreen && m.result != nil:
 		rows, hints = m.scrolled(m.resultRows(w), body, w), pick(w, "↑/↓ PgUp/PgDn scroll   Esc back to the record   q quit", "↑↓ scroll  Esc back  q quit")
@@ -449,7 +457,11 @@ func (m *Model) column(cards []card, status int, focused bool, older, w, n int) 
 		if on {
 			at = i
 		}
-		rows = append(rows, cardBox(c, on, accents[status], m.cardRows(), w)...)
+		accent := accents[status]
+		if c.running {
+			accent = runningAccent
+		}
+		rows = append(rows, cardBox(c, on, accent, m.cardRows(), w)...)
 	}
 	out := window(rows, at, m.pageSize(status), m.cardRows(), n, w)
 	if status == doneColumn && older > 0 {
@@ -799,7 +811,7 @@ func (m *Model) clampScroll() {
 			return
 		}
 		w, v := m.width, m.shown(g)
-		if w >= wideWidth {
+		if m.split() {
 			w = w * 11 / 20
 		}
 		rows, n = len(m.contentRows(v, w)), m.height-3-len(m.detailHead(v, m.width))-1
