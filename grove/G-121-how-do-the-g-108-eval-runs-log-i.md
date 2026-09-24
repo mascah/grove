@@ -2,7 +2,7 @@
 id: "G-121"
 type: question
 title: "How do the G-108 eval runs log in to the clean config directory?"
-status: open
+status: resolved
 created: "2026-09-24T00:55:29Z"
 updated: "2026-09-24T00:55:54Z"
 blocks: ["G-108"]
@@ -48,4 +48,7 @@ Who can answer: the owner, by doing one of the two and setting this record
 
 ## Next
 
-Waits for the owner.
+I ran `CLAUDE_CONFIG_DIR=~/.cache/grove-evals/claude
+   claude`, then `/login`
+
+I also disabled auto memory in the settings.json, so the the runs will fail unless we allow settings to be present. 
