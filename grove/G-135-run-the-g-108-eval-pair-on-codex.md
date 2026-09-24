@@ -2,9 +2,9 @@
 id: "G-135"
 type: work
 title: "Run the G-108 eval pair on Codex"
-status: proposed
+status: active
 created: "2026-09-24T21:48:22Z"
-updated: "2026-09-24T21:49:49Z"
+updated: "2026-09-24T23:23:23Z"
 relates_to: ["G-050", "G-101", "G-108", "G-122", "G-134"]
 ---
 
