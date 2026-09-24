@@ -377,6 +377,26 @@ def resize(root, wt, base):
     check(code == 0 and out == b"", f"exit {code}")
 
 
+def focus_rereads(root, wt, base):
+    """The board asks for focus reports and re-reads when focus returns (G-124), and turns them off on the way out."""
+    s = Session(root)
+    mark = s.expect("read 2 branches")
+    check(b"\x1b[?1004h" in s.screen, "the board did not ask for focus reports")
+    git(root, "branch", "focus-probe")
+    s.send(b"\x1b[I")  # focus in
+    mark = s.expect("Reading branches and checkouts", mark)
+    s.send(b"s")  # only changed cells are redrawn; the sources screen lists what the re-read found
+    s.expect("focus-probe", mark)
+    s.send(b"q")
+    code, out = s.finish()
+    s.restored()
+    check(code == 0 and out == b"", f"exit {code}, stdout {out!r}")
+    check(s.screen.rfind(b"\x1b[?1004l") > s.screen.rfind(b"\x1b[?1004h"), "focus reports were left on")
+
+
+focus_rereads.mutates = True  # the probe's branch changes the repository on purpose
+
+
 def writes_no_logs(root, wt, base):
     """The framework's log switches are in the environment and must do nothing."""
     logs = os.path.join(base, "logs")
@@ -563,7 +583,16 @@ def attempt_lifecycle(root, wt, base):
 
     s = Session(root, env=env)  # reconnect: the same attempt, never a second start
     s.expect("Board: current view")
-    s.expect("running")  # the card's tag
+    mark = s.expect("running")  # the card's tag
+    # A status committed on the running attempt's branch moves its card with no key pressed (G-124).
+    wt1 = os.path.join(root, ".claude", "worktrees", "worktree-G-001")
+    record = os.path.join(wt1, "grove", "work", "G-001-first.md")
+    with open(record) as f:
+        text = f.read()
+    with open(record, "w") as f:
+        f.write(text.replace("status: proposed", "status: active"))
+    git(wt1, "commit", "-qam", "active")
+    s.expect("Active 1", mark)
     s.send(ENTER)
     mark = s.expect("A lists them")
     s.send(b"A")
@@ -598,7 +627,6 @@ def attempt_lifecycle(root, wt, base):
     mark = s.expect("blocked by open question G-002", mark)
     check(count() == 2, "the wait started nothing more")
     # The owner answers on the branch; after a refresh the work continues there.
-    wt1 = os.path.join(root, ".claude", "worktrees", "worktree-G-001")
     path = os.path.join(wt1, "grove", "G-002-colour.md")
     with open(path) as f:
         text = f.read()
@@ -629,7 +657,7 @@ def attempt_lifecycle(root, wt, base):
 
 attempt_lifecycle.mutates = True  # attempts, a worktree and the fake's commit change the repository on purpose
 
-SCENARIOS = [select_and_show, leave_without_selecting, refuses_without_terminal, blocked_git, hangup, output_failure, resize, writes_no_logs, review_and_integrate,
+SCENARIOS = [select_and_show, leave_without_selecting, refuses_without_terminal, blocked_git, hangup, output_failure, resize, focus_rereads, writes_no_logs, review_and_integrate,
              attempt_lifecycle]
 
 

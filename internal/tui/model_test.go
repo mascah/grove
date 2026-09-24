@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	tea "charm.land/bubbletea/v2"
@@ -1112,5 +1113,32 @@ func TestCurrentViewTarget(t *testing.T) {
 	press(m, "right", "enter")
 	if text := currentText(m.group(), m.res.Target); !strings.Contains(text, `Current: active "Inspect records" on branch feature, checkout feat (feature), not on main.`) {
 		t.Fatalf("W-001: %s", text)
+	}
+}
+
+// Returning to the window re-reads the board as r does, and the header says
+// when; a read under way is left to finish, and leaving does nothing.
+func TestFocusRereadsTheBoard(t *testing.T) {
+	t.Parallel()
+	f := &fake{res: newFixture().twoBranches()}
+	m := open(t, f, 120, 30)
+	if !m.View().ReportFocus {
+		t.Fatal("the view asks the terminal to report focus")
+	}
+	if _, cmd := m.Update(tea.BlurMsg{}); cmd != nil {
+		t.Fatal("leaving the window starts nothing")
+	}
+	m.clock = func() time.Time { return time.Date(2026, 9, 23, 14, 5, 6, 0, time.Local) }
+	_, cmd := m.Update(tea.FocusMsg{})
+	if m.pending != "inspect" {
+		t.Fatalf("focus starts a read: %q", m.pending)
+	}
+	gen := m.gen
+	if _, again := m.Update(tea.FocusMsg{}); again != nil || m.gen != gen {
+		t.Fatal("focus while a read is pending starts none")
+	}
+	deliver(m, cmd)
+	if f.inspects != 2 || m.pending != "" || !strings.Contains(plain(m), "read 2 branches, 2 checkouts at 14:05:06") {
+		t.Fatalf("inspects %d pending %q\n%s", f.inspects, m.pending, plain(m))
 	}
 }

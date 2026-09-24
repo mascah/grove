@@ -193,6 +193,7 @@ func pick(w int, hints ...string) string {
 func (m *Model) View() tea.View {
 	v := tea.NewView(m.render())
 	v.AltScreen = true
+	v.ReportFocus = true // a terminal that reports focus re-reads the board on return (G-124)
 	return v
 }
 
@@ -302,7 +303,7 @@ func (m *Model) header() string {
 	default:
 		text += label(s)
 	}
-	return fmt.Sprintf("%s    read %s    %s", text, places(m.res.Sources), m.root)
+	return fmt.Sprintf("%s    read %s at %s    %s", text, places(m.res.Sources), m.readAt.Format("15:04:05"), m.root)
 }
 
 // banner is always on screen: what is being read, and whether the result is

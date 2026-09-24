@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -34,6 +35,7 @@ type attemptsMsg struct {
 	run      *attempt.View
 	activity attempt.Activity
 	runErr   error
+	tips     map[string]string // branch tips, read only while an attempt was live
 }
 
 // attemptTick asks for the next read while an attempt runs.
@@ -56,6 +58,9 @@ func (m *Model) wantAttempts() tea.Cmd {
 	if m.screen == attemptScreen {
 		open = m.runID
 	}
+	// While an attempt runs, one for-each-ref tells whether its branch moved
+	// (G-124); otherwise the board starts no process of its own.
+	tips := m.backend.Tips != nil && m.running()
 	ctx, backend := m.ctx, m.backend
 	return func() tea.Msg {
 		if !m.reads.begin() {
@@ -67,13 +72,17 @@ func (m *Model) wantAttempts() tea.Cmd {
 		if open != "" && backend.Attempt != nil {
 			msg.run, msg.activity, msg.runErr = backend.Attempt(ctx, root, open)
 		}
+		if tips {
+			msg.tips, _ = backend.Tips(ctx, root) // a failed listing re-reads nothing; the next poll asks again
+		}
 		return msg
 	}
 }
 
 // gotAttempts takes a read in. An attempt that was running and no longer is
-// has changed its branch, so the board is re-read unless a read that must
-// finish is under way; while any attempt runs, the next read is scheduled.
+// has changed its branch, and so has one whose branch tip moved since the
+// board was read, so the board is re-read unless a read that must finish is
+// under way; while any attempt runs, the next read is scheduled.
 func (m *Model) gotAttempts(msg attemptsMsg) tea.Cmd {
 	m.attemptsReading = false
 	ended := false
@@ -100,14 +109,34 @@ func (m *Model) gotAttempts(msg attemptsMsg) tea.Cmd {
 	var cmds []tea.Cmd
 	// An inspection already under way may predate the attempt's last commit,
 	// so it is started again; a resolve or an action is left to finish.
-	if ended && m.pending != "resolve" && m.pending != "act" {
+	// A moved tip is left to an inspection under way: restarting it on every
+	// poll could keep a slow read from ever finishing, and the next poll
+	// compares again with what it read.
+	moved := msg.tips != nil && m.res != nil && !maps.Equal(msg.tips, tipsOf(m.res))
+	if m.pending != "resolve" && m.pending != "act" && (ended || moved && m.pending != "inspect") {
 		cmds = append(cmds, m.inspect())
 	}
-	if !m.ticking && slices.ContainsFunc(m.attempts, func(v attempt.View) bool { return live(&v) }) {
+	if !m.ticking && m.running() {
 		m.ticking = true
 		cmds = append(cmds, tea.Tick(m.every, func(time.Time) tea.Msg { return attemptTick{} }))
 	}
 	return tea.Batch(cmds...)
+}
+
+// tipsOf maps each branch the result read to the commit it was read at.
+func tipsOf(res *versions.Result) map[string]string {
+	tips := map[string]string{}
+	for _, s := range res.Sources {
+		if s.Kind == "committed" {
+			tips[s.Ref] = s.Commit
+		}
+	}
+	return tips
+}
+
+// running reports whether any attempt may still be running.
+func (m *Model) running() bool {
+	return slices.ContainsFunc(m.attempts, func(v attempt.View) bool { return live(&v) })
 }
 
 // live reports an attempt whose process may still be running.
@@ -947,6 +976,7 @@ func launched(l *attempt.Launch) []string {
 // liveAttempts is the attempts part of the backend over the real repository.
 func liveAttempts(b *Backend) {
 	b.Attempts = func(_ context.Context, dir string) ([]attempt.View, error) { return attempt.ListDir(dir, "") }
+	b.Tips = versions.TipsContext
 	b.Attempt = func(ctx context.Context, root, id string) (*attempt.View, attempt.Activity, error) {
 		v, err := attempt.ShowContext(ctx, root, id, false) // the activity is the bounded read of the events
 		if err != nil {

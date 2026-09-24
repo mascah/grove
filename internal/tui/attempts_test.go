@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"sync"
@@ -743,3 +744,76 @@ func TestRunningCardStandsOut(t *testing.T) {
 }
 
 func statusIndex(s string) int { return slices.Index(statuses[:], s) }
+
+// While an attempt runs, each poll lists the branch tips and re-reads the
+// board only when one moved since it was read; with none running, nothing is
+// polled and no process is started.
+func TestMovedTipRereadsTheBoard(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	f := &fake{res: fx.twoBranches()}
+	r := &runs{}
+	var mu sync.Mutex
+	tips, lists := tipsOf(f.res), 0
+	b := r.add(f.backend())
+	b.Tips = func(context.Context, string) (map[string]string, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		lists++
+		return maps.Clone(tips), nil
+	}
+	poll := func(m *Model) {
+		m.ticking = false
+		_, cmd := m.Update(attemptTick{})
+		settle(m, cmd)
+	}
+	m := New(t.Context(), "/repo/.", b)
+	m.every = time.Millisecond
+	settle(m, m.Init())
+	if m.ticking || lists != 0 {
+		t.Fatalf("no attempt runs, so no poll is scheduled and no tips are listed: ticking %v, %d", m.ticking, lists)
+	}
+
+	r.set(view("W-002", "20260923T010000Z", attempt.Running, nil))
+	settle(m, press(m, "r"))
+	if !m.ticking {
+		t.Fatal("a running attempt schedules the next poll")
+	}
+	inspects := f.inspects
+	poll(m)
+	if f.inspects != inspects || lists == 0 {
+		t.Fatalf("unchanged tips re-read nothing: inspects %d→%d, %d lists", inspects, f.inspects, lists)
+	}
+	// The branch moves, and a read of the board sees it where it moved.
+	move := func(commit string) {
+		moved := newFixture()
+		moved.cFeat.Commit = commit
+		f.mu.Lock()
+		f.res = moved.twoBranches()
+		f.mu.Unlock()
+		mu.Lock()
+		tips[fx.cFeat.Ref] = commit
+		mu.Unlock()
+	}
+	move(strings.Repeat("9", 40))
+	poll(m)
+	poll(m)
+	if f.inspects != inspects+1 {
+		t.Fatalf("a moved tip re-reads the board once: %d→%d", inspects, f.inspects)
+	}
+	// An inspection under way is left to finish, not restarted; the next
+	// poll compares again with what it read.
+	move(strings.Repeat("8", 40))
+	early := m.inspect()
+	gen := m.gen
+	poll(m)
+	if m.gen != gen || m.pending != "inspect" {
+		t.Fatalf("gen %d→%d pending %q", gen, m.gen, m.pending)
+	}
+	settle(m, early)
+	inspects = f.inspects
+	poll(m)
+	if f.inspects != inspects {
+		t.Fatalf("the finished read saw the move: %d→%d", inspects, f.inspects)
+	}
+}

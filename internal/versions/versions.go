@@ -334,3 +334,18 @@ func listBranches(ctx context.Context, root string) ([]branch, error) {
 	}
 	return branches, nil
 }
+
+// TipsContext maps each local branch's full ref to its tip through one Git
+// process, the same listing Inspect starts from, so a reader can tell
+// whether any branch moved since a Result was read (G-124).
+func TipsContext(ctx context.Context, root string) (map[string]string, error) {
+	branches, err := listBranches(ctx, root)
+	if err != nil {
+		return nil, err
+	}
+	tips := make(map[string]string, len(branches))
+	for _, b := range branches {
+		tips[b.ref] = b.commit
+	}
+	return tips, nil
+}

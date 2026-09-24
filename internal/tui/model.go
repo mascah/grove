@@ -53,6 +53,10 @@ type Backend struct {
 	Attempt  func(ctx context.Context, root, id string) (*attempt.View, attempt.Activity, error)
 	Launch   func(ctx context.Context, req attempt.Request) ([]string, error)
 	Stop     func(ctx context.Context, root, id string) ([]string, error)
+	// Tips maps each local branch to its tip. It is read beside the attempts
+	// only while one runs, so a moved branch re-reads the board (G-124); nil
+	// leaves that out.
+	Tips func(ctx context.Context, root string) (map[string]string, error)
 }
 
 type screen int
@@ -184,6 +188,7 @@ type Model struct {
 	reads   reads
 
 	width, height int
+	readAt        time.Time // when res arrived, for the header
 
 	res     *versions.Result
 	failure string // the inventory itself failed: no rows, retry or quit
@@ -366,6 +371,13 @@ func historyAt(v *versions.Version) (commit, path string) {
 	return v.Source.Commit, v.Path
 }
 
+// refresh re-reads the board and the attempts, as r does.
+func (m *Model) refresh() tea.Cmd {
+	m.leaveVersions()
+	m.attemptsStale = true
+	return m.inspect()
+}
+
 // stop cancels any read in flight and outdates its reply.
 func (m *Model) stop() {
 	if m.cancel != nil {
@@ -412,7 +424,7 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 			m.leaveVersions()
 			return nil
 		}
-		m.res, m.failure = msg.res, ""
+		m.res, m.failure, m.readAt = msg.res, "", m.clock()
 		m.choice = min(m.choice, len(m.live()))
 		m.settleBoard()
 		m.settleFocus()
@@ -455,7 +467,13 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		return m.gotAttempts(msg)
 	case attemptTick:
 		m.ticking = false
-		m.attemptsStale = m.attemptsStale || slices.ContainsFunc(m.attempts, func(v attempt.View) bool { return live(&v) })
+		m.attemptsStale = m.attemptsStale || m.running()
+	case tea.FocusMsg:
+		// Coming back to the window is when the owner pressed r (G-124); a
+		// read already under way is left to finish. Blur does nothing.
+		if !m.busy() {
+			return m.refresh()
+		}
 	case actMsg:
 		if msg.gen != m.gen || m.pending != "act" {
 			return nil
@@ -510,9 +528,7 @@ func (m *Model) key(k string) tea.Cmd {
 			m.notice = "a read is already in progress"
 			return nil
 		}
-		m.leaveVersions()
-		m.attemptsStale = true
-		return m.inspect()
+		return m.refresh()
 	case "s":
 		if m.screen != sourcesScreen && m.res != nil {
 			m.back, m.screen, m.scroll = m.screen, sourcesScreen, 0
