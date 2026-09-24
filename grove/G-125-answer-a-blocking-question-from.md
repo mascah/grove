@@ -2,9 +2,9 @@
 id: "G-125"
 type: work
 title: "Answer a blocking question from the board"
-status: proposed
+status: active
 created: "2026-09-24T01:23:28Z"
-updated: "2026-09-24T01:25:34Z"
+updated: "2026-09-24T15:07:23Z"
 kind: feature
 size: medium
 relates_to: ["G-044", "G-046", "G-079", "G-114", "G-123"]
