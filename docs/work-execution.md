@@ -77,7 +77,7 @@ everything an assignment could touch, and do not skip what a step requires.
 | Starting | This guide, the repository's agent instructions, and `grove context IDs`: the selected records, complete, plus listings. |
 | Deciding what can start | Any open blocking question or undelivered prerequisite the listing shows (`grove show ID`). |
 | Preparing or implementing a unit | Its current plan: the document the record itself names as its plan, or the `current` plan record that `context` lists as `plan for` it. |
-| Before implementing a unit | Every question blocking it, open or resolved, and every prerequisite it builds on, with the plan or review of a prerequisite whose interface it uses. |
+| Before implementing a unit | Every question blocking it, open or resolved, and every prerequisite it builds on, with the plan or review of a prerequisite whose interface it uses, and the terms and decisions it links. |
 | When the activity needs it | A related record, decision, review, or the direction document; the record model when a field's meaning or allowed values matter or the CLI refuses a change. A status change through `grove update` needs none of these. |
 | Not by default | Every related record, historical reviews, spent handoff prompts. |
 
@@ -209,14 +209,28 @@ plan and record revisions are committed.
 
 Before implementing a unit, read in full what constrains it: every question
 that blocks it, resolved ones included, since the answer is the constraint;
-every prerequisite it builds on; and the plan or review of a prerequisite whose
-interface it uses. The listing told you these exist. It did not tell you what
-they require, and work that contradicts an unread answer is not done.
+every prerequisite it builds on; the plan or review of a prerequisite whose
+interface it uses; and the terms and decisions it links. The listing told you
+these exist. It did not tell you what they require, and work that contradicts
+an unread answer is not done. Before introducing or changing a domain
+concept, read the terms and decisions that touch it, found as the shaping
+guide's step 2 finds them (`grove list` and a text search of the record
+bodies), since `context` lists only what the record links; a conflict with a
+settled term or an accepted decision is a missing human decision, and an
+existing term under another word is the one to use.
 
 The assignment authorizes routine technical decisions inside the documented
 outcome. Do not ask again for blanket permission. Update a plan when evidence
 requires a bounded technical adjustment, keeping why; do not quietly widen the
 assignment.
+
+Capture what settles as the [shaping guide](work-shaping.md#5-write-the-records)
+(`grove guide shape`, step 5) describes, in the execution checkout and on its
+threshold: a domain concept whose meaning the work settles gets a term
+record; a resolved question the work depends on whose answer makes a
+consequential choice that no decision holds becomes a decision attributed to
+whoever answered, linked from the question; and the record names the terms and decisions that govern
+it in `relates_to`. Writing nothing is right when nothing settled.
 
 Set each record active through the CLI when its implementation starts.
 Reproduce specified bugs with deterministic fixtures before repairing them.
@@ -252,6 +266,12 @@ against its acceptance, reported as exactly that. When no independent reviewer
 exists, leave work active if its record or plan requires the review; otherwise
 status follows acceptance and the missing review is reported as open.
 
+Every review, a self-check included, also checks knowledge: whether the
+candidate introduces a domain concept the project should share that no term
+defines, contradicts a settled term or an accepted decision, depends on a
+choice still open, or implements a consequential choice no decision explains.
+Each is a finding for the author to reconcile, not one the reviewer settles.
+
 Fix consequential findings with regressions, then re-review. Allow at most
 three fix/review rounds per review gate. After the third, stop: preserve the
 changes and the open findings in the record and hand off. Exhausting the cap is
@@ -283,13 +303,17 @@ when shipping it would make the choice in practice, such as a default
 behaviour; stop that unit before implementation instead.
 
 - **Interactive:** ask one concise question, with your recommendation, and
-  continue independent work while waiting.
+  continue independent work while waiting. Record a consequential answer as
+  step 5 says. Persist a choice still unanswered when the session ends or
+  hands off as a question, created, checkpointed and committed as the
+  headless list below does: in a checkpoint's pending judgments it shows
+  nowhere as open.
 - **Headless:** do not invent the answer, pick a default for a product choice,
   launch another session, or loop. Persist the question where the owner will
   find it, in the execution checkout from step 3:
   1. `grove new question "…"`, then set what it blocks with
      `grove update G-… --expect REVISION --set 'blocks=["G-…"]'`. Put the
-     options, evidence, and your recommendation in its body.
+     options, evidence, your recommendation, and who can answer in its body.
   2. Checkpoint the affected work's Next, naming the question.
   3. Commit both. Finish any selected work that does not depend on the answer.
   4. Return the waiting condition: the question ID, the work it stops, the

@@ -107,9 +107,11 @@ implemented by [G-037](../grove/G-037-knowledge-artifacts.md)):
 | `plan` | `current`, `superseded` | `work` |
 | `review` | `current`, `superseded` | `work`, `examined` |
 
-- A term's title is the term; its body gives meaning and relationships, not
-  execution instructions. Two terms whose titles match, ignoring case and
-  surrounding space, are an error.
+- A term's title is the term; its body gives meaning, relationships and
+  boundaries, not execution instructions or implementation state; the
+  [shaping guide](work-shaping.md#5-write-the-records) says where those belong.
+  Two terms whose titles match, ignoring case and surrounding space, are an
+  error.
 - `work` is an optional list of work IDs the plan or review belongs to, checked
   like `depends_on` targets. One plan can name several work items. Work does
   not name its plans or reviews back: that side is derived, and

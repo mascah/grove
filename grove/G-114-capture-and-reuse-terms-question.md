@@ -2,10 +2,12 @@
 id: "G-114"
 type: work
 title: "Capture and reuse terms, questions and decisions across shaping, work and review"
-status: proposed
+status: review
 created: "2026-09-23T19:44:56Z"
-updated: "2026-09-24T04:25:36Z"
-relates_to: ["G-037", "G-056", "G-107", "G-108", "G-118", "G-122", "G-125"]
+updated: "2026-09-24T15:01:40Z"
+relates_to: ["G-037", "G-051", "G-056", "G-107", "G-108", "G-118", "G-122", "G-125"]
+candidate: "fdfd933e334eef1aa27631e44df7e535b762d244"
+approved: "fdfd933e334eef1aa27631e44df7e535b762d244"
 ---
 ## Outcome
 
@@ -138,26 +140,101 @@ shows links present and unread rather than absent.
 4. `grove check` passes and every new link resolves. No product change beyond
    guide text and record bodies.
 
+## Evidence
+
+Branch `worktree-G-114`, based on main `25525cf` (record revision
+`f4b81aa`). The candidate is the commit holding this text, named by the
+status change that follows it; the reviewed content is `933094d`: guide edits `d2379f0`, G-056 repair
+`08a30b6`, review fixes `bf60f18`, `70ecd0c`, `54cb163`, `ebfcb7b`, and the
+review record [G-128](G-128-g-114-independent-review-of-the.md) at
+`933094d`. No plan: the In scope list names each rule and the change is
+guide text, three documents and two record bodies. Two headless attempts
+(`G-114.20260924T042824Z`, `G-114.20260924T043857Z`) wrote the commits
+through `ebfcb7b` and G-128, then each ended its turn on the eval pair
+running as a background job, which died with the session; the interactive
+session of 2026-09-24 finished from G-128's state. That failure is proposed
+on main as G-129 and is not this record's.
+
+Acceptance, checked at `933094d`, which the candidate differs from only by
+this record:
+
+1. `git diff main...HEAD` touches both guides, `docs/record-model.md`,
+   `docs/commands.md`, G-056, this record and G-128, and nothing under
+   `.claude/skills/` or `.agents/skills/`. The work guide carries the rules
+   in step 5 (read linked terms and decisions before a unit; read what
+   touches a concept before changing it; capture what settles on the shaping
+   guide's threshold), step 6 (the knowledge check, self-check included) and
+   the interactive missing-decision bullet; the shaping guide carries them
+   in step 2 (read the terms and decisions the topic touches), step 5 (term
+   content, question persistence in either mode, answers kept and
+   consequential ones recorded as decisions, the decision threshold,
+   `relates_to`) and the headless bounds. `grove guide work` and `grove
+   guide shape` print them. Guides digest at the candidate:
+   `5a224350feae`, against the baseline's `3f5487904c61`.
+2. [G-056](G-056-attempt.md) states the meaning only; the dropped
+   observation is under [attempts](../docs/commands.md#attempts), and G-056
+   links it.
+3. Deferred by the owner's decision below to G-125, which walks the
+   resolution rule. This assignment's own walk, reported for what it is:
+   before editing the guides it read [G-051](G-051-typed-knowledge-records.md)
+   and every settled term, linked G-051 in `relates_to`, and created no term
+   or decision, since nothing settled that the records lacked; G-128 ran the
+   knowledge check and found no missing term and no contradiction. The
+   review's finding 9 shows the one rule that needs a walk: an open part of
+   a resolved answer (G-118's preference) still has no persisted form until
+   someone acting on G-118 or G-122 writes the question.
+4. `grove check`: `OK: 123 records` in the worktree; the new anchors
+   `work-shaping.md#5-write-the-records` and `commands.md#attempts` resolve.
+   `gofmt -l .` empty, `go vet ./...` clean, `go test -count=1 -timeout 120s
+   ./...` all packages ok at `933094d` (several over five seconds while the
+   eval pair ran beside them, not a change here).
+
+G-108 pair rerun, the owner's mandate, run 2026-09-24 04:50 UTC from this
+worktree at `933094d`, guides digest `5a224350feae`, fixture `db18050`,
+output `~/.cache/grove-evals/runs/2026-09-24-G-114-933094d` outside every
+checkout, $2.88 for ten runs against the $50 cap:
+
+- Missing-choice, against [G-122](G-122-g-108-baseline-runs-the-missing.md)
+  finding 1: 5 of 5 runs persisted a question with `blocks` naming the
+  proposal, and every check passed in every run, as in the baseline. What
+  the guide edit added is visible: all five question bodies now name who
+  can answer ("the owner"), which the shaping guide's step 5 already asked
+  for and the work guide's headless list now asks for too. No run wrote a
+  term or a decision. $0.28 to $0.30 and 44 to 49 seconds per run, against
+  $0.27 to $0.30 and 45 to 62 seconds.
+- Companion, over-asking: 5 of 5 runs proposed one work record and no
+  question, term or decision, every check passed, $0.27 to $0.30 and 42 to
+  51 seconds per run. The new step 2 reading (terms and decisions the topic
+  touches) cost nothing visible: the fixture has none, and each run's one
+  search was the same `grep` over the record bodies the baseline ran.
+- Same limits as G-122: Claude Opus 5.5, five runs per case, one fixture
+  with no term or decision to find, so the pair shows the edit did not
+  make agents ask or write more, not that they read terms when they exist.
+  The knowledge-sequence case in G-108's Next is the eval of that. Two
+  half-finished output directories from the abandoned headless attempts
+  remain under the same `runs/` directory and are the owner's to remove.
+
 ## Next
 
-The wait this record had is over: G-108's baseline ran at guides digest
-`3f5487904c61`, which main still prints, so the guide edits can land now
-and the pair's first rerun then differs from the baseline by this record
-alone. The owner can assign it with `/grove-work G-114`.
+In review; `candidate` names the commit. The integrator's next action, from a
+clean checkout of `worktree-G-114`, then of `main`:
+
+```sh
+go run ./cmd/grove approve G-114 "VERDICT"
+go run ./cmd/grove integrate G-114 --cleanup
+```
 
 Owner decisions, 2026-09-24, in the shaping session that refined this
 record:
 
-- The G-108 pair reruns after the guide edit, as this record's own
-  mandate: `python3 evals/run.py run --runs 5 --budget 5 --model
-  claude-opus-5-5 --permission-mode auto --config-dir
-  ~/.cache/grove-evals/claude --out DIR`, with `DIR` outside every checkout,
-  about $3 and a $50 cap. Read the companion case for over-asking and the
-  missing-choice case against G-122, and report both in this record's
-  Evidence; G-108's Next stays untouched.
+- The G-108 pair reruns after the guide edit, as this record's own mandate,
+  about $3 and a $50 cap, reported in Evidence with G-108's Next untouched.
+  Done above.
 - G-125 walks acceptance 3, since it changes how a question is answered and
   so meets the resolution rule directly. Assign it after this record lands.
 
 The headless bound's block-or-surface choice (G-118, G-122) stays open and
 is not this record's; G-108's Next lists the knowledge-sequence eval case as
 the follow-on once this lands.
+
+Verdict on candidate fdfd933, 2026-09-24: needs more work, but later. Good enough for now

@@ -17,9 +17,9 @@ recover or resume it. Several attempts can serve one work item, for example
 after review feedback.
 
 An attempt ending, even successfully, is not the work being done and does not
-by itself put anything into [review](G-058-review.md). Grove has no attempt
-record yet; today an attempt is visible as a branch, a worktree, and the
-checkpoint in the work's Next.
+by itself put anything into [review](G-058-review.md). What Grove keeps
+about an attempt, and where, is documented under
+[attempts](../docs/commands.md#attempts), not here.
 
 ## Relationships
 

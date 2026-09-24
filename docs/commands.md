@@ -156,7 +156,10 @@ and `--permission-prompts none`, its stdout and stderr written straight to
 files under the Git common directory (`.git/grove/attempts/ATTEMPT/`, shared
 by every worktree, never committed). Budget and permission mode are required:
 Grove sets no default spend or profile. Grove starts one process and never
-retries; subagents the provider starts share the budget.
+retries; subagents the provider starts share the budget. An attempt started
+by hand, such as an interactive `/grove-work`, writes no attempt files: it is
+visible only as its branch, its worktree and the checkpoint in the work's
+Next.
 
 `grove --help` lists what `run` refuses. An open question that blocks the
 work is the wait the headless guide persists, so rerunning with nothing
