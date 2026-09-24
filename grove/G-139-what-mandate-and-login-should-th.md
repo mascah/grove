@@ -2,9 +2,9 @@
 id: "G-139"
 type: question
 title: "What mandate and login should the G-135 Codex eval runs use?"
-status: open
+status: resolved
 created: "2026-09-24T22:37:54Z"
-updated: "2026-09-24T22:39:41Z"
+updated: "2026-09-24T23:21:55Z"
 blocks: ["G-135"]
 ---
 
@@ -53,3 +53,6 @@ recommendation). Then launch `/grove-work G-135` or `$grove-work G-135`
 on `worktree-G-135`.
 
 ## Next
+
+## Answer
+I ran `CODEX_HOME=~/.cache/grove-evals/codex codex login` 
