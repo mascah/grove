@@ -143,3 +143,14 @@ names the command.
 Still open, for shaping and not for this record: should the attempt
 owner's result reconciliation flag an attempt whose last message promises
 a continuation?
+
+Recommendation: run the check before integrating, in a throwaway clone, using a made-up record.
+
+1. Clone the repo into the scratchpad and check out worktree-G-129 at 0597319. The clone has its own ID counter and attempts directory, so nothing touches the real repo. This follows the AGENTS.md fixture rule.
+2. In the clone, run grove new to create one work record. Its only mandate is a command that runs past the Bash tool's 10-minute limit, for example sleep 900 && echo done, with acceptance "record its output". Commit it.
+3. From the clone, run grove run TEST-ID --budget 3 --permission-mode <a mode that allows Bash>. That costs about $2–3 and takes roughly 10 minutes.
+4. Pass/fail:
+   - Pass: the attempt runs the command in the foreground, hits the timeout, and returns a committed checkpoint that names sleep 900, whether there's partial output, and who can run it.
+   - Fail: it backgrounds the command and ends its turn saying "I'll be notified."
+     A longer-than-limit command is the stronger test: it can't be passed by the command simply finishing, only by returning a checkpoint.
+5. Before deleting the clone, copy its .git/grove/attempts/<ATTEMPT>/ somewhere that will last. Then cite those files and the attempt's last message in G-129's Evidence, make a new commit, and move candidate to it.
