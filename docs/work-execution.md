@@ -304,9 +304,10 @@ behaviour; stop that unit before implementation instead.
 
 - **Interactive:** ask one concise question, with your recommendation, and
   continue independent work while waiting. Record a consequential answer as
-  step 5 says. Create, checkpoint and commit a choice still unanswered when
-  the session ends or hands off, as the headless list below does: in a
-  checkpoint's pending judgments it shows nowhere as open.
+  step 5 says. Persist a choice still unanswered when the session ends or
+  hands off as a question, created, checkpointed and committed as the
+  headless list below does: in a checkpoint's pending judgments it shows
+  nowhere as open.
 - **Headless:** do not invent the answer, pick a default for a product choice,
   launch another session, or loop. Persist the question where the owner will
   find it, in the execution checkout from step 3:
