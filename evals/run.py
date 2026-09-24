@@ -10,7 +10,7 @@
 asserts that the checks pass and fail where they should. evals/README.md says
 what a run retains, what each check means, and how to score the rubric.
 """
-import argparse, datetime, json, os, re, shlex, shutil, signal, subprocess, sys, tempfile, time
+import argparse, datetime, glob, json, os, re, shlex, shutil, signal, subprocess, sys, tempfile, time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIXTURE = os.path.join(ROOT, "evals", "fixture")
@@ -24,7 +24,9 @@ CASES = {
 }
 # Files some step of the shaping guide needs for these topics; any other read is listed as unneeded.
 NEEDED = {"AGENTS.md", "CLAUDE.md", "grove.yaml", "grove/brief.md", "tasks.py"}
-CUSTOMIZATION = ("CLAUDE.md", "skills", "agents", "commands", "output-styles", "hooks", "settings.json", "settings.local.json")
+CUSTOMIZATION = ("CLAUDE.md", "agents", "commands", "output-styles", "hooks", "settings.local.json")
+# A login writes settings.json; these keys shape the terminal and memory, not what the agent reads or may do.
+SETTINGS = {"tui", "theme", "autoMemoryEnabled"}
 GROVE = "grove version (its revision can lag in a linked worktree; the digest pins the guides)"
 UNTOUCHED = {"proposed", "open", "current", None}
 # Claude's own auth variables pass through; every other CLAUDE* variable is the caller's session leaking in.
@@ -332,8 +334,15 @@ def run(args):
     plugins = os.path.join(args.config_dir, "plugins", "installed_plugins.json")
     if os.path.exists(plugins) and json.load(open(plugins)).get("plugins"):
         found.append("installed plugins")
+    settings = os.path.join(args.config_dir, "settings.json")
+    settings = json.load(open(settings)) if os.path.exists(settings) else {}
+    found += [f"settings.json key {k}" for k in sorted(settings.keys() - SETTINGS)]
+    # A login syncs the account's Anthropic skills and plugins under skills/synced and plugins/synced;
+    # they cannot be kept out and a preview user has them too, so they are recorded, not refused.
+    found += [f"skills/{e}" for e in sorted(os.listdir(os.path.join(args.config_dir, "skills"))) if e != "synced"] if os.path.isdir(os.path.join(args.config_dir, "skills")) else []
     if found:
         raise SystemExit(f"--config-dir {args.config_dir} is not clean: {', '.join(found)}")
+    synced = lambda kind: sorted(e["name"] for m in glob.glob(os.path.join(args.config_dir, kind, "synced", "*", "manifest.json")) for e in json.load(open(m)).get(kind, []))
     cases = args.case or list(CASES)
     work = os.path.abspath(args.out) if args.out else tempfile.mkdtemp(prefix="grove-evals-")
     os.makedirs(work, exist_ok=True)
@@ -341,7 +350,9 @@ def run(args):
             "runs per case": args.runs, "budget per run (USD)": args.budget,
             "cap (USD)": f"{float(args.budget) * args.runs * len(cases):.2f}", "model": args.model,
             "permission mode": args.permission_mode, "config dir": args.config_dir,
-            "config dir holds": ", ".join(sorted(os.listdir(args.config_dir))) or "nothing"}
+            "config dir holds": ", ".join(sorted(os.listdir(args.config_dir))) or "nothing",
+            "config dir settings": json.dumps(settings, sort_keys=True), "config dir synced skills": ", ".join(synced("skills")) or "none",
+            "config dir synced plugins": ", ".join(synced("plugins")) or "none"}
     exe = shutil.which(args.claude)
     if not exe:
         meta["claude"] = f"unavailable: {args.claude} not found; no case ran"
@@ -431,9 +442,13 @@ def selftest():
                 ("bad", "companion"): {"no-question", "session-checkout-unchanged"},
                 ("worse", "missing-choice"): {"remote-unchanged", "proposal-proposed", "no-promotion", "check-passes", "message-names"},
                 ("worse", "companion"): {"proposal-branch", "proposal-proposed", "no-question", "no-promotion", "check-passes", "message-names"}}
+    config = os.path.join(tmp, "config")  # as a login leaves it: settings and synced skills, nothing authored
+    os.makedirs(os.path.join(config, "skills", "synced", "x"))
+    json.dump({"tui": "fullscreen", "autoMemoryEnabled": False}, open(os.path.join(config, "settings.json"), "w"))
+    json.dump({"skills": [{"name": "pdf"}]}, open(os.path.join(config, "skills", "synced", "x", "manifest.json"), "w"))
     for mode in ("good", "bad", "worse"):
         os.environ["GROVE_EVAL_FAKE"] = mode
-        args = argparse.Namespace(runs=1, budget="0.01", model="fake", permission_mode="fake", config_dir=os.path.join(tmp, "config"),
+        args = argparse.Namespace(runs=1, budget="0.01", model="fake", permission_mode="fake", config_dir=config,
                                   case=[], out=os.path.join(tmp, mode), claude=shim)
         for r in run(args):
             failed = {k for k, v in r["checks"].items() if v != "pass"}
@@ -444,6 +459,17 @@ def selftest():
                 continue
             assert f["guide"] and f["brief"] and f["list"] and not f["context_or_show"], f
             assert "tasks.py" in f["files_read"] and len(f["unneeded"]) == 1 and f["unneeded"][0].endswith(".claude/CLAUDE.md"), f
+    assert open(os.path.join(tmp, "good", "report.md")).read().count("- config dir synced skills: pdf") == 1
+    for name, content in (("settings.json", '{"hooks": {}}'), ("skills/mine/SKILL.md", "")):
+        os.makedirs(os.path.dirname(os.path.join(config, name)), exist_ok=True)
+        saved = open(os.path.join(config, name)).read() if os.path.exists(os.path.join(config, name)) else None
+        open(os.path.join(config, name), "w").write(content)
+        try:
+            run(args)
+            raise AssertionError(f"{name} accepted")
+        except SystemExit as err:
+            assert "not clean" in str(err), (name, err)
+        open(os.path.join(config, name), "w").write(saved) if saved is not None else shutil.rmtree(os.path.dirname(os.path.join(config, name)))
     shutil.rmtree(tmp)
     print("selftest: ok")
 
