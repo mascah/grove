@@ -46,7 +46,8 @@ members.
   declared no mode. A headless caller must say `--interaction headless`; any
   other value is an error to report, not to guess around. The mode changes only
   [what happens when a human decision is missing](#when-a-human-decision-is-missing)
-  and [how a long command is awaited](#5-implement-through-evidence);
+  and [how a long command is awaited](#5-implement-through-evidence), at the
+  end of step 5;
   outcome, constraints, acceptance, and every other step are identical.
 
 ## Authority
@@ -255,13 +256,19 @@ evidence path, and what should wake a successor. Never start a replacement
 writer while an earlier one may still write. This is discipline for one
 session, not durable supervision.
 
-A headless session has no next turn: when its turn ends the session ends, and
-a job it left running in the background is abandoned, whatever the harness
-says about notifying it. So headless, run a command longer than one tool call
-in the foreground with a timeout, split into bounded pieces where it allows;
-if it cannot finish inside that timeout, do not start it, and return its wait
-as a checkpoint naming the command, why it must run, and what its result
-decides. Never end the turn on a background job as an implied continuation.
+Headless, no command outlives the session. A headless session has no next
+turn: its turn's end is the session's end, and a job left running in the
+background is abandoned, whatever the harness says about notifying it. Run a
+command that may outlast the harness's default tool timeout in the foreground
+with an explicit timeout, up to the harness's maximum, split into bounded
+pieces where it allows. If it cannot finish inside that maximum, do not start
+it; if it times out, confirm it has stopped and note its partial output. Either
+way the work stays active and the wait is returned as a
+[checkpoint](#7-checkpoint-and-resume) naming the command, why it must run,
+what its result decides, and who can run it (an interactive session or a
+person); rerunning headless with nothing changed returns the same checkpoint,
+so do not retry it. Never end the turn on a background job as an implied
+continuation.
 
 ## 6. Review
 
@@ -371,7 +378,7 @@ worktrees. Implementation complete, reviewed, accepted by the owner, and
 integrated are four different facts; report each separately. Return:
 
 - The outcome: in review, awaiting a named human judgment, waiting on a named
-  question or blocker, or stopped at the review cap with open findings.
+  question, blocker or command, or stopped at the review cap with open findings.
 - Assigned IDs and order, branch/worktree, base, candidate and final commits.
 - Behavior changes and acceptance evidence per record.
 - Verification results, review findings and dispositions, unverified limits.
