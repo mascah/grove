@@ -33,69 +33,106 @@ Observed at main `28f5ddc`:
   --commit` there, and then `R`.
 - On `worktree-G-108`, G-118 and G-121 were written by attempts and resolved
   by the owner in commits `1d3ad82` and `e57a4c6`, each touching only the
-  question file; G-121's answer landed under the agent's `## Next` heading.
-  Both relaunches then succeeded, so the loop works and only the path is
-  awkward.
-- docs/board.md promises that selecting "never creates a worktree, edits a
-  record, or starts an editor, shell, or agent; only `R` starts an agent".
-  That contract changes with this work and the document is reconciled.
-- Bubble Tea v2 has `tea.ExecProcess` (`exec.go`), which suspends the program
-  for a child process; nothing in `internal/tui` uses it yet.
-- A shown version belongs to a source. The workspace resolver binds a
-  committed version to the one checkout holding its branch
-  ([docs/commands.md](../docs/commands.md), `workspace`), and the review
-  actions already run in the branch's checkout after a freshness check (G-044,
-  [review.go](../internal/tui/review.go)).
-- A question is `open` or `resolved`, and the answer stays in its body or
-  links a decision ([record model](../docs/record-model.md)). `update
-  --commit` exists (G-079).
+  question file; G-121's answer landed under the agent's `## Evidence
 
-Proposed design:
+Branch `worktree-G-125`, base `main` at `c38d914`, started from this record
+at `sha256:5db1849f…` and [plan G-131](G-131-plan-for-g-125-answer-a-blocking.md)
+at `sha256:ce915f85…` (`dc3c981`). Implementation `e1d3339`, review fixes
+`052cc74` and `606330c`; the candidate is the commit holding this evidence.
+Headless attempt `G-125.20260924T150358Z`.
 
-1. `e` on a question's detail, or on an attempt whose state is waiting on a
-   question (which opens that question), resolves the checkout holding the
-   shown version, refuses when there is none, it is ambiguous, or the file
-   differs from what the board read, then runs `$VISUAL`, else `$EDITOR`,
-   else `vi`, on the record file through `tea.ExecProcess`, and re-reads on
-   return.
-2. After the editor exits, a prompt offers to resolve and commit: `update
-   --set status=resolved --commit` in that checkout with `--expect` the
-   revision just read. Declining keeps the edit uncommitted and says so. The
-   attempt row then leaves Needs you and `R` is offered.
-3. Before opening the editor, append a `## Answer` heading when the body has
-   none, so the answer has a home. Proposed; the implementer may drop it if
-   it fights the record's own structure.
-4. Bounded to question records, never code, and no text-editing widget in
-   the board. The brief's "explicit commands remain noninteractive" holds:
-   the editor is the owner's, and the board still only runs Grove's own
-   operations.
+What changed (`internal/tui`, `docs/board.md`):
 
-Out of scope: editing any record type from the board, answering in an
-in-board text box, resolving without an edit, relaunching automatically.
+- `e` on an open question's detail, or on the attempts list or one attempt
+  whose outcome is waiting on a question (which opens that question's
+  detail above the attempt, as `o` opens work), answers it (`answer.go`).
+  The checkout is found by `checkoutOf` (`review.go`), now shared with `a`
+  and `f`: the one valid checkout on the branch of the shown version,
+  refusing none or several. For judging its copy must match HEAD, as
+  before; for answering an uncommitted copy is the owner's answer so far.
+  The file on disk must have the revision the board read.
+- The board appends `## Answer` when the body has none, then suspends
+  through `tea.ExecProcess`: `sh -c '$VISUAL "$@"'` (else `$EDITOR`, else
+  `vi`, as Git runs it) on the file, with the terminal files themselves as
+  stdio, since the program's output is the `watched` wrapper. On exit the
+  file is read again. An unused heading is taken back, also by `Run` when a
+  hangup ended the session under the editor. An editor error, or no change,
+  says so and writes nothing more; a failed take-back is reported with no
+  prompt. After an edit, or on an earlier uncommitted one, the board
+  re-reads and asks `Resolve ID and commit it with your answer on branch B?
+  y/n`. `y` runs `update.Apply` with `status=resolved`, `Commit`, and
+  `Expect` the revision after the editor, so one commit of the question's
+  file alone holds the answer and the status. The result names `R` on each
+  work the question blocks. `n` or Esc leaves the edit uncommitted and says
+  where; `e` reopens it.
+- The latest attempt of work blocked by a question that is now resolved, not
+  asked after the attempt ended and last `updated` from that second on, is
+  `answered since`: `question answered: R again`, still under Needs you like
+  `feedback given: R again`, since the relaunch is the owner's to make. This
+  is a deliberate reading of the design's "leaves Needs you"; acceptance 1
+  asks only for `R` to be offered, which the work's detail does.
+- The detail of an open question names where `e` writes, or why it cannot.
+  The footers hint `e`. docs/board.md adds *Answering a question*, its key
+  row, the outcome and the Needs you case, and changes the selection
+  contract to "only `e` starts the owner's editor, on an open question".
 
-## Acceptance
+Against acceptance:
 
-1. With an attempt waiting on a question, one key from the attempt screen
-   opens the question in the owner's editor in the branch's checkout; on
-   save and quit the board offers to resolve and commit; accepting sets the
-   question resolved, commits on that branch, and the attempt's work shows
-   as launchable with `R`. Demonstrated once on a real attempt of Grove's own
-   work and reported in the evidence.
-2. Refusals are shown, never silent: no checkout holds the branch, the
-   checkout is ambiguous, the record changed since the board read it, or the
-   editor exited with an error. Nothing is written in those cases.
-3. Tests in `internal/tui` with a fake exec and update cover the resolve
-   path, the decline path and a stale revision. The terminal lifecycle check
-   (`internal/tui/testdata/terminal.py`) covers suspending for the editor and
-   resuming the board.
-4. docs/board.md's contract and key table say what `e` does and where it
-   writes. The checks in AGENTS.md pass.
+1. From the attempt screen, one key opens the question in the owner's editor
+   in the branch's checkout. After the editor quits, the board offers to
+   resolve and commit. `y` sets it resolved and commits on that branch, and
+   the attempt shows `question answered: R again`; `o`, then `R`, launches.
+   All of this is exercised by `terminal.py`'s `attempt_lifecycle`, which
+   runs the real binary in a pseudo-terminal against a fake provider and a
+   fake `VISUAL`. That scenario checks:
+   - the editor got a terminal in canonical mode, on the branch's copy;
+   - the board came back on the alternate screen;
+   - one commit `docs(G-002): set status=resolved` holds only the question,
+     with its answer;
+   - the next `R` continues on that branch to a candidate.
+   **Not done: the demonstration on a real attempt of Grove's own work.** A
+   headless session cannot answer a real question, and none is open (`grove
+   attempts`, `grove list` at `606330c`). It is left to the owner; see Next.
+2. Refusals are shown and write nothing: no checkout, two checkouts, a file
+   changed since the read, a resolved question, a record that is not a
+   question, an editor error (`TestAnswerRefusals`,
+   `TestAnswerDeclinedUnsavedOrFailed`).
+3. `internal/tui/answer_test.go` covers the following, with a fake `Edit`
+   and `Answer`:
+   - the resolve path;
+   - the decline path, then reopening the answer;
+   - a stale revision, both before the editor and refused at resolve;
+   - the take-back, and a failed take-back;
+   - the path from the attempt;
+   - the answered-since window.
+
+   `terminal.py` covers suspending for the editor and resuming.
+4. docs/board.md is reconciled as above. At `606330c` these all passed:
+   - `go vet ./...`;
+   - `gofmt -l .` (empty);
+   - `go run ./cmd/grove check` (`OK: 128 records`);
+   - `go test -count=1 -timeout 120s ./...` (every package ok, `internal/tui`
+     16.1s with `TestTerminal`);
+   - `python3 internal/tui/testdata/terminal.py BIN`: 11 of 11 ok, run by
+     `TestTerminal` in that suite and directly at `052cc74`.
+
+Review: [G-133](G-133-g-125-review-answering-a-questio.md), an independent
+subagent reviewer over three rounds. It found no blockers. Every finding was
+fixed, or kept and documented with its reason.
+
+Limits: `answered since` rests on `updated`, as docs/board.md says; `e`
+starts only on Unix (`sh`), as Grove does.
 
 ## Next
 
-Assign with `/grove-work G-125`. Medium: the checkout resolution and the
-suspend-and-resume are the two unknowns, so a short plan record is worth
-writing first. It changes the same package as
-[G-123](G-123-make-board-navigation-and-cards.md) and
-[G-124](G-124-keep-the-board-fresh-without-pre.md); run them one after
-another.
+In review with the candidate this record names. The integrator's actions:
+
+1. Demonstrate acceptance 1 on a real attempt when one next stops on a
+   question: in the board, `A`, Enter on the waiting attempt, `e`, write the
+   answer, quit the editor, `y`; the attempt shows `question answered: R
+   again`, and `o` then `R` relaunches. Report it here, or approve with it
+   noted as still owed.
+2. `go run ./cmd/grove approve G-125 "VERDICT"` in this checkout
+   (`.claude/worktrees/worktree-G-125`), then `go run ./cmd/grove integrate
+   G-125` in the `main` checkout; or `go run ./cmd/grove feedback G-125
+   "TEXT"` here.

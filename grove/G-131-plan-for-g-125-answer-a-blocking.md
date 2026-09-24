@@ -65,3 +65,8 @@ Base: `main` at `c38d914`, branch `worktree-G-125`, G-125 at revision
    a question, the key table.
 7. The checks in AGENTS.md; a demonstration on a real attempt of Grove's own
    work, or its absence reported.
+
+## Progress
+
+Steps 1 to 6 done in `e1d3339`, `052cc74` and `606330c`; step 7's checks
+pass, and the real-attempt demonstration is left to the owner (G-125 Next).
