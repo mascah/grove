@@ -33,7 +33,7 @@ var accents = [len(statuses)]lipgloss.Style{
 
 // runningAccent borders a card whose work has an attempt that may be running,
 // in a colour no status column uses; its tag says the same in text.
-var runningAccent = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+var runningAccent = cyan
 
 // cardBox draws one card as a bordered box of rows rows and w cells: its ID
 // with any tag at the right, the title on two rows, and the metadata row

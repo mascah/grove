@@ -274,7 +274,8 @@ func TestReopeningCutsThePath(t *testing.T) {
 	fx := newFixture()
 	r := &runs{}
 	r.set(view("W-001", "20260923T010000Z", attempt.Finished, &attempt.Result{ExitCode: 1}))
-	m := openRuns(t, linkedFixture(fx), r, 120, 36)
+	f := linkedFixture(fx)
+	m := openRuns(t, f, r, 120, 36)
 	press(m, "right")
 	settle(m, press(m, "enter"))
 	settle(m, press(m, "tab", "down", "down", "enter")) // needs W-002
@@ -303,6 +304,29 @@ func TestReopeningCutsThePath(t *testing.T) {
 	}
 	if press(m, "esc"); m.screen != detailScreen || m.openID() != "W-001" {
 		t.Fatalf("and then to the record they were listed from: screen %d", m.screen)
+	}
+
+	// Cutting below the layer o opened takes its return with it.
+	settle(m, press(m, "tab", "enter", "A", "o")) // W-001, plan W-005, attempts, W-001
+	settle(m, press(m, "tab", "enter"))           // plan W-005 again
+	if !slices.Equal(m.stack, []string{"W-001", "W-005"}) || m.workDepth != 0 || strings.Contains(plain(m), "attempts") {
+		t.Fatalf("the cut drops the return: %v depth %d", m.stack, m.workDepth)
+	}
+	press(m, "esc", "esc")
+	if m.screen != boardScreen {
+		t.Fatalf("Esc walks the path to the board: screen %d", m.screen)
+	}
+
+	// A refresh that removes a record below the layer o opened keeps that
+	// layer's return at its new depth.
+	settle(m, press(m, "enter", "tab", "enter", "A", "o")) // W-001, W-005, attempts, W-001
+	f.res.Groups = slices.DeleteFunc(f.res.Groups, func(g versions.Group) bool { return g.ID == "W-005" })
+	settle(m, press(m, "r"))
+	if !slices.Equal(m.stack, []string{"W-001", "W-001"}) || m.workDepth != 2 || !strings.Contains(plain(m), "board › W-001 › attempts › W-001") {
+		t.Fatalf("the layer o opened keeps its return: %v depth %d\n%s", m.stack, m.workDepth, plain(m))
+	}
+	if press(m, "esc"); m.screen != attemptsScreen {
+		t.Fatalf("Esc returns to the attempts: screen %d", m.screen)
 	}
 }
 

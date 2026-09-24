@@ -757,9 +757,18 @@ func (m *Model) settleFocus() {
 	// An open record that vanished leaves the stack, with the reason; when
 	// none is left, its detail closes, and the versions or sources screen
 	// above it.
-	if gone := slices.IndexFunc(m.stack, func(id string) bool { return m.groupOf(id) == nil }); gone >= 0 {
+	vanished := func(id string) bool { return m.groupOf(id) == nil }
+	if gone := slices.IndexFunc(m.stack, vanished); gone >= 0 {
 		m.notice = m.stack[gone] + " is no longer on any readable branch or checkout"
-		m.stack = slices.DeleteFunc(slices.Clone(m.stack), func(id string) bool { return m.groupOf(id) == nil })
+		// The record o opened keeps its return at its new depth, or loses it
+		// with the record.
+		if d := m.workDepth; d != 0 {
+			m.workDepth = len(slices.DeleteFunc(slices.Clone(m.stack[:d]), vanished))
+			if vanished(m.stack[d-1]) {
+				m.workDepth = 0
+			}
+		}
+		m.stack = slices.DeleteFunc(slices.Clone(m.stack), vanished)
 		if len(m.stack) == 0 {
 			m.leaveVersions()
 			if m.back = boardScreen; m.screen == detailScreen || m.screen == versionsScreen {

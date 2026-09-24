@@ -23,9 +23,9 @@ priority, or for Done the date it was last written and its candidate; the
 focused card has a heavy border and a `▶` marker, and each column an accent
 colour that nothing depends on. A card whose current state is only in a
 checkout's uncommitted files is marked `uncommitted`. With a target, a card
-none of whose committed current states is on it is marked `not on main`, and
-the header names the target, except on a card with a live attempt, which runs
-on a branch anyway. Where the current states diverge, one card sits
+none of whose committed current states is on it is marked `not on main`,
+unless it has a live attempt, which runs on a branch anyway; the header names
+the target. Where the current states diverge, one card sits
 in the earliest of their statuses, marked `⑂ 2 states`, and its detail says
 which states exist and where. Work whose current state removes its record is
 listed under Deleted. Done shows the most recently written cards that fit the
