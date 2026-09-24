@@ -104,10 +104,29 @@ unless the report shows the adapter failing.
 ## Next
 
 Owner decision, 2026-09-24: assign this after
-[G-134](G-134-bound-an-attempt-at-its-plan-and.md) lands, so that it is the
-target of G-134's routing experiment: a bounded preparation attempt at
-`xhigh`, then implementation at `medium`, both on Opus 5.5. Assign it with
-`$grove-work G-135 --until plan` then. At assignment, agree the runs per case, the model and reasoning effort, the
-cap, and how the clean `CODEX_HOME` logs in, as G-121 did for Claude. A
-Codex provider, if the report favours it, is separate work that revisits
-G-101.
+[G-134](G-134-bound-an-attempt-at-its-plan-and.md) lands, as the target of
+G-134's routing experiment: a bounded preparation attempt at `xhigh`, then
+implementation at `medium`, both on Opus 5.5. A Codex provider, if the
+report favours it, is separate work that revisits G-101.
+
+Checkpoint, 2026-09-24, headless `/grove-work G-135 --until plan`:
+preparation done, implementation not started, status left `proposed`.
+
+- Branch `worktree-G-135` in `.claude/worktrees/worktree-G-135`, based on
+  main `132709e`; G-135 read at `sha256:0baef170…`.
+- Plan: [G-138](G-138-g-135-codex-eval-row-plan.md),
+  `grove/G-138-g-135-codex-eval-row-plan.md` at
+  `sha256:44786ba824a993ce7f89eae49ba50ea3c4fdc18364722915fa11af7549463369`.
+  It records a free, logged-out `codex exec --json` probe (event shapes up
+  to authentication, what Codex writes into a new `CODEX_HOME`).
+- Waiting on the owner: question
+  [G-139](G-139-what-mandate-and-login-should-th.md) blocks G-135 with the
+  mandate the record's Next says is agreed at assignment (login of the
+  clean `CODEX_HOME`, runs, model, effort, permission mode, cap, and a
+  same-digest Claude pair). Only plan steps 4 and 5, the paid runs and the
+  report, need it; steps 2 and 3 do not.
+- Commands still owned: none. Pending judgment: the owner's approval of
+  G-138, given by launching the continuation.
+- Continuation: `/grove-work G-135 --interaction headless` (or
+  `$grove-work G-135 --interaction headless`) on `worktree-G-135`, or
+  `grove run G-135`; interactive, `/grove-work G-135`.
