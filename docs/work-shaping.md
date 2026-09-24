@@ -77,6 +77,10 @@ to be written for a conversation to have been useful.
 Before proposing anything new, check, without writing:
 
 - `grove list` and a text search of the record bodies for the topic's terms.
+- The term and decision records the topic touches, in full. Before introducing
+  or changing a concept, name any settled term or accepted decision it
+  conflicts with, and any existing term it would duplicate under another
+  word; use or change that record rather than coin a second one.
 - `grove versions` (or `grove versions ID`): proposals and newer versions that
   exist only on another branch or in another worktree. The current checkout is
   not the whole project.
@@ -141,8 +145,13 @@ Never bypass the check by editing frontmatter by hand or retrying blindly.
 
 Use only the record types, fields, and statuses the record model documents.
 Where the schema has term records, domain vocabulary that the conversation
-settles belongs in one (`grove new term "Name"`): meaning and relationships,
-`proposed` until the person confirms it, never execution instructions.
+settles belongs in one (`grove new term "Name"`) when it settles: its meaning,
+its relationships to other terms, its boundaries, and the misleading
+alternatives a reader might reach for. It is `proposed` until the person
+confirms it and never holds execution instructions, implementation state or
+progress; those change without the meaning changing, so they live in the
+record or document that owns them, which the term may link. Changing a
+settled term's meaning is the person's choice.
 Where the schema has pages, knowledge that fits no operational type belongs in
 one (`grove new page "Title"`): a title and prose, no status, and no authority
 that its wording might suggest.
@@ -164,15 +173,27 @@ document when it helps, and say in your return what had no supported home.
 **Questions** are for real, unresolved human choices. Create one when the
 choice blocks or shapes work and nobody present can make it now; set what it
 stops with `--set 'blocks=["G-…"]'`; put the options, evidence, your
-recommendation, and who can answer in its body. Do not create questions for
-technical unknowns you can investigate, or for choices the person made during
-the session.
+recommendation, and who can answer in its body. Persist a consequential
+choice still open before the session waits or ends, in either mode: one left
+in the conversation or in a work record's Next is lost to the next session.
+Do not create questions for technical unknowns you can investigate, or for
+choices the person made during the session.
+
+When a question is answered, keep it: the answer stays in its body and its
+status becomes `resolved`. If the answer is consequential by the threshold
+below, record it as a decision attributed to whoever answered and link it
+from the question's `relates_to`, so the choice does not live only in a
+resolved question's body.
 
 **Decisions** need actual authority. Record one as `accepted` only when a named
 person made a consequential choice, in this session or in a source you can
 link; write who, when, the alternatives, and what would reopen it. A choice
 nobody has made is a `proposed` decision or a question, never an accepted one.
-Routine choices live in the work record, not in decision records.
+Record a decision only when reversing it would be costly, a future reader
+would otherwise lack its reasoning, and there were real alternatives; keep
+it short. Routine choices live in the work record, not in decision records.
+Work names the terms and decisions that govern it in `relates_to`, so
+`grove context` lists them for the next session.
 
 Do not manufacture records. A conversation that only sharpens one existing
 record's acceptance has done its job.
@@ -205,8 +226,8 @@ The same steps, with these bounds:
   start another session.
 - **Missing human choice.** Do not invent the answer or write acceptance that
   presumes it. A scope or design choice that the acceptance depends on is
-  such a choice even when the proposal could be assigned without it; choices
-  "left for the owner" in Next are the interactive form, not this one. Create
+  such a choice even when the proposal could be assigned without it, and a
+  choice "left for the owner" only in Next is not persisted (step 5). Create
   the question with `blocks`, note it in the affected work's Next, commit,
   and return the wait: the question ID, what it stops, and the branch and
   commit holding it.

@@ -209,14 +209,26 @@ plan and record revisions are committed.
 
 Before implementing a unit, read in full what constrains it: every question
 that blocks it, resolved ones included, since the answer is the constraint;
-every prerequisite it builds on; and the plan or review of a prerequisite whose
-interface it uses. The listing told you these exist. It did not tell you what
-they require, and work that contradicts an unread answer is not done.
+every prerequisite it builds on; the plan or review of a prerequisite whose
+interface it uses; and the terms and decisions it links. The listing told you
+these exist. It did not tell you what they require, and work that contradicts
+an unread answer is not done. Before introducing or changing a concept, read
+the terms and decisions that touch it; a conflict with a settled term or an
+accepted decision is a missing human decision, and an existing term under
+another word is the one to use.
 
 The assignment authorizes routine technical decisions inside the documented
 outcome. Do not ask again for blanket permission. Update a plan when evidence
 requires a bounded technical adjustment, keeping why; do not quietly widen the
 assignment.
+
+Capture what settles as the [shaping guide](work-shaping.md#5-write-the-records)
+(`grove guide shape`, step 5) describes, in the execution checkout and on its
+threshold: a concept whose meaning the work settles gets a term record; a
+resolved question the work depends on whose answer is consequential and that
+no decision holds becomes a decision attributed to whoever answered, linked
+from the question; and the record names the terms and decisions that govern
+it in `relates_to`. Writing nothing is right when nothing settled.
 
 Set each record active through the CLI when its implementation starts.
 Reproduce specified bugs with deterministic fixtures before repairing them.
@@ -247,10 +259,15 @@ once on the final combined revision; for several records, review the combined
 diff for regressions across shared helpers while keeping each unit's evidence
 separate. The reviewer does not edit the interfaces under review. If the
 harness cannot supply an independent reviewer, say so; a self-review is never
-labelled independent. A small documentation-only change may be self-checked
-against its acceptance, reported as exactly that. When no independent reviewer
-exists, leave work active if its record or plan requires the review; otherwise
-status follows acceptance and the missing review is reported as open.
+labelled independent. Review also checks knowledge: whether the candidate
+introduces a concept no term defines, contradicts a settled term or an
+accepted decision, depends on a choice still open, or implements a
+consequential choice no decision explains. Each is a finding for the author
+to reconcile, not one the reviewer settles. A small documentation-only change
+may be self-checked against its acceptance, reported as exactly that. When no
+independent reviewer exists, leave work active if its record or plan requires
+the review; otherwise status follows acceptance and the missing review is
+reported as open.
 
 Fix consequential findings with regressions, then re-review. Allow at most
 three fix/review rounds per review gate. After the third, stop: preserve the
@@ -283,7 +300,10 @@ when shipping it would make the choice in practice, such as a default
 behaviour; stop that unit before implementation instead.
 
 - **Interactive:** ask one concise question, with your recommendation, and
-  continue independent work while waiting.
+  continue independent work while waiting. Record a consequential answer as
+  step 5 says. A choice still unanswered at a wait or handoff is persisted
+  as in steps 1 and 2 below, since a checkpoint's pending judgments are not
+  where the next session looks for an open choice.
 - **Headless:** do not invent the answer, pick a default for a product choice,
   launch another session, or loop. Persist the question where the owner will
   find it, in the execution checkout from step 3:
