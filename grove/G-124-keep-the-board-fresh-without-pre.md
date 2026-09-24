@@ -4,11 +4,12 @@ type: work
 title: "Keep the board fresh without pressing r"
 status: review
 created: "2026-09-24T01:23:28Z"
-updated: "2026-09-24T05:09:19Z"
+updated: "2026-09-24T14:57:55Z"
 kind: feature
 size: small
 relates_to: ["G-046", "G-109", "G-123"]
 candidate: "3d4597b02229ae36c623846959e6f49ff048d469"
+approved: "3d4597b02229ae36c623846959e6f49ff048d469"
 ---
 
 ## Outcome
@@ -176,3 +177,5 @@ Ghostty:
 
 Integration: `go run ./cmd/grove approve G-124 "VERDICT"` in this checkout,
 then `go run ./cmd/grove integrate G-124` in the `main` checkout.
+
+Verdict on candidate 3d4597b, 2026-09-24: working as expected
