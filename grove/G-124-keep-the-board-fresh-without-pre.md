@@ -2,9 +2,9 @@
 id: "G-124"
 type: work
 title: "Keep the board fresh without pressing r"
-status: proposed
+status: active
 created: "2026-09-24T01:23:28Z"
-updated: "2026-09-24T01:25:33Z"
+updated: "2026-09-24T04:56:50Z"
 kind: feature
 size: small
 relates_to: ["G-046", "G-109", "G-123"]
@@ -72,6 +72,5 @@ attempt running, and re-reading a detail's timeline on focus.
 
 ## Next
 
-Assign with `/grove-work G-124`. Small. It changes the same package as
-[G-123](G-123-make-board-navigation-and-cards.md); run them one after
-another.
+In progress on `worktree-G-124` from main `2491eda`. No plan needed: small,
+and the proposed design above names every change.
