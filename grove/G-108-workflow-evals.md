@@ -2,10 +2,12 @@
 id: "G-108"
 type: work
 title: "Establish behavioral evaluations for Grove context and workflows"
-status: proposed
+status: review
 created: "2026-09-23T16:05:04Z"
-updated: "2026-09-23T16:48:11Z"
+updated: "2026-09-24T04:18:14Z"
 relates_to: ["G-078", "G-040", "G-107", "G-110"]
+candidate: "60c9537b95cd8968a33d47f7833797cb1bc96ef3"
+approved: "60c9537b95cd8968a33d47f7833797cb1bc96ef3"
 ---
 ## Outcome
 
@@ -132,13 +134,110 @@ digest under evaluation so later cleanup is comparable.
    at or concludes that no change is justified, and says whether a further
    case is worth building. No product change happens in this work.
 
+## Evidence
+
+Headless `/grove-work G-108` session, 2026-09-23, on `worktree-G-108` from
+main `6208e82`, starting from this record at `sha256:ff01c9f0…`. Plan
+[G-115](G-115-g-108-eval-skeleton-plan.md) (`d9dbf23`) holds the design.
+Built, all offline and spending nothing:
+
+- `evals/run.py` (`run` and `selftest`), `evals/fixture/` (the `tasks` tool,
+  its brief, `AGENTS.md` naming `worktree-shape-SLUG` branches) and
+  [`evals/README.md`](../evals/README.md) (command, retention, checks,
+  retrieval facts, rubric, limits); a row in the README's ownership table.
+  Commits `4b5b345`, `399cc5f`, `1f03a12`.
+- Against acceptance 1 to 4, offline: the command builds the CLI and the
+  fixture with `grove init` and a bare remote per run, requires model, runs,
+  budget, permission mode and a clean `--config-dir`, retains transcript,
+  state, versions, guide digest, cost, turns and duration per run, and
+  reports an unavailable harness, unrun cases and the unbuilt Codex row
+  (1). Every acceptance 2 check is implemented and reported per run (2).
+  Retrieval facts come from the trace (3). The rubric has the four questions
+  with anchors and `owner`/`judge` labels (4). None of this has met a real
+  `claude` run yet, so each item is met in software and unexercised in fact.
+- Verification at `1f03a12`: `python3 evals/run.py selftest` prints
+  `selftest: ok` (a fake `claude` in good, bad and worse modes; every check
+  and retrieval fact asserted); signal checks with a sleeping fake: SIGINT,
+  SIGTERM and SIGHUP stop the runner and kill the session; a deleted `main`
+  fails `session-checkout-unchanged` and keeps the run's cost;
+  `grove check` OK; `go vet ./...` and `gofmt -l .` clean; the links in
+  `evals/README.md` resolve. No Go code changed, so the Go suite was not
+  rerun.
+- Independent review [G-119](G-119-g-108-eval-skeleton-review.md), three
+  rounds, examined `1f03a12`: eleven findings fixed, none open.
+
+Third headless session, 2026-09-24, same branch, starting from this record
+at `sha256:ae3f39de…` and G-115 at `sha256:c5db0353…`, after
+[G-118](G-118-what-mandate-should-the-g-108-pa.md) (`1d3ad82`) and
+[G-121](G-121-how-do-the-g-108-eval-runs-log-i.md) (`e57a4c6`) were
+resolved:
+
+- The login left `settings.json` and the account's synced skills and
+  plugins in the config directory, which the runner refused. Decision
+  taken by the session, beyond G-121's answer which covered settings only:
+  a login syncs that content and re-syncs it if removed, and a preview
+  user's session carries it too, so the runner accepts it and records it
+  in the report rather than refusing a directory no login can satisfy.
+  `d565fcf` accepts settings holding only `tui`, `theme` and
+  `autoMemoryEnabled` and the `synced` entries; after the handoff review
+  ([G-126](G-126-g-108-handoff-review-the-login-c.md)) it also requires
+  `autoMemoryEnabled` to be present and false, refuses anything in a
+  synced directory that its manifest does not name or whose manifest is
+  unreadable, and the selftest exercises each refusal and the `surfaced,
+  not blocking` reason (`selftest: ok`).
+- The paid runs, exactly G-118's mandate, from this checkout at `d565fcf`:
+  `python3 evals/run.py run --runs 5 --budget 5 --model claude-opus-5-5
+  --permission-mode auto --config-dir ~/.cache/grove-evals/claude --out
+  ~/.cache/grove-evals/runs/2026-09-23-G-108`. Ten runs, every check
+  passed in every run, $2.93 in all, no denials, timeouts or errors. The
+  output directory is outside every checkout and not committed; the report
+  is read into [G-122](G-122-g-108-baseline-runs-the-missing.md).
+- Acceptance 1 to 4 are now met in fact: the command ran on the real
+  harness with a clean directory and retained everything listed (1); every
+  check was judged on the clone per run (2); retrieval facts came from the
+  trace, all uniform and with no unneeded read (3); the rubric was scored
+  from the clone's records, labelled `judge`, the owner column open (4).
+- Acceptance 5: [G-122](G-122-g-108-baseline-runs-the-missing.md) reports
+  the pattern against G-078 finding 6 (5 of 5 blocked, 5 of 5 companions
+  proposed without a question), configuration, cost and limits, concludes
+  no change is justified, and says which further case pays. No product
+  change happened.
+- Independent review of the runner change and these records:
+  [G-126](G-126-g-108-handoff-review-the-login-c.md), three rounds,
+  examined `c3386ae`; fourteen findings fixed (`b6b3c7a`, `c3386ae`,
+  `7673723`), one left unverified (a skill at a synced ID level without a
+  manifest), and round 3's two findings fixed after the cap and
+  self-checked only.
+- Final verification at `d61b3ef`: `gofmt -l .` and `go vet ./...` clean,
+  `grove check` OK (116 records), `python3 evals/run.py selftest` prints
+  `selftest: ok`, every link in the changed records, `README.md` and
+  `evals/README.md` resolves; no Go file changed on this branch, so the Go
+  suite was not rerun. The candidate differs from `d61b3ef` only by this
+  record.
+
 ## Next
 
-The owner can commit this proposal and assign it with `$grove-work G-108`.
-At assignment, agree the model, the repeat count (five proposed), the per-run
-budget, and the fixture's brief and two topics: preparation must design
-them so the missing-choice topic's planted choice is genuinely the owner's
-and not answerable from the brief, while the companion topic's choice is.
+**Handoff, 2026-09-24 (third headless session).** G-108 alone, on
+`worktree-G-108` in `.claude/worktrees/worktree-G-108`, base main `6208e82`
+(main is now `28f5ddc`, which this branch does not contain; the runs' CLI
+was built from this branch). All five steps of
+[G-115](G-115-g-108-eval-skeleton-plan.md) are done. The paid runs and
+their reading are in Evidence and [G-122](G-122-g-108-baseline-runs-the-missing.md);
+the candidate is the commit holding this text, named by the status change
+that follows it. No command is still running.
+
+For the owner's judgment: read G-122, and if wanted the report at
+`~/.cache/grove-evals/runs/2026-09-23-G-108/report.md` and any run's
+`run.json` and proposal branch (`git -C .../missing-choice-1/p log
+--all`). Two decisions are open and are the owner's, not this work's: the
+rubric's `owner` column, and whether the headless bound should prefer a
+shippable proposal with a non-blocking question over blocking, which G-118
+says the owner would want and which every run did not do because the guide
+says to block. Neither blocks acceptance of this record.
+
+Integration: `go run ./cmd/grove approve G-108 "VERDICT"` in this checkout,
+then `go run ./cmd/grove integrate G-108` in the `main` checkout.
+
 Follow-on candidates, shaped only if the skeleton's report says so: a case
 whose proposal must find and apply a constraint held in a listed
 prerequisite or plan amid plausible distractors, the only candidate that
@@ -167,3 +266,5 @@ and stopping rules in shaping are interactive behaviour the headless skeleton
 cannot see, and stay owner judgment. A debrief step needs no guide text yet:
 acceptance 5 is one, and its review record's form is the evidence for whether
 to generalize it.
+
+Verdict on candidate 60c9537, 2026-09-24: lgtm
