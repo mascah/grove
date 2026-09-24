@@ -2,9 +2,9 @@
 id: "G-124"
 type: work
 title: "Keep the board fresh without pressing r"
-status: review
+status: done
 created: "2026-09-24T01:23:28Z"
-updated: "2026-09-24T14:57:55Z"
+updated: "2026-09-24T14:58:03Z"
 kind: feature
 size: small
 relates_to: ["G-046", "G-109", "G-123"]
