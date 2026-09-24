@@ -166,18 +166,28 @@ Built, all offline and spending nothing:
 
 ## Next
 
-**Checkpoint, 2026-09-23.** G-108 alone, on `worktree-G-108` in
-`.claude/worktrees/worktree-G-108`, base main `6208e82`. Steps 1 to 4 of
-G-115 are done; step 5 (paid runs, then the acceptance 5 review record)
-waits on [G-118](G-118-what-mandate-should-the-g-108-pa.md): the model,
-repeat count, per-run budget, permission mode, config directory, and
-approval of the fixture and topics as built. No command is still running.
-Stays `active`: acceptance 5 is unmet.
+**Checkpoint, 2026-09-23 (second headless session).** G-108 alone, on
+`worktree-G-108` in `.claude/worktrees/worktree-G-108`, base main `6208e82`.
+Steps 1 to 4 of G-115 are done. [G-118](G-118-what-mandate-should-the-g-108-pa.md)
+is resolved (`1d3ad82`): `claude-opus-5-5`, 5 runs per case, $5 per run,
+permission mode `auto` (a valid mode in Claude Code 2.1.281), the fixture
+and topics approved as built, and each missing-choice run to be reported as
+blocking, surfacing (a non-blocking question or a proposed decision) or only
+noting the choice; the check's failure reason now tells the last two apart
+(`433e338`, `selftest: ok`). Step 5 waits on
+[G-121](G-121-how-do-the-g-108-eval-runs-log-i.md): the clean
+`~/.cache/grove-evals/claude` has no login (`Not logged in` at $0 from a
+$0.10-capped probe), and a headless session cannot run `/login`. No command
+is still running. Stays `active`: acceptance 5 is unmet.
 
-When G-118 is resolved, a successor on this branch runs `python3 evals/run.py
-run` with exactly the answered values (a changed fixture first, and a rerun
-of `selftest`), scores the rubric labelled `owner` or `judge`, writes the
-review record acceptance 5 asks for, and hands off into `review`.
+When G-121 is resolved, a successor on this branch runs, from this
+checkout, `python3 evals/run.py run --runs 5 --budget 5 --model
+claude-opus-5-5 --permission-mode auto --config-dir
+~/.cache/grove-evals/claude --out DIR` with `DIR` outside every checkout
+(cap $50, printed first), reads each missing-choice run against G-118's three
+outcomes, scores the rubric labelled `owner` or `judge`, writes the review
+record acceptance 5 asks for against G-078 finding 6 (the lever G-118 names
+is the headless bound's "must block" sentence), and hands off into `review`.
 
 Follow-on candidates, shaped only if the skeleton's report says so: a case
 whose proposal must find and apply a constraint held in a listed
