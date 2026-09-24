@@ -4,9 +4,11 @@
 // checkouts holding each, the focused one's history of commits, and explicit
 // selection of one existing workspace. It reads through Backend, and writes
 // only through Backend's three actions on a record in review (G-044), each
-// behind a prompt: approve, feedback, and integrate; it starts and stops
-// processes only through Backend's Launch and Stop of an attempt (G-046),
-// each behind a prompt too.
+// behind a prompt: approve, feedback, and integrate, and through Answer
+// behind its prompt after the owner's editor has an open question (G-125);
+// it starts and stops processes only through Backend's Launch and Stop of an
+// attempt (G-046), each behind a prompt too, and Edit, which suspends it for
+// that editor.
 package tui
 
 import (
@@ -57,6 +59,12 @@ type Backend struct {
 	// only while one runs, so a moved branch re-reads the board (G-124); nil
 	// leaves that out.
 	Tips func(ctx context.Context, root string) (map[string]string, error)
+	// Edit suspends the board for the owner's editor on path and delivers
+	// done's message when it exits, and Answer resolves a question and
+	// commits its file in root, refusing unless it is still at expect
+	// (G-125); nil leaves e out.
+	Edit   func(path string, done func(error) tea.Msg) tea.Cmd
+	Answer func(ctx context.Context, root, id, expect string) ([]string, error)
 }
 
 type screen int
@@ -223,6 +231,7 @@ type Model struct {
 	diff         string   // a changed file whose diff the detail shows; "" is the content
 	prompt       *prompt  // the open question on the last row, if any
 	result       *outcome // the last action's outcome, on the result screen
+	editing      *editing // the question the editor has, until it exits
 	query        string   // the search's text
 	hit          int      // the search's cursor
 	verKey       string   // a row's key; "" is the ID header, which selects nothing
@@ -469,6 +478,8 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		m.clampScroll()
 	case attemptsMsg:
 		return m.gotAttempts(msg)
+	case editedMsg:
+		return m.edited(msg)
 	case attemptTick:
 		m.ticking = false
 		m.attemptsStale = m.attemptsStale || m.running()
@@ -484,10 +495,16 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		}
 		m.pending, m.acting, m.cancel = "", "", nil
 		title := map[string]string{"approve": "Approved " + msg.about, "feedback": "Feedback recorded on " + msg.about, "integrate": "Integration of " + msg.about,
-			"launch": "Launch of an attempt of " + msg.about, "stop": "Stop of attempt " + msg.about}[msg.kind]
+			"launch": "Launch of an attempt of " + msg.about, "stop": "Stop of attempt " + msg.about, "resolve": "Answer to " + msg.about}[msg.kind]
 		m.result = &outcome{title: title, facts: msg.facts}
 		if msg.kind == "feedback" && msg.err == nil && m.backend.Launch != nil {
 			m.result.facts = append(m.result.facts, "or: R on "+msg.about+" launches a bounded attempt on its branch")
+		}
+		// The record read before the answer names the work it blocked.
+		if g := m.groupOf(msg.about); msg.kind == "resolve" && msg.err == nil && g != nil && m.record(g) != nil && m.backend.Launch != nil {
+			for _, work := range m.record(g).Blocks {
+				m.result.facts = append(m.result.facts, "next: R on "+work+" launches its next attempt")
+			}
 		}
 		if msg.err != nil {
 			m.result.err = msg.err.Error()
@@ -584,7 +601,7 @@ func (m *Model) key(k string) tea.Cmd {
 	case boardScreen:
 		return m.boardKey(k)
 	case detailScreen:
-		m.detailKey(k)
+		return m.detailKey(k)
 	case versionsScreen:
 		return m.versionsKey(k)
 	case chooserScreen:
@@ -592,9 +609,9 @@ func (m *Model) key(k string) tea.Cmd {
 	case sourcesScreen, resultScreen:
 		m.scrollKey(k)
 	case attemptsScreen:
-		m.attemptsKey(k)
+		return m.attemptsKey(k)
 	case attemptScreen:
-		m.attemptKey(k)
+		return m.attemptKey(k)
 	}
 	return nil
 }

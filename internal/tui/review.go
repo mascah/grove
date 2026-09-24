@@ -62,6 +62,7 @@ type prompt struct {
 	cleanup          bool
 	req              *attempt.Request // launch: what Start is asked for, filled in by the prompt
 	attempt          string           // stop: the attempt
+	expect           string           // resolve: the question's revision after the editor
 }
 
 // outcome is what an action returned, shown on the result screen until Esc.
@@ -180,17 +181,30 @@ func (m *Model) projectDir(s *versions.Source) string {
 	return filepath.Join(s.Worktree, filepath.FromSlash(m.res.Prefix))
 }
 
-// judgeRoot finds the checkout in which the shown version can be judged: a
-// valid checkout on its branch whose copy of the record matches its HEAD,
-// since approval and feedback commit that file there. The reason there is
-// none is returned instead.
+// judgeRoot finds the checkout in which the shown version can be judged,
+// since approval and feedback commit the record's file there, or the reason
+// there is none.
 func (m *Model) judgeRoot(g *versions.Group, v *versions.Version) (root, branch, why string) {
+	lv, branch, why := m.checkoutOf(g, v, "judging")
+	if lv == nil {
+		return "", branch, why
+	}
+	return m.projectDir(lv.Source), branch, ""
+}
+
+// checkoutOf finds the checkout that holds the shown version to write it:
+// the one valid checkout on its branch holding the record. It returns that
+// copy, or the reason there is none. doing is "judging", which needs the
+// copy to match HEAD, or "answering", whose uncommitted copy is the owner's
+// answer so far.
+func (m *Model) checkoutOf(g *versions.Group, v *versions.Version, doing string) (lv *versions.Version, branch, why string) {
+	judging := doing == "judging"
 	if v == nil || v.Record == nil {
-		return "", "", "the current state holds no record to judge"
+		return nil, "", "the current state holds no record to " + map[bool]string{true: "judge", false: "answer"}[judging]
 	}
 	branch = branchOf(v)
 	if branch == "" {
-		return "", "", "the current state is on no branch; a and f need a branch checkout"
+		return nil, "", "the current state is on no branch; " + map[bool]string{true: "a and f need", false: "e needs"}[judging] + " a branch checkout"
 	}
 	where := func(s *versions.Source) string {
 		if s.Locator == "." {
@@ -198,26 +212,37 @@ func (m *Model) judgeRoot(g *versions.Group, v *versions.Version) (root, branch,
 		}
 		return "checkout " + s.Locator
 	}
-	if v.Source.Kind == "live" {
-		if v.Change != "unchanged" {
-			return "", branch, "the record has uncommitted changes in " + where(v.Source) + "; commit or discard them before judging it"
-		}
-		return m.projectDir(v.Source), branch, ""
+	dirty := func(s *versions.Source) string {
+		return "the record has uncommitted changes in " + where(s) + "; commit or discard them before " + doing + " it"
 	}
+	if v.Source.Kind == "live" {
+		if judging && v.Change != "unchanged" {
+			return nil, branch, dirty(v.Source)
+		}
+		return v, branch, ""
+	}
+	var found []*versions.Version
 	for _, s := range m.res.Sources {
 		if s.Kind != "live" || s.Ref != v.Source.Ref || !s.Valid {
 			continue
 		}
 		for i := range g.Versions {
-			if lv := &g.Versions[i]; lv.Source == s {
-				if lv.Record == nil || lv.Change != "unchanged" {
-					return "", branch, "the record has uncommitted changes in " + where(s) + "; commit or discard them before judging it"
-				}
-				return m.projectDir(s), branch, ""
+			if cv := &g.Versions[i]; cv.Source == s {
+				found = append(found, cv)
 			}
 		}
 	}
-	return "", branch, "no checkout is on branch " + branch + "; git worktree add one, or run grove approve there"
+	switch {
+	case len(found) > 1:
+		return nil, branch, fmt.Sprintf("%d checkouts are on branch %s, so which one to write is ambiguous", len(found), branch)
+	case len(found) == 0 && judging:
+		return nil, branch, "no checkout is on branch " + branch + "; git worktree add one, or run grove approve there"
+	case len(found) == 0:
+		return nil, branch, "no checkout is on branch " + branch + "; git worktree add one"
+	case found[0].Record == nil || judging && found[0].Change != "unchanged":
+		return nil, branch, dirty(found[0].Source)
+	}
+	return found[0], branch, ""
 }
 
 // targetRoot finds the target's checkout, where integrate runs.
@@ -446,12 +471,19 @@ func (m *Model) promptKey(msg tea.KeyPressMsg) tea.Cmd {
 			m.notice = "cancelled; nothing was launched"
 		} else if p.kind == "stop" {
 			m.notice = "cancelled; nothing was stopped"
+		} else if p.kind == "resolve" {
+			m.notice = unresolved(p)
 		}
 	case msg.Text == "y" && p.kind == "stop":
 		return m.act(p)
 	case msg.Text == "n" && p.kind == "stop":
 		m.prompt = nil
 		m.notice = "cancelled; nothing was stopped"
+	case msg.Text == "y" && p.kind == "resolve":
+		return m.act(p)
+	case msg.Text == "n" && p.kind == "resolve":
+		m.prompt = nil
+		m.notice = unresolved(p)
 	case p.kind == "approve" || p.kind == "feedback" || p.req != nil:
 		switch k {
 		case "enter":
@@ -494,7 +526,7 @@ func (m *Model) promptKey(msg tea.KeyPressMsg) tea.Cmd {
 // key never cancels its Git commands.
 func (m *Model) act(p *prompt) tea.Cmd {
 	m.prompt = nil
-	kind, root, id, text, cleanup, req, about := p.kind, p.root, p.id, strings.TrimSpace(p.text), p.cleanup, p.req, p.id
+	kind, root, id, text, cleanup, req, about, expect := p.kind, p.root, p.id, strings.TrimSpace(p.text), p.cleanup, p.req, p.id, p.expect
 	switch {
 	case kind == "cleanup":
 		kind = "integrate"
@@ -516,6 +548,8 @@ func (m *Model) act(p *prompt) tea.Cmd {
 			facts, err = m.backend.Approve(ctx, root, id, text)
 		case "feedback":
 			facts, err = m.backend.Feedback(ctx, root, id, text)
+		case "resolve":
+			facts, err = m.backend.Answer(ctx, root, id, expect)
 		default:
 			facts, err = m.backend.Integrate(ctx, root, id, cleanup)
 		}
@@ -528,7 +562,7 @@ func (m *Model) act(p *prompt) tea.Cmd {
 // acting names the running action for the banner.
 func actingText(kind string) string {
 	return map[string]string{"approve": "Approving…", "feedback": "Recording the feedback…", "integrate": "Integrating…",
-		"launch": "Launching the attempt…", "stop": "Stopping the attempt…"}[kind]
+		"launch": "Launching the attempt…", "stop": "Stopping the attempt…", "resolve": "Resolving and committing…"}[kind]
 }
 
 // promptRow is the last row while a prompt is open.
@@ -549,6 +583,8 @@ func (m *Model) promptRow(w int) string {
 		text = fmt.Sprintf("Launch %s for %s USD: permission mode, required, e.g. acceptEdits or auto (Enter launches, Esc cancels): %s▏", p.id, p.req.BudgetUSD, p.text)
 	case "stop":
 		text = fmt.Sprintf("Stop attempt %s of %s? Its partial work stays. y/n", p.attempt, p.id)
+	case "resolve":
+		text = fmt.Sprintf("Resolve %s and commit it with your answer on branch %s? y/n   (runs in %s)", p.id, p.branch, p.root)
 	default:
 		text = fmt.Sprintf("Also delete branch %s and remove its worktree? y/n   (%s)", p.branch, p.wt)
 	}
@@ -572,6 +608,11 @@ func (m *Model) resultRows(w int) []string {
 		return append(rows, line("", w), line("Re-reading the board…", w))
 	}
 	return append(rows, line("", w), line("The board has been re-read. Esc returns to the record.", w))
+}
+
+// unresolved says what declining to resolve leaves.
+func unresolved(p *prompt) string {
+	return p.id + " is not resolved; your edit stays uncommitted in " + p.root + ", and e reopens it to resolve"
 }
 
 func short7(commit string) string { return commit[:min(len(commit), 7)] }

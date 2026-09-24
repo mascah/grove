@@ -236,6 +236,11 @@ func (m *Model) render() string {
 			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   a approve   f feedback   i integrate   "+side+"v versions   s   r   Esc back   q quit",
 			"↑↓ PgUp/PgDn  Tab pane  Enter open  a approve  f feedback  i integrate  "+sideKey+"v  Esc  q",
 			"↑↓  Tab  Enter  a  f  i  v  Esc  q quit")
+	case m.screen == detailScreen && m.group() != nil && m.backend.Edit != nil && m.openRecord() != nil && m.openRecord().Type == "question" && m.openRecord().Status == "open":
+		rows, hints = m.detailBody(w, body), pick(w,
+			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   e answer in your editor   "+side+"v versions   s   r   Esc back   q quit",
+			"↑↓ PgUp/PgDn  Tab pane  Enter open  e answer  "+sideKey+"v  Esc  q",
+			"↑↓  Tab  Enter  e answer  v  Esc  q quit")
 	case m.screen == detailScreen && m.group() != nil:
 		rows, hints = m.detailBody(w, body), pick(w,
 			"↑/↓ PgUp/PgDn scroll or move   Tab content, linked, changes, timeline   Enter open   "+side+"v versions and places   s sources   r refresh   Esc back   q quit",
@@ -259,13 +264,21 @@ func (m *Model) render() string {
 	case m.screen == sourcesScreen:
 		rows, hints = m.scrolled(m.sourceRows(w), body, w), pick(w, "↑/↓ PgUp/PgDn scroll   r refresh   Esc back   q quit", "↑↓ scroll  Esc back  q quit")
 	case m.screen == attemptsScreen:
+		answer, key := "", ""
+		if list, _, at := m.listed(); at >= 0 && m.waits(&list[at]) {
+			answer, key = "e answer   ", "e answer  "
+		}
 		rows, hints = m.attemptsBody(w, body), pick(w,
-			"↑/↓ attempts   Enter show it   x stop it   o open its record   r refresh   Esc back   q quit",
-			"↑↓  Enter show  x stop  o record  Esc back  q quit")
+			"↑/↓ attempts   Enter show it   "+answer+"x stop it   o open its record   r refresh   Esc back   q quit",
+			"↑↓  Enter show  "+key+"x stop  o record  Esc back  q quit")
 	case m.screen == attemptScreen:
+		answer, key := "", ""
+		if v := m.attemptOf(m.runID); v != nil && m.waits(v) {
+			answer, key = "e answer the question   ", "e answer  "
+		}
 		rows, hints = m.scrolled(m.attemptRows(w), body, w), pick(w,
-			"↑/↓ PgUp/PgDn scroll   d details   x stop it   o open its record   r refresh   Esc back   q quit",
-			"↑↓ scroll  d details  x stop  o work  Esc back  q quit")
+			"↑/↓ PgUp/PgDn scroll   "+answer+"d details   x stop it   o open its record   r refresh   Esc back   q quit",
+			"↑↓ scroll  "+key+"d details  x stop  o work  Esc back  q quit")
 	default:
 		shelf := "elsewhere"
 		if m.current() {

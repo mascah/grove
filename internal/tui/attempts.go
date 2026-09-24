@@ -223,6 +223,9 @@ func (m *Model) outcome(v *attempt.View) (kind, text string) {
 		if q := m.blockingQuestion(work); q != "" {
 			return "question", "waiting on question " + q + unsaid
 		}
+		if q := m.answeredSince(work, r.Finished); q != "" {
+			return "answered", "waited on question " + q + ", answered since" + unsaid
+		}
 	}
 	status, none := "unreadable", ", with no candidate"
 	if r.Record != nil {
@@ -326,6 +329,12 @@ func (m *Model) standingOf(v *attempt.View) standing {
 		case "question":
 			q, _, _ := strings.Cut(m.blockingQuestion(work), " (")
 			s.short, s.next = "answer question "+q, "o opens "+work+", whose detail lists the question"
+			if m.backend.Edit != nil {
+				s.next = "e answers " + q + " in your editor and offers to resolve it; o opens " + work
+			}
+		case "answered":
+			// Like feedback given: the next launch is still the owner's.
+			s.short, s.next = "question answered: R again", "o opens "+work+": R launches the next attempt"
 		case "failed", "interrupted":
 			s.short, s.next = shortOf(kind, v), "d shows the details and the raw log; R on "+work+" launches again"
 		default:
@@ -351,6 +360,8 @@ func shortOf(kind string, v *attempt.View) string {
 		return "failed: " + strings.TrimPrefix(f.Subtype, "error_")
 	case "question":
 		return "waited on a question"
+	case "answered":
+		return "question answered"
 	case "unhanded":
 		return "ended, no handoff"
 	}
@@ -433,6 +444,23 @@ func (m *Model) blockingQuestion(work string) string {
 	return ""
 }
 
+// answeredSince names a resolved question that blocks work, not asked after
+// an attempt ended and last written in or after the second it ended, as
+// updated counts: the answer that attempt waited for (G-125), or "".
+func (m *Model) answeredSince(work string, ended time.Time) string {
+	if m.res == nil || ended.IsZero() {
+		return ""
+	}
+	for i := range m.res.Groups {
+		q := m.record(&m.res.Groups[i])
+		if q != nil && q.Type == "question" && q.Status == "resolved" && slices.Contains(q.Blocks, work) &&
+			(q.Created == nil || !q.Created.After(ended)) && q.Updated != nil && !q.Updated.Before(ended.Truncate(time.Second)) {
+			return q.ID
+		}
+	}
+	return ""
+}
+
 // attemptTag marks a card whose work has an attempt that may be running.
 func (m *Model) attemptTag(work string) string {
 	for _, v := range m.attempts {
@@ -496,12 +524,12 @@ func (m *Model) openAttempt(id string) {
 	m.runBack, m.screen, m.runID, m.scroll, m.attemptsStale = m.screen, attemptScreen, id, 0, true
 }
 
-func (m *Model) attemptsKey(k string) {
+func (m *Model) attemptsKey(k string) tea.Cmd {
 	list, _, at := m.listed()
 	switch k {
 	case "up", "k", "down", "j":
 		if len(list) == 0 {
-			return
+			return nil
 		}
 		if k == "up" || k == "k" {
 			at--
@@ -521,10 +549,15 @@ func (m *Model) attemptsKey(k string) {
 		if at >= 0 {
 			m.openWork(list[at].Launch.Work)
 		}
+	case "e":
+		if at >= 0 {
+			return m.answerFor(&list[at])
+		}
 	}
+	return nil
 }
 
-func (m *Model) attemptKey(k string) {
+func (m *Model) attemptKey(k string) tea.Cmd {
 	switch k {
 	case "x":
 		if v := m.attemptOf(m.runID); v != nil {
@@ -534,12 +567,17 @@ func (m *Model) attemptKey(k string) {
 		if v := m.attemptOf(m.runID); v != nil {
 			m.openWork(v.Launch.Work)
 		}
+	case "e":
+		if v := m.attemptOf(m.runID); v != nil {
+			return m.answerFor(v)
+		}
 	case "d":
 		m.facts = !m.facts
 		m.clampScroll()
 	default:
 		m.scrollKey(k)
 	}
+	return nil
 }
 
 // openWork opens an attempt's work record, where its reviews and evidence are.
