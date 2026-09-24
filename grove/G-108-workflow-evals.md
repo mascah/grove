@@ -2,9 +2,9 @@
 id: "G-108"
 type: work
 title: "Establish behavioral evaluations for Grove context and workflows"
-status: review
+status: done
 created: "2026-09-23T16:05:04Z"
-updated: "2026-09-24T04:18:14Z"
+updated: "2026-09-24T04:18:59Z"
 relates_to: ["G-078", "G-040", "G-107", "G-110"]
 candidate: "60c9537b95cd8968a33d47f7833797cb1bc96ef3"
 approved: "60c9537b95cd8968a33d47f7833797cb1bc96ef3"
