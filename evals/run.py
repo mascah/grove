@@ -350,7 +350,7 @@ def run(args):
             m, names = os.path.join(d, "manifest.json"), set()
             try:
                 names = {e.get("name", "?") for e in json.load(open(m)).get(kind, [])} if os.path.exists(m) else set()
-            except (ValueError, AttributeError, TypeError):
+            except (ValueError, AttributeError, TypeError, OSError):
                 found.append(f"{kind}/synced/{os.path.basename(d)}/manifest.json unreadable")
             synced[kind] = sorted(synced.get(kind, []) + sorted(names))
             found += [f"{kind}/synced/{os.path.basename(d)}/{e}" for e in sorted(os.listdir(d)) if os.path.isdir(os.path.join(d, e)) and not e.startswith(".") and e not in names] \
@@ -478,17 +478,20 @@ def selftest():
             assert f["guide"] and f["brief"] and f["list"] and not f["context_or_show"], f
             assert "tasks.py" in f["files_read"] and len(f["unneeded"]) == 1 and f["unneeded"][0].endswith(".claude/CLAUDE.md"), f
     assert open(os.path.join(tmp, "good", "report.md")).read().count("- config dir synced skills: pdf") == 1
-    for name, content in (("settings.json", '{"hooks": {}}'), ("settings.json", '{"autoMemoryEnabled": true}'), ("settings.json", '{"tui": "fullscreen"}'),
-                          ("settings.json", "[]"), ("skills/mine/SKILL.md", ""), ("skills/synced/x/mine/SKILL.md", ""), ("skills/synced/x/manifest.json", "{"),
-                          ("skills/synced/stray.json", ""), ("plugins/synced/y/mine/plugin.json", "")):
+    for name, content, reason in (("settings.json", '{"autoMemoryEnabled": false, "hooks": {}}', "key hooks"),
+                                  ("settings.json", '{"autoMemoryEnabled": true}', "autoMemoryEnabled"), ("settings.json", '{"tui": "fullscreen"}', "autoMemoryEnabled"),
+                                  ("settings.json", "[]", "key not an object"), ("skills/mine/SKILL.md", "", "skills/mine"),
+                                  ("skills/synced/x/mine/SKILL.md", "", "skills/synced/x/mine"), ("skills/synced/x/manifest.json", "{", "manifest.json unreadable"),
+                                  ("skills/synced/stray.json", "", "skills/synced/stray.json"), ("plugins/synced/y/mine/plugin.json", "", "plugins/synced/y/mine")):
         os.makedirs(os.path.dirname(os.path.join(config, name)), exist_ok=True)
         saved = open(os.path.join(config, name)).read() if os.path.exists(os.path.join(config, name)) else None
         open(os.path.join(config, name), "w").write(content)
+        args.out = os.path.join(tmp, "refused-" + reason.replace("/", "-"))  # fresh, so an accepted shape runs and fails the assertion below
         try:
             run(args)
             raise AssertionError(f"{name} accepted")
         except SystemExit as err:
-            assert "not clean" in str(err), (name, err)
+            assert "not clean" in str(err) and reason in str(err), (name, reason, err)
         open(os.path.join(config, name), "w").write(saved) if saved is not None else shutil.rmtree(os.path.dirname(os.path.join(config, name)))
     shutil.rmtree(tmp)
     print("selftest: ok")
