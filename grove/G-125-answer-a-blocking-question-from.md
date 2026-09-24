@@ -2,12 +2,13 @@
 id: "G-125"
 type: work
 title: "Answer a blocking question from the board"
-status: active
+status: review
 created: "2026-09-24T01:23:28Z"
-updated: "2026-09-24T15:07:23Z"
+updated: "2026-09-24T15:26:33Z"
 kind: feature
 size: medium
 relates_to: ["G-044", "G-046", "G-079", "G-114", "G-123"]
+candidate: "6833eb5c0cb1c19ef6d80f04a3ceba6feedf210d"
 ---
 
 ## Outcome
