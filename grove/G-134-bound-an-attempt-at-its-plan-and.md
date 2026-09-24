@@ -212,20 +212,129 @@ universal plan gate; and bounds at other steps.
 6. `grove check` passes; `gofmt`, `go vet`, the full uncached suite and the
    pseudo-terminal script pass; documentation links resolve.
 
+## Evidence
+
+Headless attempt `G-134.20260924T220310Z`, branch `worktree-G-134` in
+`.claude/worktrees/worktree-G-134`, base `98ce628` (main), started from this
+record at `sha256:f56ade5e…` and wrote plan
+[G-136](G-136-g-134-plan-plan-bound-per-phase.md) (`c197477`) before
+implementing. Implementation `a84d01d`, `f712cfb`, `ccbb73c`; the candidate
+is the commit that records this evidence, named in `candidate`.
+
+Decisions taken, each routine within the proposed design:
+
+- The reviewer definition's one owner is this repository's
+  [`.claude/agents/grove-reviewer.md`](../.claude/agents/grove-reviewer.md),
+  embedded by `guides.go` (a named dot-path embeds) and written verbatim by
+  `init` as a managed file, so `init` here reports it `unchanged`.
+  Frontmatter: `model: inherit`, `effort: high`, `disallowedTools: Edit,
+  Write, NotebookEdit`.
+- `--effort` is one token passed through: the provider owns the values and
+  refuses others. `--until` accepts only `plan`.
+- The reviewer digest is read from the worktree's project directory at
+  launch: `sha256:…`, `none`, or empty for an attempt before the field.
+- `R` asks three optional prompts after budget and mode, bound, model and
+  effort, where Enter alone asks for nothing.
+- Plan ready requires a clean, successful end of the latest attempt
+  launched with `until: plan`, no open question and no candidate, the record
+  readable and committed and the worktree clean; anything less ends without
+  a handoff (review finding 1).
+
+Per acceptance item:
+
+1. Step 4 states the bound (with a pointer in Inputs), Lifecycle says a
+   bounded assignment leaves the status as found, and step 6 names
+   `grove-reviewer` and what the session passes it. Both adapters and init's
+   `assignmentData` accept `--until plan` and still call any other bound,
+   mode or text an error; the bound is passed to no command.
+   `grove guide work` prints it. **Guides digest: `3c9996e33e42` at `98ce628`
+   (recomputed from that commit's guides), `0c163c41a0f2` at `ccbb73c`.**
+2. `grove run ID --until plan --model M --effort E` and `R` carry all three
+   in the command (`/grove-work ID --until plan --interaction headless …
+   --model M --effort E`). `attempt.json`, `grove attempt` (`Requested:` and
+   `Cost by model:`) and the attempt screen (`Asked`, and the split in
+   `Budget` when more than one model spent) show them beside the init's
+   actual model. Without the options, the command and output are as before
+   plus the `Requested:` fact. Tests: `TestInputsChanged`,
+   `TestRunToResult`, `TestRefusals`, `TestAttemptCommandsUsage`,
+   `TestLaunchFromTheDetail`, `TestAttemptScreenHonesty`.
+3. With the fake provider: the command, launch fields, the board's
+   plan-ready standing under Needs you and its superseded form
+   (`TestAttemptOutcomes`, `TestAttemptStandings`), and the prompts in the
+   pseudo-terminal script. With the real provider (Claude Code 2.1.282), in
+   a disposable clone of `a84d01d` at `/tmp/g134-clone` (removed afterwards),
+   on a fixture work record the clone numbered G-137 (the clone's own
+   counter, not this repository's G-137):
+   - A bounded attempt on `opus` at `medium` (`G-137.20260924T221429Z`) cost
+     $0.46 over 1 minute. It committed plan G-138 with `work: ["G-137"]`,
+     then a checkpoint in the record's Next naming the plan's path and
+     revision and the continuation `/grove-work G-137 --interaction
+     headless`. The record stayed `proposed`, and `git diff --stat
+     main worktree-G-137` showed only `grove/`. Its init event listed
+     `grove-reviewer` among the agents, so the provider loads the
+     definition.
+   - The real board, driven through a pseudo-terminal, listed it under Needs
+     you as `plan ready: read it, then R`. The screen showed the requested
+     bound, model and effort, the reviewer digest and the $0.46.
+   - A second bounded run with nothing changed (`G-137.20260924T221651Z`,
+     $0.26) returned the same checkpoint, wrote nothing, and left HEAD at
+     `87be73f`.
+   - `R` on the board then launched the implementation on the reused
+     worktree from `87be73f`, with no `--until` (`G-137.20260924T221717Z`).
+     It was stopped at once and cost $0.24.
+   - Total real spend: $0.96. The screen draws of that last launch are
+     recorded, but the driver's final wait missed a frame, so its facts come
+     from `grove attempt`.
+4. `init` writes `.claude/agents/grove-reviewer.md` with the managed marker,
+   reported `created` then `unchanged` (`TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles`).
+   The kept and updated verdicts use the same loop as the skills. Attempt
+   facts show the digest or `no reviewer definition`.
+5. Not in this candidate by its own terms: the experiment runs on the first
+   real assignment after this lands, G-135, whose record reports it. The
+   owner confirms that budget at assignment.
+6. At `ccbb73c`, all passed: `go vet ./...`, `gofmt -l .` (empty),
+   `go run ./cmd/grove check` (`OK: 132 records`),
+   `go test -count=1 -timeout 120s ./...` (every package ok), and
+   `python3 internal/tui/testdata/terminal.py` on a fresh build (11
+   scenarios ok). Every relative link in the changed Markdown resolves.
+   `./internal/attempt` alone ran in 4.7 s, close to the five-second rule;
+   it was about 4.4 s before.
+
+Review: [G-137](G-137-g-134-review-plan-bound-per-phas.md), two rounds by
+an independent subagent given the `grove-reviewer` brief (the definition
+could not be dispatched in a session that predates it). Round 1 had two
+findings and two wording points, all fixed or kept as limits; round 2 had
+none.
+
+Limits:
+
+- An attempt that ignores the bound and commits the record as `active`
+  still reads as plan ready: the launch does not record the status it
+  found.
+- The reviewer is read-only for Bash by instruction only.
+- Whether the provider applies an agent's `effort: high` was not observed:
+  the result event's cost by model does not show effort.
+- No review in this attempt ran through the definition itself.
+- The installed `~/.local/bin/grove` lags until rebuilt.
+
 ## Next
 
-The owner can commit this proposal and assign it with `$grove-work G-134`.
-Everything is chosen above except two things that cannot be known before
-assignment: the experiment's target item, and confirmation of its budget,
-which is a paid mandate. The owner chose the target on 2026-09-24:
-[G-135](G-135-run-the-g-108-eval-pair-on-codex.md), held until this lands.
-Fallbacks if that changes: the follow-on G-129 left open (an attempt owner
-that flags a last message promising a continuation), Go work with tests of
-the kind the sixteen attempts mostly did, needing a short shaping first; or
-the prerequisite-constraint eval case in G-108's Next. [G-110](G-110-external-preview.md) is not a good first
-target: it is large and would stop on owner choices during preparation,
-which muddies the plan-sufficiency reading. The independent review should read the plan bound
-against the amended G-055 and the guide's Lifecycle paragraph. Follow-on, shaped only after this lands: the bounded run as the
-first work-row evaluation case for the G-108 suite, about $1.60 a run, with
-clone checks on the plan record, the unchanged status and the checkpoint;
-role profiles and a second harness wait on G-135's report.
+In review with the candidate this record names. The integrator's actions:
+
+1. Optionally, try it: `go run ./cmd/grove run G-NNN --until plan --budget 2
+   --permission-mode auto --effort xhigh` on real work, then `A` on the
+   board. Or read the clone evidence above.
+2. `go run ./cmd/grove approve G-134 "VERDICT"` in this checkout
+   (`.claude/worktrees/worktree-G-134`), then `go run ./cmd/grove integrate
+   G-134` in the `main` checkout. Or `go run ./cmd/grove feedback G-134
+   "TEXT"` here.
+3. After integration, rebuild the installed binary and assign
+   [G-135](G-135-run-the-g-108-eval-pair-on-codex.md) for acceptance 5's
+   experiment: a bounded attempt on Opus 5.5 at `xhigh`, then the
+   implementation at `medium`. It is reviewed through `grove-reviewer`, and
+   the owner confirms the budget, proposed cap $30.
+
+Follow-on, from before the assignment, still open: the bounded run as the
+first work-row case of the G-108 evaluation suite; role profiles and a
+second harness wait on G-135's report. [G-110](G-110-external-preview.md)
+remains a poor first target for the experiment.
