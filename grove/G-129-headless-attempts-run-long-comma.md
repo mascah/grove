@@ -4,9 +4,10 @@ type: work
 title: "Headless attempts run long commands in the foreground, never as a background continuation"
 status: review
 created: "2026-09-24T04:49:40Z"
-updated: "2026-09-24T15:49:14Z"
+updated: "2026-09-24T17:30:13Z"
 relates_to: ["G-114", "G-108", "G-045"]
 candidate: "8868ba4"
+approved: "8868ba4"
 ---
 
 ## Outcome
@@ -167,3 +168,5 @@ owner's result reconciliation flag an attempt whose last message promises
 a continuation?
 
 Feedback on candidate 347e3ab, 2026-09-24: poke
+
+Verdict on candidate 8868ba4, 2026-09-24: lgtm
