@@ -2,7 +2,7 @@
 id: "G-118"
 type: question
 title: "What mandate should the G-108 paid eval runs have?"
-status: open
+status: resolved
 created: "2026-09-23T19:54:34Z"
 updated: "2026-09-23T19:54:49Z"
 blocks: ["G-108"]
@@ -56,3 +56,14 @@ review G-108 acceptance 5 asks for.
 
 Waits for the owner. Answer in this record, set `status=resolved`, then
 assign `/grove-work G-108` again on `worktree-G-108`.
+
+1. Use opus 5.5 for now
+2. 5
+3. $5
+4. I think auto mode would be better than bypassPermissions
+5. Approved as built. The planted choice is reversible, not fundamental:
+   a run that blocks follows the guide as written, a run that ships the
+   proposal with a non-blocking question or a proposed decision is what I
+   want, and a run that only notes the choice in Next is the G-078
+   failure. Report each run against those three. The lever, if the
+   pattern shows it, is the headless bound's "must block" sentence.
