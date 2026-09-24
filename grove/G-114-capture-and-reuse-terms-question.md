@@ -2,10 +2,10 @@
 id: "G-114"
 type: work
 title: "Capture and reuse terms, questions and decisions across shaping, work and review"
-status: proposed
+status: active
 created: "2026-09-23T19:44:56Z"
-updated: "2026-09-24T04:25:36Z"
-relates_to: ["G-037", "G-056", "G-107", "G-108", "G-118", "G-122", "G-125"]
+updated: "2026-09-24T04:31:44Z"
+relates_to: ["G-037", "G-051", "G-056", "G-107", "G-108", "G-118", "G-122", "G-125"]
 ---
 ## Outcome
 
@@ -140,10 +140,13 @@ shows links present and unread rather than absent.
 
 ## Next
 
-The wait this record had is over: G-108's baseline ran at guides digest
-`3f5487904c61`, which main still prints, so the guide edits can land now
-and the pair's first rerun then differs from the baseline by this record
-alone. The owner can assign it with `/grove-work G-114`.
+Checkpoint, 2026-09-24, headless `/grove-work G-114` on `worktree-G-114`,
+based on main `25525cf` (record revision `f4b81aa`). No plan needed: the
+In scope list names each rule and both guides, and the change is guide text
+and two record bodies. Done: guide edits `d2379f0` (guides digest
+`dff386aa5bb2`), G-056 repair `08a30b6`, `relates_to` gains G-051, which
+governs term records. Pending: an independent review of the diff, then the
+G-108 pair rerun at the reviewed guides, then Evidence and Review.
 
 Owner decisions, 2026-09-24, in the shaping session that refined this
 record:
