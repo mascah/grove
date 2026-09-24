@@ -200,12 +200,18 @@ resolved:
   proposed without a question), configuration, cost and limits, concludes
   no change is justified, and says which further case pays. No product
   change happened.
-- Verification after the records were written: `gofmt -l .` and `go vet
-  ./...` clean, `grove check` OK (115 records), `selftest: ok`, every link
-  in the changed records and `evals/README.md` resolves; no Go file
-  changed on this branch, so the Go suite was not rerun. Independent
-  review of the runner change and these records:
-  [G-126](G-126-g-108-handoff-review-the-login-c.md).
+- Independent review of the runner change and these records:
+  [G-126](G-126-g-108-handoff-review-the-login-c.md), three rounds,
+  examined `c3386ae`; fourteen findings fixed (`b6b3c7a`, `c3386ae`,
+  `7673723`), one left unverified (a skill at a synced ID level without a
+  manifest), and round 3's two findings fixed after the cap and
+  self-checked only.
+- Final verification at `d61b3ef`: `gofmt -l .` and `go vet ./...` clean,
+  `grove check` OK (116 records), `python3 evals/run.py selftest` prints
+  `selftest: ok`, every link in the changed records, `README.md` and
+  `evals/README.md` resolves; no Go file changed on this branch, so the Go
+  suite was not rerun. The candidate differs from `d61b3ef` only by this
+  record.
 
 ## Next
 
@@ -215,8 +221,8 @@ resolved:
 was built from this branch). All five steps of
 [G-115](G-115-g-108-eval-skeleton-plan.md) are done. The paid runs and
 their reading are in Evidence and [G-122](G-122-g-108-baseline-runs-the-missing.md);
-the candidate commit is named in the status change that follows this
-commit. No command is still running.
+the candidate is the commit holding this text, named by the status change
+that follows it. No command is still running.
 
 For the owner's judgment: read G-122, and if wanted the report at
 `~/.cache/grove-evals/runs/2026-09-23-G-108/report.md` and any run's
