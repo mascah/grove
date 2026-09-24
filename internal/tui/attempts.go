@@ -227,6 +227,11 @@ func (m *Model) outcome(v *attempt.View) (kind, text string) {
 			return "answered", "waited on question " + q + ", answered since" + unsaid
 		}
 	}
+	// Bounded at its plan, a clean end with no question and no candidate is
+	// the plan awaiting the owner's reading, not a missing handoff.
+	if v.Launch.Until == "plan" && !review {
+		return "plan", "plan ready: " + work + " stopped at its plan on " + v.Launch.Branch + unsaid
+	}
 	status, none := "unreadable", ", with no candidate"
 	if r.Record != nil {
 		status = r.Record.Status
@@ -335,6 +340,9 @@ func (m *Model) standingOf(v *attempt.View) standing {
 		case "answered":
 			// Like feedback given: the next launch is still the owner's.
 			s.short, s.next = "question answered: R again", "o opens "+work+": R launches the next attempt"
+		case "plan":
+			// Launching without the bound is the owner's approval of the plan.
+			s.short, s.next = "plan ready: read it, R implements", "o opens "+work+", whose detail lists its plan; R there launches the implementation from it, without the bound"
 		case "failed", "interrupted":
 			s.short, s.next = shortOf(kind, v), "d shows the details and the raw log; R on "+work+" launches again"
 		default:
@@ -362,6 +370,8 @@ func shortOf(kind string, v *attempt.View) string {
 		return "waited on a question"
 	case "answered":
 		return "question answered"
+	case "plan":
+		return "stopped at its plan"
 	case "unhanded":
 		return "ended, no handoff"
 	}
@@ -678,7 +688,9 @@ func (p *prompt) where() string {
 }
 
 // launchKey takes Enter in the launch prompt: the budget, checked, then the
-// permission mode, then the launch. Neither has a default (G-045).
+// permission mode, neither with a default (G-045); then the optional bound,
+// model and effort (G-134), where Enter alone asks for nothing, then the
+// launch.
 func (m *Model) launchKey(p *prompt) tea.Cmd {
 	text := strings.TrimSpace(p.text)
 	switch {
@@ -686,10 +698,20 @@ func (m *Model) launchKey(p *prompt) tea.Cmd {
 		m.notice = "the budget is a positive dollar amount, such as 2 or 0.5"
 	case p.kind == "budget":
 		p.req.BudgetUSD, p.kind, p.text = text, "mode", ""
-	case text == "" || strings.ContainsAny(text, " \t"):
+	case p.kind == "mode" && (text == "" || strings.ContainsAny(text, " \t")):
 		m.notice = "type one permission mode, such as acceptEdits or auto, or Esc"
+	case p.kind == "mode":
+		p.req.PermissionMode, p.kind, p.text = text, "until", ""
+	case p.kind == "until" && text != "" && text != "plan":
+		m.notice = "type plan to stop at the plan, or nothing to run through to the handoff"
+	case p.kind == "until":
+		p.req.Until, p.kind, p.text = text, "model", ""
+	case strings.ContainsAny(text, " \t"):
+		m.notice = "type one word, or nothing for the provider's default"
+	case p.kind == "model":
+		p.req.Model, p.kind, p.text = text, "effort", ""
 	default:
-		p.req.PermissionMode = text
+		p.req.Effort = text
 		return m.act(p)
 	}
 	return nil
@@ -802,9 +824,13 @@ func (m *Model) attemptRows(w int) []string {
 		model += " · " + l.ClaudeVersion
 	}
 	field("Model", model, pink)
+	field("Asked", attempt.Requested(l), pink)
 	spent, budget := "", l.BudgetUSD
 	if r := v.Result; r != nil && r.Events.Result != nil {
 		spent = fmt.Sprintf("$%.2f of ", r.Events.Result.CostUSD)
+		if costs := r.Events.Result.ModelCostUSD; len(costs) > 1 {
+			spent = fmt.Sprintf("$%.2f (%s) of ", r.Events.Result.CostUSD, attempt.CostByModel(costs))
+		}
 	}
 	switch {
 	case spent != "":
@@ -1008,6 +1034,7 @@ func entryRow(e attempt.Entry, w int) string {
 func launched(l *attempt.Launch) []string {
 	return []string{
 		fmt.Sprintf("attempt: %s started; owner pid %d, session %s, budget %s USD, permission mode %s", l.Attempt, l.Owner, l.SessionID, l.BudgetUSD, l.PermissionMode),
+		"requested: " + attempt.Requested(l),
 		"it runs without this board: closing Grove leaves it running, A lists attempts, x stops one",
 	}
 }

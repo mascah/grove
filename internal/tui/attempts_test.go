@@ -154,12 +154,43 @@ func TestLaunchFromTheDetail(t *testing.T) {
 		t.Fatal("an empty mode is refused and nothing launches")
 	}
 	typeText(m, "auto")
+	press(m, "enter")
+	if s := plain(m); m.prompt == nil || m.prompt.kind != "until" || !strings.Contains(s, "Launch W-002: plan stops it at a committed plan; Enter alone runs through") {
+		t.Fatalf("the mode leads to the optional bound:\n%s", s)
+	}
+	typeText(m, "step")
+	press(m, "enter")
+	if m.prompt == nil || m.prompt.kind != "until" || !strings.Contains(plain(m), "type plan to stop at the plan") {
+		t.Fatalf("a bound other than plan is refused:\n%s", plain(m))
+	}
+	for range "step" {
+		press(m, "backspace")
+	}
+	typeText(m, "plan")
+	press(m, "enter")
+	if s := plain(m); m.prompt == nil || m.prompt.kind != "model" || !strings.Contains(s, "Launch W-002: model, e.g. opus") {
+		t.Fatalf("the bound leads to the optional model:\n%s", s)
+	}
+	typeText(m, "opus")
+	press(m, "enter")
+	if s := plain(m); m.prompt == nil || m.prompt.kind != "effort" || !strings.Contains(s, "Launch W-002: effort, e.g. medium") {
+		t.Fatalf("the model leads to the optional effort:\n%s", s)
+	}
+	typeText(m, "x high")
+	press(m, "enter")
+	if m.prompt == nil || !strings.Contains(plain(m), "type one word") || len(r.launches) != 0 {
+		t.Fatal("an effort of two words is refused and nothing launches")
+	}
+	for range " high" {
+		press(m, "backspace")
+	}
+	typeText(m, "high")
 	cmd := press(m, "enter")
 	if m.pending != "act" || !strings.Contains(plain(m), "Launching the attempt…") {
 		t.Fatalf("Enter launches: %q", m.pending)
 	}
 	settle(m, cmd)
-	want := attempt.Request{Root: "/repo/.", ID: "W-002", Expect: fx.twoBranches().Groups[1].Versions[1].Revision, BudgetUSD: "2.5", PermissionMode: "auto"}
+	want := attempt.Request{Root: "/repo/.", ID: "W-002", Expect: fx.twoBranches().Groups[1].Versions[1].Revision, BudgetUSD: "2.5", PermissionMode: "auto", Until: "plan", Model: "opus", Effort: "xhigh"}
 	if len(r.launches) != 1 || r.launches[0] != want {
 		t.Fatalf("launched %+v, want %+v", r.launches, want)
 	}
@@ -183,7 +214,11 @@ func TestLaunchFromTheDetail(t *testing.T) {
 	typeText(m, "1")
 	press(m, "enter")
 	typeText(m, "auto")
+	press(m, "enter", "enter", "enter") // no bound, model or effort
 	settle(m, press(m, "enter"))
+	if r.launches[1].Until != "" || r.launches[1].Model != "" || r.launches[1].Effort != "" {
+		t.Fatalf("Enter alone asks for nothing more: %+v", r.launches[1])
+	}
 	if s := plain(m); !strings.Contains(s, "NOT DONE: W-002 changed since it was read") {
 		t.Fatalf("a refusal shows:\n%s", s)
 	}
@@ -222,6 +257,7 @@ func TestLaunchPlace(t *testing.T) {
 		typeText(m, "1")
 		press(m, "enter")
 		typeText(m, "auto")
+		press(m, "enter", "enter", "enter")
 		settle(m, press(m, "enter"))
 		return r.launches[0]
 	}
@@ -349,10 +385,17 @@ func TestFeedbackContinuesOnTheCandidateBranch(t *testing.T) {
 	typeText(m, "1")
 	press(m, "enter")
 	typeText(m, "acceptEdits")
+	press(m, "enter", "enter", "enter")
 	settle(m, press(m, "enter"))
 	if got := r.launches[0]; got.Branch != "feature" || got.Worktree != "/repo/feat" || got.Expect == "" {
 		t.Fatalf("%+v", got)
 	}
+}
+
+// bounded is an attempt launched with --until plan.
+func bounded(v attempt.View) attempt.View {
+	v.Launch.Until = "plan"
+	return v
 }
 
 // The outcome is derived from the attempt's files and the records: only a
@@ -398,6 +441,11 @@ func TestAttemptOutcomes(t *testing.T) {
 		// leftover untracked files do not, and nothing committed later does.
 		{view("W-001", "14", attempt.Finished, &attempt.Result{Dirty: true, Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "review", Candidate: "c0ffee12", Revision: "sha256:then"}}),
 			"candidate ready: W-001 in review on worktree-W-001 with candidate c0ffee1"},
+		// Bounded at its plan: a clean end is the plan ready, a failure still a failure.
+		{bounded(view("W-002", "15", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "proposed"}})),
+			"plan ready: W-002 stopped at its plan on worktree-W-002"},
+		{bounded(view("W-002", "16", attempt.Finished, &attempt.Result{ExitCode: 1, Events: attempt.Events{Result: &attempt.Final{Subtype: "error_max_budget_usd", IsError: true}}})),
+			"failed: error_max_budget_usd (exit 1)"},
 	}
 	m.attempts = []attempt.View{view("W-009", "6", attempt.Finished, nil), view("W-009", "0", attempt.Finished, nil)}
 	for _, c := range cases {
@@ -573,6 +621,7 @@ func TestAttemptStandings(t *testing.T) {
 	add("Q-002", "Red or blue?", "open", "", "W-107")
 	add("W-107", "Asked", "active", "")
 	add("W-108", "Continued by hand", "review", "beefcafe")
+	add("W-109", "Planned", "proposed", "")
 	m := openRuns(t, &fake{res: res}, &runs{}, 120, 36)
 	ok := &attempt.Final{Subtype: "success"}
 	ready := func(id, stamp string) attempt.View {
@@ -599,6 +648,11 @@ func TestAttemptStandings(t *testing.T) {
 		// Continued outside an attempt to another candidate: a approves that one, not this.
 		{ready("W-108", "1"), settled, "candidate c0ffee1, superseded", "Candidate ready: W-108 in review on worktree-W-108 with candidate c0ffee1. W-108 has moved on: it is in review with candidate beefcaf.", ""},
 		{ready("W-999", "1"), needsYou, "judge candidate c0ffee1", "Candidate ready: W-999 in review on worktree-W-999 with candidate c0ffee1.", "o opens W-999: a approves, f gives feedback"},
+		// Bounded at the plan: the owner reads it, and R without the bound implements.
+		{bounded(view("W-109", "1", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "proposed"}})), needsYou, "plan ready: read it, R implements",
+			"Plan ready: W-109 stopped at its plan on worktree-W-109.", "o opens W-109, whose detail lists its plan; R there launches the implementation from it, without the bound"},
+		{bounded(view("W-109", "0", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "proposed"}})), settled, "stopped at its plan, superseded",
+			"Plan ready: W-109 stopped at its plan on worktree-W-109. A later attempt of W-109 followed this one.", ""},
 	}
 	for _, c := range cases {
 		m.attempts = append(m.attempts, c.v)
@@ -689,6 +743,22 @@ func TestAttemptScreenHonesty(t *testing.T) {
 			t.Fatalf("lacks %q:\n%s", want, s)
 		}
 	}
+	// What was asked beside what ran, and each model's share of the spend.
+	split := bounded(view("W-002", "20260923T013000Z", attempt.Finished, &attempt.Result{Events: attempt.Events{Init: &attempt.Init{Model: "claude-opus-5-5"},
+		Result: &attempt.Final{Subtype: "success", CostUSD: 3, ModelCostUSD: map[string]float64{"claude-opus-5-5": 2.5, "claude-sonnet-5": 0.5}}}}))
+	split.Launch.Model, split.Launch.Effort, split.Launch.Reviewer = "opus", "xhigh", "none"
+	r.set(split)
+	m.openAttempt(split.Launch.Attempt)
+	settle(m, m.wantAttempts())
+	s = plain(m)
+	for _, want := range []string{"Asked    until plan, model opus, effort xhigh, no reviewer definition", "Budget   $3.00 (claude-opus-5-5 $2.50, claude-sonnet-5 $0.50) of $2"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("lacks %q:\n%s", want, s)
+		}
+	}
+	m.openAttempt(stopped.Launch.Attempt)
+	r.set(stopped)
+	settle(m, m.wantAttempts())
 	running := view("W-002", "20260923T010000Z", attempt.Running, nil)
 	r.set(running)
 	settle(m, press(m, "r"))

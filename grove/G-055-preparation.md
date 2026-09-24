@@ -18,7 +18,9 @@ obvious. It happens inside an assignment's mandate and does not widen it.
 
 Preparation is an activity, not a status and not an approval gate: a technical
 plan does not wait for a human sign-off unless it needs a product choice the
-work does not make.
+work does not make. A caller may bound an attempt at its plan
+([G-134](G-134-bound-an-attempt-at-its-plan-and.md)); that is the end of the
+caller's mandate, not a gate the plan needs.
 
 ## Relationships
 

@@ -2,9 +2,9 @@
 id: "G-134"
 type: work
 title: "Bound an attempt at its plan and choose each phase's model and reviewer"
-status: proposed
+status: active
 created: "2026-09-24T21:48:22Z"
-updated: "2026-09-24T21:49:48Z"
+updated: "2026-09-24T22:07:22Z"
 relates_to: ["G-045", "G-046", "G-055", "G-101", "G-108", "G-109", "G-114", "G-135"]
 ---
 

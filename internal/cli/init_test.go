@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mascah/grove"
 	"github.com/mascah/grove/internal/repo"
 )
 
@@ -50,6 +51,7 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 	want := "created grove.yaml\ncreated grove\ncreated grove/brief.md (a placeholder that states no intent)\n" +
 		"created .agents/skills/grove-shape/SKILL.md\ncreated .agents/skills/grove-shape/agents/openai.yaml\n" +
 		"created .agents/skills/grove-work/SKILL.md\ncreated .agents/skills/grove-work/agents/openai.yaml\n" +
+		"created .claude/agents/grove-reviewer.md\n" +
 		"created .claude/skills/grove-shape/SKILL.md\ncreated .claude/skills/grove-work/SKILL.md\n"
 	if out != want || !strings.Contains(errOut, "Project: "+root) {
 		t.Fatalf("stdout=%q stderr=%q", out, errOut)
@@ -64,7 +66,12 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 		}
 	}
 	portable := map[string]string{".claude/skills/grove-work/SKILL.md": string(adapter)}
-	for _, relative := range []string{".claude/skills/grove-shape/SKILL.md", ".agents/skills/grove-work/SKILL.md", ".agents/skills/grove-shape/SKILL.md", ".agents/skills/grove-work/agents/openai.yaml"} {
+	// The reviewer is written verbatim from this repository's own copy, which
+	// must carry the marker or init would keep what it just wrote as the user's.
+	if !strings.Contains(grove.Reviewer, managedMarker) || !strings.Contains(grove.Reviewer, "name: grove-reviewer\n") {
+		t.Fatal("the embedded reviewer definition must be named grove-reviewer and carry the managed marker")
+	}
+	for _, relative := range []string{".claude/agents/grove-reviewer.md", ".claude/skills/grove-shape/SKILL.md", ".agents/skills/grove-work/SKILL.md", ".agents/skills/grove-shape/SKILL.md", ".agents/skills/grove-work/agents/openai.yaml"} {
 		source, err := os.ReadFile(filepath.Join(root, relative))
 		if err != nil {
 			t.Fatal(err)
@@ -112,6 +119,7 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 		"unchanged .agents/skills/grove-shape/SKILL.md\nunchanged .agents/skills/grove-shape/agents/openai.yaml\n" +
 		"kept .agents/skills/grove-work/SKILL.md (not managed by grove init; delete it to get the managed version)\n" +
 		"unchanged .agents/skills/grove-work/agents/openai.yaml\n" +
+		"unchanged .claude/agents/grove-reviewer.md\n" +
 		"unchanged .claude/skills/grove-shape/SKILL.md\nupdated .claude/skills/grove-work/SKILL.md\n"
 	if out != want {
 		t.Fatalf("second run:\n%s", out)

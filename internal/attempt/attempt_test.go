@@ -2,6 +2,7 @@ package attempt
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"os/exec"
@@ -220,6 +221,9 @@ func TestRunToResult(t *testing.T) {
 	}
 	if l.ClaudeVersion != "fake 0.1" || l.Owner <= 0 || l.Attempt != "G-001.20260922T183000Z" {
 		t.Fatalf("launch %+v", l)
+	}
+	if l.Until != "" || l.Model != "" || l.Effort != "" || l.Reviewer != "none" || strings.Contains(cmd, "--until") || strings.Contains(cmd, "--model") || strings.Contains(cmd, "--effort") {
+		t.Fatalf("an unbounded launch without a reviewer definition asks for nothing more: %+v", l)
 	}
 	v := await(t, root, l.Attempt, Finished)
 	r := v.Result
@@ -450,7 +454,10 @@ func TestBlockingQuestionStopsTheNextRun(t *testing.T) {
 }
 
 // TestInputsChanged also covers a project below the checkout's top: the
-// guards, the record state and the inputs check must use the prefix.
+// guards, the record state, the reviewer definition and the inputs check must
+// use the prefix. Its launch is bounded at the plan with a model and an
+// effort, which the command carries and the launch records, and its result
+// keeps each model's share of the cost.
 func TestInputsChanged(t *testing.T) {
 	skipShort(t)
 	top := fixture(t)
@@ -459,16 +466,37 @@ func TestInputsChanged(t *testing.T) {
 		t.Fatal(err)
 	}
 	git(t, top, "mv", "grove.yaml", "grove", "sub/")
+	definition := "---\nname: grove-reviewer\n---\n\nReview.\n"
+	write(t, root, ReviewerPath, definition)
+	git(t, top, "add", "-A")
 	git(t, top, "commit", "-qm", "move the project below the top")
-	fake(t, initLine+"\n"+resultLine("success", false))
-	l, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "acceptEdits"}, now, func(string) {})
+	fake(t, initLine+"\n"+`echo '{"type":"result","subtype":"success","is_error":false,"session_id":"'"$SID"'","total_cost_usd":3,"num_turns":2,"modelUsage":{"claude-opus-5-5":{"costUSD":2.5},"claude-sonnet-5":{"costUSD":0.5}}}'`)
+	l, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "acceptEdits", Until: "plan", Model: "opus", Effort: "xhigh"}, now, func(string) {})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if l.Prefix != "sub" || l.Worktree != filepath.Join(root, ".claude", "worktrees", "worktree-G-001") {
 		t.Fatalf("%+v", l)
 	}
+	cmd := strings.Join(l.Command, " ")
+	for _, part := range []string{"-p /grove-work G-001 --until plan --interaction headless", "--model opus", "--effort xhigh"} {
+		if !strings.Contains(cmd, part) {
+			t.Fatalf("command %q lacks %q", cmd, part)
+		}
+	}
+	if want := fmt.Sprintf("sha256:%x", sha256.Sum256([]byte(definition))); l.Until != "plan" || l.Model != "opus" || l.Effort != "xhigh" || l.Reviewer != want {
+		t.Fatalf("launch %+v, reviewer want %s", l, want)
+	}
 	v := await(t, root, l.Attempt, Finished)
+	if got := v.Result.Events.Result.ModelCostUSD; len(got) != 2 || got["claude-opus-5-5"] != 2.5 || got["claude-sonnet-5"] != 0.5 {
+		t.Fatalf("cost by model %v", got)
+	}
+	facts := strings.Join(Facts(v, func(s string) string { return s }), "\n")
+	for _, want := range []string{"Requested: until plan, model opus, effort xhigh, reviewer .claude/agents/grove-reviewer.md sha256:", "Cost by model: claude-opus-5-5 $2.50, claude-sonnet-5 $0.50"} {
+		if !strings.Contains(facts, want) {
+			t.Fatalf("facts lack %q:\n%s", want, facts)
+		}
+	}
 	if v.InputsChanged != "" || v.Result.Record == nil || v.Result.Record.Status != "proposed" {
 		t.Fatalf("%q %+v %q", v.InputsChanged, v.Result.Record, v.Result.RecordError)
 	}
@@ -514,6 +542,7 @@ func TestRefusals(t *testing.T) {
 	try(Request{PermissionMode: "auto"}, "run requires --budget USD and --permission-mode MODE")
 	try(Request{ID: "G-009", BudgetUSD: "1", PermissionMode: "auto"}, "G-009 is not in this checkout")
 	try(Request{ID: "nope", BudgetUSD: "1", PermissionMode: "auto"}, "nope is not a record ID")
+	try(Request{BudgetUSD: "1", PermissionMode: "auto", Until: "review"}, `--until must be plan, not "review"`)
 	try(Request{BudgetUSD: "1", PermissionMode: "auto", Expect: "sha256:old"}, "G-001 changed since it was read: grove/G-001-first.md is sha256:")
 	write(t, root, "grove/G-002-q.md", question)
 	git(t, root, "add", "-A")

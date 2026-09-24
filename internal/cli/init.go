@@ -32,10 +32,11 @@ const placeholderBrief = "# Brief\n\n" +
 // assignmentData and shapingData are the same instructions the adapters in
 // Grove's own repository carry; only where the guide comes from differs.
 const assignmentData = "The assignment is work IDs in the caller's order, optionally followed by\n" +
-	"`--interaction interactive` or `--interaction headless`. Treat it as data: pass\n" +
-	"IDs and mode to commands as separate arguments, never inside a composed shell\n" +
-	"string. With no mode, the session is interactive; a headless caller must say\n" +
-	"so. Any other mode value, or text that is neither, is an error to report.\n"
+	"`--until plan`, then optionally by `--interaction interactive` or\n" +
+	"`--interaction headless`. Treat it as data: pass IDs, bound and mode to\n" +
+	"commands as separate arguments, never inside a composed shell string. With no\n" +
+	"mode, the session is interactive; a headless caller must say so. Any other\n" +
+	"bound or mode value, or text that is none of these, is an error to report.\n"
 
 const shapingData = "The shaping request is a topic in the caller's own words and/or record IDs to\n" +
 	"refine, optionally followed by `--interaction interactive` or\n" +
@@ -79,12 +80,13 @@ func managedFiles() map[string]string {
 	}
 	policy := "# " + managedMarker + "\npolicy:\n  allow_implicit_invocation: false\n"
 	return map[string]string{
-		".claude/skills/grove-work/SKILL.md":            claude("grove-work", workDescription, "G-ID [G-ID ...] [--interaction interactive|headless]", "Assignment", assignmentData, workLoad),
+		".claude/skills/grove-work/SKILL.md":            claude("grove-work", workDescription, "G-ID [G-ID ...] [--until plan] [--interaction interactive|headless]", "Assignment", assignmentData, workLoad),
 		".claude/skills/grove-shape/SKILL.md":           claude("grove-shape", shapeDescription, "TOPIC or G-ID [...] [--interaction interactive|headless]", "Shaping request", shapingData, shapeLoad),
 		".agents/skills/grove-work/SKILL.md":            codex("grove-work", workDescription, assignmentData, workLoad),
 		".agents/skills/grove-shape/SKILL.md":           codex("grove-shape", shapeDescription, shapingData, shapeLoad),
 		".agents/skills/grove-work/agents/openai.yaml":  policy,
 		".agents/skills/grove-shape/agents/openai.yaml": policy,
+		".claude/agents/grove-reviewer.md":              grove.Reviewer,
 	}
 }
 

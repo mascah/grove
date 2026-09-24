@@ -104,8 +104,11 @@ reported instead; the board never creates a checkout.
 Work's detail also names its attempts
 ([G-046](../grove/G-046-managed-runs.md)): how many, and the latest with its
 state and time. `R` on proposed or active work asks for a budget in USD, then a
-permission mode, both typed each time since neither has a default, and
-launches one attempt as [`run`](commands.md#attempts) does; it runs on the
+permission mode, both typed each time since neither has a default; then, where
+Enter alone asks for nothing, the bound (`plan` stops the attempt at a
+committed plan), a model and an effort
+([G-134](../grove/G-134-bound-an-attempt-at-its-plan-and.md)); and launches
+one attempt as [`run`](commands.md#attempts) does; it runs on the
 branch the record's current state stands on when that is not the target, in
 that branch's checkout, so after feedback the next attempt continues on the
 candidate's branch, and otherwise in a new `worktree-ID`. It is refused up
@@ -120,9 +123,13 @@ within each: **Needs you**, **Running** and **Settled**. Each row gives the
 work's ID and title, a short state and how long it has run or how long ago it
 ended. The title goes below 60 columns, and the state is cut last. Only the
 latest attempt of work that is still proposed, active or in review needs you:
-a candidate to judge, a question to answer, a failure, an interruption, an
-end without a handoff, or feedback given or a question answered that awaits
-the next launch. An
+a candidate to judge, a question to answer, a plan to read, a failure, an
+interruption, an end without a handoff, or feedback given or a question
+answered that awaits the next launch. An attempt bounded at its plan that
+ended cleanly, with no question and no candidate, is `plan ready: read it, R
+implements`: its work's detail lists the plan, and `R` there without the
+bound launches the implementation on the same branch, which is the owner's
+approval of that plan. An
 orphan always needs you, since its process runs unowned. A stopped attempt,
 an earlier attempt of the same work and any attempt of work now done or
 abandoned are settled, and each says why, such as `done: candidate 1614e89`
@@ -130,7 +137,10 @@ or `candidate 71a650e, superseded`.
 
 Enter opens one attempt. At the top are the work's ID and title, a coloured
 state and the run's configuration: attempt, model and provider version,
-budget with what it cost, permission mode, branch and base, start and end.
+what the launch asked for (bound, model, effort, and the reviewer
+definition's digest or its absence), budget with what it cost and, where
+more than one model spent it, the split, permission mode, branch and base,
+start and end.
 What the run used follows: turns, tokens, context size against the model's
 window, subagents, compactions, tool calls and tool errors. Then come `State`, the
 outcome in a sentence with why it is settled, and `Next`, the keys that act

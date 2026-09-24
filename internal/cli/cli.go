@@ -33,8 +33,8 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID [--expect REVISION] (--set FIELD=VALUE | --unset FIELD)... [--commit]\n" +
 	"       grove [--project DIR] approve ID VERDICT | feedback ID TEXT | integrate ID [--cleanup]\n" +
-	"       grove [--project DIR] run ID --budget USD --permission-mode MODE [--model MODEL]\n" +
-	"                                     [--branch NAME] [--worktree DIR]\n" +
+	"       grove [--project DIR] run ID --budget USD --permission-mode MODE [--until plan]\n" +
+	"                                     [--model MODEL] [--effort LEVEL] [--branch NAME] [--worktree DIR]\n" +
 	"       grove [--project DIR] attempts [ID] | attempt ATTEMPT [--json] | stop ATTEMPT\n" +
 	"       grove [--project DIR] convert PATH --type TYPE --title TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
@@ -55,8 +55,9 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"  check      Validate configuration, records, and relationships\n" +
 	"  init       Set up the Git checkout at --project DIR (default: the current directory,\n" +
 	"             which must be the checkout's top): grove.yaml, the record root, a\n" +
-	"             placeholder brief, and the grove-work and grove-shape entrypoints for\n" +
-	"             Claude Code and Codex. Existing files are kept; a file init wrote before\n" +
+	"             placeholder brief, the grove-work and grove-shape entrypoints for Claude\n" +
+	"             Code and Codex, and Claude Code's grove-reviewer agent definition, which the\n" +
+	"             work guide reviews through. Existing files are kept; a file init wrote before\n" +
 	"             (marked as managed) is updated when its template changed. Prints one line\n" +
 	"             per path; on any conflict nothing is written and the reasons are printed.\n" +
 	"  guide      Print the work or shaping guide this binary carries; the generated\n" +
@@ -97,7 +98,10 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             that outlives this terminal: in the branch's worktree (default worktree-ID\n" +
 	"             under .claude/worktrees/, created from this checkout's HEAD or reused), with\n" +
 	"             --max-budget-usd USD, --permission-mode MODE and --permission-prompts none, its\n" +
-	"             raw output in files under the Git common directory. Refused while an attempt\n" +
+	"             raw output in files under the Git common directory. --until plan ends the\n" +
+	"             attempt at a committed plan, leaving the status as found; --model and\n" +
+	"             --effort are passed to the provider. Each is recorded with the digest of the\n" +
+	"             worktree's grove-reviewer definition, or its absence. Refused while an attempt\n" +
 	"             of ID runs or is orphaned, when ID is not proposed or active here or on its\n" +
 	"             branch (a candidate in review awaits judgment), while an open question blocks\n" +
 	"             ID in either place, when the record has uncommitted changes here, or when the\n" +
@@ -247,6 +251,7 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 			return 1
 		}
 		fmt.Fprintf(out, "attempt: %s started; owner pid %d, session %s, budget %s USD, permission mode %s\n", l.Attempt, l.Owner, l.SessionID, l.BudgetUSD, l.PermissionMode)
+		fmt.Fprintf(out, "requested: %s\n", visible(attempt.Requested(l)))
 		fmt.Fprintf(out, "inspect: grove attempt %s; stop: grove stop %s\n", l.Attempt, l.Attempt)
 		return 0
 	case "attempts":
@@ -412,6 +417,13 @@ func parseArgs(args []string) (a invocation, err error) {
 		}},
 		{"--permission-mode", "mode", once(&a.run.PermissionMode)},
 		{"--model", "model", once(&a.run.Model)},
+		{"--effort", "effort level", once(&a.run.Effort)},
+		{"--until", "bound", func(value string) error {
+			if value != "plan" {
+				return errors.New("must be plan")
+			}
+			return once(&a.run.Until)(value)
+		}},
 		{"--branch", "branch name", once(&a.run.Branch)},
 		{"--worktree", "directory", once(&a.run.Worktree)},
 		{"--expect", "revision", once(&a.request.Expect)},
@@ -545,8 +557,8 @@ func parseArgs(args []string) (a invocation, err error) {
 	if a.json && a.command != "" && a.command != "show" && a.command != "brief" && a.command != "versions" && a.command != "workspace" && a.command != "context" && a.command != "attempt" {
 		return a, fmt.Errorf("--json applies only to the board, show, brief, versions, workspace, context, and attempt")
 	}
-	if (a.run.BudgetUSD != "" || a.run.PermissionMode != "" || a.run.Model != "" || a.run.Branch != "" || a.run.Worktree != "") && a.command != "run" {
-		return a, fmt.Errorf("--budget, --permission-mode, --model, --branch, and --worktree apply only to run")
+	if (a.run.BudgetUSD != "" || a.run.PermissionMode != "" || a.run.Model != "" || a.run.Effort != "" || a.run.Until != "" || a.run.Branch != "" || a.run.Worktree != "") && a.command != "run" {
+		return a, fmt.Errorf("--budget, --permission-mode, --until, --model, --effort, --branch, and --worktree apply only to run")
 	}
 	if a.statuses != nil && a.command != "list" {
 		return a, fmt.Errorf("--status applies only to list")

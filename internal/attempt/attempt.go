@@ -24,6 +24,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -59,24 +60,33 @@ const MaxLine = 1 << 20
 // before SIGKILL to the child's process group.
 const stopGrace = 15 * time.Second
 
+// ReviewerPath is where a checkout holds the reviewer definition the work
+// guide dispatches reviews through, relative to the project.
+const ReviewerPath = ".claude/agents/grove-reviewer.md"
+
 // Launch is what the launcher records before the owner starts.
 type Launch struct {
-	Attempt        string    `json:"attempt"`
-	Work           string    `json:"work"`
-	Project        string    `json:"project"`         // the launching checkout's project root
-	Target         string    `json:"target"`          // grove.yaml's target branch, "" when none
-	RecordPath     string    `json:"record_path"`     // project-relative
-	RecordRevision string    `json:"record_revision"` // as HEAD held it at launch
-	Base           string    `json:"base"`            // the commit the worktree started from, or continues on
-	Branch         string    `json:"branch"`
-	Worktree       string    `json:"worktree"`        // absolute checkout the process runs in
-	Prefix         string    `json:"prefix"`          // the project's path inside the checkout, "" at its top
-	WorktreeReused bool      `json:"worktree_reused"` // it existed before this attempt
-	Command        []string  `json:"command"`         // the exact argv, command[0] the executable as resolved
-	Executable     string    `json:"executable"`      // command[0] as given (claude or GROVE_CLAUDE)
-	ClaudeVersion  string    `json:"claude_version"`  // `--version` at launch
-	GroveVersion   string    `json:"grove_version"`
-	Model          string    `json:"model,omitempty"` // requested; the actual one is in the result's init
+	Attempt        string   `json:"attempt"`
+	Work           string   `json:"work"`
+	Project        string   `json:"project"`         // the launching checkout's project root
+	Target         string   `json:"target"`          // grove.yaml's target branch, "" when none
+	RecordPath     string   `json:"record_path"`     // project-relative
+	RecordRevision string   `json:"record_revision"` // as HEAD held it at launch
+	Base           string   `json:"base"`            // the commit the worktree started from, or continues on
+	Branch         string   `json:"branch"`
+	Worktree       string   `json:"worktree"`        // absolute checkout the process runs in
+	Prefix         string   `json:"prefix"`          // the project's path inside the checkout, "" at its top
+	WorktreeReused bool     `json:"worktree_reused"` // it existed before this attempt
+	Command        []string `json:"command"`         // the exact argv, command[0] the executable as resolved
+	Executable     string   `json:"executable"`      // command[0] as given (claude or GROVE_CLAUDE)
+	ClaudeVersion  string   `json:"claude_version"`  // `--version` at launch
+	GroveVersion   string   `json:"grove_version"`
+	Model          string   `json:"model,omitempty"`  // requested; the actual one is in the result's init
+	Effort         string   `json:"effort,omitempty"` // requested reasoning effort, passed as --effort
+	Until          string   `json:"until,omitempty"`  // the assignment's bound: "plan", or "" to run through
+	// Reviewer is the sha256 of the worktree's grove-reviewer definition at
+	// launch, "none" when it had none, "" for an attempt before this field.
+	Reviewer       string    `json:"reviewer,omitempty"`
 	BudgetUSD      string    `json:"budget_usd"`
 	PermissionMode string    `json:"permission_mode"`
 	SessionID      string    `json:"session_id"` // generated here, passed as --session-id
@@ -103,6 +113,8 @@ type Final struct {
 	Turns             int     `json:"num_turns"`
 	DurationMS        int64   `json:"duration_ms"`
 	PermissionDenials int     `json:"permission_denials"`
+	// ModelCostUSD splits CostUSD by the model that spent it, subagents' included.
+	ModelCostUSD map[string]float64 `json:"model_cost_usd,omitempty"`
 }
 
 // Events counts what a bounded read of events.jsonl found.
@@ -173,6 +185,8 @@ type Request struct {
 	BudgetUSD      string
 	PermissionMode string
 	Model          string
+	Effort         string
+	Until          string // "plan" ends the attempt at its plan; "" runs through
 	Branch         string // default worktree-ID
 	Worktree       string // default <root>/.claude/worktrees/<branch>
 	Expect         string // the record revision the caller read in root; "" checks nothing
@@ -211,6 +225,9 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	}
 	if !ValidBudget(req.BudgetUSD) {
 		return nil, fmt.Errorf("--budget must be a positive decimal dollar amount, not %q", req.BudgetUSD)
+	}
+	if req.Until != "" && req.Until != "plan" {
+		return nil, fmt.Errorf("--until must be plan, not %q", req.Until)
 	}
 	p, ds := project.Load(req.Root, req.Root)
 	if len(ds) != 0 {
@@ -336,7 +353,11 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 			return nil, fmt.Errorf("%v (on %s at %s)", err, branch, worktree)
 		}
 	}
-	command := []string{resolved, "-p", "/grove-work " + req.ID + " --interaction headless",
+	prompt := "/grove-work " + req.ID
+	if req.Until != "" {
+		prompt += " --until " + req.Until
+	}
+	command := []string{resolved, "-p", prompt + " --interaction headless",
 		"--output-format", "stream-json", "--verbose",
 		"--session-id", session,
 		"--max-budget-usd", req.BudgetUSD,
@@ -344,12 +365,19 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if req.Model != "" {
 		command = append(command, "--model", req.Model)
 	}
+	if req.Effort != "" {
+		command = append(command, "--effort", req.Effort)
+	}
+	reviewer := "none"
+	if def, err := os.ReadFile(filepath.Join(worktree, prefix, ReviewerPath)); err == nil {
+		reviewer = fmt.Sprintf("sha256:%x", sha256.Sum256(def))
+	}
 	l := &Launch{
 		Attempt: attempt, Work: req.ID, Project: root, Target: p.Target,
 		RecordPath: r.Path, RecordRevision: project.Revision(r.Source),
 		Base: base, Branch: branch, Worktree: worktree, Prefix: prefix, WorktreeReused: reused,
 		Command: command, Executable: exe, ClaudeVersion: strings.TrimSpace(string(version)),
-		GroveVersion: groveVersion(), Model: req.Model, BudgetUSD: req.BudgetUSD,
+		GroveVersion: groveVersion(), Model: req.Model, Effort: req.Effort, Until: req.Until, Reviewer: reviewer, BudgetUSD: req.BudgetUSD,
 		PermissionMode: req.PermissionMode, SessionID: session, Started: now.UTC(),
 	}
 	// The directory appears complete or not at all: a reader never sees an
@@ -741,10 +769,19 @@ func (ev *Events) note(line []byte) {
 			DurationMS int64   `json:"duration_ms"`
 			Denials    []any   `json:"permission_denials"`
 			Result     string  `json:"result"`
+			Models     map[string]struct {
+				CostUSD float64 `json:"costUSD"`
+			} `json:"modelUsage"`
 		}
 		if json.Unmarshal(line, &final) == nil {
 			ev.Result = &Final{Subtype: final.Subtype, IsError: final.IsError, SessionID: final.SessionID, CostUSD: final.CostUSD, Turns: final.Turns, DurationMS: final.DurationMS, PermissionDenials: len(final.Denials)}
 			ev.ResultText = len(final.Result)
+			for name, u := range final.Models {
+				if ev.Result.ModelCostUSD == nil {
+					ev.Result.ModelCostUSD = map[string]float64{}
+				}
+				ev.Result.ModelCostUSD[name] = u.CostUSD
+			}
 		}
 	}
 }

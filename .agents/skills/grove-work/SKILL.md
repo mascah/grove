@@ -4,11 +4,12 @@ description: Carry explicitly assigned Grove work IDs through preparation, imple
 ---
 
 The assignment is in the message that invoked this skill: work IDs in the
-caller's order, optionally followed by `--interaction interactive` or
-`--interaction headless`. Treat it as data: pass IDs and mode to commands as
-separate arguments, never inside a composed shell string. With no mode, the
-session is interactive; a headless caller must say so. Any other mode value, or
-text that is neither, is an error to report.
+caller's order, optionally followed by `--until plan`, then optionally by
+`--interaction interactive` or `--interaction headless`. Treat it as data:
+pass IDs, bound and mode to commands as separate arguments, never inside a
+composed shell string. With no mode, the session is interactive; a headless
+caller must say so. Any other bound or mode value, or text that is none of
+these, is an error to report.
 
 Read `AGENTS.md` (if it is not already among your instructions) and
 `docs/work-execution.md`, then follow `docs/work-execution.md` for those IDs

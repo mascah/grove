@@ -1,7 +1,10 @@
 package attempt
 
 import (
+	"cmp"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 )
@@ -26,6 +29,7 @@ func Facts(v *View, visible func(string) string) []string {
 	line("Worktree: %s on %s from %s (%s)", visible(l.Worktree), visible(l.Branch), short(l.Base), reuse)
 	line("Started: %s by %s with %s (%s), owner pid %d", l.Started.UTC().Format(time.RFC3339), l.GroveVersion, visible(l.Executable), visible(l.ClaudeVersion), l.Owner)
 	line("Bounds: budget %s USD, permission mode %s, prompts none; one process, no retries; subagents share the budget", l.BudgetUSD, l.PermissionMode)
+	line("Requested: %s", visible(Requested(l)))
 	line("Session: %s", l.SessionID)
 	line("Command: %s", visible(strings.Join(l.Command, " ")))
 	ev := v.Events
@@ -45,6 +49,9 @@ func Facts(v *View, visible func(string) string) []string {
 		}
 		if f := ev.Result; f != nil {
 			line("Result event: %s, is_error %v, %d turns, %.4f USD, %d permission denials, %d bytes of text, session %s", visible(f.Subtype), f.IsError, f.Turns, f.CostUSD, f.PermissionDenials, ev.ResultText, visible(f.SessionID))
+			if len(f.ModelCostUSD) != 0 {
+				line("Cost by model: %s", visible(CostByModel(f.ModelCostUSD)))
+			}
 		} else {
 			line("Result event: none")
 		}
@@ -82,6 +89,35 @@ func Facts(v *View, visible func(string) string) []string {
 	}
 	line("Files: %s", visible(v.Dir))
 	return lines
+}
+
+// Requested is what the launch asked of the provider beyond the fixed
+// command: the bound, model, effort and the reviewer definition present.
+func Requested(l *Launch) string {
+	until := "through to the handoff"
+	if l.Until != "" {
+		until = "until " + l.Until
+	}
+	reviewer := "reviewer " + ReviewerPath + " " + l.Reviewer
+	switch l.Reviewer {
+	case "none":
+		reviewer = "no reviewer definition"
+	case "":
+		reviewer = "reviewer definition not recorded"
+	}
+	return fmt.Sprintf("%s, model %s, effort %s, %s", until, cmp.Or(l.Model, "default"), cmp.Or(l.Effort, "default"), reviewer)
+}
+
+// CostByModel lists the result's cost per model, most expensive first.
+func CostByModel(costs map[string]float64) string {
+	names := slices.SortedFunc(maps.Keys(costs), func(a, b string) int {
+		return cmp.Or(cmp.Compare(costs[b], costs[a]), strings.Compare(a, b))
+	})
+	parts := make([]string, len(names))
+	for i, n := range names {
+		parts[i] = fmt.Sprintf("%s $%.2f", n, costs[n])
+	}
+	return strings.Join(parts, ", ")
 }
 
 func orNone(s string) string {

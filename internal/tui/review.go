@@ -580,7 +580,13 @@ func (m *Model) promptRow(w int) string {
 	case "budget":
 		text = fmt.Sprintf("Launch %s: budget in USD, required (Enter continues, Esc cancels): %s▏   (%s)", p.id, p.text, p.where())
 	case "mode":
-		text = fmt.Sprintf("Launch %s for %s USD: permission mode, required, e.g. acceptEdits or auto (Enter launches, Esc cancels): %s▏", p.id, p.req.BudgetUSD, p.text)
+		text = fmt.Sprintf("Launch %s for %s USD: permission mode, required, e.g. acceptEdits or auto (Enter continues, Esc cancels): %s▏", p.id, p.req.BudgetUSD, p.text)
+	case "until":
+		text = fmt.Sprintf("Launch %s: plan stops it at a committed plan; Enter alone runs through to the handoff (Esc cancels): %s▏", p.id, p.text)
+	case "model":
+		text = fmt.Sprintf("Launch %s: model, e.g. opus or sonnet; Enter alone for the provider's default (Esc cancels): %s▏", p.id, p.text)
+	case "effort":
+		text = fmt.Sprintf("Launch %s: effort, e.g. medium or xhigh; Enter alone for the default, then it launches (Esc cancels): %s▏", p.id, p.text)
 	case "stop":
 		text = fmt.Sprintf("Stop attempt %s of %s? Its partial work stays. y/n", p.attempt, p.id)
 	case "resolve":

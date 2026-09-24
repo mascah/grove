@@ -32,8 +32,9 @@ The CLI refuses it where the candidate is not already in HEAD, which keeps a
 checkout without the code from closing the work, and where the checkout is
 on a branch other than the configured target; `grove integrate` writes it
 after the merge it performs. Preparation,
-independent review, waiting and a failed attempt are facts recorded inside
-`active`, never statuses. A roadmap plan is not an assignment of all its
+independent review, waiting and a failed attempt are facts recorded in the
+record, never statuses; preparation comes before `active`, so an assignment
+bounded at its plan (step 4) leaves the status as it found it. A roadmap plan is not an assignment of all its
 members.
 
 ## Inputs
@@ -49,6 +50,9 @@ members.
   and [how a long command is awaited](#5-implement-through-evidence)
   (end of step 5);
   outcome, constraints, acceptance, and every other step are identical.
+- **A bound**, optional, between the IDs and the mode: `--until plan` ends
+  the assignment at its plan, as [step 4](#4-prepare) says. Any other bound
+  is an error to report.
 
 ## Authority
 
@@ -207,6 +211,14 @@ record does not make is a missing human decision. Report preparation as
 preparation; an assignment is frozen and implementation-ready only once its
 plan and record revisions are committed.
 
+An assignment given `--until plan` ends here. Commit the plan, or the "no
+plan needed" note, and any question; checkpoint in the record's Next the
+plan's path and revision and the runnable continuation, the same assignment
+without the bound; leave the status as you found it; and return. The bound
+is the caller's end of the mandate, not a gate the plan needs, and the
+continuation that follows it is the caller's reading of the plan. Rerun
+with nothing changed, it returns the same checkpoint.
+
 ## 5. Implement through evidence
 
 Before implementing a unit, read in full what constrains it: every question
@@ -274,7 +286,14 @@ Never end the turn on a background job as an implied continuation.
 Obtain an independent review at each consequential boundary the plan names and
 once on the final combined revision; for several records, review the combined
 diff for regressions across shared helpers while keeping each unit's evidence
-separate. The reviewer does not edit the interfaces under review. If the
+separate. The reviewer does not edit the interfaces under review. Where the
+checkout holds the `grove-reviewer` agent definition
+(`.claude/agents/grove-reviewer.md`, which `grove init` writes), dispatch
+every review through it, a fresh one per gate, and pass it: the checkout's
+path; the exact commit, or base and tip, under review; the record's path with
+its acceptance and constraints; the plan's path; the commands it may run;
+and, for a re-review, the findings and what was done about each. It returns
+findings with evidence and never edits. If the
 harness cannot supply an independent reviewer, say so; a self-review is never
 labelled independent. A small documentation-only change may be self-checked
 against its acceptance, reported as exactly that. When no independent reviewer

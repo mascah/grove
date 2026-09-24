@@ -142,8 +142,9 @@ prerequisites, related records, and linked documents in full):
 ## Attempts
 
 Grove starts an agent only through `run` or the board's `R`, one assigned
-work ID per attempt. `run ID --budget USD --permission-mode MODE [--model
-MODEL] [--branch NAME] [--worktree DIR]` starts one bounded implementation
+work ID per attempt. `run ID --budget USD --permission-mode MODE [--until
+plan] [--model MODEL] [--effort LEVEL] [--branch NAME] [--worktree DIR]`
+starts one bounded implementation
 attempt of proposed or active work as a Grove-owned `claude -p "/grove-work
 ID --interaction headless"` process that outlives the terminal
 ([G-101](../grove/G-101-attempt-mechanism.md),
@@ -156,7 +157,20 @@ and `--permission-prompts none`, its stdout and stderr written straight to
 files under the Git common directory (`.git/grove/attempts/ATTEMPT/`, shared
 by every worktree, never committed). Budget and permission mode are required:
 Grove sets no default spend or profile. Grove starts one process and never
-retries; subagents the provider starts share the budget. An attempt started
+retries; subagents the provider starts share the budget.
+
+Three options shape one launch, recorded in `attempt.json` and reported as
+the attempt's `Requested:` fact ([G-134](../grove/G-134-bound-an-attempt-at-its-plan-and.md)).
+`--until plan` adds the bound to the assignment (`/grove-work ID --until plan
+--interaction headless`): the attempt stops at a committed plan with the
+record's status as it found it and the continuation in its Next, as the work
+guide's step 4 says, and launching again without the bound, after reading the
+plan, is the implementation. `--model` and `--effort` pass through to the
+provider, which owns their values (`claude --help`); a preparation attempt and
+the implementation after it can differ in both. The launch also records the
+sha256 of the worktree's `.claude/agents/grove-reviewer.md`, the reviewer
+definition `init` writes and step 6 reviews through, or `none` where there is
+none. An attempt started
 by hand, such as an interactive `/grove-work`, writes no attempt files: it is
 visible only as its branch, its worktree and the checkpoint in the work's
 Next.
@@ -168,8 +182,11 @@ that what an existing branch holds is checked in its checkout, so a branch
 that had no worktree keeps the one `run` made.
 
 `attempts [ID]` lists attempts newest first. `attempt ATTEMPT [--json]`
-prints one attempt's launch, event counts (parsed bounded: a line over 1 MiB
-is counted, not read), the provider's init and result fields, the result
+prints one attempt's launch, what it requested, event counts (parsed bounded:
+a line over 1 MiB is counted, not read), the provider's init fields with the
+model that actually ran, the result event's fields with its cost split by
+model where the provider reports one (a subagent on another model shows
+apart), the result
 (exit, the worktree's HEAD and whether it holds uncommitted or untracked
 changes), the record as the branch holds it, whether the record on the target
 changed since launch, and the file paths; no provider text is printed.
@@ -191,9 +208,15 @@ another executable, for fakes.
 
 `init` runs at the top of a Git checkout (or `--project /absolute/path`). It
 writes `grove.yaml` (`records: grove`, `brief: grove/brief.md`), the record
-root, a placeholder brief that states no intent, and the `grove-work` and
+root, a placeholder brief that states no intent, the `grove-work` and
 `grove-shape` entrypoints for Claude Code (`.claude/skills/`) and Codex
-(`.agents/skills/`), each marked as managed. It prints one line per path:
+(`.agents/skills/`), and Claude Code's `grove-reviewer` agent definition
+(`.claude/agents/grove-reviewer.md`), each marked as managed. The reviewer is
+read-only, inherits the session's model at `high` effort, and carries the
+standard review brief the work guide's step 6 dispatches; its text is Grove's
+own `.claude/agents/grove-reviewer.md`, embedded in the binary. Codex has no
+equivalent, so a Codex session reports its missing independent reviewer as
+step 6 says. It prints one line per path:
 `created`; `kept` for an existing `grove.yaml`, whose own `records` and
 `brief` it then follows, for the brief and the record root, and for an
 entrypoint without the marker, which is yours; `unchanged`; or `updated` for
