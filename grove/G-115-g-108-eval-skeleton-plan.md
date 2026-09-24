@@ -115,8 +115,12 @@ runs without them.
 Status, 2026-09-23: steps 1 to 4 done (`d9dbf23`, `4b5b345`, question
 [G-118](G-118-what-mandate-should-the-g-108-pa.md) at `275bd41`, review
 [G-119](G-119-g-108-eval-skeleton-review.md) examined `1f03a12` with no open
-findings). G-118 was resolved at `1d3ad82`; step 5 waits on the eval login,
-[G-121](G-121-how-do-the-g-108-eval-runs-log-i.md).
+findings). G-118 was resolved at `1d3ad82` and the eval login
+[G-121](G-121-how-do-the-g-108-eval-runs-log-i.md) at `e57a4c6`.
 
 5. After the owner answers: the paid runs, then a review record reporting
    the pattern against G-078 finding 6 (acceptance 5), then handoff.
+   Done 2026-09-24: runs at `d565fcf` (which also let the runner accept a
+   login's settings and synced skills), review
+   [G-122](G-122-g-108-baseline-runs-the-missing.md), handoff in G-108's
+   Next.

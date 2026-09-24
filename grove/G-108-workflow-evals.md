@@ -164,30 +164,56 @@ Built, all offline and spending nothing:
 - Independent review [G-119](G-119-g-108-eval-skeleton-review.md), three
   rounds, examined `1f03a12`: eleven findings fixed, none open.
 
+Third headless session, 2026-09-24, same branch, after
+[G-118](G-118-what-mandate-should-the-g-108-pa.md) (`1d3ad82`) and
+[G-121](G-121-how-do-the-g-108-eval-runs-log-i.md) (`e57a4c6`) were
+resolved:
+
+- The login left `settings.json` and the account's synced skills and
+  plugins in the config directory, which the runner refused; `d565fcf`
+  accepts settings holding only `tui`, `theme` and `autoMemoryEnabled` and
+  the `synced` entries, refuses anything else, records them in the report,
+  and the selftest covers both shapes (`selftest: ok`).
+- The paid runs, exactly G-118's mandate, from this checkout at `d565fcf`:
+  `python3 evals/run.py run --runs 5 --budget 5 --model claude-opus-5-5
+  --permission-mode auto --config-dir ~/.cache/grove-evals/claude --out
+  ~/.cache/grove-evals/runs/2026-09-23-G-108`. Ten runs, every check
+  passed in every run, $2.93 in all, no denials, timeouts or errors. The
+  output directory is outside every checkout and not committed; the report
+  is read into [G-122](G-122-g-108-baseline-runs-the-missing.md).
+- Acceptance 1 to 4 are now met in fact: the command ran on the real
+  harness with a clean directory and retained everything listed (1); every
+  check was judged on the clone per run (2); retrieval facts came from the
+  trace, all uniform and with no unneeded read (3); the rubric was scored
+  from the clone's records, labelled `judge`, the owner column open (4).
+- Acceptance 5: [G-122](G-122-g-108-baseline-runs-the-missing.md) reports
+  the pattern against G-078 finding 6 (5 of 5 blocked, 5 of 5 companions
+  proposed without a question), configuration, cost and limits, concludes
+  no change is justified, and says which further case pays. No product
+  change happened.
+
 ## Next
 
-**Checkpoint, 2026-09-23 (second headless session).** G-108 alone, on
-`worktree-G-108` in `.claude/worktrees/worktree-G-108`, base main `6208e82`.
-Steps 1 to 4 of G-115 are done. [G-118](G-118-what-mandate-should-the-g-108-pa.md)
-is resolved (`1d3ad82`): `claude-opus-5-5`, 5 runs per case, $5 per run,
-permission mode `auto` (a valid mode in Claude Code 2.1.281), the fixture
-and topics approved as built, and each missing-choice run to be reported as
-blocking, surfacing (a non-blocking question or a proposed decision) or only
-noting the choice; the check's failure reason now tells the last two apart
-(`433e338`, `selftest: ok`). Step 5 waits on
-[G-121](G-121-how-do-the-g-108-eval-runs-log-i.md): the clean
-`~/.cache/grove-evals/claude` has no login (`Not logged in` at $0 from a
-$0.10-capped probe), and a headless session cannot run `/login`. No command
-is still running. Stays `active`: acceptance 5 is unmet.
+**Handoff, 2026-09-24 (third headless session).** G-108 alone, on
+`worktree-G-108` in `.claude/worktrees/worktree-G-108`, base main `6208e82`
+(main is now `28f5ddc`, which this branch does not contain; the runs' CLI
+was built from this branch). All five steps of
+[G-115](G-115-g-108-eval-skeleton-plan.md) are done. The paid runs and
+their reading are in Evidence and [G-122](G-122-g-108-baseline-runs-the-missing.md);
+the candidate commit is named in the status change that follows this
+commit. No command is still running.
 
-When G-121 is resolved, a successor on this branch runs, from this
-checkout, `python3 evals/run.py run --runs 5 --budget 5 --model
-claude-opus-5-5 --permission-mode auto --config-dir
-~/.cache/grove-evals/claude --out DIR` with `DIR` outside every checkout
-(cap $50, printed first), reads each missing-choice run against G-118's three
-outcomes, scores the rubric labelled `owner` or `judge`, writes the review
-record acceptance 5 asks for against G-078 finding 6 (the lever G-118 names
-is the headless bound's "must block" sentence), and hands off into `review`.
+For the owner's judgment: read G-122, and if wanted the report at
+`~/.cache/grove-evals/runs/2026-09-23-G-108/report.md` and any run's
+`run.json` and proposal branch (`git -C .../missing-choice-1/p log
+--all`). Two decisions are open and are the owner's, not this work's: the
+rubric's `owner` column, and whether the headless bound should prefer a
+shippable proposal with a non-blocking question over blocking, which G-118
+says the owner would want and which every run did not do because the guide
+says to block. Neither blocks acceptance of this record.
+
+Integration: `go run ./cmd/grove approve G-108 "VERDICT"` in this checkout,
+then `go run ./cmd/grove integrate G-108` in the `main` checkout.
 
 Follow-on candidates, shaped only if the skeleton's report says so: a case
 whose proposal must find and apply a constraint held in a listed
