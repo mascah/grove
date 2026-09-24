@@ -12,3 +12,9 @@ pre-commit:
     - name: mod-tidy
       glob: "{*.go,go.mod,go.sum}"
       run: go mod tidy -diff
+
+post-merge:
+  parallel: true
+  commands:
+    install:
+      run: just install
