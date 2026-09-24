@@ -146,6 +146,13 @@ permission profile's mapping onto sandbox and approval, and the review
 gate, whose `grove-reviewer` is a Claude agent definition; and whether
 [G-101](G-101-attempt-mechanism.md) would be revisited. No product change.
 
+**Adjustment, 2026-09-24, implementation.** The owner's login left the
+eval home's `config.toml` with a `[tui]` table (screen-reader detection,
+model-availability notice) beside a trust table: terminal state, as
+Claude's `tui` and `theme` settings are, and ignored anyway under
+`--ignore-user-config`. The runner allows `tui` as well as
+`projects.*.trust_level`; anything else is still refused.
+
 ## Steps
 
 1. Commit this plan and G-139; checkpoint G-135's Next (this session,

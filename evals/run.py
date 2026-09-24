@@ -3,14 +3,16 @@
 
     python3 evals/run.py run --runs N --budget USD --model MODEL \\
         --permission-mode MODE --config-dir DIR [--case NAME]... [--out DIR]
+    python3 evals/run.py run --harness codex --runs N --model MODEL --effort EFFORT \\
+        --permission-mode MODE --config-dir DIR --max-seconds S [--case NAME]... [--out DIR]
     python3 evals/run.py selftest
 
 `run` spends money: every spend parameter is required and has no default.
-`selftest` spends nothing: it drives the same runner with a fake `claude` and
-asserts that the checks pass and fail where they should. evals/README.md says
+`selftest` spends nothing: it drives the same runner with a fake `claude` and a
+fake `codex` and asserts that the checks pass and fail where they should. evals/README.md says
 what a run retains, what each check means, and how to score the rubric.
 """
-import argparse, datetime, glob, json, os, re, shlex, shutil, signal, subprocess, sys, tempfile, time
+import argparse, datetime, glob, json, os, re, shlex, shutil, signal, subprocess, sys, tempfile, time, tomllib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FIXTURE = os.path.join(ROOT, "evals", "fixture")
@@ -23,7 +25,7 @@ CASES = {
     "companion": {"topic": "let tasks list filter by tag", "question": False},
 }
 # Files some step of the shaping guide needs for these topics; any other read is listed as unneeded.
-NEEDED = {"AGENTS.md", "CLAUDE.md", "grove.yaml", "grove/brief.md", "tasks.py"}
+NEEDED = {"AGENTS.md", "CLAUDE.md", "grove.yaml", "grove/brief.md", "tasks.py", ".agents/skills/grove-shape/SKILL.md"}
 CUSTOMIZATION = ("CLAUDE.md", "agents", "commands", "output-styles", "hooks", "settings.local.json")
 # A login writes settings.json; these keys shape the terminal and memory, not what the agent reads or may do.
 SETTINGS = {"tui", "theme", "autoMemoryEnabled"}
@@ -31,6 +33,10 @@ GROVE = "grove version (its revision can lag in a linked worktree; the digest pi
 UNTOUCHED = {"proposed", "open", "current", None}
 # Claude's own auth variables pass through; every other CLAUDE* variable is the caller's session leaking in.
 AUTH = ("CLAUDE_CODE_OAUTH_TOKEN",)
+# What in a CODEX_HOME shapes a session beyond Codex's defaults; config.toml and skills/ are checked apart.
+CODEX_CUSTOMIZATION = ("AGENTS.md", "AGENTS.override.md", "rules", "prompts", "hooks.json", "hooks")
+# approve-for-me is the workspace-write sandbox with Codex's automatic reviewer on approvals, the nearest to Claude's auto.
+CODEX_MODES = ("read-only", "workspace-write", "danger-full-access", "approve-for-me")
 
 
 def env():
@@ -78,6 +84,31 @@ def records(clone, ref):
             text = git(clone, "show", f"{ref}:{path}")
             out[path] = {"fields": frontmatter(text), "source": text}
     return out
+
+
+def codex_home(home):
+    """Why a CODEX_HOME is not clean; empty when it is. Codex writes a trust table per directory it runs in,
+    a login writes tui state, and skills/.system holds Codex's bundled skills: those are recorded, not refused."""
+    found = [c for c in CODEX_CUSTOMIZATION if os.path.exists(os.path.join(home, c))]
+    memories = os.path.join(home, "memories")
+    found += ["memories/"] if os.path.isdir(memories) and os.listdir(memories) else []
+    skills = os.path.join(home, "skills")
+    found += [f"skills/{e}" for e in sorted(os.listdir(skills)) if e != ".system"] if os.path.isdir(skills) else []
+    try:
+        config = tomllib.load(open(os.path.join(home, "config.toml"), "rb")) if os.path.exists(os.path.join(home, "config.toml")) else {}
+    except (tomllib.TOMLDecodeError, OSError) as err:
+        return found + [f"config.toml unreadable: {err}"]
+    for key, value in config.items():
+        if key == "projects" and isinstance(value, dict):
+            found += [f"config.toml projects.{p}.{k}" for p, t in value.items() for k in (t if isinstance(t, dict) else {"(not a table)": 0}) if k != "trust_level"]
+        elif key != "tui":
+            found.append(f"config.toml key {key}")
+    return found
+
+
+def system_skills(home):
+    d = os.path.join(home, "skills", ".system")
+    return ", ".join(sorted(e for e in os.listdir(d) if not e.startswith("."))) if os.path.isdir(d) else "none yet"
 
 
 def build(work):
@@ -181,10 +212,24 @@ def events(path):
             continue
 
 
-def retrieval(transcript, clone, created):
-    """Facts from the trace's tool calls: what the session used and read. Reported, never scored."""
+def unwrap(cmd):
+    """The script of Codex's SHELL -lc 'SCRIPT' wrapping, or the command as given."""
+    try:
+        words = shlex.split(cmd)
+    except ValueError:
+        return cmd
+    return words[-1] if len(words) == 3 and words[1] in ("-lc", "-c") else cmd
+
+
+def calls(transcript, harness):
+    """The trace's shell commands and the files its read tool read. Codex has no read tool: every read is a command."""
     commands, files = [], []
     for ev in events(transcript):
+        if harness == "codex":
+            item = ev.get("item") or {}
+            if ev.get("type") == "item.completed" and item.get("type") == "command_execution":
+                commands.append(unwrap(item.get("command", "")))
+            continue
         if ev.get("type") != "assistant":
             continue
         for block in ev.get("message", {}).get("content", []):
@@ -194,15 +239,21 @@ def retrieval(transcript, clone, created):
             if block.get("name") == "Read":
                 files.append(inp.get("file_path", ""))
             elif block.get("name") == "Bash":
-                cmd = inp.get("command", "")
-                commands.append(cmd)
-                for part in re.split(r"&&|\|\||;|\|", cmd):
-                    try:
-                        words = shlex.split(part)
-                    except ValueError:
-                        continue
-                    if words and words[0] in ("cat", "head", "tail", "sed", "nl", "less", "awk"):
-                        files += [w for w in words[1:] if not w.startswith("-") and os.path.isfile(os.path.join(clone, w))]
+                commands.append(inp.get("command", ""))
+    return commands, files
+
+
+def retrieval(transcript, harness, clone, created):
+    """Facts from the trace's tool calls: what the session used and read. Reported, never scored."""
+    commands, files = calls(transcript, harness)
+    for cmd in commands:
+        for part in re.split(r"&&|\|\||;|\|", cmd):
+            try:
+                words = shlex.split(part)
+            except ValueError:
+                continue
+            if words and words[0] in ("cat", "head", "tail", "sed", "nl", "less", "awk"):
+                files += [w for w in words[1:] if not w.startswith("-") and os.path.isfile(os.path.join(clone, w))]
     rel, clone = [], os.path.realpath(clone)
     for f in files:
         full = os.path.realpath(os.path.join(clone, f))
@@ -244,19 +295,28 @@ def one(args, grove, template, work, case_name, n, meta):
     git(clone, "config", "user.name", "Grove Eval")
     git(clone, "config", "user.email", "eval@example.invalid")
     before = snapshot(clone, remote)
-    command = [args.claude, "-p", f"/grove-shape {case['topic']} --interaction headless",
-               "--output-format", "stream-json", "--verbose", "--no-session-persistence",
-               "--max-budget-usd", args.budget, "--model", args.model,
-               "--permission-mode", args.permission_mode, "--permission-prompts", "none"]
-    e = env()
-    e["CLAUDE_CONFIG_DIR"] = args.config_dir
+    codex = args.harness == "codex"
+    if codex:  # not --ephemeral: the rollout under CODEX_HOME/sessions is the only record of the model and policy used
+        mode = ["--approve-for-me"] if args.permission_mode == "approve-for-me" else ["-s", args.permission_mode]
+        command = [args.codex, "exec", "--json", "--ignore-user-config", "--disable", "memories", "-m", args.model,
+                   "-c", f"model_reasoning_effort={args.effort}", *mode, "-o", os.path.join(rdir, "last-message.txt"),
+                   f"$grove-shape {case['topic']} --interaction headless"]
+        e = {k: v for k, v in env().items() if not k.startswith("CODEX_") or k == "CODEX_API_KEY"}
+        e["CODEX_HOME"] = args.config_dir
+    else:
+        command = [args.claude, "-p", f"/grove-shape {case['topic']} --interaction headless",
+                   "--output-format", "stream-json", "--verbose", "--no-session-persistence",
+                   "--max-budget-usd", args.budget, "--model", args.model,
+                   "--permission-mode", args.permission_mode, "--permission-prompts", "none"]
+        e = env()
+        e["CLAUDE_CONFIG_DIR"] = args.config_dir
     e["PATH"] = os.path.dirname(grove) + os.pathsep + e.get("PATH", "")
     transcript = os.path.join(rdir, "transcript.jsonl")
     started, timed_out = time.time(), False
     with open(transcript, "w") as out, open(os.path.join(rdir, "stderr.txt"), "w") as err:
         proc = subprocess.Popen(command, cwd=clone, stdout=out, stderr=err, stdin=subprocess.DEVNULL, env=e, start_new_session=True)
         try:
-            proc.wait(TIMEOUT)
+            proc.wait(args.max_seconds if codex else TIMEOUT)
         except subprocess.TimeoutExpired:
             timed_out = True
         finally:  # also on Ctrl-C, and after a normal exit, for background processes the session left
@@ -265,27 +325,63 @@ def one(args, grove, template, work, case_name, n, meta):
             except OSError:
                 pass
             proc.wait()
-    init = next((ev for ev in events(transcript) if ev.get("type") == "system" and ev.get("subtype") == "init"), {})
-    result = next((ev for ev in events(transcript) if ev.get("type") == "result"), {})
     run = {
         "case": case_name, "run": n, "topic": case["topic"], "command": command,
         "exit": proc.returncode, "timed_out": timed_out, "wall_seconds": round(time.time() - started, 1),
-        **{k: meta[k] for k in ("claude", GROVE, "base commit", "fixture commit")}, "model_requested": args.model, "model_reported": init.get("model"),
-        "permission_mode_reported": init.get("permissionMode"),
-        "cost_usd": result.get("total_cost_usd"), "turns": result.get("num_turns"), "duration_ms": result.get("duration_ms"),
-        "result_subtype": result.get("subtype"), "is_error": result.get("is_error"),
-        "permission_denials": len(result.get("permission_denials") or []),
-        "message": result.get("result", ""),
+        **{k: meta[k] for k in (args.harness, GROVE, "base commit", "fixture commit")}, "model_requested": args.model,
+        **(codex_facts(transcript, rdir, args) if codex else claude_facts(transcript)),
     }
     try:  # the session has spent by now: a failure reading its effects must not lose what it cost
         after = state(clone, remote, grove, rdir, before["main"])
         json.dump(dict(after, before=before), open(os.path.join(rdir, "state.json"), "w"), indent=1)
         run["checks"] = checks(case, before, after, run["message"])
-        run["retrieval"] = retrieval(transcript, clone, {p for b in after["proposals"].values() for p in b["touched"]})
+        run["retrieval"] = retrieval(transcript, args.harness, clone, {p for b in after["proposals"].values() for p in b["touched"]})
     except Exception as err:
         run.update(error=str(err), checks={"runner": f"fail: {err}"})
     json.dump(run, open(os.path.join(rdir, "run.json"), "w"), indent=1)
     return run
+
+
+def claude_facts(transcript):
+    init = next((ev for ev in events(transcript) if ev.get("type") == "system" and ev.get("subtype") == "init"), {})
+    result = next((ev for ev in events(transcript) if ev.get("type") == "result"), {})
+    return {
+        "model_reported": init.get("model"), "permission_mode_reported": init.get("permissionMode"),
+        "cost_usd": result.get("total_cost_usd"), "turns": result.get("num_turns"), "duration_ms": result.get("duration_ms"),
+        "result_subtype": result.get("subtype"), "is_error": result.get("is_error"),
+        "permission_denials": len(result.get("permission_denials") or []),
+        "message": result.get("result", ""),
+    }
+
+
+def codex_facts(transcript, rdir, args):
+    """What `codex exec --json` and the session's rollout report; each fact it does not report is null with the reason."""
+    evs = list(events(transcript))
+    thread = next((ev.get("thread_id") for ev in evs if ev.get("type") == "thread.started"), None)
+    usage = [ev.get("usage") or {} for ev in evs if ev.get("type") == "turn.completed"]
+    items = [ev.get("item") or {} for ev in evs if ev.get("type") == "item.completed"]
+    end = next((ev for ev in reversed(evs) if ev.get("type") in ("turn.completed", "turn.failed")), {})
+    rollout = sorted(glob.glob(os.path.join(args.config_dir, "sessions", "**", f"rollout-*{thread}.jsonl"), recursive=True)) if thread else []
+    context, reason = {}, "no thread.started event" if not thread else f"no rollout for thread {thread} under CODEX_HOME/sessions"
+    if rollout:
+        shutil.copy(rollout[-1], os.path.join(rdir, "rollout.jsonl"))
+        context = next((ev.get("payload") or {} for ev in events(rollout[-1]) if ev.get("type") == "turn_context"), {})
+        reason = None if context else "the rollout has no turn_context"
+    last = os.path.join(rdir, "last-message.txt")
+    messages = [i.get("text", "") for i in items if i.get("type") == "agent_message"]
+    return {
+        "thread_id": thread, "model_reported": context.get("model"), "effort_reported": context.get("effort"),
+        "permission_mode_reported": {k: context.get(k) for k in ("approval_policy", "sandbox_policy")} if context else None,
+        "reported_reason": reason,
+        "cost_usd": None, "cost_reason": "Codex reports tokens, not dollars",
+        "tokens": {k: sum(u.get(k) or 0 for u in usage) for k in ("input_tokens", "cached_input_tokens", "output_tokens")} if usage else None,
+        "turns": len(usage), "tool_calls": sum(i.get("type") in ("command_execution", "file_change", "mcp_tool_call", "web_search") for i in items),
+        "duration_ms": None, "duration_reason": "Codex reports no duration; wall_seconds is the runner's",
+        "result_subtype": {"turn.completed": "completed", "turn.failed": "failed"}.get(end.get("type")), "is_error": end.get("type") != "turn.completed",
+        "errors": [ev.get("message") or (ev.get("error") or {}).get("message") for ev in evs if ev.get("type") in ("error", "turn.failed")],
+        "permission_denials": None, "permission_denials_reason": "Codex reports none; a refused command is a command item's exit status",
+        "message": open(last).read().strip() if os.path.exists(last) else (messages[-1] if messages else ""),
+    }
 
 
 def harness(r):
@@ -300,18 +396,21 @@ def report(path, meta, runs, unrun):
     mark = lambda v: "-" if v is None else "pass" if v == "pass" else ("FAIL" if v.startswith("fail") else "n/j")
     lines = ["# Grove shaping eval report", ""]
     lines += [f"- {k}: {v}" for k, v in meta.items()]
-    lines += ["- Codex row: not built (G-108 follow-on)", f"- Cases not run: {', '.join(unrun) or 'none'}", ""]
+    lines += [f"- Cases not run: {', '.join(unrun) or 'none'}", ""]
     for name in CASES:
         rs = [r for r in runs if r["case"] == name]
         if not rs:
             continue
         keys = list(dict.fromkeys(k for r in rs for k in r["checks"]))
-        lines += [f"## {name}: {CASES[name]['topic']}", "", "| run | harness | " + " | ".join(keys) + " | cost | turns | seconds | guide | brief | list | context/show | unneeded reads |",
-                  "|" + " --- |" * (len(keys) + 10)]
+        lines += [f"## {name}: {CASES[name]['topic']}", "", "| run | harness | " + " | ".join(keys) + " | cost | tokens in/cached/out | turns | seconds | guide | brief | list | context/show | unneeded reads |",
+                  "|" + " --- |" * (len(keys) + 11)]
         for r in rs:
             f = r.get("retrieval") or dict.fromkeys(("guide", "brief", "list", "context_or_show"), "-") | {"unneeded": []}
+            cost = "not reported" if r.get("cost_reason") else r.get("cost_usd")
+            tokens = "/".join(str(v) for v in r["tokens"].values()) if r.get("tokens") else "-"
+            seconds = r["duration_ms"] / 1000 if r.get("duration_ms") else r.get("wall_seconds") or 0
             lines.append(f"| {r['run']} | {harness(r)} | " + " | ".join(mark(r["checks"].get(k)) for k in keys)
-                         + f" | {r.get('cost_usd')} | {r.get('turns')} | {(r.get('duration_ms') or 0) / 1000:.0f} | {f['guide']} | {f['brief']} | {f['list']} | {f['context_or_show']} | {', '.join(f['unneeded']) or '-'} |")
+                         + f" | {cost} | {tokens} | {r.get('turns')} | {seconds:.0f} | {f['guide']} | {f['brief']} | {f['list']} | {f['context_or_show']} | {', '.join(f['unneeded']) or '-'} |")
         lines += ["", "Failures:", ""]
         lines += [f"- run {r['run']} {k}: {v}" for r in rs for k, v in r["checks"].items() if v != "pass"] or ["- none"]
         lines += ["", "Rubric (evals/README.md), scorer `owner` or `judge`:", "", "| run | scorer | presumes choice | planted question | brief constraint | handoff | notes |", "| --- | --- | --- | --- | --- | --- | --- |"]
@@ -324,12 +423,31 @@ def run(args):
     for name in args.case:
         if name not in CASES:
             raise SystemExit(f"unknown case {name}; cases: {', '.join(CASES)}")
-    if not re.fullmatch(r"[0-9]+(\.[0-9]+)?", args.budget) or float(args.budget) <= 0:
-        raise SystemExit(f"--budget must be a positive dollar amount, not {args.budget!r}")
+    codex = args.harness == "codex"
+    if codex:  # Codex has no budget flag: the cap is time, and a --budget nothing enforces would read as one
+        if args.max_seconds is None:
+            raise SystemExit("--harness codex needs --max-seconds: Codex bounds no dollars, so each run is killed at that cap")
+        if args.max_seconds < 1:
+            raise SystemExit("--max-seconds must be at least 1")
+        if args.budget is not None:
+            raise SystemExit("--budget is Claude's: Codex has no flag that would enforce it; --max-seconds is the cap")
+        if not args.effort:
+            raise SystemExit("--harness codex needs --effort, passed as model_reasoning_effort")
+        if args.permission_mode not in CODEX_MODES:
+            raise SystemExit(f"--permission-mode for Codex is one of {', '.join(CODEX_MODES)}, not {args.permission_mode!r}")
+    else:
+        if args.effort is not None or args.max_seconds is not None:
+            raise SystemExit("--effort and --max-seconds are Codex's; Claude's cap is --budget")
+        if args.budget is None:
+            raise SystemExit("--harness claude needs --budget")
+        if not re.fullmatch(r"[0-9]+(\.[0-9]+)?", args.budget) or float(args.budget) <= 0:
+            raise SystemExit(f"--budget must be a positive dollar amount, not {args.budget!r}")
     if args.runs < 1:
         raise SystemExit("--runs must be at least 1")
     args.config_dir = os.path.abspath(args.config_dir)
     os.makedirs(args.config_dir, exist_ok=True)
+    if codex:
+        return run_on(args, codex_home(args.config_dir))
     found = [c for c in CUSTOMIZATION if os.path.exists(os.path.join(args.config_dir, c))]
     plugins = os.path.join(args.config_dir, "plugins", "installed_plugins.json")
     if os.path.exists(plugins) and json.load(open(plugins)).get("plugins"):
@@ -355,29 +473,47 @@ def run(args):
             synced[kind] = sorted(synced.get(kind, []) + sorted(names))
             found += [f"{kind}/synced/{os.path.basename(d)}/{e}" for e in sorted(os.listdir(d)) if os.path.isdir(os.path.join(d, e)) and not e.startswith(".") and e not in names] \
                 if os.path.isdir(d) else [f"{kind}/synced/{os.path.basename(d)}"]
+    return run_on(args, found, {"config dir settings": json.dumps(settings, sort_keys=True), "config dir synced skills": ", ".join(synced.get("skills", [])) or "none",
+                                "config dir synced plugins": ", ".join(synced.get("plugins", [])) or "none"})
+
+
+def run_on(args, found, recorded=None):
+    """Run the cases once the arguments are valid; found is what makes the config dir unclean."""
+    codex = args.harness == "codex"
     if found:
         raise SystemExit(f"--config-dir {args.config_dir} is not clean: {', '.join(found)}")
     cases = args.case or list(CASES)
     work = os.path.abspath(args.out) if args.out else tempfile.mkdtemp(prefix="grove-evals-")
     os.makedirs(work, exist_ok=True)
-    meta = {"started": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "output": work,
-            "runs per case": args.runs, "budget per run (USD)": args.budget,
-            "cap (USD)": f"{float(args.budget) * args.runs * len(cases):.2f}", "model": args.model,
-            "permission mode": args.permission_mode, "config dir": args.config_dir,
-            "config dir holds": ", ".join(sorted(os.listdir(args.config_dir))) or "nothing",
-            "config dir settings": json.dumps(settings, sort_keys=True), "config dir synced skills": ", ".join(synced.get("skills", [])) or "none",
-            "config dir synced plugins": ", ".join(synced.get("plugins", [])) or "none"}
-    exe = shutil.which(args.claude)
+    meta = {"started": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "output": work, "harness": args.harness,
+            "runs per case": args.runs}
+    if codex:
+        meta.update({"cap per run (seconds)": args.max_seconds, "cap (seconds)": args.max_seconds * args.runs * len(cases),
+                     "cost": "not reported: Codex reports tokens, not dollars, and has no budget flag", "model": args.model, "reasoning effort": args.effort})
+    else:
+        meta.update({"budget per run (USD)": args.budget, "cap (USD)": f"{float(args.budget) * args.runs * len(cases):.2f}", "model": args.model})
+    meta.update({"permission mode": args.permission_mode, "config dir": args.config_dir,
+                 "config dir holds": ", ".join(sorted(os.listdir(args.config_dir))) or "nothing", **(recorded or {})})
+    name = args.codex if codex else args.claude
+    exe = shutil.which(name)
     if not exe:
-        meta["claude"] = f"unavailable: {args.claude} not found; no case ran"
+        meta[args.harness] = f"unavailable: {name} not found; no case ran"
         report(os.path.join(work, "report.md"), meta, [], list(CASES))
-        raise SystemExit(meta["claude"] + f"\nreport: {work}/report.md")
-    args.claude = exe
-    version = sh(exe, "--version", environ=dict(env(), CLAUDE_CONFIG_DIR=args.config_dir)).stdout.strip()
+        raise SystemExit(meta[args.harness] + f"\nreport: {work}/report.md")
+    if codex:
+        args.codex = exe
+        home = dict({k: v for k, v in env().items() if not k.startswith("CODEX_") or k == "CODEX_API_KEY"}, CODEX_HOME=args.config_dir)
+        version = sh(exe, "--version", environ=home).stdout.strip()
+        login = sh(exe, "login", "status", environ=home, check=False)
+        meta.update({"login": (login.stdout + login.stderr).strip() or f"exit {login.returncode}", "config dir system skills": system_skills(args.config_dir)})
+    else:
+        args.claude = exe
+        version = sh(exe, "--version", environ=dict(env(), CLAUDE_CONFIG_DIR=args.config_dir)).stdout.strip()
     grove, template, grove_version = build(work)
-    meta.update({"claude": version, GROVE: grove_version, "base commit": git(ROOT, "rev-parse", "HEAD") + (" with uncommitted changes" if git(ROOT, "status", "--porcelain") else ""),
+    meta.update({args.harness: version, GROVE: grove_version, "base commit": git(ROOT, "rev-parse", "HEAD") + (" with uncommitted changes" if git(ROOT, "status", "--porcelain") else ""),
                  "fixture commit": git(template, "rev-parse", "HEAD")})
-    print(f"output {work}; spending at most ${meta['cap (USD)']}", file=sys.stderr)
+    print(f"output {work}; " + (f"at most {meta['cap (seconds)']} seconds of Codex time, and Codex bounds no dollars" if codex
+                                 else f"spending at most ${meta['cap (USD)']}"), file=sys.stderr)
     runs = []
     for name in cases:
         for n in range(1, args.runs + 1):
@@ -389,32 +525,53 @@ def run(args):
                 os.makedirs(os.path.join(work, f"{name}-{n}"), exist_ok=True)
                 json.dump(r, open(os.path.join(work, f"{name}-{n}", "run.json"), "w"), indent=1)
                 runs.append(r)
+            if codex:  # Codex installs its bundled skills on the first run
+                meta["config dir system skills"] = system_skills(args.config_dir)
             report(os.path.join(work, "report.md"), meta, runs, [c for c in CASES if c not in cases])
     print(os.path.join(work, "report.md"))
     return runs
 
 
-def fake(argv):
-    """A stand-in for `claude -p` acting out a scripted outcome, chosen by GROVE_EVAL_FAKE:
+def fake(harness, argv):
+    """A stand-in for `claude -p` or `codex exec --json` acting out a scripted outcome, chosen by GROVE_EVAL_FAKE:
     good follows the guide; bad is G-078's divergence (no question) plus a write to the
     session checkout; surfaced asks the question without `blocks`; worse pushes, promotes,
     breaks `check`, names a stale commit and, on the companion, leaves two proposal branches."""
+    codex = harness == "codex"
     if "--version" in argv:
-        return print("0.0.0 (fake claude)")
-    topic = argv[argv.index("-p") + 1].removeprefix("/grove-shape ").removesuffix(" --interaction headless")
+        return print(f"0.0.0 (fake {harness})")
+    if argv[:2] == ["login", "status"]:
+        return print("Logged in using an API key (fake)")
+    prompt = argv[-1] if codex else argv[argv.index("-p") + 1]
+    topic = prompt.removeprefix("$grove-shape " if codex else "/grove-shape ").removesuffix(" --interaction headless")
     missing, mode = topic == CASES["missing-choice"]["topic"], os.environ["GROVE_EVAL_FAKE"]
     emit = lambda ev: print(json.dumps(ev), flush=True)
-    tool = lambda name, **inp: emit({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": name, "input": inp}]}})
-    emit({"type": "system", "subtype": "init", "model": "fake", "permissionMode": argv[argv.index("--permission-mode") + 1]})
+    if codex:  # Codex wraps every command in the user's shell and reads files through commands
+        thread = f"fake-{os.getpid()}"
+        rollout = os.path.join(os.environ["CODEX_HOME"], "sessions", "2026", "09", "24", f"rollout-2026-09-24T00-00-00-{thread}.jsonl")
+        os.makedirs(os.path.dirname(rollout), exist_ok=True)
+        approve = "--approve-for-me" in argv
+        open(rollout, "w").write(json.dumps({"type": "session_meta", "payload": {"id": thread}}) + "\n" + json.dumps({"type": "turn_context", "payload": {
+            "model": argv[argv.index("-m") + 1], "effort": argv[argv.index("-c") + 1].partition("=")[2],
+            "approval_policy": "on-request" if approve else "never", "sandbox_policy": {"type": "workspace-write" if approve else argv[argv.index("-s") + 1]}}}) + "\n")
+        emit({"type": "thread.started", "thread_id": thread})
+        emit({"type": "turn.started"})
+        item = lambda **i: emit({"type": "item.completed", "item": {"id": "item", **i}})
+        tool = lambda name, **inp: item(type="command_execution", status="completed", exit_code=0,
+                                        command="/bin/zsh -lc " + shlex.quote(inp["command"] if name == "Bash" else f"nl -ba {inp['file_path']}"))
+    else:
+        tool = lambda name, **inp: emit({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": name, "input": inp}]}})
+        emit({"type": "system", "subtype": "init", "model": "fake", "permissionMode": argv[argv.index("--permission-mode") + 1]})
     if mode == "worse":  # commands that mention grove subcommands without running them
         for cmd in ('grove new work "Let tasks list filter by tag"', 'grove new question "Should tasks list show dropped tasks?"',
                     "cd /tmp/grove-evals-x/p && git worktree list", "cat > /tmp/x.md <<EOF\nthe brief and the guide\nEOF"):
             tool("Bash", command=cmd)
     else:
         tool("Bash", command="grove guide shape")
-        tool("Read", file_path=os.path.abspath("grove/brief.md"))
+        tool("Read", file_path="grove/brief.md" if codex else os.path.abspath("grove/brief.md"))
         tool("Bash", command="grove list && cat tasks.py")
-        tool("Read", file_path=os.path.expanduser("~/.claude/CLAUDE.md"))
+        # an unneeded read outside the clone; Codex's goes through a command, so the file must exist
+        tool("Read", file_path=os.path.abspath(__file__) if codex else os.path.expanduser("~/.claude/CLAUDE.md"))
     branch = "worktree-shape-" + ("hide-finished" if missing else "tag-filter")
     wt = os.path.abspath(os.path.join(".claude", "worktrees", branch))
     git(".", "worktree", "add", "-q", "-b", branch, wt, "main")
@@ -443,14 +600,20 @@ def fake(argv):
         git(".", "branch", "worktree-shape-second", branch)
     tip = named if mode == "worse" else git(wt, "rev-parse", "--short=9", "HEAD")
     text = f"Proposed {work} on {branch} at {tip}." + (f" Question {q} blocks it." if q and mode != "bad" else "")
+    if codex:
+        open(argv[argv.index("-o") + 1], "w").write(text + "\n")
+        item(type="agent_message", text=text)
+        return emit({"type": "turn.completed", "usage": {"input_tokens": 100, "cached_input_tokens": 60, "output_tokens": 10}})
     emit({"type": "result", "subtype": "success", "is_error": False, "total_cost_usd": 0, "num_turns": 5, "duration_ms": 1000, "result": text})
 
 
 def selftest():
     tmp = tempfile.mkdtemp(prefix="grove-evals-selftest-")
-    shim = os.path.join(tmp, "claude")
-    open(shim, "w").write(f"#!/bin/sh\nexec {shlex.quote(sys.executable)} {shlex.quote(os.path.abspath(__file__))} _fake \"$@\"\n")
-    os.chmod(shim, 0o755)
+    shims = {}
+    for name in ("claude", "codex"):
+        shims[name] = os.path.join(tmp, name)
+        open(shims[name], "w").write(f"#!/bin/sh\nexec {shlex.quote(sys.executable)} {shlex.quote(os.path.abspath(__file__))} _fake {name} \"$@\"\n")
+        os.chmod(shims[name], 0o755)
     expected = {("good", "missing-choice"): set(), ("good", "companion"): set(),
                 ("bad", "missing-choice"): {"question-blocks-proposal", "message-names", "session-checkout-unchanged"},
                 ("bad", "companion"): {"no-question", "session-checkout-unchanged"},
@@ -461,23 +624,69 @@ def selftest():
     os.makedirs(os.path.join(config, "skills", "synced", "x"))
     json.dump({"tui": "fullscreen", "autoMemoryEnabled": False}, open(os.path.join(config, "settings.json"), "w"))
     json.dump({"skills": [{"name": "pdf"}]}, open(os.path.join(config, "skills", "synced", "x", "manifest.json"), "w"))
+    home = os.path.join(tmp, "codex-home")  # as a login and a first run leave it: tui state, a trust table, bundled skills
+    os.makedirs(os.path.join(home, "skills", ".system", "openai-docs"))
+    os.makedirs(os.path.join(home, "memories"))
+    open(os.path.join(home, "config.toml"), "w").write('[tui]\nscreen_reader_detection_done = true\n\n[projects."/tmp/x"]\ntrust_level = "trusted"\n')
     reasons = {"bad": "fail: no question or decision", "surfaced": "fail: surfaced, not blocking"}
-    for mode in ("good", "bad", "surfaced", "worse"):
-        os.environ["GROVE_EVAL_FAKE"] = mode
-        args = argparse.Namespace(runs=1, budget="0.01", model="fake", permission_mode="fake", config_dir=config,
-                                  case=[], out=os.path.join(tmp, mode), claude=shim)
-        for r in run(args):
-            failed = {k for k, v in r["checks"].items() if v != "pass"}
-            assert failed == expected[(mode, r["case"])], (mode, r["case"], r["checks"])
-            if mode in reasons and r["case"] == "missing-choice":
-                assert r["checks"]["question-blocks-proposal"].startswith(reasons[mode]), r["checks"]
-            f = r["retrieval"]
-            if mode == "worse":
-                assert not (f["guide"] or f["brief"] or f["list"] or f["context_or_show"]), f
-                continue
-            assert f["guide"] and f["brief"] and f["list"] and not f["context_or_show"], f
-            assert "tasks.py" in f["files_read"] and len(f["unneeded"]) == 1 and f["unneeded"][0].endswith(".claude/CLAUDE.md"), f
-    assert open(os.path.join(tmp, "good", "report.md")).read().count("- config dir synced skills: pdf") == 1
+    for harness in ("claude", "codex"):
+        for mode in ("good", "bad", "surfaced", "worse"):
+            os.environ["GROVE_EVAL_FAKE"] = mode
+            args = argparse.Namespace(harness=harness, runs=1, budget=None if harness == "codex" else "0.01", model="fake-model", effort="high" if harness == "codex" else None,
+                                      permission_mode="approve-for-me" if harness == "codex" else "fake", max_seconds=60 if harness == "codex" else None,
+                                      config_dir=home if harness == "codex" else config, case=[], out=os.path.join(tmp, "out-" + harness, mode), claude=shims["claude"], codex=shims["codex"])
+            for r in run(args):
+                failed = {k for k, v in r["checks"].items() if v != "pass"}
+                assert failed == expected[(mode, r["case"])], (harness, mode, r["case"], r["checks"])
+                if mode in reasons and r["case"] == "missing-choice":
+                    assert r["checks"]["question-blocks-proposal"].startswith(reasons[mode]), r["checks"]
+                if harness == "codex":
+                    assert r["model_reported"] == "fake-model" and r["effort_reported"] == "high" and r["permission_mode_reported"]["approval_policy"] == "on-request", r
+                    assert r["cost_usd"] is None and r["cost_reason"] and r["tokens"]["output_tokens"] == 10 and not r["is_error"] and r["turns"] == 1, r
+                    assert os.path.exists(os.path.join(tmp, "out-" + harness, mode, f"{r['case']}-1", "rollout.jsonl"))
+                f = r["retrieval"]
+                if mode == "worse":
+                    assert not (f["guide"] or f["brief"] or f["list"] or f["context_or_show"]), f
+                    continue
+                assert f["guide"] and f["brief"] and f["list"] and not f["context_or_show"], f
+                outside = "evals/run.py" if harness == "codex" else ".claude/CLAUDE.md"
+                assert "tasks.py" in f["files_read"] and "grove/brief.md" in f["files_read"] and len(f["unneeded"]) == 1 and f["unneeded"][0].endswith(outside), f
+    assert open(os.path.join(tmp, "out-claude", "good", "report.md")).read().count("- config dir synced skills: pdf") == 1
+    text = open(os.path.join(tmp, "out-codex", "good", "report.md")).read()
+    assert "- config dir system skills: openai-docs" in text and "| not reported | 100/60/10 |" in text and "- login: Logged in" in text, text
+    for harness, change, reason in (("codex", {"max_seconds": None}, "needs --max-seconds"), ("codex", {"budget": "1"}, "--budget is Claude's"),
+                                    ("codex", {"effort": None}, "needs --effort"), ("codex", {"permission_mode": "auto"}, "one of"),
+                                    ("claude", {"effort": "high"}, "are Codex's"), ("claude", {"max_seconds": 60}, "are Codex's"), ("claude", {"budget": None}, "needs --budget")):
+        valid = dict(harness=harness, runs=1, budget=None, model="fake", effort="high", permission_mode="workspace-write", max_seconds=60,
+                     config_dir=home, case=[], out=os.path.join(tmp, "refused"), claude=shims["claude"], codex=shims["codex"])
+        if harness == "claude":
+            valid.update(budget="0.01", effort=None, max_seconds=None, permission_mode="fake", config_dir=config)
+        try:
+            run(argparse.Namespace(**(valid | change)))
+            raise AssertionError(f"{harness} {change} accepted")
+        except SystemExit as err:
+            assert reason in str(err), (harness, change, err)
+    args = argparse.Namespace(**(vars(args) | {"out": os.path.join(tmp, "refused")}))
+    for name, content, reason in (("AGENTS.md", "", "AGENTS.md"), ("skills/mine/SKILL.md", "", "skills/mine"), ("memories/note.md", "x", "memories/"),
+                                  ("config.toml", 'model = "x"\n', "config.toml key model"), ("config.toml", '[projects."/x"]\nsandbox_mode = "x"\n', "projects./x.sandbox_mode"),
+                                  ("config.toml", "[", "config.toml unreadable")):
+        path = os.path.join(home, name)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        saved = open(path).read() if os.path.exists(path) else None
+        open(path, "w").write(content)
+        try:
+            run(args)
+            raise AssertionError(f"{name} accepted")
+        except SystemExit as err:
+            assert "not clean" in str(err) and reason in str(err), (name, reason, err)
+        if saved is not None:
+            open(path, "w").write(saved)
+        else:
+            os.remove(path)
+            if name.startswith("skills/"):
+                os.rmdir(os.path.dirname(path))
+    args = argparse.Namespace(runs=1, budget="0.01", model="fake", permission_mode="fake", config_dir=config, case=[], claude=shims["claude"], codex=shims["codex"],
+                              harness="claude", effort=None, max_seconds=None)
     for name, content, reason in (("settings.json", '{"autoMemoryEnabled": false, "hooks": {}}', "key hooks"),
                                   ("settings.json", '{"autoMemoryEnabled": true}', "autoMemoryEnabled"), ("settings.json", '{"tui": "fullscreen"}', "autoMemoryEnabled"),
                                   ("settings.json", "[]", "key not an object"), ("skills/mine/SKILL.md", "", "skills/mine"),
@@ -501,19 +710,23 @@ def main():
     for sig in (signal.SIGTERM, signal.SIGHUP):  # unwind like Ctrl-C, so a running harness is killed
         signal.signal(sig, lambda n, _: sys.exit(128 + n))
     if sys.argv[1:2] == ["_fake"]:
-        return fake(sys.argv[2:])
+        return fake(sys.argv[2], sys.argv[3:])
     parser = argparse.ArgumentParser(prog="evals/run.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
-    p = sub.add_parser("run", help="run the cases on Claude; spends up to runs x cases x budget")
+    p = sub.add_parser("run", help="run the cases on Claude (up to runs x cases x budget) or Codex (up to runs x cases x max-seconds)")
+    p.add_argument("--harness", choices=("claude", "codex"), default="claude")
     p.add_argument("--runs", type=int, required=True)
-    p.add_argument("--budget", required=True, help="USD per run, passed as --max-budget-usd")
+    p.add_argument("--budget", help="Claude only, required: USD per run, passed as --max-budget-usd")
     p.add_argument("--model", required=True)
-    p.add_argument("--permission-mode", required=True)
-    p.add_argument("--config-dir", required=True, help="CLAUDE_CONFIG_DIR for every run; must hold no customization")
+    p.add_argument("--effort", help="Codex only, required: passed as -c model_reasoning_effort=EFFORT")
+    p.add_argument("--permission-mode", required=True, help=f"Claude's --permission-mode; for Codex one of {', '.join(CODEX_MODES)}")
+    p.add_argument("--max-seconds", type=int, help="Codex only, required: each run is killed at this cap")
+    p.add_argument("--config-dir", required=True, help="CLAUDE_CONFIG_DIR or CODEX_HOME for every run; must hold no customization")
     p.add_argument("--case", action="append", default=[], help=f"one of {', '.join(CASES)}; default all")
     p.add_argument("--out", help="output directory; default a new temporary one")
-    p.add_argument("--claude", default="claude", help="the harness executable")
-    sub.add_parser("selftest", help="check the runner against a fake claude; spends nothing")
+    p.add_argument("--claude", default="claude", help="the Claude executable")
+    p.add_argument("--codex", default="codex", help="the Codex executable")
+    sub.add_parser("selftest", help="check the runner against a fake claude and codex; spends nothing")
     args = parser.parse_args()
     try:
         run(args) if args.command == "run" else selftest()
