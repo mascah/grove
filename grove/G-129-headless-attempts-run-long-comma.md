@@ -64,8 +64,81 @@ Out of scope: a Grove-owned way to run and await the eval pair, and changing
    returns a checkpoint naming it; its attempt files are cited.
 3. `grove check` passes.
 
+## Evidence
+
+Branch `worktree-G-129`, based on main `c38d914` (record revision
+`sha256:d53d511c`). This was run as headless `/grove-work G-129`. The
+candidate is the commit that holds this text; the status change that
+follows it names that commit. The reviewed content is `4e8cd92`: the rule
+`88312db`, review fixes `9ad05c5` and `4e8cd92`, and the review record
+[G-132](G-132-g-129-independent-review-of-the.md). No plan was written,
+because the In scope item is one guide rule. The owner's choice about the
+attempt owner is left open, as the Constraints say, and the rule does not
+depend on it.
+
+Acceptance:
+
+1. Met. [Step 5](../docs/work-execution.md#5-implement-through-evidence)
+   of the work guide now ends with the rule, stated once. It opens
+   "Headless, no command outlives the session." What it says:
+   - Run a long command in the foreground with an explicit timeout, up to
+     the harness's maximum, in bounded pieces where the command allows.
+   - If the command cannot finish inside that maximum, or it times out,
+     the work stays active. The session returns a committed checkpoint
+     that names the command, the path of any partial output, why it must
+     run, what its result decides, and who can run it. A headless rerun
+     with nothing changed returns the same checkpoint.
+   - Never end the turn on a background job as an implied continuation.
+
+   The Inputs sentence about mode now points to this rule. Step 8's return
+   list now includes a wait on a command. No other text restates the rule.
+   `go build -o /tmp/grove-g129 ./cmd/grove`, then `/tmp/grove-g129 guide
+   work | diff - docs/work-execution.md`, shows no difference.
+   `/tmp/grove-g129 version` prints guides digest `3c9996e33e42`. Before
+   this change, main `c38d914` printed `5a224350feae`.
+2. Not met, and this attempt cannot meet it. The acceptance needs a
+   separate headless attempt of a record whose mandate includes a long
+   command, run after the change. Starting that attempt means `grove run`,
+   which this assignment does not authorize, and the guide tells a headless
+   session not to launch another one. The attempt also reads the guide from
+   its own worktree, so it sees the rule only once that worktree's base
+   holds this branch, which in practice means after integration. The owner
+   decides whether that attempt comes before or after the merge. This
+   session did not run anything longer than one tool call. The longest run
+   was the full test suite, about 15 seconds, in the foreground.
+3. Met. At `4e8cd92`, `go run ./cmd/grove check` printed `OK: 126 records`
+   before G-132 was written. `gofmt -l .` printed nothing, and `go vet
+   ./...` was clean. At `9ad05c5`, `go test -count=1 -timeout 120s ./...`
+   passed for every package. Several packages took more than five seconds,
+   as they already did on main, and this change touches no Go code.
+   `4e8cd92` changes only wording in the guide.
+
+Review: G-132 ran two rounds with an independent reviewer subagent. Round 1
+raised 2 consequential findings, 4 minor ones and 1 nit; round 2 raised 2
+nits. All were fixed except one step 8 nit, left as it is on purpose. The
+knowledge check found nothing: no new domain concept, and no conflict with
+G-056 or G-101.
+
 ## Next
 
-Proposed 2026-09-24 from the diagnosis of G-114's two abandoned attempts.
-Shape before assigning: the guide sentence is small, but whether the attempt
-owner should surface an abandoned job is an open choice.
+In review; `candidate` names the commit. Acceptance 2 is still open (see
+Evidence). The owner's verdict decides whether it blocks integration or
+follows it. To integrate, run the first command in a clean checkout of
+`worktree-G-129` and the second in a clean checkout of `main`:
+
+```sh
+go run ./cmd/grove approve G-129 "VERDICT"
+go run ./cmd/grove integrate G-129 --cleanup
+```
+
+For acceptance 2 after the merge, give an attempt a mandate that includes
+the G-108 eval pair (about nine minutes). An example is a G-108 rerun, or
+the knowledge-sequence case listed in G-108's Next:
+`go run ./cmd/grove run ID --budget USD --permission-mode MODE`. Then cite
+its files under `.git/grove/attempts/`. It meets the acceptance if it
+either finishes the pair in the foreground or returns a checkpoint that
+names the command.
+
+Still open, for shaping and not for this record: should the attempt
+owner's result reconciliation flag an attempt whose last message promises
+a continuation?
