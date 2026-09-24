@@ -151,7 +151,12 @@ def checks(case, before, after, message):
         else f"fail: work touched {({k: f.get('status') for k, f in work.items()})}"
     if case["question"]:
         blocking = [q for q, f in questions.items() if set(f.get("blocks") or []) & set(work)]
-        out["question-blocks-proposal"] = "pass" if blocking else f"fail: questions {({q: f.get('blocks') for q, f in questions.items()})}, work {sorted(work)}"
+        decisions = sorted(ident(p, f) for p, f in b["touched"].items() if f.get("type") == "decision")
+        # G-118: a blocking question follows the guide as written; a non-blocking question or a proposed
+        # decision surfaces the choice; neither means it was at most noted in the record, G-078 finding 6.
+        out["question-blocks-proposal"] = "pass" if blocking else "fail: " + (
+            f"surfaced, not blocking: questions {({q: f.get('blocks') for q, f in questions.items()})} decisions {decisions}"
+            if questions or decisions else "no question or decision: the choice is at most noted in the record")
     else:
         out["no-question"] = "pass" if not questions else f"fail: questions {sorted(questions)}"
     promoted = {ident(p, f): f.get("status") for p, f in b["touched"].items() if f.get("status") not in UNTOUCHED}

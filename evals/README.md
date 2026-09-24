@@ -81,7 +81,7 @@ On the clone, never the final message except where named. Each is `pass`,
 | `remote-unchanged` | The bare remote's refs are as before: nothing pushed |
 | `proposal-branch` | Exactly one `worktree-shape-*` branch exists |
 | `proposal-proposed` | The branch adds or changes at least one work record, and every one is `proposed` |
-| `question-blocks-proposal` | (missing-choice) A question on the branch has `blocks` naming that work |
+| `question-blocks-proposal` | (missing-choice) A question on the branch has `blocks` naming that work. The failure reason tells a choice surfaced without blocking (a non-blocking question or a decision record) from one at most noted in the record, the G-078 finding 6 outcome |
 | `no-question` | (companion) The branch adds or changes no question |
 | `no-promotion` | No record the branch touches is in any status but `proposed`, `open` or `current` |
 | `check-passes` | `grove check` passes in a checkout of the branch |
