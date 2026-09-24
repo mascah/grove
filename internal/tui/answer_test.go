@@ -164,6 +164,24 @@ func TestAnswerDeclinedUnsavedOrFailed(t *testing.T) {
 	}
 	fileIs(t, path, edited)
 
+	// An earlier answer without the heading: the heading is taken back, and
+	// the resolve expects the file as it is again.
+	_, f, path = answerFixture(t)
+	byHand := question + "Blue, by hand.\n"
+	os.WriteFile(path, []byte(byHand), 0o644)
+	for i := range f.res.Groups[0].Versions {
+		if v := &f.res.Groups[0].Versions[i]; v.Source.Kind == "live" {
+			v.Change, v.Revision, v.Record.Source = "modified", project.Revision([]byte(byHand)), []byte(byHand)
+		}
+	}
+	e = &editor{}
+	m = openQuestion(t, f, e)
+	deliverAll(m, press(m, "e"))
+	if m.prompt == nil || m.prompt.expect != project.Revision([]byte(byHand)) {
+		t.Fatalf("the resolve should expect the answer as written by hand:\n%s", plain(m))
+	}
+	fileIs(t, path, byHand)
+
 	for _, c := range []struct {
 		fail   error
 		notice string

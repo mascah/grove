@@ -113,6 +113,7 @@ func (m *Model) edited(msg editedMsg) tea.Cmd {
 			m.notice = "the Answer heading could not be taken back (" + werr.Error() + "); nothing was committed, and it stays in " + e.path
 			return m.refresh()
 		}
+		after = e.before // what an earlier edit's resolve expects
 	}
 	kept := "; nothing was committed, and the edit stays uncommitted in " + e.root
 	switch {
