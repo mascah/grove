@@ -217,13 +217,12 @@ universal plan gate; and bounds at other steps.
 The owner can commit this proposal and assign it with `$grove-work G-134`.
 Everything is chosen above except two things that cannot be known before
 assignment: the experiment's target item, and confirmation of its budget,
-which is a paid mandate. Candidates observed on 2026-09-24:
-[G-135](G-135-run-the-g-108-eval-pair-on-codex.md) if it is still
-unassigned when this lands; otherwise the follow-on G-129 left open (an
-attempt owner that flags a last message promising a continuation), which
-is Go work with tests of the kind the sixteen attempts mostly did and
-needs a short shaping first; or the prerequisite-constraint eval case in
-G-108's Next. [G-110](G-110-external-preview.md) is not a good first
+which is a paid mandate. The owner chose the target on 2026-09-24:
+[G-135](G-135-run-the-g-108-eval-pair-on-codex.md), held until this lands.
+Fallbacks if that changes: the follow-on G-129 left open (an attempt owner
+that flags a last message promising a continuation), Go work with tests of
+the kind the sixteen attempts mostly did, needing a short shaping first; or
+the prerequisite-constraint eval case in G-108's Next. [G-110](G-110-external-preview.md) is not a good first
 target: it is large and would stop on owner choices during preparation,
 which muddies the plan-sufficiency reading. The independent review should read the plan bound
 against the amended G-055 and the guide's Lifecycle paragraph. Follow-on, shaped only after this lands: the bounded run as the

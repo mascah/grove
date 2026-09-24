@@ -103,9 +103,11 @@ unless the report shows the adapter failing.
 
 ## Next
 
-The owner can commit this proposal and assign it with `$grove-work G-135`.
-At assignment, agree the runs per case, the model and reasoning effort, the
+Owner decision, 2026-09-24: assign this after
+[G-134](G-134-bound-an-attempt-at-its-plan-and.md) lands, so that it is the
+target of G-134's routing experiment: a bounded preparation attempt at
+`xhigh`, then implementation at `medium`, both on Opus 5.5. Assign it with
+`$grove-work G-135 --until plan` then. At assignment, agree the runs per case, the model and reasoning effort, the
 cap, and how the clean `CODEX_HOME` logs in, as G-121 did for Claude. A
 Codex provider, if the report favours it, is separate work that revisits
-G-101; [G-134](G-134-bound-an-attempt-at-its-plan-and.md) proceeds
-independently.
+G-101.
