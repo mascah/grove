@@ -2,9 +2,9 @@
 id: "G-114"
 type: work
 title: "Capture and reuse terms, questions and decisions across shaping, work and review"
-status: review
+status: done
 created: "2026-09-23T19:44:56Z"
-updated: "2026-09-24T15:01:40Z"
+updated: "2026-09-24T15:03:27Z"
 relates_to: ["G-037", "G-051", "G-056", "G-107", "G-108", "G-118", "G-122", "G-125"]
 candidate: "fdfd933e334eef1aa27631e44df7e535b762d244"
 approved: "fdfd933e334eef1aa27631e44df7e535b762d244"
