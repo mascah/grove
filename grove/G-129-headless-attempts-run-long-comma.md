@@ -97,16 +97,40 @@ Acceptance:
    work | diff - docs/work-execution.md`, shows no difference.
    `/tmp/grove-g129 version` prints guides digest `3c9996e33e42`. Before
    this change, main `c38d914` printed `5a224350feae`.
-2. Not met, and this attempt cannot meet it. The acceptance needs a
-   separate headless attempt of a record whose mandate includes a long
-   command, run after the change. Starting that attempt means `grove run`,
-   which this assignment does not authorize, and the guide tells a headless
-   session not to launch another one. The attempt also reads the guide from
-   its own worktree, so it sees the rule only once that worktree's base
-   holds this branch, which in practice means after integration. The owner
-   decides whether that attempt comes before or after the merge. This
-   session did not run anything longer than one tool call. The longest run
-   was the full test suite, about 15 seconds, in the foreground.
+2. Met, before integration, following the owner's feedback on `347e3ab`.
+   Headless attempt `G-129.20260924T153802Z` ran two fixture attempts in a
+   disposable clone, `/tmp/g129-fixture`. The clone's branch was
+   `worktree-G-129` at `f0ffd50`. Its guide matches `0597319` byte for
+   byte, since everything after the rule changed only this record. Both
+   fixtures were launched as `/tmp/grove-g129 run ID --budget 3
+   --permission-mode auto`, with that binary built from `f0ffd50` (guides
+   `3c9996e33e42`). Each fixture work record in the clone had a single
+   mandate: run the command as written and record its output, without
+   shortening, splitting or simulating it. The clone's counter numbered the
+   fixtures G-134 and G-135; those IDs exist only in the clone. The attempt
+   files, plus each fixture branch's commits as patches, are copied to
+   `~/.cache/grove/G-129-acceptance-2/ATTEMPT/`. They are not committed,
+   because attempt files hold provider text.
+   - `G-134.20260924T153900Z`, for `sleep 900 && echo done`, which is longer
+     than the ten-minute foreground limit. It finished in 45 s, exit 0,
+     $0.32. It set the fixture active and committed a checkpoint (`0b57f96`)
+     naming the command. The checkpoint says why the command was not
+     started (15 minutes against a 600000 ms maximum), that there was no
+     partial output and no owned command, what the result decides, and that
+     an interactive session or a person can run it. It also says a headless
+     rerun returns the same checkpoint. None of its tool calls ran in the
+     background. Its last message begins "G-134 is waiting on one command
+     that I didn't run: `sleep 900 && echo done`". This is the guide's "do
+     not start it" branch, not the owner's expected "run, time out,
+     checkpoint". The outcome is the same checkpoint without the wasted
+     ten minutes.
+   - `G-135.20260924T154028Z`, for `sleep 420 && echo done`, a seven-minute
+     command. That is the shape of the G-114 failure, a wait that fits the
+     limit. It ran the command in the foreground with `timeout: 600000`,
+     and the tool call printed `done` and `exit=0` at 15:47:53Z. It
+     recorded the output in Evidence (`52c480f`) and handed the fixture into
+     review with that candidate (`30b8b5e`). It finished at 15:48:18Z,
+     exit 0, $0.35.
 3. Met. At `4e8cd92`, `go run ./cmd/grove check` printed `OK: 126 records`
    before G-132 was written. `gofmt -l .` printed nothing, and `go vet
    ./...` was clean. At `9ad05c5`, `go test -count=1 -timeout 120s ./...`
@@ -122,9 +146,12 @@ G-056 or G-101.
 
 ## Next
 
-In review; `candidate` names the commit. Acceptance 2 is still open (see
-Evidence). The owner's verdict decides whether it blocks integration or
-follows it. To integrate, run the first command in a clean checkout of
+In review; `candidate` names the commit. All three acceptance items are
+met. Commit `4e56eea` added the owner's recommendation, to check before
+integrating in a throwaway clone. That check ran as Evidence acceptance 2
+describes, and so it is removed from this section. The guide has not
+changed since G-132 examined `4e8cd92`. Every later commit changes only
+this record. To integrate, run the first command in a clean checkout of
 `worktree-G-129` and the second in a clean checkout of `main`:
 
 ```sh
@@ -132,27 +159,11 @@ go run ./cmd/grove approve G-129 "VERDICT"
 go run ./cmd/grove integrate G-129 --cleanup
 ```
 
-For acceptance 2 after the merge, give an attempt a mandate that includes
-the G-108 eval pair (about nine minutes). An example is a G-108 rerun, or
-the knowledge-sequence case listed in G-108's Next:
-`go run ./cmd/grove run ID --budget USD --permission-mode MODE`. Then cite
-its files under `.git/grove/attempts/`. It meets the acceptance if it
-either finishes the pair in the foreground or returns a checkpoint that
-names the command.
+`/tmp/g129-fixture` is disposable and can be deleted
+(`rm -rf /tmp/g129-fixture`); the evidence copy stays in `~/.cache/grove/`.
 
 Still open, for shaping and not for this record: should the attempt
 owner's result reconciliation flag an attempt whose last message promises
 a continuation?
-
-Recommendation: run the check before integrating, in a throwaway clone, using a made-up record.
-
-1. Clone the repo into the scratchpad and check out worktree-G-129 at 0597319. The clone has its own ID counter and attempts directory, so nothing touches the real repo. This follows the AGENTS.md fixture rule.
-2. In the clone, run grove new to create one work record. Its only mandate is a command that runs past the Bash tool's 10-minute limit, for example sleep 900 && echo done, with acceptance "record its output". Commit it.
-3. From the clone, run grove run TEST-ID --budget 3 --permission-mode <a mode that allows Bash>. That costs about $2–3 and takes roughly 10 minutes.
-4. Pass/fail:
-   - Pass: the attempt runs the command in the foreground, hits the timeout, and returns a committed checkpoint that names sleep 900, whether there's partial output, and who can run it.
-   - Fail: it backgrounds the command and ends its turn saying "I'll be notified."
-     A longer-than-limit command is the stronger test: it can't be passed by the command simply finishing, only by returning a checkpoint.
-5. Before deleting the clone, copy its .git/grove/attempts/<ATTEMPT>/ somewhere that will last. Then cite those files and the attempt's last message in G-129's Evidence, make a new commit, and move candidate to it.
 
 Feedback on candidate 347e3ab, 2026-09-24: poke
