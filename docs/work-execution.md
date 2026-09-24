@@ -46,8 +46,8 @@ members.
   declared no mode. A headless caller must say `--interaction headless`; any
   other value is an error to report, not to guess around. The mode changes only
   [what happens when a human decision is missing](#when-a-human-decision-is-missing)
-  and [how a long command is awaited](#5-implement-through-evidence), at the
-  end of step 5;
+  and [how a long command is awaited](#5-implement-through-evidence)
+  (end of step 5);
   outcome, constraints, acceptance, and every other step are identical.
 
 ## Authority
@@ -262,13 +262,12 @@ background is abandoned, whatever the harness says about notifying it. Run a
 command that may outlast the harness's default tool timeout in the foreground
 with an explicit timeout, up to the harness's maximum, split into bounded
 pieces where it allows. If it cannot finish inside that maximum, do not start
-it; if it times out, confirm it has stopped and note its partial output. Either
-way the work stays active and the wait is returned as a
-[checkpoint](#7-checkpoint-and-resume) naming the command, why it must run,
-what its result decides, and who can run it (an interactive session or a
-person); rerunning headless with nothing changed returns the same checkpoint,
-so do not retry it. Never end the turn on a background job as an implied
-continuation.
+it; if it times out, confirm it has stopped. Either way the work stays active
+and the wait is returned as a [checkpoint](#7-checkpoint-and-resume) naming
+the command, the path of any partial output, why it must run, what its result
+decides, and who can run it (an interactive session or a person); rerunning
+headless with nothing changed returns the same checkpoint, so do not retry it.
+Never end the turn on a background job as an implied continuation.
 
 ## 6. Review
 
