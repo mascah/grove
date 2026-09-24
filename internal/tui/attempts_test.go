@@ -711,3 +711,35 @@ func TestAttemptScreenHonesty(t *testing.T) {
 		t.Fatalf("a first read that fails shows no figures:\n%s", s)
 	}
 }
+
+// A card with a live attempt has a border of its own colour, and does not
+// say the obvious `not on main` beside `● running`; when the attempt ends,
+// both return to what the card's state says.
+func TestRunningCardStandsOut(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	res := fx.twoBranches()
+	res.Target = "main"
+	r := &runs{}
+	r.set(view("W-002", "20260923T010000Z", attempt.Running, nil))
+	m := openRuns(t, &fake{res: res}, r, 120, 36)
+	cols, _, _ := m.bounded()
+	i := slices.IndexFunc(cols[statusIndex("proposed")], func(c card) bool { return c.id == "W-002" })
+	if i < 0 || !cols[statusIndex("proposed")][i].running || cols[statusIndex("proposed")][i].tag != "● running" {
+		t.Fatalf("W-002 is a running card with only that tag: %+v", cols)
+	}
+	press(m, "down") // unfocused, so the border is only the accent
+	running := strings.Split(runningAccent.Render("x"), "x")[0] + "╭"
+	if !strings.Contains(m.render(), running) {
+		t.Fatal("a running card has its own border colour")
+	}
+	r.set(view("W-002", "20260923T010000Z", attempt.Finished, &attempt.Result{ExitCode: 0}))
+	m.attemptsStale = true
+	settle(m, m.wantAttempts())
+	cols, _, _ = m.bounded()
+	if c := cols[statusIndex("proposed")][i]; c.running || c.tag != "not on main" || strings.Contains(m.render(), running) {
+		t.Fatalf("an ended attempt leaves the card as its state says: %+v", c)
+	}
+}
+
+func statusIndex(s string) int { return slices.Index(statuses[:], s) }

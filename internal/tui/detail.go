@@ -26,15 +26,54 @@ type entry struct {
 }
 
 // openDetail shows a record above whatever is open: a card from the board,
-// or a linked record from another detail.
+// or a linked record from another detail. From a detail, a record already on
+// the path is returned to, cutting what was opened above it, rather than
+// opened again; o from an attempt always opens a layer, so Esc still returns
+// to the attempt.
 func (m *Model) openDetail(id string) {
 	if len(m.stack) == 0 {
 		m.workDepth = 0 // a record opened afresh returns to the board
 	}
-	m.stack = append(m.stack, id)
+	if i := lastIndex(m.stack, id); i >= 0 && m.screen == detailScreen {
+		m.stack = m.stack[:i+1]
+		if len(m.stack) < m.workDepth {
+			m.workDepth = 0 // the record o opened was cut, and its return with it
+		}
+	} else {
+		m.stack = append(m.stack, id)
+	}
 	m.screen, m.side, m.dscroll, m.asOf, m.diff = detailScreen, -1, 0, "", ""
 	m.leaveVersions()
 	m.startAtEvidence()
+}
+
+// lastIndex is where id last stands on a path. o from an attempt can put a
+// record on it twice, and the later one keeps the return to the attempt.
+func lastIndex(path []string, id string) int {
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == id {
+			return i
+		}
+	}
+	return -1
+}
+
+// crumbs is the detail's path, from where it was entered to the open record,
+// with the attempts a record was opened from by o; long paths lose their
+// start, never the open record.
+func (m *Model) crumbs(w int) string {
+	parts := []string{"board"}
+	for i, id := range m.stack {
+		if m.workDepth != 0 && i == m.workDepth-1 {
+			parts = append(parts, "attempts")
+		}
+		parts = append(parts, id)
+	}
+	s := safe(strings.Join(parts, " › "))
+	if over := ansi.StringWidth(s) - w; over > 0 {
+		s = ansi.TruncateLeft(s, over+1, "…")
+	}
+	return line(s, w)
 }
 
 // leaveDetail steps back: from a diff or a commit's content to now, then to
@@ -74,7 +113,7 @@ func (m *Model) detailKey(k string) {
 					break
 				}
 			}
-			if next < 0 && m.width < wideWidth {
+			if next < 0 && !m.split() {
 				next = 0 // a narrow terminal shows the sidebar even with nothing to select
 			}
 		case changes > m.side:
@@ -108,6 +147,13 @@ func (m *Model) detailKey(k string) {
 			m.diff, m.asOf, m.dscroll = path, "", 0
 		case e.commit == nil && e.id != "":
 			m.openDetail(e.id)
+		}
+	case "w":
+		// Hidden, the content takes the width, and a mouse selection of it
+		// takes no sidebar text; Tab still reaches the sidebar, full width.
+		if m.width >= wideWidth {
+			m.sideHidden = !m.sideHidden
+			m.clampScroll()
 		}
 	case "v":
 		m.screen = versionsScreen
@@ -287,8 +333,13 @@ func (m *Model) entries() []entry {
 	return out
 }
 
+// split reports the detail's content beside its sidebar: on a wide terminal
+// that has not hidden the sidebar with w.
+func (m *Model) split() bool { return m.width >= wideWidth && !m.sideHidden }
+
 // detailBody draws the open record: its header, then its content beside
-// the sidebar, or one of them at a time on a narrow terminal.
+// the sidebar, or one of them at a time on a narrow terminal or with the
+// sidebar hidden.
 func (m *Model) detailBody(w, n int) []string {
 	g := m.group()
 	v := m.shown(g)
@@ -296,9 +347,9 @@ func (m *Model) detailBody(w, n int) []string {
 	n -= len(head)
 	var rows []string
 	switch {
-	case w < wideWidth && m.side >= 0:
+	case !m.split() && m.side >= 0:
 		rows = m.sidebar(v, w, n)
-	case w < wideWidth:
+	case !m.split():
 		rows = m.content(v, w, n)
 	default:
 		lw := w * 11 / 20
@@ -340,7 +391,11 @@ func (m *Model) detailHead(v *versions.Version, w int) []string {
 	if compact {
 		rows = 1
 	}
-	inner := []string{bold(line(first, iw))}
+	var inner []string
+	if !compact {
+		inner = append(inner, m.crumbs(iw))
+	}
+	inner = append(inner, bold(line(first, iw)))
 	inner = append(inner, wrap(title, iw)[:min(len(wrap(title, iw)), rows)]...)
 	if meta := m.detailMeta(g, v); meta != "" && !compact {
 		inner = append(inner, wrap(meta, iw)[:min(len(wrap(meta, iw)), rows)]...)

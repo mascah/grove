@@ -23,14 +23,17 @@ priority, or for Done the date it was last written and its candidate; the
 focused card has a heavy border and a `▶` marker, and each column an accent
 colour that nothing depends on. A card whose current state is only in a
 checkout's uncommitted files is marked `uncommitted`. With a target, a card
-none of whose committed current states is on it is marked `not on main`, and
-the header names the target. Where the current states diverge, one card sits
+none of whose committed current states is on it is marked `not on main`,
+unless it has a live attempt, which runs on a branch anyway; the header names
+the target. Where the current states diverge, one card sits
 in the earliest of their statuses, marked `⑂ 2 states`, and its detail says
 which states exist and where. Work whose current state removes its record is
 listed under Deleted. Done shows the most recently written cards that fit the
 column, newest first, and counts the rest (`+ 23 older · / to search`).
 Abandoned is hidden until `a` shows its column, and the shelf row counts it
-meanwhile. Neither the bound nor the hiding moves a file.
+meanwhile. Neither the bound nor the hiding moves a file. ←/→ and `h` `l`
+move to the next column with cards, skipping empty ones, which are still
+drawn; past the last column with cards the focus stays.
 
 `b` chooses between the current view and one checkout's own live files; this
 changes what is displayed and switches no branch or directory. On a
@@ -53,11 +56,19 @@ way), `blocked by` and `blocks` (a question's `blocks`), `part of` and
 `member` (`members`), and `related` (`relates_to` either way). Tab moves
 focus from the content to the linked records, to the changes, to the
 timeline, and back; ↑/↓ and PgUp/PgDn scroll the content or move the cursor.
-Enter on a linked record opens its own detail, of any type, and Esc returns;
+Enter on a linked record opens its own detail, of any type, and Esc returns.
+A record already on the path is returned to instead of opened again, so A,
+then B from A's sidebar, then A from B's is A alone, one Esc from the board. From
+16 rows, a row at the top of the header shows the path, such as `board ›
+G-108 › G-115`, losing its start when too long; a record `o` opened from an attempt
+has `attempts` before it, and Esc from it returns to the attempt.
 Enter on a timeline commit shows the record as it was at that commit, and
 Esc returns to now. Below 100 columns the detail shows one pane at a time and
-Tab cycles them. A page, term, decision, question, plan or review opens in
-the same screen, with the fields its type has.
+Tab cycles them. From 100 columns `w` hides the sidebar so the content takes
+the width and a mouse selection takes no sidebar text, with Tab cycling as
+below 100 columns; `w` shows it again, and the choice lasts for the session.
+A page, term, decision, question, plan or review opens in the same screen,
+with the fields its type has.
 
 ## Judging a candidate
 
@@ -142,7 +153,8 @@ is reported as such. `x` asks, then stops a running or orphaned attempt as
 `stop` does, keeping its partial work, and `o` opens its work record. The
 board only reads the attempts' files: quitting leaves an attempt running,
 and the next session shows the same one. While one runs, they are re-read
-every 2 s, a running card is tagged `● running`, and when one ends the board
+every 2 s, a running card is tagged `● running` (`● orphaned` for an orphan)
+and has a border in a colour no column uses, and when one ends the board
 is re-read.
 
 ## Timeline
@@ -205,7 +217,7 @@ render is cached per record content and width.
 | --- | --- | --- |
 | ↑/↓ | everywhere | Move |
 | `j` `k` | everywhere but search, where letters are typed | Move |
-| ←/→, `h` `l` | board | Move between columns |
+| ←/→, `h` `l` | board | Move to the next column with cards |
 | Tab | board | Switch between the columns and Deleted or Elsewhere |
 | Tab | detail | Cycle the content, linked records, changes and timeline |
 | Tab | versions | Switch between versions and details |
@@ -220,6 +232,7 @@ render is cached per record content and width.
 | `o` | attempts list or one attempt | Open its work record |
 | `d` | one attempt | Show or hide its details |
 | `v` | detail | Open the record's versions |
+| `w` | detail, from 100 columns | Hide or show the sidebar |
 | `b` | board | Choose the current view or one checkout's board |
 | `s` | everywhere | List every branch and checkout read, with diagnostics; reachable while a banner marks an incomplete result |
 | `r` | everywhere | Re-read |

@@ -84,6 +84,7 @@ type card struct {
 	tag       string // what the card notes beside its ID
 	meta      string // kind, size and priority, or when Done and its candidate
 	rec       *project.Record
+	running   bool // an attempt of this work may be running
 }
 
 // meta is a card's last line: what a glance at the board needs beyond the
@@ -211,6 +212,7 @@ type Model struct {
 	cardID       string   // the board's focus
 	stack        []string // open records, the last showing in the detail
 	side         int      // the detail's sidebar cursor; -1 while the content has focus
+	sideHidden   bool     // w hid the detail's sidebar on a wide terminal
 	dscroll      int      // the detail's content scroll
 	asOf         string   // a timeline commit whose content the detail shows; "" is now
 	diff         string   // a changed file whose diff the detail shows; "" is the content
@@ -596,16 +598,19 @@ func (m *Model) boardKey(k string) tea.Cmd {
 	case "down", "j":
 		focus(list, at+1)
 	case "left", "h", "right", "l":
+		// The next column with cards; empty ones are drawn but skipped.
 		if !m.onShelf {
-			vis := m.visible()
-			i := slices.Index(vis, m.col)
+			vis, step := m.visible(), 1
 			if k == "left" || k == "h" {
-				i = max(i-1, 0)
-			} else {
-				i = min(i+1, len(vis)-1)
+				step = -1
 			}
-			m.col = vis[i]
-			focus(columns[m.col], at)
+			for i := slices.Index(vis, m.col) + step; i >= 0 && i < len(vis); i += step {
+				if len(columns[vis[i]]) != 0 {
+					m.col = vis[i]
+					focus(columns[m.col], at)
+					break
+				}
+			}
 		}
 	case "a":
 		// Abandoned work is hidden by default; showing it adds its column.
@@ -752,9 +757,18 @@ func (m *Model) settleFocus() {
 	// An open record that vanished leaves the stack, with the reason; when
 	// none is left, its detail closes, and the versions or sources screen
 	// above it.
-	if gone := slices.IndexFunc(m.stack, func(id string) bool { return m.groupOf(id) == nil }); gone >= 0 {
+	vanished := func(id string) bool { return m.groupOf(id) == nil }
+	if gone := slices.IndexFunc(m.stack, vanished); gone >= 0 {
 		m.notice = m.stack[gone] + " is no longer on any readable branch or checkout"
-		m.stack = slices.DeleteFunc(slices.Clone(m.stack), func(id string) bool { return m.groupOf(id) == nil })
+		// The record o opened keeps its return at its new depth, or loses it
+		// with the record.
+		if d := m.workDepth; d != 0 {
+			m.workDepth = len(slices.DeleteFunc(slices.Clone(m.stack[:d]), vanished))
+			if vanished(m.stack[d-1]) {
+				m.workDepth = 0
+			}
+		}
+		m.stack = slices.DeleteFunc(slices.Clone(m.stack), vanished)
 		if len(m.stack) == 0 {
 			m.leaveVersions()
 			if m.back = boardScreen; m.screen == detailScreen || m.screen == versionsScreen {
@@ -833,7 +847,7 @@ func (m *Model) placed() (columns [len(statuses)][]card, shelf []card) {
 				continue
 			}
 			if i := slices.Index(statuses[:], v.Record.Status); i >= 0 {
-				columns[i] = append(columns[i], card{g.ID, v.Record.Title, distinct(g), count("", distinct(g), ""), meta(v.Record), v.Record})
+				columns[i] = append(columns[i], card{g.ID, v.Record.Title, distinct(g), count("", distinct(g), ""), meta(v.Record), v.Record, false})
 				placed = true
 			}
 		}
@@ -852,6 +866,7 @@ func (m *Model) cards() (columns [len(statuses)][]card, shelf []card) {
 		for j := range columns[i] {
 			if t := m.attemptTag(columns[i][j].id); t != "" {
 				columns[i][j].tag = strings.TrimSpace(t + " " + columns[i][j].tag)
+				columns[i][j].running = true
 			}
 		}
 	}
@@ -961,14 +976,16 @@ func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
 		if uncommitted {
 			tags = append(tags, "uncommitted")
 		}
-		if t := m.res.Target; t != "" && !slices.ContainsFunc(states, func(state []*versions.Version) bool { return state[0].OnTarget }) &&
+		// An attempt runs on a branch, so a running card says nothing of the
+		// target: running is what matters until it ends.
+		if t := m.res.Target; t != "" && m.attemptTag(g.ID) == "" && !slices.ContainsFunc(states, func(state []*versions.Version) bool { return state[0].OnTarget }) &&
 			slices.ContainsFunc(states, func(state []*versions.Version) bool { return slices.ContainsFunc(state, committed) }) {
 			tags = append(tags, "not on "+t)
 		}
 		tag := strings.Join(tags, " ")
 		switch {
 		case best >= 0:
-			columns[best] = append(columns[best], card{g.ID, rec.Title, len(states), tag, meta(rec), rec})
+			columns[best] = append(columns[best], card{g.ID, rec.Title, len(states), tag, meta(rec), rec, false})
 		case !work && deleted && isWork(g, nil):
 			shelf = append(shelf, card{id: g.ID, versions: len(states), tag: tag})
 		}

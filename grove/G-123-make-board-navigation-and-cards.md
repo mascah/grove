@@ -2,12 +2,14 @@
 id: "G-123"
 type: work
 title: "Make board navigation and cards quicker to read and move through"
-status: proposed
+status: review
 created: "2026-09-24T01:23:27Z"
-updated: "2026-09-24T01:25:33Z"
+updated: "2026-09-24T04:51:36Z"
 kind: feature
 size: small
 relates_to: ["G-043", "G-109", "G-124", "G-125"]
+candidate: "ff15e25d4cf5c0b85d2c6ab618984dbf5cf726bd"
+approved: "ff15e25d4cf5c0b85d2c6ab618984dbf5cf726bd"
 ---
 
 ## Outcome
@@ -82,9 +84,98 @@ board reads.
    `go vet ./...`, `gofmt -l .`, one full `go test -count=1 -timeout 120s
    ./...` and the terminal lifecycle check pass.
 
+## Evidence
+
+Implemented on `worktree-G-123`, base main `f81f7e9`, from G-123 revision
+`sha256:2056133c…` (no plan: small work, and the proposed design in
+Constraints was specific enough to build without one). Code is in `46f1322`,
+with review fixes in `6e78245`. The candidate is the commit holding this
+text.
+
+Against each acceptance item:
+
+1. **Stack cut.** In `openDetail` (`internal/tui/detail.go`), opening from a
+   detail a record already on the path cuts the path back to that record.
+   `o` from an attempt still opens a new layer, so Esc returns to the
+   attempt. If a cut drops that layer, its return goes too. `settleFocus`
+   now keeps the layer's depth right when a refresh drops a record below it.
+   A breadcrumb is the first row of the detail header, such as
+   `board › W-001 › attempts › W-001`, with the start cut when too long. It
+   is left out in the compact header, below 16 rows.
+   `TestReopeningCutsThePath` covers A → B → A (two deep, and one Esc to the
+   board), the `o` layer and its return, a cut below it, and the refresh.
+   The test fails with the cut disabled, and fails with the `settleFocus`
+   fix removed.
+2. **Column skip.** ←/→ and `h` `l` in `boardKey` (`model.go`) move to the
+   next column with cards. Empty columns are still drawn, and past the last
+   column with cards the focus stays. `TestColumnKeysSkipEmptyColumns`
+   covers this at 120 and 80 columns: one → from Proposed lands on Done.
+3. **Running card.** A card with a live attempt has a cyan border
+   (`runningAccent`, ANSI 6, a colour no column uses), and `currentCards`
+   leaves off `not on main` while the attempt is live.
+   `TestRunningCardStandsOut` checks both, and checks that both revert when
+   the attempt ends. An orphan is treated the same, with its text tag
+   `● orphaned`. No spinner: it was optional, and only if the owner wants
+   motion after seeing the colour. **Open: the owner's judgment in a
+   terminal.**
+4. **Hide the sidebar.** `w` in a detail, from 100 columns, hides the
+   sidebar: `split()` then gives the content the full width and uses the
+   one-pane layout, so no row holds sidebar text, and Tab still reaches the
+   sidebar alone. `w` shows it again. The choice lasts for the session and
+   does nothing below 100 columns. The hint shows only where the key acts.
+   `TestHidingTheSidebar` covers this. The key is in the docs/board.md table.
+   **Open: a real mouse selection** is for the owner to try, since the tests
+   check only the rendered rows.
+5. **Docs and checks.** docs/board.md now covers each changed behaviour:
+   Columns and cards, Record detail, Attempts, and the keys table. At
+   `6e78245`:
+   - `go vet ./...`: clean.
+   - `gofmt -l .`: empty.
+   - `go run ./cmd/grove check`: `OK: 122 records`.
+   - `go test -count=1 -timeout 120s ./...`: passed at `46f1322`. At
+     `6e78245`, every package passed except `internal/tui`, where one run of
+     `TestTerminal` failed in `attempt_lifecycle` (`never drew 'resolved'`).
+     The screen showed `a read is already in progress`: the script's single
+     `r` came while a re-read from before its answer commit was still
+     running, under full-suite load.
+   - `go test -count=1 -timeout 120s ./internal/tui` alone: passed three
+     times in a row, in about 8.7 s each. Of that, `TestTerminal` takes
+     8.4 s, as it does on main.
+   - `python3 internal/tui/testdata/terminal.py BINARY`: all ten checks ok,
+     at both `46f1322` and `6e78245`.
+
+Review: [G-127](G-127-review-of-g-123-board-navigation.md), an independent
+reviewer subagent, two rounds. Round 1 found one should-fix (the stale depth
+of the `o` layer after a refresh) and four nits. Four were fixed in
+`6e78245`, and the orphan border was kept for the owner. Round 2 found
+nothing new.
+
+Limits: the running-card colour, and a mouse selection with the sidebar
+hidden, are unjudged by a person. The `attempt_lifecycle` script race is
+not fixed here, since it is outside this work's scope.
+
 ## Next
 
-Assign with `/grove-work G-123`. Small, judged visually.
+**Handoff, 2026-09-24 (headless).** G-123 alone, on `worktree-G-123` in
+`.claude/worktrees/worktree-G-123`, base main `f81f7e9`. Main is now
+`25525cf`, which adds only a G-114 record edit; that touches none of these
+files. No command is still running.
+
+For the owner's judgment, run `go run ./cmd/grove` in this checkout, from a
+terminal at least 100 columns wide, with an attempt running or a card in a
+detail path:
+
+- Open a card, open a linked record, then open the first again. The path
+  should cut back, and the breadcrumb row should read well.
+- → from Proposed should skip empty columns.
+- Decide whether a cyan-bordered card with `● running` stands out enough,
+  and whether an orphan should share that border.
+- `w` in a detail, then select the content with the mouse.
+
+Integration: `go run ./cmd/grove approve G-123 "VERDICT"` in this checkout,
+then `go run ./cmd/grove integrate G-123` in the `main` checkout. Run
 [G-124](G-124-keep-the-board-fresh-without-pre.md) and
-[G-125](G-125-answer-a-blocking-question-from.md) change the same package;
-run them one after another, not as parallel attempts.
+[G-125](G-125-answer-a-blocking-question-from.md) one after another, since
+they change the same package.
+
+Verdict on candidate ff15e25, 2026-09-24: lgtn

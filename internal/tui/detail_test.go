@@ -2,12 +2,15 @@ package tui
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/mascah/grove/internal/attempt"
 	"github.com/mascah/grove/internal/versions"
 )
 
@@ -259,5 +262,100 @@ func TestDetailSurvivesRefresh(t *testing.T) {
 	press(m, "tab", "enter")
 	if s := plain(m); m.screen != detailScreen || !strings.Contains(s, "W-001 · deleted") || !strings.Contains(s, "Deleted here") {
 		t.Fatalf("a deleted current state opens without content:\n%s", s)
+	}
+}
+
+// Opening a record already on the path returns to it: A, then B from A's
+// sidebar, then A from B's is A two deep, and one Esc reaches the board. A
+// record o opened from an attempt is a layer of its own, and returning to it
+// keeps the way back to the attempt.
+func TestReopeningCutsThePath(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	r := &runs{}
+	r.set(view("W-001", "20260923T010000Z", attempt.Finished, &attempt.Result{ExitCode: 1}))
+	f := linkedFixture(fx)
+	m := openRuns(t, f, r, 120, 36)
+	press(m, "right")
+	settle(m, press(m, "enter"))
+	settle(m, press(m, "tab", "down", "down", "enter")) // needs W-002
+	if s := plain(m); !strings.Contains(s, "board › W-001 › W-002") {
+		t.Fatalf("the breadcrumb shows the path:\n%s", s)
+	}
+	settle(m, press(m, "tab", "enter")) // needed by W-001
+	if s := plain(m); !slices.Equal(m.stack, []string{"W-001"}) || !strings.Contains(s, "board › W-001") || strings.Contains(s, "› W-002") {
+		t.Fatalf("W-001 again is W-001 two deep: %v\n%s", m.stack, s)
+	}
+	if press(m, "esc"); m.screen != boardScreen {
+		t.Fatalf("one Esc returns to the board: screen %d", m.screen)
+	}
+
+	settle(m, press(m, "enter", "A", "o"))
+	if s := plain(m); !slices.Equal(m.stack, []string{"W-001", "W-001"}) || !strings.Contains(s, "board › W-001 › attempts › W-001") {
+		t.Fatalf("o opens a layer: %v\n%s", m.stack, s)
+	}
+	settle(m, press(m, "tab", "down", "down", "enter"))
+	settle(m, press(m, "tab", "enter"))
+	if !slices.Equal(m.stack, []string{"W-001", "W-001"}) {
+		t.Fatalf("the cut keeps the layer o opened: %v", m.stack)
+	}
+	if press(m, "esc"); m.screen != attemptsScreen {
+		t.Fatalf("Esc returns to the attempts: screen %d", m.screen)
+	}
+	if press(m, "esc"); m.screen != detailScreen || m.openID() != "W-001" {
+		t.Fatalf("and then to the record they were listed from: screen %d", m.screen)
+	}
+
+	// Cutting below the layer o opened takes its return with it.
+	settle(m, press(m, "tab", "enter", "A", "o")) // W-001, plan W-005, attempts, W-001
+	settle(m, press(m, "tab", "enter"))           // plan W-005 again
+	if !slices.Equal(m.stack, []string{"W-001", "W-005"}) || m.workDepth != 0 || strings.Contains(plain(m), "attempts") {
+		t.Fatalf("the cut drops the return: %v depth %d", m.stack, m.workDepth)
+	}
+	press(m, "esc", "esc")
+	if m.screen != boardScreen {
+		t.Fatalf("Esc walks the path to the board: screen %d", m.screen)
+	}
+
+	// A refresh that removes a record below the layer o opened keeps that
+	// layer's return at its new depth.
+	settle(m, press(m, "enter", "tab", "enter", "A", "o")) // W-001, W-005, attempts, W-001
+	f.res.Groups = slices.DeleteFunc(f.res.Groups, func(g versions.Group) bool { return g.ID == "W-005" })
+	settle(m, press(m, "r"))
+	if !slices.Equal(m.stack, []string{"W-001", "W-001"}) || m.workDepth != 2 || !strings.Contains(plain(m), "board › W-001 › attempts › W-001") {
+		t.Fatalf("the layer o opened keeps its return: %v depth %d\n%s", m.stack, m.workDepth, plain(m))
+	}
+	if press(m, "esc"); m.screen != attemptsScreen {
+		t.Fatalf("Esc returns to the attempts: screen %d", m.screen)
+	}
+}
+
+// w hides the sidebar on a wide terminal: the content takes the whole width
+// and no row holds sidebar text; Tab still reaches the sidebar, alone.
+func TestHidingTheSidebar(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	m := open(t, linkedFixture(fx), 120, 36)
+	press(m, "right")
+	deliverAll(m, press(m, "enter"))
+	if s := plain(m); !strings.Contains(s, " │ ") || !strings.Contains(s, "w sidebar") {
+		t.Fatalf("wide, the sidebar is beside the content:\n%s", s)
+	}
+	press(m, "w")
+	s := plain(m)
+	if strings.Contains(s, " │ ") || strings.Contains(s, "Linked") || strings.Contains(s, "plan       W-005") {
+		t.Fatalf("w hides the sidebar:\n%s", s)
+	}
+	press(m, "tab")
+	if s := plain(m); !strings.Contains(s, "> plan       W-005") || strings.Contains(s, "▶ Content") {
+		t.Fatalf("Tab reaches the hidden sidebar alone:\n%s", s)
+	}
+	press(m, "tab", "tab", "tab", "w")
+	if s := plain(m); !strings.Contains(s, " │ ") {
+		t.Fatalf("w shows it again:\n%s", s)
+	}
+	m.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+	if press(m, "w"); m.sideHidden {
+		t.Fatal("below 100 columns w changes nothing")
 	}
 }

@@ -128,3 +128,30 @@ func TestCardsFitTheirColumn(t *testing.T) {
 		}
 	}
 }
+
+// ←/→ skip empty columns, which are still drawn: with nothing active or in
+// review, Done is one key from Proposed, and past the last column with
+// cards the focus stays.
+func TestColumnKeysSkipEmptyColumns(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	var vs []versions.Version
+	for _, s := range []*versions.Source{fx.cMain, fx.main} {
+		vs = append(vs, version(s, "W-001", "Open work", "proposed"), version(s, "W-002", "Finished", "done"))
+	}
+	for _, w := range []int{120, 80} {
+		m := open(t, &fake{res: result(fx.main, fx.sources(), vs...)}, w, 24)
+		if press(m, "right"); m.col != doneColumn || m.cardID != "W-002" {
+			t.Fatalf("width %d: → from Proposed lands on Done: column %d card %s", w, m.col, m.cardID)
+		}
+		if press(m, "l"); m.col != doneColumn {
+			t.Fatalf("width %d: past the last column with cards the focus stays: column %d", w, m.col)
+		}
+		if press(m, "h"); m.col != 0 || m.cardID != "W-001" {
+			t.Fatalf("width %d: ← returns to Proposed: column %d", w, m.col)
+		}
+		if s := plain(m); w >= wideWidth && (!strings.Contains(s, "Active 0") || !strings.Contains(s, "Review 0")) {
+			t.Fatalf("empty columns are still drawn:\n%s", s)
+		}
+	}
+}
