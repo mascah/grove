@@ -2,11 +2,11 @@
 id: "G-129"
 type: work
 title: "Headless attempts run long commands in the foreground, never as a background continuation"
-status: active
+status: review
 created: "2026-09-24T04:49:40Z"
-updated: "2026-09-24T15:36:30Z"
+updated: "2026-09-24T15:49:14Z"
 relates_to: ["G-114", "G-108", "G-045"]
-candidate: "347e3abdebc4b80adfc5a3f9cdeede6d14bbc88c"
+candidate: "8868ba4"
 ---
 
 ## Outcome
