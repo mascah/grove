@@ -4,9 +4,10 @@ type: work
 title: "Capture and reuse terms, questions and decisions across shaping, work and review"
 status: review
 created: "2026-09-23T19:44:56Z"
-updated: "2026-09-24T05:00:28Z"
+updated: "2026-09-24T15:01:40Z"
 relates_to: ["G-037", "G-051", "G-056", "G-107", "G-108", "G-118", "G-122", "G-125"]
 candidate: "fdfd933e334eef1aa27631e44df7e535b762d244"
+approved: "fdfd933e334eef1aa27631e44df7e535b762d244"
 ---
 ## Outcome
 
@@ -235,3 +236,5 @@ record:
 The headless bound's block-or-surface choice (G-118, G-122) stays open and
 is not this record's; G-108's Next lists the knowledge-sequence eval case as
 the follow-on once this lands.
+
+Verdict on candidate fdfd933, 2026-09-24: needs more work, but later. Good enough for now
