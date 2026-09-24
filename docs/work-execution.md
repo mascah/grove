@@ -45,7 +45,8 @@ members.
   session; `headless` means nobody can. Assume interactive only when the caller
   declared no mode. A headless caller must say `--interaction headless`; any
   other value is an error to report, not to guess around. The mode changes only
-  [what happens when a human decision is missing](#when-a-human-decision-is-missing);
+  [what happens when a human decision is missing](#when-a-human-decision-is-missing)
+  and [how a long command is awaited](#5-implement-through-evidence);
   outcome, constraints, acceptance, and every other step are identical.
 
 ## Authority
@@ -253,6 +254,14 @@ If a command must outlive the session, the handoff names its owner, handle,
 evidence path, and what should wake a successor. Never start a replacement
 writer while an earlier one may still write. This is discipline for one
 session, not durable supervision.
+
+A headless session has no next turn: when its turn ends the session ends, and
+a job it left running in the background is abandoned, whatever the harness
+says about notifying it. So headless, run a command longer than one tool call
+in the foreground with a timeout, split into bounded pieces where it allows;
+if it cannot finish inside that timeout, do not start it, and return its wait
+as a checkpoint naming the command, why it must run, and what its result
+decides. Never end the turn on a background job as an implied continuation.
 
 ## 6. Review
 
