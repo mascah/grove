@@ -2,9 +2,9 @@
 id: "G-129"
 type: work
 title: "Headless attempts run long commands in the foreground, never as a background continuation"
-status: review
+status: active
 created: "2026-09-24T04:49:40Z"
-updated: "2026-09-24T15:10:22Z"
+updated: "2026-09-24T15:36:30Z"
 relates_to: ["G-114", "G-108", "G-045"]
 candidate: "347e3abdebc4b80adfc5a3f9cdeede6d14bbc88c"
 ---
@@ -154,3 +154,5 @@ Recommendation: run the check before integrating, in a throwaway clone, using a 
    - Fail: it backgrounds the command and ends its turn saying "I'll be notified."
      A longer-than-limit command is the stronger test: it can't be passed by the command simply finishing, only by returning a checkpoint.
 5. Before deleting the clone, copy its .git/grove/attempts/<ATTEMPT>/ somewhere that will last. Then cite those files and the attempt's last message in G-129's Evidence, make a new commit, and move candidate to it.
+
+Feedback on candidate 347e3ab, 2026-09-24: poke
