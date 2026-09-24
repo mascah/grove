@@ -59,9 +59,11 @@ requests, the nearest to Claude's `auto`.
 `CODEX_API_KEY`; the report records `codex login status` and which of
 `CODEX_API_KEY` and `OPENAI_API_KEY` are set. Codex runs each command in the
 user's login shell, whose profile can put an installed `grove` before the
-built one: the runner gives it an empty `ZDOTDIR`, which keeps a zsh user's
-startup files out, and refuses to start unless `SHELL -lc 'command -v
-grove'` then finds the built binary. The runner refuses
+built one: the runner gives it a `ZDOTDIR` of its own, which keeps a zsh
+user's startup files out and whose `.zprofile` restores the `PATH` that
+`/etc/zprofile` reorders, and refuses to start unless `SHELL -lc` then finds
+the built `grove` with the runner's `PATH`, the one the Claude row's
+sessions get. Another login shell, such as bash, is refused. The runner refuses
 a directory holding `AGENTS.md`, `AGENTS.override.md`, `rules`, `prompts`,
 `hooks.json`, `hooks`, a non-empty `memories`, any `skills` entry but
 `.system`, or a `config.toml` with anything but the `tui` state a login

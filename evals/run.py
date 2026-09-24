@@ -108,11 +108,14 @@ def codex_home(home):
 
 def codex_env(home, grove):
     """Codex runs each command in the user's login shell, whose profile can put an installed grove before the built
-    one (G-135 review): an empty ZDOTDIR keeps a zsh user's own startup files out, and run_on verifies the result."""
+    one (G-135 review). A ZDOTDIR of the runner's own keeps a zsh user's startup files out, and its .zprofile restores
+    the PATH that /etc/zprofile reorders, so the session has the Claude row's PATH; run_on verifies the result."""
     e = {k: v for k, v in env().items() if not k.startswith("CODEX_") or k == "CODEX_API_KEY"}
+    e["PATH"] = os.path.dirname(grove) + os.pathsep + e.get("PATH", "")
     zdotdir = os.path.join(os.path.dirname(os.path.dirname(grove)), "zdotdir")
     os.makedirs(zdotdir, exist_ok=True)
-    return dict(e, CODEX_HOME=home, ZDOTDIR=zdotdir, PATH=os.path.dirname(grove) + os.pathsep + e.get("PATH", ""))
+    open(os.path.join(zdotdir, ".zprofile"), "w").write(f"export PATH={shlex.quote(e['PATH'])}\n")
+    return dict(e, CODEX_HOME=home, ZDOTDIR=zdotdir)
 
 
 def system_skills(home):
@@ -523,14 +526,15 @@ def run_on(args, found, recorded=None):
     if codex:
         home = codex_env(args.config_dir, grove)
         shell = pwd.getpwuid(os.getuid()).pw_shell
-        found = sh(shell, "-lc", "command -v grove", environ=home, check=False).stdout.strip()
-        if found != grove:
-            raise SystemExit(f"{shell} -lc resolves grove to {found or 'nothing'}, not the built {grove}: the session would not run the guides under evaluation")
+        found = sh(shell, "-lc", 'command -v grove; printf %s "$PATH"', environ=home, check=False).stdout.strip().split("\n", 1) + [""]
+        if found[:2] != [grove, home["PATH"]]:
+            raise SystemExit(f"{shell} -lc resolves grove to {found[0] or 'nothing'} with PATH {found[1]!r}, not the built {grove} with the runner's PATH: "
+                             "the session would not run the guides under evaluation, or would run other tools than the Claude row")
         version = sh(exe, "--version", environ=home).stdout.strip()
         login = sh(exe, "login", "status", environ=home, check=False)
         meta.update({"login": (login.stdout + login.stderr).strip() or f"exit {login.returncode}",
                      "credential variables set": ", ".join(k for k in ("CODEX_API_KEY", "OPENAI_API_KEY") if home.get(k)) or "none",
-                     "login shell": f"{shell} -lc resolves grove to the built binary", "config dir system skills": system_skills(args.config_dir)})
+                     "login shell": f"{shell} -lc resolves grove to the built binary, with the runner's PATH", "config dir system skills": system_skills(args.config_dir)})
     meta.update({args.harness: version, GROVE: grove_version, "base commit": git(ROOT, "rev-parse", "HEAD") + (" with uncommitted changes" if git(ROOT, "status", "--porcelain") else ""),
                  "fixture commit": git(template, "rev-parse", "HEAD")})
     print(f"output {work}; " + (f"at most {meta['cap (seconds)']} seconds of Codex time, and Codex bounds no dollars" if codex

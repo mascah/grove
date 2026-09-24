@@ -153,6 +153,16 @@ Claude's `tui` and `theme` settings are, and ignored anyway under
 `--ignore-user-config`. The runner allows `tui` as well as
 `projects.*.trust_level`; anything else is still refused.
 
+**Adjustment, 2026-09-24, review G-138 step 3.** Codex runs each command
+as `SHELL -lc`, and the owner's `~/.zprofile` then puts the installed
+`~/.local/bin/grove` before the built one (observed: `env PATH=DIR:$PATH
+/bin/zsh -lc 'command -v grove'` found `~/.local/bin/grove`). The Codex
+environment adds a `ZDOTDIR` of the runner's own, whose `.zprofile`
+restores the runner's `PATH` after `/etc/zprofile`'s `path_helper`
+reorders it, and the runner refuses to start unless the login shell finds
+the built `grove` with that `PATH`, so the Codex sessions' tools are the
+Claude row's.
+
 ## Steps
 
 1. Commit this plan and G-139; checkpoint G-135's Next (this session,
