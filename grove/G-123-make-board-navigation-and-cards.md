@@ -2,12 +2,13 @@
 id: "G-123"
 type: work
 title: "Make board navigation and cards quicker to read and move through"
-status: active
+status: review
 created: "2026-09-24T01:23:27Z"
-updated: "2026-09-24T04:24:10Z"
+updated: "2026-09-24T04:36:21Z"
 kind: feature
 size: small
 relates_to: ["G-043", "G-109", "G-124", "G-125"]
+candidate: "ff15e25d4cf5c0b85d2c6ab618984dbf5cf726bd"
 ---
 
 ## Outcome
