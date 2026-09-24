@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
@@ -95,7 +96,7 @@ func (m *Model) leaveDetail() {
 	}
 }
 
-func (m *Model) detailKey(k string) {
+func (m *Model) detailKey(k string) tea.Cmd {
 	entries := m.entries()
 	linked := slices.IndexFunc(entries, func(e entry) bool { return e.commit == nil && e.change == nil })
 	changes := slices.IndexFunc(entries, func(e entry) bool { return e.change != nil })
@@ -133,7 +134,7 @@ func (m *Model) detailKey(k string) {
 		}
 	case "enter":
 		if m.side < 0 || m.side >= len(entries) {
-			return
+			return nil
 		}
 		switch e := entries[m.side]; {
 		case e.commit != nil && e.commit.Source != nil:
@@ -168,7 +169,10 @@ func (m *Model) detailKey(k string) {
 		m.openAttempts(work)
 	case "R":
 		m.launch()
+	case "e":
+		return m.answer()
 	}
+	return nil
 }
 
 // moved applies a movement key to a position.
@@ -405,6 +409,11 @@ func (m *Model) detailHead(v *versions.Version, w int) []string {
 		for _, row := range m.reviewRows(g, v) {
 			inner = append(inner, wrap(row, iw)[:min(len(wrap(row, iw)), rows)]...)
 		}
+	}
+	// An open question says where e would write its answer.
+	if !compact && r != nil && r.Type == "question" && r.Status == "open" && m.backend.Edit != nil {
+		row := m.answerRow()
+		inner = append(inner, wrap(row, iw)[:min(len(wrap(row, iw)), rows)]...)
 	}
 	// Work shows its latest attempt, so a person back after closing the
 	// board finds a run from the card they know.

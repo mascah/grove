@@ -236,6 +236,11 @@ func (m *Model) render() string {
 			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   a approve   f feedback   i integrate   "+side+"v versions   s   r   Esc back   q quit",
 			"↑↓ PgUp/PgDn  Tab pane  Enter open  a approve  f feedback  i integrate  "+sideKey+"v  Esc  q",
 			"↑↓  Tab  Enter  a  f  i  v  Esc  q quit")
+	case m.screen == detailScreen && m.group() != nil && m.backend.Edit != nil && m.openRecord() != nil && m.openRecord().Type == "question" && m.openRecord().Status == "open":
+		rows, hints = m.detailBody(w, body), pick(w,
+			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   e answer in your editor   "+side+"v versions   s   r   Esc back   q quit",
+			"↑↓ PgUp/PgDn  Tab pane  Enter open  e answer  "+sideKey+"v  Esc  q",
+			"↑↓  Tab  Enter  e answer  v  Esc  q quit")
 	case m.screen == detailScreen && m.group() != nil:
 		rows, hints = m.detailBody(w, body), pick(w,
 			"↑/↓ PgUp/PgDn scroll or move   Tab content, linked, changes, timeline   Enter open   "+side+"v versions and places   s sources   r refresh   Esc back   q quit",

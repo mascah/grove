@@ -534,7 +534,7 @@ def stop_attempts(root):
 
 
 def attempt_lifecycle(root, wt, base):
-    """R launches a bounded attempt of a fake provider that floods its events; the board quits while it runs, a new session reconnects to the same attempt and stops it; the next waits on a question that then refuses a launch; once it is answered, R continues on the same branch to a candidate in review."""
+    """R launches a bounded attempt of a fake provider that floods its events; the board quits while it runs, a new session reconnects to the same attempt and stops it; the next waits on a question that then refuses a launch; e on that attempt suspends the board for the owner's editor, resumes it, and resolves and commits the answer on the branch; R then continues on the same branch to a candidate in review."""
     for key, value in (("user.name", "t"), ("user.email", "t@t"), ("commit.gpgsign", "false"), ("maintenance.auto", "false")):
         git(root, "config", key, value)
     git(root, "worktree", "remove", "--force", wt)
@@ -549,7 +549,14 @@ def attempt_lifecycle(root, wt, base):
     with open(fake, "w") as f:
         f.write(FAKE_CLAUDE.replace("@STARTS@", starts).replace("@FINISH@", finish).replace("@QUESTION@", question))
     os.chmod(fake, 0o755)
-    env = clean_env(GROVE_CLAUDE=fake)
+    # The owner's editor: it must get the terminal back in canonical mode, and
+    # it appends the answer to the file it is given.
+    editor, edits = os.path.join(tools, "editor"), os.path.join(tools, "edits")
+    with open(editor, "w") as f:
+        f.write(f"#!/bin/sh\n[ -t 0 ] && [ -t 1 ] || exit 3\necho \"$1 $(stty -a | grep -o -- '-*icanon')\" >> '{edits}'\n"
+                "echo EDITOR-RAN\nprintf 'Blue.\\n' >> \"$1\"\n")
+    os.chmod(editor, 0o755)
+    env = clean_env(GROVE_CLAUDE=fake, VISUAL=editor)
     count = lambda: open(starts).read().count("start") if os.path.exists(starts) else 0
 
     s = Session(root, env=env)
@@ -626,15 +633,35 @@ def attempt_lifecycle(root, wt, base):
     s.send(b"R")
     mark = s.expect("blocked by open question G-002", mark)
     check(count() == 2, "the wait started nothing more")
-    # The owner answers on the branch; after a refresh the work continues there.
+    # The owner answers from the attempt (G-125): e suspends the board for the
+    # editor on the branch's copy, then resolves and commits it there.
+    s.send(b"A")
+    mark = s.expect("answer question G-002", mark)
+    s.send(ENTER)
+    mark = s.expect("e answers G-002 in your editor", mark)
+    s.send(b"e")
+    mark = s.expect("EDITOR-RAN", mark)
+    after = s.expect("Resolve G-002 and commit it with your answer on branch worktree-G-001? y/n", mark)
+    suspended = s.screen[mark:after]
+    check(suspended.find(ALT_ON) >= 0, f"the board did not resume on the alternate screen: {suspended[:300]!r}")
     path = os.path.join(wt1, "grove", "G-002-colour.md")
+    with open(edits) as f:
+        check(f.read() == path + " icanon\n", f"the editor ran on {open(edits).read()!r}, want {path} in canonical mode")
+    s.send(b"y")
+    s.expect("Answer to G-002", mark)
+    s.expect("next: R on G-001 launches its next attempt", mark)
+    mark = s.expect("The board has been re-read.", mark)
     with open(path) as f:
         text = f.read()
-    with open(path, "w") as f:
-        f.write(text.replace("status: open", "status: resolved"))
-    git(wt1, "commit", "-qam", "answer: blue")
-    s.send(b"r")
-    mark = s.expect("resolved", mark)
+    check("status: resolved" in text and text.endswith("## Answer\n\nBlue.\n"), f"the answer and the status: {text!r}")
+    log = subprocess.run([GIT, "-C", wt1, "log", "-1", "--name-only", "--format=%s"], check=True, capture_output=True, env=clean_env()).stdout.decode()
+    check(log == "docs(G-002): set status=resolved\n\ngrove/G-002-colour.md\n", f"one commit of the question alone on the branch: {log!r}")
+    s.send(ESC)  # to the question
+    mark = s.expect("G-002 · question · resolved", mark)
+    s.send(ESC)  # to the attempt
+    mark = s.expect("question answered: R again", mark)
+    s.send(b"o")  # G-001's detail, launchable again
+    mark = s.expect("R launches one", mark)
     open(finish, "w").close()
     s.send(b"R")
     mark = s.expect("budget in USD", mark)

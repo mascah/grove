@@ -9,8 +9,9 @@ The board draws on stderr and reads stdin, so both must be terminals, while
 stdout may be redirected: `cd "$(go run ./cmd/grove)"`. Without a terminal it
 refuses at once with exit 1 and names the noninteractive commands. Text from
 records, paths, Git, and an attempt's provider is shown with control
-characters escaped. Besides its prompted actions it writes no files, including
-the framework's debug logs.
+characters escaped. Besides its prompted actions, and the `## Answer` heading
+`e` hands the owner's editor, it writes no files, including the framework's
+debug logs.
 
 ## Columns and cards
 
@@ -120,7 +121,8 @@ work's ID and title, a short state and how long it has run or how long ago it
 ended. The title goes below 60 columns, and the state is cut last. Only the
 latest attempt of work that is still proposed, active or in review needs you:
 a candidate to judge, a question to answer, a failure, an interruption, an
-end without a handoff, or feedback given that awaits the next launch. An
+end without a handoff, or feedback given or a question answered that awaits
+the next launch. An
 orphan always needs you, since its process runs unowned. A stopped attempt,
 an earlier attempt of the same work and any attempt of work now done or
 abandoned are settled, and each says why, such as `done: candidate 1614e89`
@@ -156,7 +158,10 @@ The outcome is derived, never written: `running`, `orphaned`,
 attempt ended with its record committed in review with a candidate, which
 the owner records at exit), `stopped`, `failed` (no result event, an error
 result or a nonzero exit), `waiting on question` (the work's latest attempt,
-while an open question blocks it) or `ended without a handoff`. A clean exit
+while an open question blocks it), `answered since` (the work's latest
+attempt, when a question that blocks it, not asked after the attempt ended,
+is resolved and was last written from the second it ended on) or `ended
+without a handoff`. A clean exit
 alone is never ready, and a record that says review without being committed
 is reported as such. `x` asks, then stops a running or orphaned attempt as
 `stop` does, keeping its partial work, and `o` opens its work record. The
@@ -168,6 +173,32 @@ column uses, and the board is re-read when one ends or a branch tip has moved
 since the last read, so a status an attempt commits moves its card while it
 runs; a moved tip waits while a detail left at a timeline commit or a diff
 is open.
+
+## Answering a question
+
+An attempt that needs a decision writes a question that `blocks` its work
+and ends ([work guide](work-execution.md#when-a-human-decision-is-missing)).
+`e` on an open question's detail, or on the attempts list or one attempt
+waiting on a question, which opens that question's detail above the attempt,
+answers it ([G-125](../grove/G-125-answer-a-blocking-question-from.md)). The
+detail's header names where `e` writes, or why it cannot: the one checkout on
+the branch the question's current state stands on, whose copy matches its
+HEAD and is still what the board read. No such checkout, two on the branch,
+uncommitted changes to the question there, or a file changed since the read
+is refused with the reason, and nothing is written.
+
+Otherwise the board appends a `## Answer` heading when the body has none,
+suspends itself, and runs `$VISUAL`, else `$EDITOR`, else `vi`, as Git does,
+on the question's file in that checkout, on the terminal itself. When the
+editor exits the board resumes and re-reads. An editor that saved nothing
+gets the heading taken back, and one that failed is reported; either way
+nothing more is written. After an edit, a prompt asks to resolve the question
+and commit it there: `y` runs `update --set status=resolved --commit` at the
+revision the editor left, so one commit on that branch holds the answer and
+the status, and the result names the work to launch next with `R`; `n` or
+Esc leaves the edit uncommitted in that checkout and says so. The attempt
+then shows `question answered: R again`. Only questions are edited, and only
+in the owner's editor; the board has no text editing of its own.
 
 ## Timeline
 
@@ -202,7 +233,9 @@ missing or ambiguous, the record was deleted there) stays on screen with its
 reason until `r` refreshes, after which a version must be selected again. The
 details pane there begins with the focused version's history. Selecting never
 creates a worktree, edits a record, or starts an editor, shell, or agent;
-only `R` starts an agent, behind its prompts.
+only `R` starts an agent, behind its prompts, and only `e` starts the
+owner's editor, on an open question (see [Answering a
+question](#answering-a-question)).
 
 ## Search
 
@@ -239,6 +272,7 @@ render is cached per record content and width.
 | `a` | board | Show or hide Abandoned |
 | `a`, `f`, `i` | detail of work in review | Approve, give feedback, integrate |
 | `R` | detail of proposed or active work | Launch an attempt |
+| `e` | detail of an open question; attempts list or one attempt waiting on a question | Answer it in your editor, then resolve and commit it on its branch |
 | `A` | board or any detail | List attempts: of that work, or every attempt |
 | `x` | attempts list or one attempt | Stop the attempt |
 | `o` | attempts list or one attempt | Open its work record |

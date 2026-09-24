@@ -20,8 +20,9 @@ import (
 // selects a workspace or leaves. A nil workspace with a nil error is ordinary
 // cancellation; context.Canceled is an interrupt. The terminal is restored and
 // every read collected before Run returns, so the caller may then write its
-// result. Nothing is written to a file except by the three review actions,
-// each confirmed at a prompt.
+// result. Nothing is written to a file except by the three review actions and
+// the resolve of an answered question, each confirmed at a prompt, and by the
+// owner's editor with the Answer heading it is handed.
 func Run(ctx context.Context, root string, input, screen *os.File) (*versions.Workspace, error) {
 	// The framework reads these from the process environment, not from the
 	// environment a program is given, and each one makes it write a log file.
@@ -43,7 +44,9 @@ func Run(ctx context.Context, root string, input, screen *os.File) (*versions.Wo
 		case <-ctx.Done():
 		}
 	}()
-	m := New(ctx, root, Live())
+	b := Live()
+	liveAnswer(&b, input, screen)
+	m := New(ctx, root, b)
 	out := &watched{File: screen, stop: cancel}
 	_, err := tea.NewProgram(m, tea.WithContext(ctx), tea.WithInput(input), tea.WithOutput(out)).Run()
 	// Quitting does not stop a command that is still reading.
