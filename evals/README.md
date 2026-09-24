@@ -29,10 +29,12 @@ directory holding any of them. A new directory has no login: log in once with
 `CLAUDE_CONFIG_DIR=DIR claude`, or export `ANTHROPIC_API_KEY` or
 `CLAUDE_CODE_OAUTH_TOKEN`, which pass through; every other `CLAUDE*`
 variable is removed. A login leaves a `settings.json`, accepted while it
-holds only `tui`, `theme` and `autoMemoryEnabled`, and syncs the account's
-Anthropic skills and plugins under `skills/synced` and `plugins/synced`,
-which a preview user has too; the report records both. Managed (policy)
-settings still apply and are outside the runner's control.
+holds only `tui`, `theme` and `autoMemoryEnabled` set to false, and syncs
+the account's Anthropic skills and plugins under `skills/synced` and
+`plugins/synced`, which a preview user has too and which load into every
+session; the report records both, and anything there that the sync's
+manifest does not name is refused as authored. Managed (policy) settings
+still apply and are outside the runner's control.
 
 ## What a run does
 

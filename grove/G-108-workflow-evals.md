@@ -164,16 +164,24 @@ Built, all offline and spending nothing:
 - Independent review [G-119](G-119-g-108-eval-skeleton-review.md), three
   rounds, examined `1f03a12`: eleven findings fixed, none open.
 
-Third headless session, 2026-09-24, same branch, after
+Third headless session, 2026-09-24, same branch, starting from this record
+at `sha256:ae3f39de…` and G-115 at `sha256:c5db0353…`, after
 [G-118](G-118-what-mandate-should-the-g-108-pa.md) (`1d3ad82`) and
 [G-121](G-121-how-do-the-g-108-eval-runs-log-i.md) (`e57a4c6`) were
 resolved:
 
 - The login left `settings.json` and the account's synced skills and
-  plugins in the config directory, which the runner refused; `d565fcf`
-  accepts settings holding only `tui`, `theme` and `autoMemoryEnabled` and
-  the `synced` entries, refuses anything else, records them in the report,
-  and the selftest covers both shapes (`selftest: ok`).
+  plugins in the config directory, which the runner refused. Decision
+  taken by the session, beyond G-121's answer which covered settings only:
+  a login syncs that content and re-syncs it if removed, and a preview
+  user's session carries it too, so the runner accepts it and records it
+  in the report rather than refusing a directory no login can satisfy.
+  `d565fcf` accepts settings holding only `tui`, `theme` and
+  `autoMemoryEnabled` and the `synced` entries; after the handoff review
+  ([G-126](G-126-g-108-handoff-review-the-login-c.md)) it also requires `autoMemoryEnabled` to be false, refuses
+  anything in a synced directory that its manifest does not name, and the
+  selftest exercises each refusal and the `surfaced, not blocking` reason
+  (`selftest: ok`).
 - The paid runs, exactly G-118's mandate, from this checkout at `d565fcf`:
   `python3 evals/run.py run --runs 5 --budget 5 --model claude-opus-5-5
   --permission-mode auto --config-dir ~/.cache/grove-evals/claude --out
@@ -191,6 +199,12 @@ resolved:
   proposed without a question), configuration, cost and limits, concludes
   no change is justified, and says which further case pays. No product
   change happened.
+- Verification after the records were written: `gofmt -l .` and `go vet
+  ./...` clean, `grove check` OK (115 records), `selftest: ok`, every link
+  in the changed records and `evals/README.md` resolves; no Go file
+  changed on this branch, so the Go suite was not rerun. Independent
+  review of the runner change and these records:
+  [G-126](G-126-g-108-handoff-review-the-login-c.md).
 
 ## Next
 

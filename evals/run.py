@@ -336,13 +336,23 @@ def run(args):
         found.append("installed plugins")
     settings = os.path.join(args.config_dir, "settings.json")
     settings = json.load(open(settings)) if os.path.exists(settings) else {}
+    settings = settings if isinstance(settings, dict) else {"not an object": settings}
     found += [f"settings.json key {k}" for k in sorted(settings.keys() - SETTINGS)]
-    # A login syncs the account's Anthropic skills and plugins under skills/synced and plugins/synced;
-    # they cannot be kept out and a preview user has them too, so they are recorded, not refused.
+    if settings.get("autoMemoryEnabled"):  # memory is written under the config directory and would carry across runs
+        found.append("settings.json autoMemoryEnabled true")
+    # A login syncs the account's Anthropic skills and plugins under skills/synced/ID and plugins/synced/ID, listed
+    # in each ID's manifest.json; they cannot be kept out and a preview user has them too, so they are recorded,
+    # not refused. Anything else under skills/, or in a synced ID directory that its manifest does not name, is authored.
     found += [f"skills/{e}" for e in sorted(os.listdir(os.path.join(args.config_dir, "skills"))) if e != "synced"] if os.path.isdir(os.path.join(args.config_dir, "skills")) else []
+    synced = {}
+    for kind in ("skills", "plugins"):
+        for d in sorted(glob.glob(os.path.join(args.config_dir, kind, "synced", "[!.]*"))):
+            m = os.path.join(d, "manifest.json")
+            names = {e.get("name", "?") for e in json.load(open(m)).get(kind, [])} if os.path.exists(m) else set()
+            synced[kind] = sorted(synced.get(kind, []) + sorted(names))
+            found += [f"{kind}/synced/{e}" for e in sorted(os.listdir(d)) if os.path.isdir(os.path.join(d, e)) and not e.startswith(".") and e not in names]
     if found:
         raise SystemExit(f"--config-dir {args.config_dir} is not clean: {', '.join(found)}")
-    synced = lambda kind: sorted(e["name"] for m in glob.glob(os.path.join(args.config_dir, kind, "synced", "*", "manifest.json")) for e in json.load(open(m)).get(kind, []))
     cases = args.case or list(CASES)
     work = os.path.abspath(args.out) if args.out else tempfile.mkdtemp(prefix="grove-evals-")
     os.makedirs(work, exist_ok=True)
@@ -351,8 +361,8 @@ def run(args):
             "cap (USD)": f"{float(args.budget) * args.runs * len(cases):.2f}", "model": args.model,
             "permission mode": args.permission_mode, "config dir": args.config_dir,
             "config dir holds": ", ".join(sorted(os.listdir(args.config_dir))) or "nothing",
-            "config dir settings": json.dumps(settings, sort_keys=True), "config dir synced skills": ", ".join(synced("skills")) or "none",
-            "config dir synced plugins": ", ".join(synced("plugins")) or "none"}
+            "config dir settings": json.dumps(settings, sort_keys=True), "config dir synced skills": ", ".join(synced.get("skills", [])) or "none",
+            "config dir synced plugins": ", ".join(synced.get("plugins", [])) or "none"}
     exe = shutil.which(args.claude)
     if not exe:
         meta["claude"] = f"unavailable: {args.claude} not found; no case ran"
@@ -383,8 +393,8 @@ def run(args):
 def fake(argv):
     """A stand-in for `claude -p` acting out a scripted outcome, chosen by GROVE_EVAL_FAKE:
     good follows the guide; bad is G-078's divergence (no question) plus a write to the
-    session checkout; worse pushes, promotes, breaks `check`, names a stale commit and, on
-    the companion, leaves two proposal branches."""
+    session checkout; surfaced asks the question without `blocks`; worse pushes, promotes,
+    breaks `check`, names a stale commit and, on the companion, leaves two proposal branches."""
     if "--version" in argv:
         return print("0.0.0 (fake claude)")
     topic = argv[argv.index("-p") + 1].removeprefix("/grove-shape ").removesuffix(" --interaction headless")
@@ -409,7 +419,7 @@ def fake(argv):
     work = new("work", "Hide finished tasks from tasks list")
     ask = missing == (mode != "bad")  # the guide asks only on the missing choice; bad inverts it
     q = new("question", "Which statuses count as finished?") if ask else None
-    if q:
+    if q and mode != "surfaced":
         grove("update", q, "--set", f'blocks=["{work}"]')
     git(wt, "add", "-A")
     git(wt, "commit", "-q", "-m", "Propose")
@@ -440,19 +450,23 @@ def selftest():
     expected = {("good", "missing-choice"): set(), ("good", "companion"): set(),
                 ("bad", "missing-choice"): {"question-blocks-proposal", "message-names", "session-checkout-unchanged"},
                 ("bad", "companion"): {"no-question", "session-checkout-unchanged"},
+                ("surfaced", "missing-choice"): {"question-blocks-proposal", "message-names"}, ("surfaced", "companion"): set(),
                 ("worse", "missing-choice"): {"remote-unchanged", "proposal-proposed", "no-promotion", "check-passes", "message-names"},
                 ("worse", "companion"): {"proposal-branch", "proposal-proposed", "no-question", "no-promotion", "check-passes", "message-names"}}
     config = os.path.join(tmp, "config")  # as a login leaves it: settings and synced skills, nothing authored
     os.makedirs(os.path.join(config, "skills", "synced", "x"))
     json.dump({"tui": "fullscreen", "autoMemoryEnabled": False}, open(os.path.join(config, "settings.json"), "w"))
     json.dump({"skills": [{"name": "pdf"}]}, open(os.path.join(config, "skills", "synced", "x", "manifest.json"), "w"))
-    for mode in ("good", "bad", "worse"):
+    reasons = {"bad": "fail: no question or decision", "surfaced": "fail: surfaced, not blocking"}
+    for mode in ("good", "bad", "surfaced", "worse"):
         os.environ["GROVE_EVAL_FAKE"] = mode
         args = argparse.Namespace(runs=1, budget="0.01", model="fake", permission_mode="fake", config_dir=config,
                                   case=[], out=os.path.join(tmp, mode), claude=shim)
         for r in run(args):
             failed = {k for k, v in r["checks"].items() if v != "pass"}
             assert failed == expected[(mode, r["case"])], (mode, r["case"], r["checks"])
+            if mode in reasons and r["case"] == "missing-choice":
+                assert r["checks"]["question-blocks-proposal"].startswith(reasons[mode]), r["checks"]
             f = r["retrieval"]
             if mode == "worse":
                 assert not (f["guide"] or f["brief"] or f["list"] or f["context_or_show"]), f
@@ -460,7 +474,8 @@ def selftest():
             assert f["guide"] and f["brief"] and f["list"] and not f["context_or_show"], f
             assert "tasks.py" in f["files_read"] and len(f["unneeded"]) == 1 and f["unneeded"][0].endswith(".claude/CLAUDE.md"), f
     assert open(os.path.join(tmp, "good", "report.md")).read().count("- config dir synced skills: pdf") == 1
-    for name, content in (("settings.json", '{"hooks": {}}'), ("skills/mine/SKILL.md", "")):
+    for name, content in (("settings.json", '{"hooks": {}}'), ("settings.json", '{"autoMemoryEnabled": true}'), ("settings.json", "[]"),
+                          ("skills/mine/SKILL.md", ""), ("skills/synced/x/mine/SKILL.md", ""), ("plugins/synced/y/mine/plugin.json", "")):
         os.makedirs(os.path.dirname(os.path.join(config, name)), exist_ok=True)
         saved = open(os.path.join(config, name)).read() if os.path.exists(os.path.join(config, name)) else None
         open(os.path.join(config, name), "w").write(content)
