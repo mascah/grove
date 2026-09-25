@@ -2,9 +2,9 @@
 id: "G-144"
 type: work
 title: "Give adopting projects the record model the guides cite"
-status: proposed
+status: active
 created: "2026-09-25T03:53:22Z"
-updated: "2026-09-25T03:53:35Z"
+updated: "2026-09-25T04:29:39Z"
 relates_to: ["G-135", "G-143"]
 ---
 
