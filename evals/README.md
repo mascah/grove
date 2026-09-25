@@ -54,8 +54,8 @@ window each ([G-143](../grove/G-143-g-135-codex-eval-row-pattern-pla.md),
 `--max-plan-percent P` is required too: before each run the runner takes
 the last reading of the newest rollout under `CODEX_HOME` (0 once its window
 has reset), and starts no run once that reading plus the largest run's use
-so far, never less than 13 points, would reach P, or once a run left no
-reading; the report says where it stopped. P is not a ceiling: a run
+so far, never less than 13 points, would reach P (a new home with no
+reading counts as 0), or once a run left no reading; the report says where it stopped. P is not a ceiling: a run
 already started is not stopped, and use elsewhere on the account since the
 last reading is not seen. Model, effort, runs and both
 caps are the owner's explicit answer, never a default (G-141).

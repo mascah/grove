@@ -25,20 +25,23 @@ the owner's answer covered only the login. The owner stopped the attempt at
 this report covers the nine completed Codex runs, as the owner directed.
 
 ```sh
-python3 evals/run.py run --harness codex --runs 5 --model gpt-6-astra --effort high \
+python3 evals/run.py run --harness codex --runs N --model gpt-6-astra --effort high \
     --permission-mode approve-for-me --max-seconds 600 --config-dir ~/.cache/grove-evals/codex \
-    --case missing-choice   # a one-run probe first, then four; companion likewise, five started
+    --case CASE   # missing-choice: a 1-run probe, then 4; companion: 5, the fifth stopped
 python3 evals/run.py run --runs 5 --budget 5 --model claude-opus-5-5 \
     --permission-mode auto --config-dir ~/.cache/grove-evals/claude
 ```
 
 Output under `~/.cache/grove-evals/runs/2026-09-24-G-135-codex-probe`,
 `…-codex-missing-choice`, `…-codex-companion` and `…-claude`, outside every
-checkout and not committed. Configuration from the reports: codex-cli
-0.156.1, reported model and effort `gpt-6-astra`/`high`, approval
-`on-request` with Codex's `codex-auto-review` guardian at `low`, ChatGPT
+checkout and not committed. Configuration from the reports and the
+rollouts' `turn_context`: codex-cli 0.156.1, reported model and effort
+`gpt-6-astra`/`high`, approval `on-request` with Codex's
+`codex-auto-review` guardian at `low`, ChatGPT
 Plus login; Claude Code 2.1.282, `claude-opus-5-5`, `auto`. Both rows ran
-at guides digest `0c163c41a0f2`, fixture `063d319`; G-122 ran at
+at guides digest `0c163c41a0f2`, on fixtures built per batch (`bd0a558`,
+`9ac09e6`, `063d319`, Claude `5603b49`) that differ only in one record's
+`created` and `updated`; G-122 ran at
 `3f5487904c61`. The companion batch's `grove version` reads `+dirty`: the
 checkout had uncommitted changes when it built, which are not recorded;
 the guides digest is the same as the other batches'. Scores below are this
@@ -56,16 +59,19 @@ and no question. Every clone check passed in all nine. The same-digest
 Claude pair: 5 of 5 blocking, 5 of 5 without a question, every check
 passing, as G-122.
 
-**2. Codex read outside the clone, through the owner's home.** In 5 of 9
-runs (probe, missing-choice 1, 2 and 4, companion 3) Codex looked for "the
-record model" the shaping guide names, which the fixture project does not
-hold and `grove` does not print: it listed the owner's home directory,
-searched `~/Code`, `~/GitHub`, `~/go` and `~/grove-archive`, and read
-`docs/record-model.md` from the owner's own Grove checkout. The
-workspace-write sandbox confines writes, not reads. Missing-choice 3 and
-companion 1 and 2 looked under `~/.cache/grove-evals` only. The Claude pair
-and G-122 read nothing outside the clone. The listings sit in the retained
-transcripts, outside every checkout.
+**2. Codex read outside the clone, through the owner's home.** All nine
+Codex runs read outside the clone. In 5 of 9 (probe,
+missing-choice 1, 2 and 4, companion 3) Codex looked for "the record
+model" the shaping guide names, which the fixture project does not hold and
+`grove` does not print, and read `docs/record-model.md` from the owner's
+own Grove checkout: missing-choice 1 and 2 searched the whole home
+directory recursively, and the probe, missing-choice 4 and companion 3
+listed it and searched other top-level directories there, the probe also
+`/private/tmp`. Missing-choice 3, companion 1, 2 and 4 stayed under
+`~/.cache/grove-evals`, the eval's own output. The workspace-write sandbox
+confines writes, not reads. The Claude pair and G-122 read nothing outside
+the clone. The listings sit in the retained transcripts, outside every
+checkout; this record names no file from them.
 
 **3. Plan use and cost.** Five-hour window use per run, from the rollouts'
 `rate_limits` readings, from one run's first reading to the next's: 10, 10,
@@ -73,7 +79,7 @@ transcripts, outside every checkout.
 of the weekly window a run. Tokens per run: 318k to 671k input (90% to 95%
 cached), 2.7k to 5.8k output, under 350 reasoning; the guardian added 38k
 to 116k more. Effort `high` therefore cost little; context resent across
-13 to 39 tool calls on the largest model cost the most. Wall clock 126 to
+13 to 39 tool calls on `gpt-6-astra` cost the most. Wall clock 126 to
 230 seconds, against the Claude pair's 43 to 88 seconds and $0.26 to $0.30
 a run, $2.87 for ten.
 

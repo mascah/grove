@@ -24,9 +24,9 @@ Observed at `worktree-G-135` `f37be4e`:
   (its read-in-stages table) send a session to "the record model" when a
   field's meaning or allowed value matters or the CLI refuses a change.
 - The record model is [docs/record-model.md](../docs/record-model.md) in
-  this repository only. The binary embeds just the two guides (`grove guide
-  work|shape`, `internal/cli/init.go` digests them), and `grove init`
-  writes neither the model nor a pointer to it, so an adopting project has
+  this repository only. The binary embeds the two guides (`grove guide
+  work|shape`) and the reviewer definition, not the record model, and
+  `grove init` writes neither the model nor a pointer to it, so an adopting project has
   no copy.
 - [G-143](G-143-g-135-codex-eval-row-pattern-pla.md) finding 2: in 5 of 9
   Codex shaping runs on the eval fixture, which is such a project, the

@@ -563,6 +563,7 @@ def run_on(args, found, recorded=None):
     runs = []
     for name, n in ((name, n) for name in cases for n in range(1, args.runs + 1)):
         prior = plan_used(args.config_dir) if codex else (0, None)
+        prior = (0, None) if prior is None and not runs else prior  # a new home has no reading: the first run still meets the floor
         used = prior and prior[0]
         step = max([PLAN_POINTS_FLOOR] + [r["plan_used"] for r in runs if r.get("plan_used") is not None])
         if codex and (prior is None and runs or prior is not None and used + step >= args.max_plan_percent):
@@ -583,7 +584,8 @@ def run_on(args, found, recorded=None):
         if codex:  # Codex installs its bundled skills on the first run
             meta["config dir system skills"] = system_skills(args.config_dir)
             if pp := runs[-1].get("plan_percent"):  # from the reading before it in the same window; else the run's own first, which already holds some of it
-                runs[-1]["plan_used"] = max(0, pp["last"] - (used if prior and prior[1] == pp["resets_at"] else pp["first"]))
+                same = prior[1] is not None and pp["resets_at"] is not None and abs(prior[1] - pp["resets_at"]) < 60  # Codex's resets_at jitters by a second
+                runs[-1]["plan_used"] = max(0, pp["last"] - (used if same else pp["first"]))
                 json.dump(runs[-1], open(os.path.join(work, f"{name}-{n}", "run.json"), "w"), indent=1)
         report(os.path.join(work, "report.md"), meta, runs, [c for c in CASES if c not in cases])
     print(os.path.join(work, "report.md"))
@@ -724,6 +726,16 @@ def selftest():
     runs = run(argparse.Namespace(**(vars(args) | {"config_dir": guarded, "runs": 3, "case": ["companion"], "max_plan_percent": 20, "out": os.path.join(tmp, "out-guarded")})))
     assert len(runs) == 2 and [r["plan_used"] for r in runs] == [5, 5], runs
     assert "- stopped: before companion 3: five-hour plan use 10% plus 13 points for the next run (the largest so far, at least 13) would reach --max-plan-percent 20" in open(os.path.join(tmp, "out-guarded", "report.md")).read()
+    new = os.path.join(tmp, "new-home")  # no rollout yet: the floor still refuses a cap it would reach
+    shutil.copytree(home, new, ignore=shutil.ignore_patterns("sessions"))
+    assert run(argparse.Namespace(**(vars(args) | {"config_dir": new, "case": ["companion"], "max_plan_percent": 13, "out": os.path.join(tmp, "out-new")}))) == []
+    reading = lambda name, *ps: open(os.path.join(new, "sessions", name), "w").write("".join(json.dumps({"payload": {"type": "token_count", "rate_limits": {"primary": p}}}) + "\n" for p in ps))
+    os.makedirs(os.path.join(new, "sessions"))
+    reading("rollout-a.jsonl", {"used_percent": 90, "resets_at": 1})
+    assert plan_used(new) == (0, None), "a reset window reads as 0"
+    reading("rollout-a.jsonl", {"used_percent": 90})
+    assert plan_used(new) == (90, None), "a reading without resets_at is current"
+    shutil.rmtree(new)
     for harness, change, reason in (("codex", {"max_seconds": None}, "needs --max-seconds"), ("codex", {"budget": "1"}, "--budget is Claude's"),
                                     ("codex", {"max_plan_percent": None}, "needs --max-plan-percent"), ("codex", {"max_plan_percent": 101}, "needs --max-plan-percent"),
                                     ("codex", {"effort": None}, "needs --effort"), ("codex", {"permission_mode": "auto"}, "one of"),
