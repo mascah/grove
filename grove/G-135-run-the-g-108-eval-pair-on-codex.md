@@ -2,9 +2,9 @@
 id: "G-135"
 type: work
 title: "Run the G-108 eval pair on Codex"
-status: review
+status: done
 created: "2026-09-24T21:48:22Z"
-updated: "2026-09-25T04:05:23Z"
+updated: "2026-09-25T04:05:29Z"
 relates_to: ["G-050", "G-101", "G-108", "G-122", "G-134"]
 candidate: "fec6e94d382aea3ab8b5b50c681145f91ad7c35b"
 approved: "fec6e94d382aea3ab8b5b50c681145f91ad7c35b"
