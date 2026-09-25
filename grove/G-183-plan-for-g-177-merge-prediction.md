@@ -72,3 +72,10 @@ independent review on the final revision.
    `deps` and `integrate`, and the integrate sentence of
    `docs/work-execution.md`.
 6. Verification per `CLAUDE.md`, independent review, handoff.
+
+## Status
+
+Steps 1 to 6 done through `829f08c`; the review is
+[G-189](G-189-review-of-g-177-candidate-merge.md). Step 4's integrate now
+falls through to the `git merge` refusal when a prediction fails, and
+`Changes.Unpredicted` carries the reason, both after review round 1.
