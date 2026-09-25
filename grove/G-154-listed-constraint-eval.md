@@ -116,89 +116,89 @@ has no product to test; scoring the retrieval facts.
 4. Nothing is spent without the mandate, nothing runs in `go test` or CI,
    and fixture records are created only in disposable directories.
 
+## Evidence
+
+Branch `worktree-G-154` in `.claude/worktrees/worktree-G-154`, base main
+`b684951`, which merges into main `47852e3` cleanly. The final session
+started from this record at `sha256:8fc9ba32…` and plan
+[G-155](G-155-g-154-listed-and-code-constraint.md) at `sha256:64da8623…`;
+the candidate is the commit that adds this section.
+
+Against each acceptance item:
+
+1. `listed-constraint` and `code-constraint` exist in
+   [evals/run.py](../evals/run.py), each on its own copy of the fixture
+   with records from `evals/fixture/records/`, per-case rubric columns and
+   the retrieval facts `search`, `holding read` and `distractors read`;
+   [evals/README.md](../evals/README.md) documents them and the two-digest
+   comparison, now saying G-153 shipped no search. `selftest` covers every
+   check and fact, including reads through a glob or a `for` loop
+   (`40e1263`), a glob character in the clone path and an `--include` path
+   `context` refuses (`7026cbe`); each of those assertions fails with its
+   fix reverted. With no `--case` the runner still runs only the G-108
+   pair, on its unchanged fixture. Commits `b2c7ef0`, `946459a`,
+   `47223ed`, `c895666`, `40e1263`, `7026cbe`.
+2. The `without` row ran under [G-158](G-158-what-mandate-should-the-g-154-wi.md)'s
+   answer, "Use the G-122 settings" (`claude-opus-5-5`, 5 runs a case, $5
+   a run, `auto`, `~/.cache/grove-evals/claude`), at `eeec725`, guides
+   digest `41324c3655a1`, never the Codex harness: $3.35, every retained
+   file the README lists under
+   `~/.cache/grove-evals/runs/2026-09-25-G-154-without/`. The `with` row was
+   dropped (G-173).
+3. [G-160](G-160-g-154-without-row-both-constrain.md), examined `eeec725`:
+   both constraints found and applied in 10 of 10 runs, the holding record
+   read in 10 of 10 (recomputed with the fixed runner), distractors read in
+   every listed-constraint run, G-001 in 8 of 10, $0.29 to $0.38 a run;
+   lever none, because at five and two records every run reads nearly
+   every record; a symbol-level or index case is not worth it without a
+   fixture large enough that reading everything fails; limits as G-122
+   records them.
+4. No paid run without the mandate; no run in `go test` or CI; fixture
+   records only under each run's output directory or the selftest's
+   temporary one.
+
+Decisions taken: the Outcome and acceptance 2 and 3 were amended to the
+`without` row by the owner's answer to G-173; no decision record, since
+reversing it costs one more row on the unchanged runner. The recomputed
+facts are a throwaway script's, reproduced by both final reviewers; the
+reports under `--out` keep the `eeec725` values.
+
+Verification at `144329d` (the candidate adds only records):
+`python3 evals/run.py selftest` prints `selftest: ok`; `go run
+./cmd/grove check` prints `OK: 155 records`; `go test -count=1 -timeout
+120s ./...` passes (no Go changed on the branch); every relative link in
+the changed records and the README resolves.
+
+Reviews: [G-159](G-159-g-154-runner-cases-review.md), the runner at
+`47223ed`, three rounds, every consequential finding fixed;
+[G-160](G-160-g-154-without-row-both-constrain.md), the row;
+[G-181](G-181-g-154-final-review-runner-fixes.md), the final gate, two
+rounds, examined `c45af99`, every finding minor and fixed but two
+informational limits; `144329d` after it rewords G-160 as its round 2
+asks, self-checked.
+
+Open limits: the `for`-loop rule looks for a reader anywhere in the
+command (G-181 round 1 finding 2); the include rule does not copy
+`context`'s `.git` and symlink refusals (round 2 finding 2); the rubric's
+owner column in G-160 is unscored.
+
 ## Next
 
-Assign the `without` row now: build both cases, then one mandated run each
-on Claude. The `with` row waits for G-153 to be integrated. The owner
-supplies the mandate before any paid run; it names a Claude model, and no
-attempt passes `--harness codex` or names `gpt-6-astra`. G-153 starts after
-the `without` row's review is read (owner decision, 2026-09-25).
+In review: the owner judges the candidate. From this checkout:
 
-**Checkpoint, 2026-09-25, second headless `/grove-work G-154`.** The
-`without` row is run and reviewed; the `with` row waits for G-153 to be
-integrated, and G-153 waits for the owner to read
-[G-160](G-160-g-154-without-row-both-constrain.md). G-154 alone, on
-`worktree-G-154` in `.claude/worktrees/worktree-G-154`, base main
-`b684951`; plan [G-155](G-155-g-154-listed-and-code-constraint.md) at
-`sha256:fc27deb1…`, this record at `sha256:8efad9e4…` when the session
-started. Status stays `active`: acceptance 2 and 3 are half done.
+```sh
+go run ./cmd/grove approve G-154 "VERDICT"
+```
 
-- Done, plan steps 1 and 2 (acceptance 1 and 4): `listed-constraint` and
-  `code-constraint` in `evals/run.py`, each on its own copy of the fixture
-  with records from `evals/fixture/records/`; the retrieval facts
-  `search`, `holding read` and `distractors read`; per-case rubric
-  columns; README sections for the cases, facts, rubric rows and the
-  two-digest comparison. With no `--case` the runner still runs only the
-  G-108 pair, whose fixture is unchanged. Commits `b2c7ef0`, `946459a`,
-  `47223ed`, `c895666`.
-- Done, step 3: independent review
-  [G-159](G-159-g-154-runner-cases-review.md), three rounds, examined
-  `47223ed`; every consequential finding fixed, one post-cap fix
-  (`c895666`) self-checked only, one informational coverage gap open.
-- Done, step 5 (acceptance 2 and 3 for the `without` row): under
-  [G-158](G-158-what-mandate-should-the-g-154-wi.md)'s answer, "Use the
-  G-122 settings" (`claude-opus-5-5`, 5 runs, $5 a run, `auto`,
-  `~/.cache/grove-evals/claude`), both cases ran at `eeec725`, guides
-  digest `41324c3655a1`, as two foreground pieces, one per case, into
-  `~/.cache/grove-evals/runs/2026-09-25-G-154-without/{listed-constraint,code-constraint}`;
-  $3.35 spent, never the Codex harness. Review
-  [G-160](G-160-g-154-without-row-both-constrain.md), examined `eeec725`:
-  both constraints found and applied in 10 of 10 runs, because at five and
-  two records every run reads every record; code-constraint runs 4 and 5
-  also blocked on an unplanted syntax question; the runner's `holding
-  read` and `distractors read` miss reads through a glob (5 of 10
-  false negatives). Lever: none from this row.
-- Verification at the checkpoint commit: `python3 evals/run.py selftest`
-  prints `selftest: ok`; `go run ./cmd/grove check` passes; links in
-  G-160 resolve. No code changed.
-- No command is running.
+then, in main's checkout:
 
-**Checkpoint, 2026-09-25, third headless `/grove-work G-154`.** G-153 is
-integrated on main (`1db5a75`, done at `47852e3`) but narrowed at its
-preparation to the board's body search and the review listing, with no
-`grove search` and no guide sentence, so a headless `with` row has no
-search to measure. Whether G-154 drops, runs or defers that row changes
-its acceptance, so it waits on
-[G-173](G-173-what-should-g-154-s-with-row-bec.md), which blocks G-154;
-recommendation there: drop it. Nothing was spent and main was not merged.
-Same branch and worktree, base main `b684951`; this record at
-`sha256:13094ec8…` and G-155 at `sha256:de24d4fa…` when the session
-started.
+```sh
+go run ./cmd/grove integrate G-154
+```
 
-- Done, independent of the answer: the runner's `holding read` and
-  `distractors read` count a read through a glob or a `for` loop (G-160
-  finding 4), commit `40e1263`, with the fake reading a distractor both
-  ways and a selftest assertion that a listing loop, `ls` and `grep` over
-  a glob read nothing; the selftest fails on the distractor assertion
-  without the fix and prints `selftest: ok` with it.
-- Recomputed from the `without` row's retained transcripts with
-  `retrieval()` at `40e1263` (a throwaway script importing `evals/run.py`,
-  not committed): `holding read` true in 10 of 10 runs (was 5); listed-
-  constraint `distractors read` G-003 and G-004 in 5 of 5 (was 2);
-  unneeded reads now include the distractors read by glob (runs 1, 3, 5)
-  and the shared G-001 (listed-constraint 1 and 5, code-constraint 2 and
-  3). This matches G-160 finding 3's reading of the transcripts.
-- Not yet reviewed: `40e1263` goes to the final review with the rest of
-  the handoff (plan step 6).
-- No command is running.
+or `go run ./cmd/grove feedback G-154 "TEXT"` here for changes.
 
-Pending judgments, the owner's: G-173; and whether a larger-fixture case
-deserves its own work (G-160 Disposition).
-
-Continuation, once G-173 is resolved: assign `/grove-work G-154` again on
-this branch. On answer 1, amend acceptance 2 and 3 as the answer says,
-complete the review with the recomputed facts, obtain the final
-independent review, and hand off into Review. On answer 2, `git merge
-main`, run the `with` row with G-160's two commands and a new `--out`
-(`2026-MM-DD-G-154-with/…`), complete the review across both rows, and
-hand off. On answer 3, checkpoint the wait on the named work.
+Pending judgments, the owner's: the Outcome's amendment after G-173; the
+rubric's owner column in G-160; whether a larger-fixture case, which could
+also carry a later search's `with` row, deserves its own work (G-160
+Disposition).
