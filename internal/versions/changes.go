@@ -24,9 +24,12 @@ type Change struct {
 type Changes struct {
 	Base     string // the merge base of the target and the candidate; "" without a target
 	OnTarget bool   // the target contains the candidate
-	Merge    *Merge // nil without a target
-	Files    []Change
-	After    []string
+	Merge    *Merge // nil without a target, or when it could not be predicted
+	// Unpredicted says why a merge with a target could not be predicted,
+	// as on a Git before 2.38, whose merge-tree cannot write a tree.
+	Unpredicted string
+	Files       []Change
+	After       []string
 }
 
 // ChangesContext reads a candidate's changes in root's repository, on demand,
@@ -49,12 +52,14 @@ func ChangesContext(ctx context.Context, root, target, candidate, tip, recordPat
 		}
 		c.Base = strings.TrimSpace(base)
 		c.OnTarget = c.Base == full
-		m, _, err := predict(ctx, root, at, c.Base, full)
-		if err != nil {
-			return nil, err
+		if m, _, err := predict(ctx, root, at, c.Base, full); ctx.Err() != nil {
+			return nil, ctx.Err()
+		} else if err != nil {
+			c.Unpredicted = err.Error()
+		} else {
+			m.Target = at
+			c.Merge = &m
 		}
-		m.Target = at
-		c.Merge = &m
 		out, err := repo.GitContext(ctx, root, "diff", "--numstat", "-z", c.Base, candidate)
 		if err != nil {
 			return nil, err

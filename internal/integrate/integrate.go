@@ -76,19 +76,16 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 	}
 	// A conflict is refused before the merge starts (G-177): merge-tree
 	// performs it in objects only, against the commit that would be merged
-	// into, and names the files.
-	ms, err := versions.PredictContext(context.Background(), root, before, []string{from.Commit})
-	if err != nil {
-		return fmt.Errorf("the merge of %s into %s could not be predicted: %v; %s is unchanged", name, p.Target, err, p.Target)
-	}
-	if m := ms[0]; m.Outcome == "conflict" {
-		files := strings.Join(m.Conflicts, ", ")
+	// into, and names the files. A prediction that fails, as on a Git
+	// before 2.38, leaves the refusal to the merge below.
+	if ms, err := versions.PredictContext(context.Background(), root, before, []string{from.Commit}); err == nil && ms[0].Outcome == "conflict" {
+		conflict := ms[0].Text(p.Target)
 		where := worktreeOf(res, from.Ref)
 		if where == "" {
 			where = "a checkout of " + name
 		}
-		return fmt.Errorf("merge of %s into %s refused: it %s; nothing was merged, %s is unchanged at %s and %s stays in review. Next: in %s, git merge %s, resolve %s and commit, then hand that commit to review as the new candidate; or there, grove feedback %s %q returns it to an implementer",
-			name, p.Target, m.Text(p.Target), p.Target, short(before), req.ID, where, p.Target, files, req.ID, "conflicts with "+p.Target+" at "+short(before)+" in "+files+"; merge "+p.Target+" and resolve")
+		return fmt.Errorf("merge of %s into %s refused: it %s; nothing was merged, %s is unchanged at %s and %s stays in review. Next: in %s, git merge %s, resolve the conflicts and commit, then hand that commit to review as the new candidate; or there, grove feedback %s %q returns it to an implementer",
+			name, p.Target, conflict, p.Target, short(before), req.ID, where, p.Target, req.ID, conflict+"; merge "+p.Target+" and resolve")
 	}
 	// The commit the checks above read is what is merged, not the name: the
 	// branch may move meanwhile, and a tag of the same name would win the

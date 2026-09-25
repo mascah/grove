@@ -176,7 +176,9 @@ the target commit it read, stale once the target moves. A selection with
 two or more candidates in review not on the target merges them in its
 order, each onto the ones before, and a note names where the first conflict
 lands and in which files; Grove states that order but never chooses one, and
-a clean order is not evidence that the changes work together. Notes also report what the current view (see
+a clean order is not evidence that the changes work together. Git before
+2.38 cannot perform such a merge, and the delivery says the merge could not
+be predicted. Notes also report what the current view (see
 [Versions](#versions)) says about each listed record: an older version here,
 diverging current versions, other `depends_on` elsewhere (never merged into
 this checkout's), uncommitted changes here, a record that changed while it

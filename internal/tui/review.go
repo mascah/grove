@@ -300,6 +300,8 @@ func (m *Model) reviewRows(g *versions.Group, v *versions.Version) []string {
 			text += "; the board read " + m.res.Target + " at " + short7(tip) + " (r re-reads)"
 		}
 		parts = append(parts, text)
+	} else if held && read.c != nil && read.c.Unpredicted != "" {
+		parts = append(parts, "the merge into "+m.res.Target+" could not be predicted: "+read.c.Unpredicted)
 	}
 	rows := []string{strings.Join(parts, " · ")}
 	var where []string

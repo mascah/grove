@@ -35,7 +35,16 @@ func (m *Merge) Text(target string) string {
 	case "clean":
 		return "merges cleanly into " + at + ", which moved since the branch left it"
 	}
-	return "conflicts with " + at + " in " + strings.Join(m.Conflicts, ", ")
+	return "conflicts with " + at + " " + m.Where()
+}
+
+// Where names a conflict's files; Git names none for some, such as a split
+// directory rename.
+func (m *Merge) Where() string {
+	if len(m.Conflicts) == 0 {
+		return "where Git names no file"
+	}
+	return "in " + strings.Join(m.Conflicts, ", ")
 }
 
 // PredictContext resolves target to a commit once and predicts merging the

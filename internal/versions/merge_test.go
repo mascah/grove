@@ -88,6 +88,20 @@ func TestPredictMerges(t *testing.T) {
 	if err != nil || !c.OnTarget || c.Merge.Outcome != "integrated" {
 		t.Fatalf("changes, abbreviated candidate: %+v %v", c, err)
 	}
+	// A split directory rename conflicts in no file Git names.
+	write(t, root, "x/a", "a\n")
+	write(t, root, "x/b", "b\n")
+	commit(t, root, "x")
+	split := addWorktree(t, root, "split", "main", "-b", "split")
+	write(t, split, "y/a", "a\n")
+	write(t, split, "z/b", "b\n")
+	git(t, split, "rm", "-q", "x/a", "x/b")
+	splitTip := commit(t, split, "split x")
+	write(t, root, "x/c", "c\n")
+	now := commit(t, root, "x/c")
+	if m := one("main", splitTip); m.Outcome != "conflict" || len(m.Conflicts) != 0 || m.Text("main") != "conflicts with main at "+now[:7]+" where Git names no file" {
+		t.Fatalf("split rename: %+v %q", m, m.Text("main"))
+	}
 	if _, err := PredictContext(ctx, root, "nope", []string{left}); err == nil {
 		t.Fatal("an unknown target predicted")
 	}

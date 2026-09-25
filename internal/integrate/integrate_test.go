@@ -203,13 +203,21 @@ func TestIntegrateRefusesConflictsBeforeAnythingChanges(t *testing.T) {
 		moved := git(t, root, "rev-parse", "--short=7", "HEAD")
 		refs := git(t, root, "for-each-ref")
 		facts := refused(t, root, false, "merge of feature into main refused: it conflicts with main at "+moved+" in code.txt; nothing was merged, main is unchanged at "+moved+
-			" and G-001 stays in review. Next: in "+wt+", git merge main, resolve code.txt and commit, then hand that commit to review as the new candidate; or there, grove feedback G-001 \"conflicts with main at "+moved+" in code.txt; merge main and resolve\" returns it to an implementer")
+			" and G-001 stays in review. Next: in "+wt+", git merge main, resolve the conflicts and commit, then hand that commit to review as the new candidate; or there, grove feedback G-001 \"conflicts with main at "+moved+" in code.txt; merge main and resolve\" returns it to an implementer")
 		if len(facts) != 1 || !strings.HasPrefix(facts[0], "approval: ") {
 			t.Fatalf("facts %q", facts)
 		}
 		if git(t, root, "for-each-ref") != refs {
 			t.Fatal("a refused integration changed a ref")
 		}
+	})
+	t.Run("what prediction cannot see", func(t *testing.T) {
+		t.Parallel()
+		// The candidate adds the review record, which an untracked file in
+		// the target's checkout stands in the way of: the merge refuses it.
+		root, _, candidate := fixture(t, true)
+		write(t, root, "grove/G-005-review.md", git(t, root, "show", candidate+":grove/G-005-review.md")+"\nA local edit.\n")
+		refused(t, root, false, "merge of feature into main refused: error: The following untracked working tree files would be overwritten by merge")
 	})
 	t.Run("the record changed on the target", func(t *testing.T) {
 		t.Parallel()

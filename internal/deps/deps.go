@@ -333,7 +333,7 @@ func (v *View) mergeOrder(target string, predict func([]string) ([]versions.Merg
 	var steps []string
 	for i, m := range ms {
 		v.MergeOrder = append(v.MergeOrder, OrderedMerge{ids[i], m})
-		steps = append(steps, ids[i]+" "+map[string]string{"integrated": "is already there", "fast-forward": "fast-forwards", "clean": "merges cleanly", "conflict": "conflicts in " + strings.Join(m.Conflicts, ", ")}[m.Outcome])
+		steps = append(steps, ids[i]+" "+map[string]string{"integrated": "is already there", "fast-forward": "fast-forwards", "clean": "merges cleanly", "conflict": "conflicts " + m.Where()}[m.Outcome])
 	}
 	result := "no conflict"
 	if last := ms[len(ms)-1]; last.Outcome == "conflict" {

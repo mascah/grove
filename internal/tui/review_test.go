@@ -73,6 +73,21 @@ func TestReviewMergePredictionNamesAMovedTarget(t *testing.T) {
 	}
 }
 
+// A merge Git could not predict says so and keeps the changed files.
+func TestReviewMergeUnpredicted(t *testing.T) {
+	t.Parallel()
+	f := reviewFixture(newFixture(), true)
+	f.changes = func(target, candidate, tip, path string) (*versions.Changes, error) {
+		return &versions.Changes{Base: "base000", Unpredicted: "git merge-tree: too old", Files: []versions.Change{{Path: "internal/x.go", Added: 1}}}, nil
+	}
+	s := plain(openReview(t, f, 200, 36))
+	for _, want := range []string{"only the record changed since it · the merge into main could not be predicted: git merge-tree: too old", "internal/x.go  +1 −0"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("review detail lacks %q:\n%s", want, s)
+		}
+	}
+}
+
 // The detail of a candidate in review leads with its standing and where the
 // actions run, starts at the Evidence, lists the changed files, and shows a
 // file's diff escaped; a narrow terminal keeps every row its width.
