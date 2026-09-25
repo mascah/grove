@@ -256,6 +256,18 @@ checkpoint the blocked work's Next, and hand off naming the blocker.
 `depends_on` already records that wait, so it needs no question unless someone
 must decide something about it.
 
+With several selected units, implement them one at a time in the context's
+order, and start none whose inputs wait: an open question, a prerequisite
+outside the selection that the base does not hold, or a selected prerequisite
+that waits. A new question, an external blocker or a failure of one unit
+stops that unit and every selected unit that needs it, directly or through
+other work; units that need none of them continue. Exhausting the budget, or
+a Stop, ends everything with what is committed kept. Each unit keeps its own
+plan, acceptance, evidence and Next. A later unit may build on an earlier
+one's unmerged changes on the same branch: the explicit
+selection is the owner's choice to review them together, which an edge alone
+never implies.
+
 Run the targeted checks, then the full verification the repository's
 instructions, the record, and the plan require; prefer uncached runs for final
 evidence. Documentation needs link and consistency checks. Record actual
@@ -386,6 +398,22 @@ candidate to human judgment:
    alone, so `git diff --stat CANDIDATE HEAD` shows one file:
    `grove update G-030 --expect REVISION --set status=review --set candidate=COMMIT`.
 
+Several selected units share one handoff. When every unit the assignment
+started is complete, the complete units enter review together with one
+shared candidate, the combined commit: set `status=review` and that
+candidate on each, then commit those record changes together and nothing
+else, so `git diff --stat CANDIDATE HEAD` shows only their records. The
+records on a branch whose candidate is the same commit are one group, judged
+per unit and integrated together. A unit never started because it waits stays
+as it was, with a checkpoint naming its wait; its records, plans and questions
+are record files and do not hold the others back. If a started unit is
+incomplete (failed, out of budget, stopped, or at the review cap) with
+changes outside the record root on the branch, nothing on that branch enters
+review, since integrating it would carry the unfinished code: the complete
+units stay `active` with a checkpoint such as "complete at commit X, review
+waits on G-031". Launching the same selection again resumes on that branch
+and does not redo units whose checkpoint the branch confirms.
+
 If the attempt failed or was interrupted, or a review the record demands is
 still missing, the work stays `active` with a checkpoint: a terminal attempt
 does not enter Review by itself. Automated checks and screenshots are not
@@ -431,6 +459,15 @@ disposition:
 - **Rejection:** `status=abandoned`, with the decision and its reasons in the
   record or a decision record it links.
 
+A candidate several records share is judged per record and integrated as
+their group. `approve` binds each record's own verdict, and the group's
+record commits do not count as later changes. `feedback` on any of them
+reopens them all: the others are set `active` with their approvals dropped
+and a line naming that feedback appended, each committed alone, since the
+next candidate replaces the shared one. `integrate` of any of them merges
+the commit, and so all of them: it refuses, naming them, until every one is
+approved in review, then writes `done` for each, committed alone.
+
 A further commit on the branch after the handoff is a new candidate, which
 `approve` refuses until `candidate` names it: set it and reconsider, since
 approval is of one commit. A `done` record without a candidate predates this rule and claims
@@ -446,7 +483,7 @@ an untracked background agent running as an implied continuation.
 | --- | --- |
 | Claude, interactive | `/grove-work G-030 G-031` |
 | Claude, headless | `claude -p "/grove-work G-030 --interaction headless"` |
-| Grove-owned attempt | `grove run G-030 --budget USD --permission-mode MODE` (either flag optional where `grove.yaml` sets it under `run:`), or `R` on the work's detail on the board: the headless row as a process that outlives the terminal, in the work's worktree; `grove attempts`, `attempt`, `stop`, or `A` and `x` on the board |
+| Grove-owned attempt | `grove run G-030 --budget USD --permission-mode MODE` (either flag optional where `grove.yaml` sets it under `run:`), or `R` on the work's detail on the board: the headless row as a process that outlives the terminal, in the work's worktree; `grove run G-030 G-031 --dry-run` previews a selection, launched as one attempt; `grove attempts`, `attempt`, `stop`, or `A` and `x` on the board |
 | Codex, interactive | `$grove-work G-030 G-031` |
 | Any agent without skills | "Read the repository's agent instructions and the output of `grove guide work`, then follow that guide for `G-030 --interaction headless`." |
 | Inspect first, no agent | `grove context G-030` |
@@ -454,7 +491,7 @@ an untracked background agent running as an implied continuation.
 Every row ends in this file and the same `context` command; the mode travels
 as the `--interaction` argument and is passed on to `context`, which records it
 in its output. The skills are explicit-invocation only. Grove starts an
-agent only through `grove run` or the board's `R`, one explicitly assigned work ID per attempt:
+agent only through `grove run` or the board's `R`, one explicit assignment, of one work ID or a selection of several, per attempt:
 the caller's assignment is the authorization, the attempt binds the worktree,
 identity, budget, permission profile, raw logs, Stop and owner-loss handling,
 and its result is facts about the process, never acceptance; the record's

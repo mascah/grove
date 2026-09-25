@@ -183,13 +183,15 @@ nothing. [G-161](../grove/G-161-dependency-view.md) owns it; the board's
 ## Attempts
 
 Grove starts an agent only through `run` or the board's `R`, one assigned
-work ID per attempt. `run ID [--budget USD] [--permission-mode MODE] [--until
-plan] [--model MODEL] [--effort LEVEL] [--branch NAME] [--worktree DIR]`
-starts one bounded implementation
+work, or one explicit selection of work, per attempt. `run ID...
+[--dry-run | --expect DIGEST] [--budget USD] [--permission-mode MODE]
+[--until plan] [--model MODEL] [--effort LEVEL] [--branch NAME]
+[--worktree DIR]` starts one bounded implementation
 attempt of proposed or active work as a Grove-owned `claude -p "/grove-work
-ID --interaction headless"` process that outlives the terminal
+ID... --interaction headless"` process that outlives the terminal
 ([G-101](../grove/G-101-attempt-mechanism.md),
-[G-045](../grove/G-045-durable-attempt.md)). It creates `worktree-ID` under
+[G-045](../grove/G-045-durable-attempt.md)), the IDs passed as given. It creates `worktree-` plus the IDs joined by `-`
+(`worktree-G-030`, `worktree-G-030-G-031`) under
 `.claude/worktrees/` from this checkout's HEAD, or reuses the branch's
 registered worktree so a next attempt continues from preserved partial work,
 then starts an owner process in its own session that runs the provider there
@@ -205,6 +207,36 @@ set the model and effort; a flag overrides its default for one launch, and
 is refused as a usage error: Grove itself sets no default spend or profile.
 Grove starts one process and never retries; subagents the provider starts
 share the budget.
+
+Several IDs are one selection
+([G-162](../grove/G-162-bounded-work-selection.md),
+[G-188](../grove/G-188-selected-work-shared-candidate.md)): still one
+process, one worktree and one budget over all of it, never one process per
+ID. `run` orders the members as [`deps`](#dependencies) does and adds
+nothing: a prerequisite outside the selection is listed with its delivery at
+the base (the launching HEAD, or the reused branch's tip), never implemented.
+A member **waits**, and the agent does not start it, when an open question
+blocks it, when an outside prerequisite is not delivered at the base
+(proposed, active, review or abandoned, or done with a candidate the base
+lacks; done without a candidate is reported as unrecorded delivery), or when
+a selected prerequisite waits. The agent implements the members one at a
+time in that order; a new question, an outside blocker or a failure stops
+that member and every member that needs it while the rest continue, and
+budget exhaustion or `stop` ends everything with what is committed kept. The
+complete members enter review together on one shared candidate, judged per
+member and integrated as a group ([Work lifecycle](record-model.md#work-lifecycle));
+a started member left incomplete holds the whole branch out of review,
+since integrating it would carry the unfinished code, while one that never
+started keeps its wait and does not. `--dry-run` checks everything a launch
+checks and prints the assignment without writing or starting anything: the
+IDs, order, each member's status, revision and whether it can start or
+waits and why, the outside prerequisites, the base, worktree, bounds, review
+boundary, continuation policy, and a digest, sha256 over the IDs as given,
+each member's revision, the base and the resolved options. `--expect DIGEST`
+refuses a launch whose assignment no longer has that digest and prints what
+it would run now. `attempt.json` records the selection with its digest and
+member revisions; an attempt from before selections reads as a selection of
+its one work.
 
 Three options shape one launch, recorded in `attempt.json` and reported as
 the attempt's `Requested:` fact ([G-134](../grove/G-134-bound-an-attempt-at-its-plan-and.md)).
@@ -240,11 +272,15 @@ the skill the prompt names, which `init` writes and you commit
 ([G-150](../grove/G-150-launch-attempts-only-where-the-w.md)); a new branch
 is checked in HEAD before it is created. An open question that blocks the
 work is the wait the headless guide persists, so rerunning with nothing
-changed refuses the same way. Every refusal comes before a write, except
+changed refuses the same way: a selection none of whose members can start is
+refused, naming each wait. A running or orphaned attempt whose selection
+shares any member refuses the launch, so overlapping selections cannot both
+own a record. Every refusal comes before a write, except
 that what an existing branch holds is checked in its checkout, so a branch
 that had no worktree keeps the one `run` made.
 
-`attempts [ID]` lists attempts newest first. `attempt ATTEMPT [--json]`
+`attempts [ID]` lists attempts newest first, or those whose selection
+includes ID, with every member in the WORK column. `attempt ATTEMPT [--json]`
 prints one attempt's launch, what it requested, event counts (parsed bounded:
 a line over 1 MiB is counted, not read), the provider's init fields with the
 model that actually ran, the result event's fields with its cost split by
@@ -252,7 +288,11 @@ model where the provider reports one (a subagent on another model shows
 apart), the result
 (exit, the worktree's HEAD and whether it holds uncommitted or untracked
 changes), the record as the branch holds it, whether the record on the target
-changed since launch, and the file paths; no provider text is printed.
+changed since launch, and the file paths; no provider text is printed. For a
+selection it prints each member at launch and, once ended, one line per member
+as the branch holds it: awaiting judgment (review, with the candidate),
+active with its checkpoint in its Next, not started and why, or waiting on a
+question; and whether each member's record on the target changed.
 Liveness is the owner's file lock, never a pid: `running` while it is held,
 `finished` once `result.json` exists, `orphaned` when the owner is gone but
 the provider's process group lives, `interrupted` when nothing is left and no

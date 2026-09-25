@@ -106,7 +106,13 @@ branch's worktree and branch. Each runs the same operation as the command
 ([Work lifecycle](record-model.md#work-lifecycle)), one at a time; a result
 screen shows its facts, or why it was refused, and the board is re-read. A
 candidate without a clean checkout of its branch, or a target without one, is
-reported instead; the board never creates a checkout.
+reported instead; the board never creates a checkout. Other work records on
+the branch whose candidate is the same commit, a selection handed off
+together ([G-188](../grove/G-188-selected-work-shared-candidate.md)), are
+named where an action covers them: `f` returns them to `active` too, `i`
+merges them as one group and marks each done, refused until each is
+approved, and their record files do not count as changes since the
+candidate.
 
 ## Attempts
 
@@ -149,12 +155,19 @@ an earlier attempt of the same work and any attempt of work now done or
 abandoned are settled, and each says why, such as `done: candidate 1614e89`
 or `candidate 71a650e, superseded`.
 
+`R` launches one work; a selection of several is launched with `run ID...`
+([G-162](../grove/G-162-bounded-work-selection.md)). Its attempt is listed by
+its first ID as given and how many more, such as `G-030+2`, is among the
+attempts of each member's work, and stands for the members its worktree
+handed off in review, such as `candidate ready: G-030, G-031 in review`.
+
 Enter opens one attempt. At the top are the work's ID and title, a coloured
 state and the run's configuration: attempt, model and provider version,
 what the launch asked for (bound, model, effort, and the reviewer
 definition's digest or its absence), budget with what it cost and, where
 more than one model spent it, the split, permission mode, branch and base,
-start and end.
+start and end, and for a selection each member with its state on the branch
+(awaiting judgment, active, not started and why, or waiting on a question).
 What the run used follows: turns, tokens, context size against the model's
 window, subagents, compactions, tool calls and tool errors. Then come `State`, the
 outcome in a sentence with why it is settled, and `Next`, the keys that act

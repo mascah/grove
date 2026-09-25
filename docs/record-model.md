@@ -472,7 +472,11 @@ Candidate, review, approval and integration name the facts:
   record, so `git diff --stat CANDIDATE TIP` shows one file. A changed
   candidate is a new value set through `update`, so the reviewed and the
   approved commit can be compared to each review's `examined`; the earlier
-  value stays in Git history.
+  value stays in Git history. Several work records selected together can
+  share one candidate: the records on a branch whose `candidate` is the same
+  commit are one **group**, and nothing else defines it. The commit that
+  hands them off sets `review` and the candidate on all of them and changes
+  only their records. A group of one is the ordinary case.
 - **Review** means a candidate awaits human judgment. The record's Evidence
   and Next carry the handoff the work guide describes, so a new session can
   judge it without the originating chat. A failed or interrupted attempt does
@@ -484,11 +488,16 @@ Candidate, review, approval and integration name the facts:
   appends `Verdict on candidate X, DATE: VERDICT` as the body's last
   paragraph, committed alone. A changed candidate cannot inherit it: `check`
   rejects an `approved` that differs from `candidate`, and `approve` refuses
-  a tip that changed any file but the record after the candidate. Feedback
+  a tip that changed any file but the group's records after the candidate.
+  Approval stays per record, so each member of a group is judged against
+  its own acceptance. Feedback
   that asks for more implementation, `feedback ID TEXT` in the same checkout,
   sets `active`, unsets `approved`, keeps `candidate` so earlier reviews
   still compare to it, and appends `Feedback on candidate X, DATE: TEXT`;
-  nothing earlier is removed.
+  nothing earlier is removed. It reopens the whole group: every other member
+  in review is set `active` the same way, with `Reopened with ID's feedback
+  on candidate X, DATE` appended instead, each committed alone, since the
+  next candidate replaces the shared one.
 - **Done** means the candidate was accepted and merged into the target, for
   research and design deliverables too, since those are files. `update` writes
   `done`, or changes a done record's candidate, only when the candidate is an
@@ -501,8 +510,10 @@ Candidate, review, approval and integration name the facts:
   (a conflict is aborted and refused before anything changes), writes done
   there committed alone, and with `--cleanup` removes the branch's worktree
   and the branch only where Git agrees and the worktree holds no ignored
-  files. The merge is of the commit the checks read, so a branch that moves
-  meanwhile is not merged. A squash or rebase that lands a
+  files. Merging a shared candidate merges the whole group, so `integrate`
+  of any member refuses, naming them, until every member is approved in
+  review, then writes done for each, each committed alone. The merge is of
+  the commit the checks read, so a branch that moves meanwhile is not merged. A squash or rebase that lands a
   different commit is a manual merge that names that commit as the candidate
   in the same `update`. The check needs Git, as `update` already does;
   `check` verifies the form only.
