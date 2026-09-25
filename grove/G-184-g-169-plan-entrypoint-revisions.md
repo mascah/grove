@@ -46,7 +46,8 @@ revision.
   prints anything other than that guide" the adapter already stops on. A
   plain `grove guide NAME`, which a person and a legacy adapter both run,
   always prints: `guide` cannot tell them apart, so a revision-1 file
-  reaches diagnosis through `init --check` and `run`, as below.
+  reaches diagnosis through `init --check` and `run`, as below, and (after
+  round 2) a legacy skill's session through the guides' Inputs.
 - **Diagnosis.** `grove.Diagnose(path, content)` classifies one installed
   file: `custom` (no marker: project-owned, not judged), `current`
   (byte-equal to this binary's template), `compatible` (marked, supported
@@ -71,8 +72,8 @@ revision.
   target after the refresh is committed, and commit. A session that already
   loaded an adapter or guide keeps what it read: start a new session (or
   reload skills) after refreshing. Documented in the command reference's
-  Init and Attempts sections and `init`'s help; the guide says nothing new
-  beyond the grammar.
+  Init and Attempts sections and `init`'s help; the guides add only the
+  grammar and (after round 2) the legacy stop.
 
 **Adjustment after review round 1 (G-187), bounded and technical.** The
 plan served revision 1. The review showed that revision-less files are at

@@ -4,7 +4,8 @@ type: term
 title: "Entrypoint revision"
 status: proposed
 created: "2026-09-25T23:19:59Z"
-updated: "2026-09-25T23:19:59Z"
+updated: "2026-09-25T23:29:12Z"
+relates_to: ["G-169", "G-062", "G-152", "G-170"]
 ---
 
 ## Meaning
