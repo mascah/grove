@@ -53,15 +53,16 @@ and the board both render.
 - **Order.** `handoff.selection` moves there as `deps.Order` unchanged, and
   `context` calls it, so `context`, `deps` and the board cannot disagree.
   Only `depends_on` orders; `members`, `priority` and `blocks` never do.
-- **Layer and group.** Over the unfinished work shown (proposed, active,
-  review), a layer is the longest chain of unfinished prerequisites beneath
-  an item (0 when none), and a group is a connected set through
-  `depends_on` in either direction. A separate group is unrelated work. Equal
-  layers mean no declared order, never permission to run together.
-- **Needs and unlocks.** Each item lists every direct prerequisite (with its
-  status when it is not unfinished: done and abandoned prerequisites stay
-  named, collapsed on the board, never dropped) and the unfinished work it
-  directly unlocks.
+- **Layer and group.** Among the work shown (the unfinished work, or the
+  selection), a layer is one more than the deepest shown item it needs,
+  directly or through any other work (0 when none), and shown items either
+  of which needs the other share a group. A separate group is unrelated
+  work; a done prerequisite two items share does not join them. Equal layers
+  mean no declared order, never permission to run together.
+- **Needs and unlocks.** Each item lists every direct prerequisite and the
+  unfinished work it directly unlocks. Prerequisites that are not shown
+  (done or abandoned ones in the overview) are listed after the rows with
+  their delivery, collapsed on the board, never dropped.
 - **Selection preview** for explicit IDs: the IDs as given, their order,
   every transitive prerequisite outside the selection ("not added"), the
   questions that block the selection or those prerequisites with their
