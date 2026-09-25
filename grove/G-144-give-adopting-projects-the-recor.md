@@ -2,9 +2,9 @@
 id: "G-144"
 type: work
 title: "Give adopting projects the record model the guides cite"
-status: review
+status: done
 created: "2026-09-25T03:53:22Z"
-updated: "2026-09-25T14:36:17Z"
+updated: "2026-09-25T14:41:03Z"
 relates_to: ["G-135", "G-143"]
 candidate: "6def6c6"
 approved: "6def6c6"
