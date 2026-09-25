@@ -2,13 +2,14 @@
 id: "G-150"
 type: work
 title: "Launch attempts only where the worktree holds the entrypoints init wrote"
-status: active
+status: review
 created: "2026-09-25T19:06:01Z"
-updated: "2026-09-25T19:22:56Z"
+updated: "2026-09-25T19:48:41Z"
 kind: fix
 priority: 1
 size: small
 relates_to: ["G-040", "G-101", "G-110", "G-134", "G-152"]
+candidate: "ac1b787b820190c102a9b4f11a21b8579c96e2fc"
 ---
 
 ## Outcome
