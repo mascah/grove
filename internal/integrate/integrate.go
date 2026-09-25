@@ -2,7 +2,9 @@
 // and marks its work done there, as a sequence of separately reported facts
 // (G-044): approval found, merge made or refused, done written, cleanup done
 // or kept. Every refusal happens before anything changes, and nothing after
-// the merge undoes it.
+// the merge undoes it. A candidate shared by several work records on its
+// branch (G-188) is integrated as their group: merging the commit merges all
+// of it, so every member must be approved, and each is marked done alone.
 package integrate
 
 import (
@@ -51,7 +53,9 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 	} else if dirty != "" {
 		return fmt.Errorf("the checkout of %s has uncommitted changes; commit or set them aside before merging", p.Target)
 	}
-	res, err := versions.Inspect(root, req.ID)
+	// Every record, not only this one: the branch's other members of the
+	// group are read in the same pass.
+	res, err := versions.Inspect(root, "")
 	if err != nil {
 		return err
 	}
@@ -63,12 +67,32 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 	if _, err := repo.Git(root, "merge-base", "--is-ancestor", r.Candidate, from.Commit); err != nil {
 		return fmt.Errorf("branch %s does not contain candidate %s, which it names; repair the record before integrating", name, r.Candidate)
 	}
-	if others, err := versions.Others(context.Background(), root, r.Candidate, from.Commit, r.Path); err != nil {
+	group := update.Group(branchRecords(res, from), r)
+	var waiting, paths []string
+	for _, m := range group {
+		paths = append(paths, m.Path)
+		switch {
+		case m.Status != "review":
+			waiting = append(waiting, m.ID+" is "+m.Status)
+		case !update.SameCommit(m.Approved, r.Candidate):
+			waiting = append(waiting, m.ID+" is not approved")
+		}
+	}
+	if waiting != nil {
+		where := "its checkout"
+		if w := worktreeOf(res, from.Ref); w != "" {
+			where = w
+		}
+		return fmt.Errorf("candidate %s on %s is shared by %s, and merging it integrates all of them, but %s; judge each first (grove approve ID VERDICT in %s); %s is unchanged", short(r.Candidate), name, ids(group), strings.Join(waiting, ", "), where, p.Target)
+	}
+	if others, err := versions.Others(context.Background(), root, r.Candidate, from.Commit, paths...); err != nil {
 		return err
 	} else if len(others) != 0 {
 		return fmt.Errorf("commits after candidate %s on %s change %s: the tip %s is a new candidate; approve it before integrating", short(r.Candidate), name, strings.Join(others, ", "), short(from.Commit))
 	}
-	report(fmt.Sprintf("approval: candidate %s of %s approved on branch %s at %s%s", short(r.Candidate), req.ID, name, short(from.Commit), verdict(r)))
+	for _, m := range group {
+		report(fmt.Sprintf("approval: candidate %s of %s approved on branch %s at %s%s", short(r.Candidate), m.ID, name, short(from.Commit), verdict(m)))
+	}
 
 	before, err := head(root)
 	if err != nil {
@@ -102,15 +126,17 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 		report(fmt.Sprintf("merge: merge commit %s on %s (was %s)", short(after), p.Target, short(before)))
 	}
 
-	done, err := update.Apply(root, update.Request{ID: req.ID, Set: []update.Field{{Name: "status", Value: "done"}}, Commit: true}, now, nil)
-	if err != nil {
-		// update says whether the file was written before the commit failed.
-		return fmt.Errorf("merged as %s, but marking %s done failed: %v; once that is repaired, commit the staged record here: git commit -m 'docs(%s): set status=done' -- %s (or, if it was not written, grove update %s --set status=done --commit)", short(after), req.ID, err, req.ID, r.Path, req.ID)
-	}
-	if done.Changed {
-		report(fmt.Sprintf("done: %s done at commit %s", req.ID, short(done.Commit)))
-	} else {
-		report(fmt.Sprintf("done: %s was already done here", req.ID))
+	for _, m := range group {
+		done, err := update.Apply(root, update.Request{ID: m.ID, Set: []update.Field{{Name: "status", Value: "done"}}, Commit: true}, now, nil)
+		if err != nil {
+			// update says whether the file was written before the commit failed.
+			return fmt.Errorf("merged as %s, but marking %s done failed: %v; once that is repaired, commit the staged record here: git commit -m 'docs(%s): set status=done' -- %s (or, if it was not written, grove update %s --set status=done --commit)", short(after), m.ID, err, m.ID, m.Path, m.ID)
+		}
+		if done.Changed {
+			report(fmt.Sprintf("done: %s done at commit %s", m.ID, short(done.Commit)))
+		} else {
+			report(fmt.Sprintf("done: %s was already done here", m.ID))
+		}
 	}
 	if !req.Cleanup {
 		return nil
@@ -159,6 +185,27 @@ func approved(res *versions.Result, id, target string) (*versions.Source, *proje
 		return nil, nil, fmt.Errorf("%s is in review on %s but not approved: run grove approve %s VERDICT in %s first", id, names(review), id, where)
 	}
 	return nil, nil, fmt.Errorf("no branch holds %s in review; nothing to integrate", id)
+}
+
+// branchRecords is every record the committed source holds.
+func branchRecords(res *versions.Result, from *versions.Source) []*project.Record {
+	var out []*project.Record
+	for _, g := range res.Groups {
+		for _, v := range g.Versions {
+			if v.Source == from && v.Record != nil {
+				out = append(out, v.Record)
+			}
+		}
+	}
+	return out
+}
+
+func ids(records []*project.Record) string {
+	var out []string
+	for _, r := range records {
+		out = append(out, r.ID)
+	}
+	return strings.Join(out, ", ")
 }
 
 // worktreeOf is the registered checkout of a branch, or "".

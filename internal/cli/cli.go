@@ -85,14 +85,21 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             branch that holds it: sets approved to the candidate, appends the verdict\n" +
 	"             to the body, and commits that file alone. Refused where HEAD lacks the\n" +
 	"             candidate, the record has uncommitted changes, or a commit after the\n" +
-	"             candidate changed another file (that tip is a new candidate).\n" +
+	"             candidate changed another file (that tip is a new candidate). Work records\n" +
+	"             whose candidate is the same commit are one group, handed off together from\n" +
+	"             one selection: each is approved on its own, and their record files do not\n" +
+	"             count as later changes.\n" +
 	"  feedback   Return a work record in review to active with the text appended to the body,\n" +
 	"             committed alone in that same checkout; an approval is unset and the\n" +
-	"             candidate kept, so earlier reviews still compare to it. Prints where to\n" +
-	"             continue. Both print what update prints.\n" +
+	"             candidate kept, so earlier reviews still compare to it. Every other member\n" +
+	"             of its group in review is reopened the same way, each committed alone, with\n" +
+	"             a line naming this feedback. Prints where to continue. Both print what\n" +
+	"             update prints.\n" +
 	"  integrate  Merge the one branch holding an approved candidate of ID into the target\n" +
 	"             branch grove.yaml names, in that target's clean checkout, and mark ID done\n" +
-	"             there, committed alone. Prints one line per fact as it holds: approval,\n" +
+	"             there, committed alone. A candidate shared by a group integrates the group:\n" +
+	"             refused unless every member is approved in review, then one merge and done\n" +
+	"             for each member, committed alone. Prints one line per fact as it holds: approval,\n" +
 	"             merge (fast-forward or merge commit; a conflict is aborted and refused),\n" +
 	"             done, and with --cleanup the worktree and branch removed, or kept with\n" +
 	"             Git's reason. Every refusal comes before the merge; nothing undoes one.\n" +
@@ -238,12 +245,23 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 			report(errOut, err)
 			return 1
 		}
-		if a.command == "feedback" {
-			// The actionable continuation: the work is active again here.
-			branch, _ := update.Branch(p.Root)
-			fmt.Fprintf(errOut, "Next: %s is active on branch %s in %s; continue there with /grove-work %s\n", res.ID, visible(cmp.Or(branch, "(detached HEAD)")), visible(p.Root), res.ID)
-		}
 		object := map[string]any{"id": res.ID, "path": res.Path, "revision": res.Revision, "changed": res.Changed}
+		if a.command == "feedback" {
+			// The actionable continuation: the work, and any group it shared a
+			// candidate with, is active again here.
+			ids := []string{res.ID}
+			var reopened []map[string]any
+			for _, o := range res.Reopened {
+				fmt.Fprintf(errOut, "Reopened: %s shared the candidate and is active again, commit %s\n", o.ID, o.Commit)
+				ids = append(ids, o.ID)
+				reopened = append(reopened, map[string]any{"id": o.ID, "path": o.Path, "revision": o.Revision, "commit": o.Commit})
+			}
+			if reopened != nil {
+				object["reopened"] = reopened
+			}
+			branch, _ := update.Branch(p.Root)
+			fmt.Fprintf(errOut, "Next: %s active on branch %s in %s; continue there with /grove-work %s\n", strings.Join(ids, ", ")+map[bool]string{true: " is", false: " are"}[len(ids) == 1], visible(cmp.Or(branch, "(detached HEAD)")), visible(p.Root), strings.Join(ids, " "))
+		}
 		if a.request.Commit || a.command != "update" { // approve and feedback always commit
 			object["commit"] = nil // a no-op commits nothing
 			if res.Commit != "" {

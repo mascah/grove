@@ -66,10 +66,11 @@ func ChangesContext(ctx context.Context, root, target, candidate, tip, recordPat
 	return c, nil
 }
 
-// Others lists the files other than the record's that differ between two
+// Others lists the files other than the records' that differ between two
 // commits, as paths from the repository's top, where git diff prints them;
-// recordPath is relative to the project, which may sit under a prefix.
-func Others(ctx context.Context, root, from, to, recordPath string) ([]string, error) {
+// recordPaths, several for a group sharing a candidate, are relative to the
+// project, which may sit under a prefix.
+func Others(ctx context.Context, root, from, to string, recordPaths ...string) ([]string, error) {
 	_, _, prefix, err := repo.IdentifyContext(ctx, root)
 	if err != nil {
 		return nil, err
@@ -78,10 +79,13 @@ func Others(ctx context.Context, root, from, to, recordPath string) ([]string, e
 	if err != nil {
 		return nil, err
 	}
-	record := path.Join(prefix, recordPath)
+	records := map[string]bool{}
+	for _, r := range recordPaths {
+		records[path.Join(prefix, r)] = true
+	}
 	var others []string
 	for _, p := range strings.Split(strings.TrimSuffix(out, "\x00"), "\x00") {
-		if p != "" && p != record {
+		if p != "" && !records[p] {
 			others = append(others, p)
 		}
 	}

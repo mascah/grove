@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -90,10 +91,13 @@ func Live() Backend {
 				return nil, err
 			}
 			branch, _ := update.Branch(root)
-			return []string{
-				fmt.Sprintf("feedback: %s is active again on branch %s in %s, commit %s", id, branch, root, res.Commit[:min(len(res.Commit), 7)]),
-				fmt.Sprintf("next: continue there with /grove-work %s", id),
-			}, nil
+			facts := []string{fmt.Sprintf("feedback: %s is active again on branch %s in %s, commit %s", id, branch, root, res.Commit[:min(len(res.Commit), 7)])}
+			ids := []string{id}
+			for _, o := range res.Reopened {
+				facts = append(facts, fmt.Sprintf("reopened: %s shared the candidate and is active again, commit %s", o.ID, o.Commit[:min(len(o.Commit), 7)]))
+				ids = append(ids, o.ID)
+			}
+			return append(facts, "next: continue there with /grove-work "+strings.Join(ids, " ")), nil
 		},
 		Integrate: func(_ context.Context, root, id string, cleanup bool) ([]string, error) {
 			var facts []string

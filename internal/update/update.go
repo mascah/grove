@@ -43,6 +43,9 @@ type Field struct{ Name, Value string }
 type Result struct {
 	ID, Path, Revision, Commit string
 	Changed                    bool
+	// Reopened is, for feedback, the other members of the record's group
+	// returned to active with it (G-188), each its own commit.
+	Reopened []Result
 }
 
 // Failure retains publication state when an error happens after the rename
