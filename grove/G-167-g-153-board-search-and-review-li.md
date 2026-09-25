@@ -4,9 +4,9 @@ type: review
 title: "G-153 board search and review listing review"
 status: current
 created: "2026-09-25T20:54:27Z"
-updated: "2026-09-25T20:54:44Z"
+updated: "2026-09-25T20:59:14Z"
 work: ["G-153"]
-examined: "702b576"
+examined: "ab21640"
 ---
 
 ## Examined
@@ -47,3 +47,26 @@ disposable clone it removed; it wrote nothing in the checkout.
 
 Knowledge: no term or decision is contradicted; "describes a file" is
 board vocabulary defined in board.md and needs no term.
+
+## Round 2
+
+A fresh `grove-reviewer` agent on `3f2b923` to `ab21640` (the `examined`
+commit): every round-1 disposition holds, verified by running (the prefix
+fix reverted fails the test; PgDn and PgUp keep the hit visible and
+clamp at 30 hits and heights 12, 20, 30; G-144's merge gives 3 link and 12
+span pairs, as Evidence says); no regression; Evidence matches the code,
+commits and numbers. `go vet`, `gofmt -l`, `grove check`, tui and handoff
+uncached all pass. Nothing consequential remains.
+
+- Minor, accepted: the paging fix has no committed test; the reviewer's
+  throwaway test showed it correct.
+- Informational, no change: under a prefix, a code span written from the
+  repository's top (`proj/internal/x.go`) does not name the project path
+  `internal/x.go`, consistent with search, which takes project paths.
+- Informational, no change: board.md's "as search matches a path" leaves
+  out that a file outside the project matches by code span only; the code
+  comment and Evidence say it.
+
+Limits: the reviewer did not run `terminal.py` (the implementer did, all
+ok at `7f00b39`), the full suite, or a Linux run; the owner's layout
+judgment is open.

@@ -253,3 +253,32 @@ granularity and over-reports common file names; G-154's `with` row has no
 product change to measure (Scope at preparation); no Linux run.
 
 ## Next
+
+In review, awaiting the owner. Candidate: the commit that adds this
+handoff, on `worktree-G-153` from main `3f2b923`; code at `7f00b39`.
+Review G-167 examined `ab21640`, which differs from the candidate only in
+this record and G-167. Owner's judgments: the narrowing (Scope at
+preparation), which the owner may reverse; and the layout of the search
+hits and the review listing in a real terminal (acceptance 3), for
+example:
+
+```sh
+go run ./cmd/grove          # then / and type internal/tui/search.go, or a word from a body
+```
+
+and a work record in review with a candidate, whose detail lists under
+each changed file the records that describe it. Then, from this checkout:
+
+```sh
+grove approve G-153 "VERDICT"
+```
+
+and from main's checkout:
+
+```sh
+grove integrate G-153 --cleanup
+```
+
+G-154's `with` row compares nothing new after this (Scope at preparation);
+reshaping `grove search` and the guide sentences as their own work is the
+owner's choice.
