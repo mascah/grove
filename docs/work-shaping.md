@@ -6,7 +6,7 @@ that belongs with it. The `grove-shape` skill adapters for
 Claude and Codex, which `grove init` writes, only load it, and `grove guide
 shape` prints the copy the binary carries; an interactive session, a headless
 call, and a person reading this file follow the same steps.
-Carrying out assigned work is the [work guide](work-execution.md)'s job, not
+Carrying out assigned work is the work guide's job (`grove guide work`), not
 this one's.
 
 **Shaping authorizes proposals, nothing else.** An invocation is a mandate to

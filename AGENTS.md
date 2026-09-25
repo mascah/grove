@@ -97,7 +97,8 @@ own policy.
 - Bare `grove` opens the board (Bubble Tea v2, `internal/tui`), and explicit
   subcommands stay noninteractive (G-017).
 - A document the binary ships (`grove guide work|shape|model`, the
-  reviewer definition) links only to other shipped documents, never to a
+  reviewer definition) links only within itself or to `https://`, names
+  another shipped document by its command, never by path, and never links a
   record, since its `G-` IDs would name the adopting project's own (G-146).
 - Keep the board's text escaping and exact source targeting, with freshness
   checks before acting on a selected version (G-017, G-011).

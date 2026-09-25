@@ -239,8 +239,8 @@ outcome. Do not ask again for blanket permission. Update a plan when evidence
 requires a bounded technical adjustment, keeping why; do not quietly widen the
 assignment.
 
-Capture what settles as the [shaping guide](work-shaping.md#5-write-the-records)
-(`grove guide shape`, step 5) describes, in the execution checkout and on its
+Capture what settles as the shaping guide (`grove guide shape`, step 5)
+describes, in the execution checkout and on its
 threshold: a domain concept whose meaning the work settles gets a term
 record; a resolved question the work depends on whose answer makes a
 consequential choice that no decision holds becomes a decision attributed to

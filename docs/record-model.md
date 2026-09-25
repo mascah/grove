@@ -220,8 +220,7 @@ target and give a note. A target branch with no project yet, as while Grove
 is adopted on another branch, lacks every record.
 
 Optional `run:` is a mapping of launch defaults for `grove run` and the
-board's `R` ([G-140](../grove/G-140-default-an-attempt-s-budget-mode.md)),
-each named as the flag it stands in for:
+board's `R`, each named as the flag it stands in for:
 
 ```yaml
 run:
