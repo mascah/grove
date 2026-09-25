@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -257,25 +258,31 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 	if code := Run([]string{"version"}, t.TempDir(), &version, &versionErr); code != 0 || !regexp.MustCompile(`^grove \S.* guides sha256:[0-9a-f]{12}\n$`).MatchString(version.String()) {
 		t.Fatalf("version=%q", version.String())
 	}
-	// The three documents ship verbatim into projects that have no docs folder
-	// and live G- IDs of their own, so none links outside itself, and the
-	// model names no G- ID beyond its format examples.
-	var model string
-	for _, name := range []string{"work", "shape", "model"} {
+	// The shipped documents reach projects that have no docs folder and live
+	// G- IDs of their own, so none links outside itself, names a G- ID beyond
+	// its own examples, or points at Grove's repository or the predecessor.
+	shipped := map[string]string{"reviewer": grove.Reviewer}
+	examples := map[string][]string{"work": {"G-030", "G-031"}, "shape": {"G-037"}, "model": {"G-001", "G-003", "G-1000"}}
+	for name := range examples {
 		var out, errOut bytes.Buffer
 		Run([]string{"guide", name}, t.TempDir(), &out, &errOut)
-		for _, link := range regexp.MustCompile(`\]\(([^)]*)\)`).FindAllStringSubmatch(out.String(), -1) {
+		shipped[name] = out.String()
+	}
+	for name, text := range shipped {
+		for _, link := range regexp.MustCompile(`\]\(([^)]*)\)`).FindAllStringSubmatch(text, -1) {
 			if !strings.HasPrefix(link[1], "#") && !strings.HasPrefix(link[1], "https://") {
-				t.Errorf("guide %s links outside itself: %s", name, link[1])
+				t.Errorf("%s links outside itself: %s", name, link[1])
 			}
 		}
-		if name == "model" {
-			model = out.String()
+		for _, id := range regexp.MustCompile(`G-[0-9]+`).FindAllString(text, -1) {
+			if !slices.Contains(examples[name], id) {
+				t.Errorf("%s names %s, which is a live ID in an adopting project", name, id)
+			}
 		}
-	}
-	for _, id := range regexp.MustCompile(`G-[0-9]+`).FindAllString(model, -1) {
-		if id != "G-001" && id != "G-003" && id != "G-1000" {
-			t.Errorf("the record model names %s, which is a live ID in an adopting project", id)
+		for _, phrase := range []string{"Grove's own repository", "Grove's own records", "command reference", "predecessor"} {
+			if strings.Contains(text, phrase) {
+				t.Errorf("%s mentions %q, which an adopting project lacks", name, phrase)
+			}
 		}
 	}
 	for _, args := range [][]string{{"guide"}, {"guide", "both"}, {"guide", "work", "shape"}, {"version", "x"}, {"init", "here"}} {

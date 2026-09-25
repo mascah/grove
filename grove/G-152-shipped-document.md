@@ -29,8 +29,8 @@ under the same rule, not documents.
 
 The rule lives in AGENTS.md's constraints; its reason is
 [G-146](G-146-how-should-an-adopting-project-r.md)'s answer, which
-[G-151](G-151-strip-grove-repository-pointers.md) proposes extending from
-links to mentions. `TestGuideAndVersionNeedNoProject` enforces it. Delivered
+[G-151](G-151-strip-grove-repository-pointers.md) extends from links to
+mentions. `TestGuideAndVersionNeedNoProject` enforces it. Delivered
 by [G-040](G-040-portable-bootstrap.md) (the guides, `init`),
 [G-134](G-134-bound-an-attempt-at-its-plan-and.md) (the reviewer definition)
 and [G-144](G-144-give-adopting-projects-the-recor.md) (the model).

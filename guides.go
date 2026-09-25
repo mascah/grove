@@ -7,7 +7,7 @@ package grove
 import "embed"
 
 // Guides holds docs/work-execution.md, docs/work-shaping.md and the record
-// model they cite, docs/record-model.md, which links to no record so it reads
+// model they cite, docs/record-model.md, which names no record so it reads
 // the same in any project.
 //
 //go:embed docs/work-execution.md docs/work-shaping.md docs/record-model.md

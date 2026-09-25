@@ -260,6 +260,4 @@ runner, `grove run`, starts only assigned work attempts.
 | Codex, interactive | `$grove-shape a way to archive finished work` |
 | Any agent without skills | "Read the repository's agent instructions and the output of `grove guide shape`, then follow that guide for: TOPIC." |
 
-The skills are explicit-invocation only. Which rows have been exercised in a
-real harness is recorded in Grove's own repository (G-050); that is history,
-not required reading for a shaping session.
+The skills are explicit-invocation only.

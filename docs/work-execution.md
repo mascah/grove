@@ -23,11 +23,10 @@ disagree, repository and user instructions win.
 ## Lifecycle
 
 Work runs Proposed → Active → Review → Done, with Abandoned only by an
-explicit human decision, as Grove's own records G-035 and G-038 selected and
-implemented. An
-assignment sets `active` when implementation starts (step 5) and ends by
-handing a candidate commit into `review` (step 8). Only the integrator writes
-`done`, on the target after the merge, since Done means accepted and merged.
+explicit human decision. An assignment sets `active` when implementation
+starts (step 5) and ends by handing a candidate commit into `review`
+(step 8). Only the integrator writes `done`, on the target after the merge,
+since Done means accepted and merged.
 The CLI refuses it where the candidate is not already in HEAD, which keeps a
 checkout without the code from closing the work, and where the checkout is
 on a branch other than the configured target; `grove integrate` writes it
@@ -460,7 +459,4 @@ the caller's assignment is the authorization, the attempt binds the worktree,
 identity, budget, permission profile, raw logs, Stop and owner-loss handling,
 and its result is facts about the process, never acceptance; the record's
 status on the branch, set by this guide's steps, is the handoff. Scheduling
-and batches remain callers to define. Which of these rows has been exercised in a
-real harness, and what this workflow keeps, adapts, and defers from the
-predecessor's `/work`, are recorded in Grove's own repository (G-032). That is
-history, not required reading for an assignment.
+and batches remain callers to define.
