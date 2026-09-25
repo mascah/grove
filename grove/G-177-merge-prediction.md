@@ -4,10 +4,11 @@ type: work
 title: "Predict whether a candidate in review merges cleanly into the target"
 status: review
 created: "2026-09-25T21:39:27Z"
-updated: "2026-09-25T23:24:54Z"
+updated: "2026-09-25T23:30:39Z"
 kind: feature
 relates_to: ["G-161", "G-162", "G-163", "G-044", "G-060", "G-057", "G-030", "G-178", "G-180"]
 candidate: "a658921371a89424c0482a22d387fef9c17bc2e1"
+approved: "a658921371a89424c0482a22d387fef9c17bc2e1"
 ---
 
 ## Outcome
@@ -188,3 +189,5 @@ grove integrate G-177           # then in the main checkout
 or `grove feedback G-177 "TEXT"` in the worktree. A demo: `grove deps
 G-177 G-178` or the board's `g`, `p` on candidates in review, and a card's
 Review block. G-178 and G-180 act on this fact.
+
+Verdict on candidate a658921, 2026-09-25: approved
