@@ -247,12 +247,16 @@ linked worktree that lies inside its repository, Go only recognises the
 enclosing checkout's `.git` directory and stamps that checkout's revision and
 cleanliness instead (observed with go 1.26.2). The predecessor rejects
 `version` as an unknown command, so the line tells the two apart, and the
-line ends with a digest of the embedded guides, which names the workflow even
-when no revision was stamped.
+line ends with a digest of the embedded guides and record model, which names
+the workflow even when no revision was stamped.
 
 `go install …@COMMIT` resolves only a pushed commit, and rebuilding an
 installed binary is manual.
 
 `guide work` and `guide shape` print the [work](work-execution.md) and
 [shaping](work-shaping.md) guides the binary carries, so the workflow version
-is the executable version and no copy is edited elsewhere.
+is the executable version and no copy is edited elsewhere. `guide model`
+prints the [record model](record-model.md) the guides cite, the contract that
+binary validates, so a session in any project reads it without Grove's
+repository. Since it ships into projects whose own `G-` IDs are live, it links
+to no record.

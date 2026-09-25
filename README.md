@@ -38,7 +38,7 @@ go run ./cmd/grove check
 | `workspace` | Print the checkout holding a selected version | [Workspace](docs/commands.md#workspace) |
 | `context` | Assemble staged context for selected work | [Context](docs/commands.md#context) |
 | `init` | Set up Grove in a Git checkout | [Init](docs/commands.md#init) |
-| `guide`, `version` | Print a workflow guide; name this build | [Version and guide](docs/commands.md#version-and-guide) |
+| `guide`, `version` | Print a workflow guide or the record model; name this build | [Version and guide](docs/commands.md#version-and-guide) |
 
 ## The board
 

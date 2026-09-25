@@ -1,24 +1,21 @@
 # Record model
 
 This is Grove's current record contract: configuration, record types, fields,
-statuses, validation and the lifecycle rules software enforces. How each rule
-was chosen is in the record linked beside it and in Git, not here; the
-[brief](../grove/brief.md) owns product direction, `grove --help` gives each
-command's usage, and [the command reference](commands.md) covers the commands
-this document does not.
+statuses, validation and the lifecycle rules software enforces. `grove guide
+model` prints the copy a binary carries, which is the contract that binary
+validates. How each rule was chosen is in Grove's own records and Git history,
+not here; the project's brief (`grove brief`) owns its direction, `grove
+--help` gives each command's usage, and Grove's command reference covers the
+commands this document does not.
 
 ## Identity and placement apart from classification
 
-`schema_version: 3` is the one schema Grove reads
-([G-064](../grove/G-064-stable-knowledge.md) selected it,
-[G-065](../grove/G-065-flexible-records.md) implemented it). Grove keeps no
-backward compatibility before its first release: schemas 1 and 2, their type
-folders, typed `W-`/`Q-`/`D-`/`T-`/`P-`/`R-` IDs and per-type counters were
-deleted by [G-052](../grove/G-052-migrate-knowledge.md), and
-[G-069](../grove/G-069-migration-map.md) maps this repository's old IDs and
-paths. A commit from before the conversion is inspected with the CLI in that
-commit (`go run ./cmd/grove` there); the current CLI reports such a branch in
-`versions` and the board as a source it cannot inspect.
+`schema_version: 3` is the one schema Grove reads. Grove keeps no backward
+compatibility before its first release: schemas 1 and 2, their type folders,
+typed `W-`/`Q-`/`D-`/`T-`/`P-`/`R-` IDs and per-type counters were deleted. A
+commit from before that conversion is inspected with the CLI built from that
+commit; the current CLI reports such a branch in `versions` and the board as a
+source it cannot inspect.
 
 - **Discovery.** Every `.md` file beneath the record root, at any depth, is a
   record, except the configured brief. No folder names a type: the root and
@@ -68,7 +65,8 @@ deleted typed counters is never read or written.
 
 **Conversion (`grove convert`).** Turns a Markdown document outside the record
 root into a record, one source per run. Its other form, which gave a typed-ID
-record a neutral ID, did G-052's conversion and was deleted with typed IDs:
+record a neutral ID, did the conversion to schema 3 and was deleted with typed
+IDs:
 
 - `convert PATH --type TYPE --title TITLE [--slug SLUG]` takes a Markdown
   document outside the record root, such as a plan written before plan
@@ -98,8 +96,7 @@ rewriting, and per-type folders or prefixes.
 
 ## Knowledge records and the brief
 
-Terms, plans and reviews ([G-051](../grove/G-051-typed-knowledge-records.md),
-implemented by [G-037](../grove/G-037-knowledge-artifacts.md)):
+Terms, plans and reviews:
 
 | Type | Statuses (first is what `new` writes) | Extra fields |
 | --- | --- | --- |
@@ -109,7 +106,7 @@ implemented by [G-037](../grove/G-037-knowledge-artifacts.md)):
 
 - A term's title is the term; its body gives meaning, relationships and
   boundaries, not execution instructions or implementation state; the
-  [shaping guide](work-shaping.md#5-write-the-records) says where those belong.
+  shaping guide (`grove guide shape`, step 5) says where those belong.
   Two terms whose titles match, ignoring case and surrounding space, are an
   error.
 - `work` is an optional list of work IDs the plan or review belongs to, checked
@@ -194,14 +191,8 @@ These distinctions hold:
 
 ## On-disk contract
 
-[G-001](../grove/G-001-starter-defaults.md) and
-[G-004](../grove/G-004-sequential-ids.md) record how these defaults were
-accepted. [G-003](../grove/G-003-inspect-records.md) implements discovery,
-validation and inspection, [G-007](../grove/G-007-create-records.md)
-creation and allocation per [G-006](../grove/G-006-allocator-mechanism.md),
-and [G-009](../grove/G-009-update-records.md) field updates with content
-revisions and a shared write lock. No command renames, moves (other than
-`convert`), deletes or edits the body of a record.
+No command renames, moves (other than `convert`), deletes or edits the body
+of a record.
 
 ### Configuration and discovery
 
@@ -218,9 +209,9 @@ root and a placeholder brief, and keeps an existing configuration that
 validates, following its own `records` and `brief`.
 
 Optional `target: BRANCH` names the integration target: the local branch that
-work is merged into, `main` in this repository. `init` does not write it.
-[G-042](../grove/G-042-current-view.md) uses it only to label the current view
-(on the target, or not), never to decide which state is current. It is
+work is merged into, such as `main`. `init` does not write it. The current
+view uses it only as a label (on the target, or not), never to decide which
+state is current. It is
 compared with branch names and never passed to Git; a value with surrounding
 spaces or a `refs/` prefix is refused as a likely mistake. Every valid source
 whose `grove.yaml` names a target must agree; a source that names none has no
@@ -231,7 +222,7 @@ is adopted on another branch, lacks every record.
 `schema_version` versions the configuration and record schema together. Require
 both keys, with `brief` and `target` optional; accept exactly 3 and refuse a missing or
 other version without guessing, migrating, or rewriting files. The number is
-this CLI's, unrelated to the sibling skills CLI's schema numbering or
+this CLI's, unrelated to the predecessor skills CLI's schema numbering or
 `grove.toml` configuration.
 
 Resolve `records` relative to the directory containing `grove.yaml`. Permit a
@@ -307,9 +298,8 @@ Allocation in one local repository:
 
 The counter, `grove/neutral-ids` in the form `G 12` (the next number), belongs
 to the local repository, not to a branch, worktree, or record-root path. It is
-local coordination state, not a tracked record, and needs no daemon;
-[G-006](../grove/G-006-allocator-mechanism.md) owns its encoding, lock
-primitive and recovery protocol. `new` and `update` serialize publication
+local coordination state, not a tracked record, and needs no daemon. `new`
+and `update` serialize publication
 through `grove/write.lock` beside it. The read-only commands never create any
 of these files, and none is ever unlinked.
 
@@ -383,21 +373,16 @@ if the project no longer validates. It requires Git and never overwrites.
 `show <id> --json` prints one object with `id`, `path`, `revision`, and
 `source`. `update <id> [--expect REVISION] [--commit]` with `--set FIELD=VALUE` and
 `--unset FIELD` changes `title`, `status`, `relates_to`, work planning fields,
-`candidate` and `approved`, question `blocks`, plan and review `work`, or review `examined` by editing only those frontmatter entries plus `updated`;
-[G-009](../grove/G-009-update-records.md) owns its request, preservation,
-locking, and failure-reporting contract, and prints `{id, path, revision, changed}`.
-[G-079](../grove/G-079-update-a-record-by-hand-without.md) made `--expect`
-optional and added `--commit`, which after a change runs `git add` and
+`candidate` and `approved`, question `blocks`, plan and review `work`, or review `examined` by editing only those frontmatter entries plus `updated`,
+and prints `{id, path, revision, changed}`.
+`--commit`, after a change, runs `git add` and
 `git commit` for the record's file alone with a generated message, adds
 `commit` to the result (`null` when nothing changed), and reports a commit Git
 refused as an applied, uncommitted update.
 `versions` reads the same project location on every local branch tip and in
 every registered worktree, validating each source alone by these rules, and
 `workspace` resolves one version it listed to its checkout; both require Git
-and read only. [The command reference](commands.md#versions) describes them;
-[G-010](../grove/G-010-record-versions.md),
-[G-042](../grove/G-042-current-view.md) and
-[G-011](../grove/G-011-record-workspace.md) own their contracts.
+and read only. `grove --help` and Grove's command reference describe them.
 
 - `list`: show ID, type, status, and title, ordered by `created` ascending with
   undated records last, then the ID's number as the tie-breaker.
@@ -445,9 +430,8 @@ transactional snapshot or ownership of the files.
   durable decision instead of deleting the question's identity.
 - Decision: `proposed`, `accepted`, `rejected`, `superseded`. `superseded`
   is an accepted decision that a later one replaced: `relates_to` names the
-  replacement and the body says why, with no dedicated field
-  ([G-041](../grove/G-041-nullsec-pilot.md)). Prior versions remain available
-  in Git.
+  replacement and the body says why, with no dedicated field. Prior versions
+  remain available in Git.
 
 Reopening changes status explicitly. Directory movement does not determine
 completion. A resolved question stops blocking named work; an abandoned
@@ -456,15 +440,9 @@ prerequisite does not count as delivered.
 ### Work lifecycle
 
 Proposed → Active → Review → Done, with Abandoned only through an explicit
-human decision ([G-035](../grove/G-035-interactive-adoption.md) selected it,
-[G-038](../grove/G-038-review-lifecycle.md) implemented it, and
-[G-044](../grove/G-044-review-integration.md) added `approved`, `approve`,
-`feedback` and `integrate`). Preparation,
-implementation, independent review and waiting are activities inside
-`active`, recorded in the body, never statuses. The settled terms
-[candidate](../grove/G-057-candidate.md), [review](../grove/G-058-review.md),
-[approval](../grove/G-059-approval.md) and
-[integration](../grove/G-060-integration.md) name the facts.
+human decision. Preparation, implementation, independent review and waiting
+are activities inside `active`, recorded in the body, never statuses.
+Candidate, review, approval and integration name the facts:
 
 - **`candidate`** is an optional work field: a quoted Git commit, the same
   form as a review's `examined`, naming the commit offered for judgment
@@ -531,12 +509,10 @@ different branches are versions to reconcile, not automatically ID collisions.
 
 ## Not records
 
-Attempts are not records: `grove run`
-([G-045](../grove/G-045-durable-attempt.md)) keeps each attempt's inputs, raw
-events and result as files under the Git common directory, shared by every
-worktree and never committed, and the work record's own status on the
-attempt's branch is the only handoff. The board
-([G-046](../grove/G-046-managed-runs.md)) reads the same files and derives an
+Attempts are not records: `grove run` keeps each attempt's inputs, raw events
+and result as files under the Git common directory, shared by every worktree
+and never committed, and the work record's own status on the attempt's branch
+is the only handoff. The board reads the same files and derives an
 outcome from them for display; it writes nothing about an attempt. There is
 no report type, and no assignee field; ordinary Markdown links and prose carry
 other supporting material.
