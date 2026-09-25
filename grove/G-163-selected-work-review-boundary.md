@@ -4,9 +4,9 @@ type: question
 title: "Where should review and integration stop a selected chain of work?"
 status: resolved
 created: "2026-09-25T20:35:30Z"
-updated: "2026-09-25T23:05:05Z"
+updated: "2026-09-25T23:22:35Z"
 blocks: ["G-162"]
-relates_to: ["G-161"]
+relates_to: ["G-161", "G-188"]
 ---
 
 ## Question
@@ -66,3 +66,5 @@ creating these proposals.
 ## Answer
 option 1
 
+
+Recorded as decision [G-188](G-188-selected-work-shared-candidate.md), with the consequences plan G-185 drew from it.

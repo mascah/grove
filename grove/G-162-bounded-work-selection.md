@@ -2,11 +2,11 @@
 id: "G-162"
 type: work
 title: "Execute an explicitly selected set of work with bounded progress and review"
-status: proposed
+status: active
 created: "2026-09-25T20:35:28Z"
-updated: "2026-09-25T20:38:16Z"
+updated: "2026-09-25T23:22:36Z"
 kind: feature
-relates_to: ["G-045", "G-046", "G-044", "G-101", "G-054", "G-056", "G-057", "G-059", "G-060", "G-161"]
+relates_to: ["G-045", "G-046", "G-044", "G-101", "G-054", "G-056", "G-057", "G-059", "G-060", "G-161", "G-188"]
 ---
 
 ## Outcome
