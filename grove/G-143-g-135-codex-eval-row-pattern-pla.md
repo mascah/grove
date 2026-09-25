@@ -68,8 +68,8 @@ and G-122 read nothing outside the clone. The listings sit in the retained
 transcripts, outside every checkout.
 
 **3. Plan use and cost.** Five-hour window use per run, from the rollouts'
-`rate_limits` readings: 10, 10, 8, 11, 12 (missing-choice), 7, 6, 10, 8
-(companion); about 9 points, or 11 runs per Plus window, and 1 to 2 points
+`rate_limits` readings, from one run's first reading to the next's: 10, 10,
+8, 11, 12 (missing-choice), 7, 6, 10, 8 (companion); last to last, 6 to 13; about 9 points, or 11 runs per Plus window, and 1 to 2 points
 of the weekly window a run. Tokens per run: 318k to 671k input (90% to 95%
 cached), 2.7k to 5.8k output, under 350 reasoning; the guardian added 38k
 to 116k more. Effort `high` therefore cost little; context resent across

@@ -27,7 +27,7 @@ and the attempt read the blanks as approval instead of blocking. The
 [G-135](G-135-run-the-g-108-eval-pair-on-codex.md) attempt then ran 9½
 Codex shaping runs on it in 24 minutes, 2026-09-24T23:42Z to
 2026-09-25T00:06Z, moving the ChatGPT Plus five-hour window from 12% to 95%
-used (8 to 12 points a run) and the weekly window from 2% to 15%, as the
+used (6 to 13 points a run) and the weekly window from 2% to 15%, as the
 rollouts' `rate_limits` readings under `~/.cache/grove-evals/codex/sessions`
 show. The owner stopped the attempt.
 

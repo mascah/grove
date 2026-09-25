@@ -48,13 +48,16 @@ memories -m MODEL -c model_reasoning_effort=EFFORT` with `$grove-shape TOPIC
 cap exists: `--max-seconds` is required, each run is killed at it, and the
 runner prints the cap, runs × cases × seconds, before the first run.
 A ChatGPT login spends the plan's five-hour window instead, and seconds do
-not bound that: G-135's `gpt-6-astra` runs took 8 to 12 points of a Plus
-window each ([G-141](../grove/G-141-never-run-gpt-6-astra-unless-the.md)).
-`--max-plan-percent P` is required too: before each run the runner reads
-the newest five-hour reading any rollout under `CODEX_HOME` holds, and
-starts no run once that reading plus the largest run's use so far would
-reach P, or once a run reported no reading; the report says where it
-stopped. It cannot stop a run already started. Model, effort, runs and both
+not bound that: G-135's `gpt-6-astra` runs took 6 to 13 points of a Plus
+window each ([G-143](../grove/G-143-g-135-codex-eval-row-pattern-pla.md),
+[G-141](../grove/G-141-never-run-gpt-6-astra-unless-the.md)).
+`--max-plan-percent P` is required too: before each run the runner takes
+the last reading of the newest rollout under `CODEX_HOME` (0 once its window
+has reset), and starts no run once that reading plus the largest run's use
+so far, never less than 13 points, would reach P, or once a run left no
+reading; the report says where it stopped. P is not a ceiling: a run
+already started is not stopped, and use elsewhere on the account since the
+last reading is not seen. Model, effort, runs and both
 caps are the owner's explicit answer, never a default (G-141).
 `--budget` is refused with Codex, and `--effort`, `--max-seconds` and
 `--max-plan-percent` with Claude. `--permission-mode` is a sandbox (`read-only`, `workspace-write`,

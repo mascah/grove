@@ -26,6 +26,8 @@ CASES = {
 }
 # Files some step of the shaping guide needs for these topics; any other read is listed as unneeded.
 NEEDED = {"AGENTS.md", "CLAUDE.md", "grove.yaml", "grove/brief.md", "tasks.py", ".agents/skills/grove-shape/SKILL.md"}
+# ponytail: the largest five-hour plan use one G-135 run took (gpt-6-astra, G-143); every run is assumed to take at least this, measure per model if it binds
+PLAN_POINTS_FLOOR = 13
 CUSTOMIZATION = ("CLAUDE.md", "agents", "commands", "output-styles", "hooks", "settings.local.json")
 # A login writes settings.json; these keys shape the terminal and memory, not what the agent reads or may do.
 SETTINGS = {"tui", "theme", "autoMemoryEnabled"}
@@ -227,14 +229,15 @@ def events(path):
 def plan_readings(path):
     """The account's five-hour plan use, (used_percent, resets_at), from each token_count event of a Codex rollout."""
     limits = ((ev.get("payload") or {}).get("rate_limits") or {} for ev in events(path) if (ev.get("payload") or {}).get("type") == "token_count")
-    return [(p["used_percent"], p.get("resets_at") or 0) for p in (l.get("primary") or {} for l in limits) if p.get("used_percent") is not None]
+    return [(p["used_percent"], p.get("resets_at")) for p in (l.get("primary") or {} for l in limits) if p.get("used_percent") is not None]
 
 
 def plan_used(home):
-    """The newest five-hour plan reading any session under this CODEX_HOME left: 0 once its window has reset, None with no reading."""
+    """The last (used_percent, resets_at) of the newest rollout under this CODEX_HOME: (0, None) once its window has reset, None with no reading.
+    A reading without resets_at counts as current; use since the reading, here or elsewhere on the account, is not seen."""
     rollouts = glob.glob(os.path.join(home, "sessions", "**", "rollout-*.jsonl"), recursive=True)
     readings = plan_readings(max(rollouts, key=os.path.getmtime)) if rollouts else []
-    return None if not readings else readings[-1][0] if readings[-1][1] > time.time() else 0
+    return None if not readings else readings[-1] if readings[-1][1] is None or readings[-1][1] > time.time() else (0, None)
 
 
 def unwrap(cmd):
@@ -402,7 +405,7 @@ def codex_facts(transcript, rdir, args):
         "permission_mode_reported": {k: context.get(k) for k in ("approval_policy", "sandbox_policy")} if context else None,
         "reported_reason": reason,
         "cost_usd": None, "cost_reason": "Codex reports tokens, not dollars",
-        "plan_percent": {"first": readings[0][0], "last": readings[-1][0]} if readings else None,
+        "plan_percent": {"first": readings[0][0], "last": readings[-1][0], "resets_at": readings[0][1]} if readings else None,
         "tokens": {k: sum(u.get(k) or 0 for u in usage) for k in dict.fromkeys(k for u in usage for k in u if isinstance(u[k], int))} if usage else None,
         "turns": len(usage), "tool_calls": sum(i.get("type") in ("command_execution", "file_change", "mcp_tool_call", "web_search") for i in items),
         "duration_ms": None, "duration_reason": "Codex reports no duration; wall_seconds is the runner's",
@@ -559,11 +562,13 @@ def run_on(args, found, recorded=None):
                                  else f"spending at most ${meta['cap (USD)']}"), file=sys.stderr)
     runs = []
     for name, n in ((name, n) for name in cases for n in range(1, args.runs + 1)):
-        used = plan_used(args.config_dir) if codex else 0
-        step = max((r["plan_used"] for r in runs if r.get("plan_used") is not None), default=0)
-        if codex and (used is None and runs or used is not None and used + step >= args.max_plan_percent):
-            meta["stopped"] = (f"before {name} {n}: " + ("the last run reported no plan use, so the next could not be bounded" if used is None
-                               else f"five-hour plan use {used}% plus the largest run's {step} points would reach --max-plan-percent {args.max_plan_percent}"))
+        prior = plan_used(args.config_dir) if codex else (0, None)
+        used = prior and prior[0]
+        step = max([PLAN_POINTS_FLOOR] + [r["plan_used"] for r in runs if r.get("plan_used") is not None])
+        if codex and (prior is None and runs or prior is not None and used + step >= args.max_plan_percent):
+            meta["stopped"] = (f"before {name} {n}: " + ("no plan reading under CODEX_HOME after a run, so the next could not be bounded" if prior is None
+                               else f"five-hour plan use {used}% plus {step} points for the next run (the largest so far, at least {PLAN_POINTS_FLOOR}) "
+                                    f"would reach --max-plan-percent {args.max_plan_percent}"))
             print(meta["stopped"], file=sys.stderr)
             report(os.path.join(work, "report.md"), meta, runs, [c for c in CASES if c not in cases])
             break
@@ -577,8 +582,8 @@ def run_on(args, found, recorded=None):
             runs.append(r)
         if codex:  # Codex installs its bundled skills on the first run
             meta["config dir system skills"] = system_skills(args.config_dir)
-            if runs[-1].get("plan_percent"):  # from the reading before it, which the run's own first reading already includes some of
-                runs[-1]["plan_used"] = runs[-1]["plan_percent"]["last"] - (runs[-1]["plan_percent"]["first"] if used is None else used)
+            if pp := runs[-1].get("plan_percent"):  # from the reading before it in the same window; else the run's own first, which already holds some of it
+                runs[-1]["plan_used"] = max(0, pp["last"] - (used if prior and prior[1] == pp["resets_at"] else pp["first"]))
                 json.dump(runs[-1], open(os.path.join(work, f"{name}-{n}", "run.json"), "w"), indent=1)
         report(os.path.join(work, "report.md"), meta, runs, [c for c in CASES if c not in cases])
     print(os.path.join(work, "report.md"))
@@ -605,7 +610,7 @@ def fake(harness, argv):
         os.makedirs(os.path.dirname(rollout), exist_ok=True)
         approve = "--approve-for-me" in argv
         spent = 5 * len(glob.glob(os.path.join(os.environ["CODEX_HOME"], "sessions", "**", "rollout-*.jsonl"), recursive=True))
-        plan = lambda used: json.dumps({"type": "event_msg", "payload": {"type": "token_count", "rate_limits": {"primary": {"used_percent": used, "resets_at": time.time() + 3600}}}}) + "\n"
+        plan = lambda used: json.dumps({"type": "event_msg", "payload": {"type": "token_count", "rate_limits": {"primary": {"used_percent": used, "resets_at": 4102444800}}}}) + "\n"
         open(rollout, "w").write(plan(spent) + plan(spent + 5) + json.dumps({"type": "session_meta", "payload": {"id": thread}}) + "\n" + json.dumps({"type": "turn_context", "payload": {
             "model": argv[argv.index("-m") + 1], "effort": argv[argv.index("-c") + 1].partition("=")[2],
             "approval_policy": "on-request" if approve else "never", "sandbox_policy": {"type": "workspace-write" if approve else argv[argv.index("-s") + 1]}}}) + "\n")
@@ -713,12 +718,12 @@ def selftest():
     assert "- login: Logged in" in text and "resolves grove to the built binary" in text, text
     open(os.path.join(tmp, "empty.jsonl"), "w").close()
     assert retrieval(os.path.join(tmp, "empty.jsonl"), "codex", tmp, set())["reason"].startswith("unavailable"), "a Codex trace without commands"
-    guarded = os.path.join(tmp, "guarded")  # a window 5 points from the cap: the first run spends 5, and the second is refused
+    guarded = os.path.join(tmp, "guarded")  # each run spends 5, and the floor keeps 13 in hand: two runs start, the third is refused
     shutil.copytree(home, guarded, ignore=shutil.ignore_patterns("sessions"))
     os.environ["GROVE_EVAL_FAKE"] = "good"
-    runs = run(argparse.Namespace(**(vars(args) | {"config_dir": guarded, "runs": 3, "case": ["companion"], "max_plan_percent": 10, "out": os.path.join(tmp, "out-guarded")})))
-    assert len(runs) == 1 and runs[0]["plan_used"] == 5, runs
-    assert "- stopped: before companion 2: five-hour plan use 5% plus the largest run's 5 points would reach --max-plan-percent 10" in open(os.path.join(tmp, "out-guarded", "report.md")).read()
+    runs = run(argparse.Namespace(**(vars(args) | {"config_dir": guarded, "runs": 3, "case": ["companion"], "max_plan_percent": 20, "out": os.path.join(tmp, "out-guarded")})))
+    assert len(runs) == 2 and [r["plan_used"] for r in runs] == [5, 5], runs
+    assert "- stopped: before companion 3: five-hour plan use 10% plus 13 points for the next run (the largest so far, at least 13) would reach --max-plan-percent 20" in open(os.path.join(tmp, "out-guarded", "report.md")).read()
     for harness, change, reason in (("codex", {"max_seconds": None}, "needs --max-seconds"), ("codex", {"budget": "1"}, "--budget is Claude's"),
                                     ("codex", {"max_plan_percent": None}, "needs --max-plan-percent"), ("codex", {"max_plan_percent": 101}, "needs --max-plan-percent"),
                                     ("codex", {"effort": None}, "needs --effort"), ("codex", {"permission_mode": "auto"}, "one of"),
