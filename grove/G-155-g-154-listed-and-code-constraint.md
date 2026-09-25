@@ -86,3 +86,6 @@ paid run.
    review record of its pattern (G-154 acceptance 3 for that row).
 6. After G-153 integrates: merge main, the `with` row, the review
    completed across both rows; handoff into Review.
+
+Steps 1 to 4 done, 2026-09-25 (G-154's Next has the evidence); step 5
+waits on G-158.

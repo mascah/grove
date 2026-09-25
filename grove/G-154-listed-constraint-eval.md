@@ -112,3 +112,34 @@ on Claude. The `with` row waits for G-153 to be integrated. The owner
 supplies the mandate before any paid run; it names a Claude model, and no
 attempt passes `--harness codex` or names `gpt-6-astra`. G-153 starts after
 the `without` row's review is read (owner decision, 2026-09-25).
+
+**Checkpoint, 2026-09-25 (headless `/grove-work G-154`).** Waiting on
+[G-158](G-158-what-mandate-should-the-g-154-wi.md), the mandate for the
+`without` row, which this assignment did not supply; nothing has been
+spent. G-154 alone, on `worktree-G-154` in
+`.claude/worktrees/worktree-G-154`, base main `b684951`, started from this
+record at `sha256:d569262b…`. Plan
+[G-155](G-155-g-154-listed-and-code-constraint.md), committed `ef16843`.
+
+- Done, plan steps 1 and 2 (acceptance 1 and 4): `listed-constraint` and
+  `code-constraint` in `evals/run.py`, each on its own copy of the fixture
+  with records from `evals/fixture/records/`; the retrieval facts
+  `search`, `holding read` and `distractors read`; per-case rubric
+  columns; README sections for the cases, facts, rubric rows and the
+  two-digest comparison. With no `--case` the runner still runs only the
+  G-108 pair, whose fixture is unchanged. Commits `b2c7ef0`, `946459a`,
+  `47223ed`, `c895666`.
+- Done, step 3: independent review
+  [G-159](G-159-g-154-runner-cases-review.md), three rounds, examined
+  `47223ed`; every consequential finding fixed, one post-cap fix
+  (`c895666`) self-checked only, one informational coverage gap open.
+- Verification at `c895666`: `python3 evals/run.py selftest` prints
+  `selftest: ok`; `go run ./cmd/grove check` OK (153 records); `gofmt -l .`
+  empty and `go vet ./...` clean; links in the README and the new records
+  resolve. No Go file changed, so the Go suite was not run.
+- No command is running.
+
+Continuation, once G-158 is resolved: assign `/grove-work G-154` again on
+this branch. It runs G-158's command exactly (step 5), writes the
+`without` row's review record, and checkpoints for G-153; the `with` row
+(step 6) follows G-153's integration, after `git merge main` here.
