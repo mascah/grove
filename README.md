@@ -59,12 +59,17 @@ GOBIN="$HOME/.local/bin" go install github.com/mascah/grove/cmd/grove@COMMIT  # 
 grove version     # must print "grove v…"; a usage error means another grove answered
 grove init        # at the checkout's top, or: grove --project /absolute/path init
 grove check
+git add grove.yaml grove .claude .agents && git commit -m "chore: set up grove"   # at the top
 ```
 
-Then `/grove-shape TOPIC` develops the brief and proposes work, and
-`/grove-work G-001` carries it out (`$grove-shape` and `$grove-work` in
-Codex). [Init](docs/commands.md#init) says what `init` writes and how to
-point Codex at the right binary.
+Commit what `init` wrote before the first attempt: an attempt's worktree
+holds only committed files, and `grove run` refuses one without the
+`grove-work` skill. Then `/grove-shape TOPIC` develops the brief and proposes
+work, and `/grove-work G-001` carries it out (`$grove-shape` and `$grove-work`
+in Codex), or `grove run G-001 --budget USD --permission-mode MODE` starts it
+as a headless attempt ([Attempts](docs/commands.md#attempts)).
+[Init](docs/commands.md#init) says what `init` writes and how to point Codex
+at the right binary.
 
 ## Where each subject lives
 

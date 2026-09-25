@@ -176,12 +176,17 @@ provider, which owns their values (`claude --help`); a preparation attempt and
 the implementation after it can differ in both. The launch also records the
 sha256 of the worktree's `.claude/agents/grove-reviewer.md`, the reviewer
 definition `init` writes and step 6 reviews through, or `none` where there is
-none. An attempt started
+none, which the launch warns of: without it the attempt has no independent
+reviewer, and work whose record requires one stays active. An attempt started
 by hand, such as an interactive `/grove-work`, writes no attempt files: it is
 visible only as its branch, its worktree and the checkpoint in the work's
 Next.
 
-`grove --help` lists what `run` refuses. An open question that blocks the
+`grove --help` lists what `run` refuses. The worktree holds only what is
+committed, so `run` refuses a worktree without `.claude/skills/grove-work/SKILL.md`,
+the skill the prompt names, which `init` writes and you commit
+([G-150](../grove/G-150-launch-attempts-only-where-the-w.md)); a new branch
+is checked in HEAD before it is created. An open question that blocks the
 work is the wait the headless guide persists, so rerunning with nothing
 changed refuses the same way. Every refusal comes before a write, except
 that what an existing branch holds is checked in its checkout, so a branch
@@ -234,8 +239,10 @@ prints every reason, writes nothing, and exits 1. It never reads or writes
 `AGENTS.md` or `CLAUDE.md`: the entrypoints defer to them for how the CLI is
 invoked, and `init` ends with a note on stderr naming what they should say if
 the entrypoints' defaults are not wanted: how `grove` is invoked, and how
-work and proposal branches are named. Upgrading is building again and
-rerunning `init`.
+work and proposal branches are named, and to commit what it wrote: an
+attempt's worktree holds only committed files, and `run` refuses one without
+the `grove-work` skill. Upgrading is building again, rerunning `init` and
+committing what it updated.
 
 Check which `grove` answers before `init`: the predecessor also has an
 `init`, which would write its own scaffolding instead. Codex runs each

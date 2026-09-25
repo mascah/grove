@@ -2,13 +2,15 @@
 id: "G-150"
 type: work
 title: "Launch attempts only where the worktree holds the entrypoints init wrote"
-status: proposed
+status: review
 created: "2026-09-25T19:06:01Z"
-updated: "2026-09-25T19:08:15Z"
+updated: "2026-09-25T20:11:09Z"
 kind: fix
 priority: 1
 size: small
 relates_to: ["G-040", "G-101", "G-110", "G-134", "G-152"]
+candidate: "ac1b787b820190c102a9b4f11a21b8579c96e2fc"
+approved: "ac1b787b820190c102a9b4f11a21b8579c96e2fc"
 ---
 
 ## Outcome
@@ -101,12 +103,90 @@ the guide reads, whatever the harness does), a Codex runner
    `gofmt`, `grove check` and the full uncached suite pass; `internal/attempt`
    stays under five seconds.
 
+## Evidence
+
+Implemented 2026-09-25 by a headless `/grove-work G-150` attempt on
+`worktree-G-150` from `main` `28aaf95`, record revision
+`sha256:085b9a43…` at start; no plan, as Next allowed. Implementation
+`cd3a1c5`, review fixes `b322825`.
+
+- **Guard** (`internal/attempt/attempt.go`, `SkillPath`). `Start` refuses
+  when the attempt's worktree would lack `.claude/skills/grove-work/SKILL.md`
+  under the project's prefix: for a branch that does not yet exist, by
+  `git cat-file -e HEAD_SHA:PATH` before the branch or worktree is made;
+  for a reused or existing branch, on disk after `prepareWorktree` and
+  after the branch's own review and blocking-question refusals. Both come
+  before the attempt directory and the owner. The message names the path
+  and says to commit the files `grove init` wrote. An absent reviewer
+  definition is a `warning:` fact through `report` before the attempt
+  directory, and `attempt.json` still records `none`.
+- **Deviation from the proposed design, bounded and technical.** The
+  design checked only after `prepareWorktree`. That keeps a fresh
+  `worktree-ID` at a HEAD without the skill, which the next launch would
+  reuse after the commit and refuse again, contrary to acceptance 1. So a
+  new branch is checked in HEAD first. An existing branch without a
+  worktree still keeps the one `run` made, as documented.
+- **Acceptance 1.** `TestRefusals`: a skill that is on disk but not in
+  HEAD is refused with no branch made. An existing branch without the
+  skill is refused in its checkout. After the commit, the launch passes
+  every check and reaches the owner. By hand, with a binary built from
+  `cd3a1c5`: a disposable project made by `grove init`, with only a work
+  record committed, was refused (`…SKILL.md is not committed at HEAD…`,
+  exit 1, no branch). After the commit it started (exit 0). The board's
+  `R` is covered by `terminal.py` `attempt_lifecycle`: the launch is
+  refused with `NOT DONE: .claude/skills/grove-work/SKILL.md is not
+  committed at HEAD`, with no start and no worktree. After the commit,
+  the same launch starts.
+- **Acceptance 2.** `TestRunToResult` asserts the exact warning fact and
+  `Reviewer == "none"`. By hand, `grove run` printed the warning before
+  `attempt: … started`, `requested:` said `no reviewer definition`, and
+  `attempt.json` held `"reviewer": "none"`. `terminal.py` asserts that the
+  board draws the warning. Open (G-157 finding 2): the board draws it only
+  once `Start` returns, after the provider has started.
+- **Acceptance 3.** `init`'s closing note (asserted in
+  `internal/cli/init_test.go`), the README's adoption block (it now
+  commits the paths `init` writes and names `grove run`), the command
+  reference's Attempts and Init sections, and `grove --help`'s `run` text
+  all say to commit, and `--help` lists the refusal.
+- **Acceptance 4.** Run at `b322825`: `go vet ./...` was clean, `gofmt -l .`
+  was empty, `go run ./cmd/grove check` reported `OK: 150 records`, and
+  `go test -count=1 -timeout 120s ./...` passed every package. `python3
+  internal/tui/testdata/terminal.py` passed 11 of 11. Limit (G-157 finding
+  3): `go test -count=1 ./internal/attempt` alone took 5.06 to 5.22 s at
+  `b322825`, and the same at base `28aaf95` (a `git archive` copy, three
+  runs each, load average about 4). So the package was already over five
+  seconds before this change.
+- **Review.** [G-157](G-157-g-150-skill-guard-review.md), two rounds.
+  Findings 1, 4 and 5 were fixed. Finding 2 is left for the owner, and
+  finding 3 is inherited.
+
 ## Next
 
 Proposed 2026-09-25 from the owner's self-containment review of `main`
 `001b271`. [G-110](G-110-external-preview.md) depends on it: its acceptance
 4 executes a bounded assignment in a disposable repository from the preview
-documentation alone. Assign with `/grove-work G-150`; a plan is optional,
-since the change is one guard in `Start`, three documents and tests. If the
-owner prefers a missing reviewer to refuse rather than warn, say so at
-assignment.
+documentation alone.
+
+In review 2026-09-25 on `worktree-G-150` (base `28aaf95`). The candidate
+is the evidence commit this record names in `candidate`. For the owner:
+
+- Judge the guard and its order: `git diff 28aaf95 b322825 --
+  internal/attempt/attempt.go`.
+- Decide on G-157 finding 2. The board draws the reviewer warning after
+  the provider has started. Either accept that as the design's "as it
+  shows the other launch messages", or capture new work to stream launch
+  facts into the board, or make a missing reviewer refuse. The record left
+  that choice to you at assignment, and none was given, so it warns.
+- Demo: in a scratch `git init` repository, run `grove init`, then
+  `grove new work "Try"`. Commit only `grove.yaml` and `grove`. Then
+  `GROVE_CLAUDE=/path/to/fake grove run G-001 --budget 1 --permission-mode
+  auto` is refused, and after committing `.claude .agents` it starts.
+
+Integration, as given:
+
+```sh
+go run ./cmd/grove approve G-150 "VERDICT"   # in this worktree
+go run ./cmd/grove integrate G-150           # in the main checkout
+```
+
+Verdict on candidate ac1b787, 2026-09-25: approved

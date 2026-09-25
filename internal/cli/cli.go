@@ -104,7 +104,9 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             --effort are passed to the provider. --budget and --permission-mode are\n" +
 	"             required unless grove.yaml's run: sets them; it may set --model and --effort\n" +
 	"             too, and a flag overrides it. What ran is recorded with the digest of the\n" +
-	"             worktree's grove-reviewer definition, or its absence. Refused while an attempt\n" +
+	"             worktree's grove-reviewer definition, or its absence, which is warned of.\n" +
+	"             Refused when the worktree would not hold the committed grove-work skill\n" +
+	"             (.claude/skills/grove-work/SKILL.md, which init writes), while an attempt\n" +
 	"             of ID runs or is orphaned, when ID is not proposed or active here or on its\n" +
 	"             branch (a candidate in review awaits judgment), while an open question blocks\n" +
 	"             ID in either place, when the record has uncommitted changes here, or when the\n" +
