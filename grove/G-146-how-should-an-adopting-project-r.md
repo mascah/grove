@@ -2,9 +2,9 @@
 id: "G-146"
 type: question
 title: "How should an adopting project read the record model the guides cite?"
-status: open
+status: resolved
 created: "2026-09-25T04:10:06Z"
-updated: "2026-09-25T04:10:26Z"
+updated: "2026-09-25T04:26:49Z"
 blocks: ["G-144"]
 ---
 
@@ -56,4 +56,36 @@ option (and sub-choice and spelling, if option 1) in its Answer; any item
 left blank takes the recommendation. Then launch
 `/grove-work G-144 --until plan` on `worktree-G-144`.
 
+## Answer
+
+On 2026-09-24 the owner selected option 1 with its third sub-choice and the
+`model` spelling: `guides.go` embeds `docs/record-model.md`, `grove guide
+model` prints it, the three citations name that command, and the model is
+first edited to hold no `G-` link at all, so the printed copy is the source
+verbatim with no preamble.
+
+Why not the preamble: `G-064` is a live ID in every adopting project, so a
+printed model that says "G-064 selected it" is a false statement in that
+project's own vocabulary, read by a session that takes IDs literally. A
+namespace collision is not closed by a warning.
+
+Why the model can hold none: its outbound `G-` links are attribution, not
+delegation. The model already states the counter encoding, the floor scan
+and the recovery notices; the command reference describes `versions`,
+`workspace` and `context`; the CLI prints its own refusals. The provenance
+stays where it already is: AGENTS.md's constraint list carries the
+rule-to-record index, the records link into the model, and `docs(G-NNN)`
+commits give `git blame` per-line history.
+
+What the plan covers in the model: delete the provenance parentheticals
+("G-064 selected it, G-065 implemented it" and the like), reword the
+sentences that say a record owns a contract as plain statements, keep the
+ID format examples (`G-001`, `G-1000`), and cite the command reference and
+the brief by name, as the guides do, instead of by path. Also one line in
+AGENTS.md: a document the binary ships links only to other shipped
+documents, never to a record.
+
 ## Next
+
+Resolved 2026-09-24. G-144 plans against this answer:
+`/grove-work G-144 --until plan` on `worktree-G-144`.
