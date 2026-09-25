@@ -4,12 +4,13 @@ type: work
 title: "Strip Grove-repository pointers from the shipped guides and model"
 status: review
 created: "2026-09-25T19:06:01Z"
-updated: "2026-09-25T19:32:12Z"
+updated: "2026-09-25T20:09:01Z"
 kind: fix
 priority: 1
 size: small
 relates_to: ["G-110", "G-144", "G-146", "G-149", "G-152"]
 candidate: "80aa23e"
+approved: "80aa23e"
 ---
 
 ## Outcome
@@ -164,3 +165,5 @@ reference" entry needs changing with it. Integrator:
 grove approve G-151 "VERDICT"   # in worktree-G-151
 grove integrate G-151           # in the main checkout
 ```
+
+Verdict on candidate 80aa23e, 2026-09-25: approve
