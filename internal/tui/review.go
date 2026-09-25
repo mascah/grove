@@ -261,6 +261,16 @@ func (m *Model) targetRoot() (root, why string) {
 	return "", "no checkout is on the target " + m.res.Target + "; i needs one"
 }
 
+// targetTip is the target branch's commit as the board read it, or "".
+func (m *Model) targetTip() string {
+	for _, s := range m.res.Sources {
+		if s.Kind == "committed" && s.Ref == "refs/heads/"+m.res.Target {
+			return s.Commit
+		}
+	}
+	return ""
+}
+
 // reviewRows are the header's Review block: the candidate's standing and
 // where each action would run. Facts only; every action is a key away.
 func (m *Model) reviewRows(g *versions.Group, v *versions.Version) []string {
@@ -282,12 +292,14 @@ func (m *Model) reviewRows(g *versions.Group, v *versions.Version) []string {
 	default:
 		parts = append(parts, "only the record changed since it")
 	}
-	if read, held := m.changes[changesKey(m.res.Target, v)]; held && read.c != nil && m.res.Target != "" {
-		if read.c.OnTarget {
-			parts = append(parts, "on "+m.res.Target)
-		} else {
-			parts = append(parts, "not on "+m.res.Target)
+	if read, held := m.changes[changesKey(m.res.Target, v)]; held && read.c != nil && read.c.Merge != nil {
+		// The prediction names the target commit it read, which the board's
+		// own reading of the target may no longer be (G-177).
+		text := read.c.Merge.Text(m.res.Target)
+		if tip := m.targetTip(); tip != "" && tip != read.c.Merge.Target {
+			text += "; the board read " + m.res.Target + " at " + short7(tip) + " (r re-reads)"
 		}
+		parts = append(parts, text)
 	}
 	rows := []string{strings.Join(parts, " · ")}
 	var where []string

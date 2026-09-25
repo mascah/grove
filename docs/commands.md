@@ -168,16 +168,29 @@ work awaits implementation; a candidate in review or done says whether HEAD
 of this checkout and the target branch contain it, by Git ancestry, or that
 Git cannot read it here; done without a candidate says its delivery is
 unrecorded; abandoned work will not be delivered, and a note names the work
-that still needs it. Notes also report what the current view (see
+that still needs it. A candidate in review also says what merging it into
+the target's current tip would do, performed with `git merge-tree` in
+objects only: `integrated`, a fast-forward, a clean merge although the
+target moved since the branch left it, or a conflict in named files, with
+the target commit it read, stale once the target moves. A selection with
+two or more candidates in review not on the target merges them in its
+order, each onto the ones before, and a note names where the first conflict
+lands and in which files; Grove states that order but never chooses one, and
+a clean order is not evidence that the changes work together. Notes also report what the current view (see
 [Versions](#versions)) says about each listed record: an older version here,
 diverging current versions, other `depends_on` elsewhere (never merged into
 this checkout's), uncommitted changes here, a record that changed while it
 was read, and an incomplete inspection, which prints everything, says so on
 stderr and exits 1. `--json` prints `{checkout: {root, ref, head}, target,
 selected, order, items[]: {id, title, status, revision, candidate, outside,
-layer, group, needs, unlocks, needed_by, delivery}, questions[]: {id, title,
-blocks}, notes}`, with `selected` null for the overview. The command writes
-nothing. [G-161](../grove/G-161-dependency-view.md) owns it; the board's
+layer, group, needs, unlocks, needed_by, delivery, merge}, questions[]: {id,
+title, blocks}, notes, merge_order}`, where `merge` is `{target, commit,
+outcome, conflicts}` or null and `merge_order` lists `{id, target, commit,
+outcome, conflicts}` up to the first conflict or is null, with `selected`
+null for the overview. The command writes
+nothing but the objects a merge writes, and no ref.
+[G-161](../grove/G-161-dependency-view.md) owns it, and
+[G-177](../grove/G-177-merge-prediction.md) the merge prediction; the board's
 `g` shows the same interpretation ([Dependencies](board.md#dependencies)).
 
 ## Attempts

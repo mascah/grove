@@ -37,7 +37,8 @@ func reviewFixture(fx fixture, approved bool) *fake {
 	return &fake{res: res, actions: true,
 		history: func(context.Context, string, string) ([]versions.Commit, error) { return nil, nil },
 		changes: func(target, candidate, tip, path string) (*versions.Changes, error) {
-			return &versions.Changes{Base: "base000", Files: []versions.Change{{Path: "internal/x.go", Added: 12, Removed: 3}, {Path: "grove/work/W-001.md", Added: 5, Removed: 1}, {Path: "bin.dat", Added: -1, Removed: -1}}}, nil
+			merge := &versions.Merge{Target: strings.Repeat("a", 40), Commit: candidate, Outcome: "conflict", Conflicts: []string{"internal/x.go"}}
+			return &versions.Changes{Base: "base000", Merge: merge, Files: []versions.Change{{Path: "internal/x.go", Added: 12, Removed: 3}, {Path: "grove/work/W-001.md", Added: 5, Removed: 1}, {Path: "bin.dat", Added: -1, Removed: -1}}}, nil
 		},
 		diff: func(from, to, path string) (string, error) {
 			return "diff --git a/" + path + " b/" + path + "\n@@ -1,2 +1,3 @@\n-old\n+new \x1b]0;evil\a\n+\tmore\n", nil
@@ -58,6 +59,20 @@ func openReview(t *testing.T, f *fake, w, h int) *Model {
 	return m
 }
 
+// A prediction read against a target commit other than the board's reading
+// of the target says so (G-177): one of the two is stale, and r re-reads.
+func TestReviewMergePredictionNamesAMovedTarget(t *testing.T) {
+	t.Parallel()
+	f := reviewFixture(newFixture(), true)
+	f.changes = func(target, candidate, tip, path string) (*versions.Changes, error) {
+		return &versions.Changes{Base: "base000", Merge: &versions.Merge{Target: strings.Repeat("b", 40), Commit: candidate, Outcome: "clean", Conflicts: []string{}}}, nil
+	}
+	s := plain(openReview(t, f, 200, 36))
+	if want := "approved · only the record changed since it · merges cleanly into main at bbbbbbb, which moved since the branch left it; the board read main at aaaaaaa (r re-reads)"; !strings.Contains(s, want) {
+		t.Fatalf("review detail lacks %q:\n%s", want, s)
+	}
+}
+
 // The detail of a candidate in review leads with its standing and where the
 // actions run, starts at the Evidence, lists the changed files, and shows a
 // file's diff escaped; a narrow terminal keeps every row its width.
@@ -69,7 +84,7 @@ func TestReviewDetailShowsStandingChangesAndDiffs(t *testing.T) {
 	s := plain(m)
 	for _, want := range []string{
 		"W-001 · review", "candidate abcdef1 · not on main",
-		"Review: candidate abcdef1 · not yet approved · only the record changed since it · not on main",
+		"Review: candidate abcdef1 · not yet approved · only the record changed since it · conflicts with main at aaaaaaa in", "┃ internal/x.go ",
 		"a approve and f feedback run on branch feature in /repo/feat · i integrate runs into main in /repo",
 		"## Evidence", "It works.",
 		"review     W-006  W-001 review  current", "examined abcdef1 = candidate",
