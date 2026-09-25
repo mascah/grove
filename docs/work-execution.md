@@ -447,7 +447,7 @@ an untracked background agent running as an implied continuation.
 | --- | --- |
 | Claude, interactive | `/grove-work G-030 G-031` |
 | Claude, headless | `claude -p "/grove-work G-030 --interaction headless"` |
-| Grove-owned attempt | `grove run G-030 --budget USD --permission-mode MODE`, or `R` on the work's detail on the board: the headless row as a process that outlives the terminal, in the work's worktree; `grove attempts`, `attempt`, `stop`, or `A` and `x` on the board |
+| Grove-owned attempt | `grove run G-030 --budget USD --permission-mode MODE` (either flag optional where `grove.yaml` sets it under `run:`), or `R` on the work's detail on the board: the headless row as a process that outlives the terminal, in the work's worktree; `grove attempts`, `attempt`, `stop`, or `A` and `x` on the board |
 | Codex, interactive | `$grove-work G-030 G-031` |
 | Any agent without skills | "Read the repository's agent instructions and the output of `grove guide work`, then follow that guide for `G-030 --interaction headless`." |
 | Inspect first, no agent | `grove context G-030` |
