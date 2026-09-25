@@ -148,8 +148,8 @@ orders: `members`, `priority` and question `blocks` never do, and an absent
 `depends_on` means no declared prerequisite, not readiness.
 
 Without IDs it lists the unfinished work (proposed, active, review), one row
-each with `GROUP`, `LAYER`, `NEEDS` (its `depends_on`) and `UNLOCKS` (the
-unfinished work that names it). Work in one group needs other work in it,
+each with `GROUP`, `LAYER`, `NEEDS` (its `depends_on`), `UNLOCKS` (the
+unfinished work that names it) and `DELIVERY` (below). Work in one group needs other work in it,
 directly or through anything else; a separate group is unrelated. A layer is
 one more than the deepest work of its group that it needs, so layer 0 needs
 no unfinished work. Equal layers have no declared order, which is not

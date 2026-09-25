@@ -175,6 +175,7 @@ func TestCompareDescribesOtherVersions(t *testing.T) {
 	branch := &versions.Source{Kind: "committed", Ref: "refs/heads/feature"}
 	other := &versions.Source{Kind: "live", Ref: "refs/heads/other", Locator: "other", GitDir: "/g/w"}
 	a, b, c, d := work("A", "proposed", "B"), work("B", "proposed"), work("C", "proposed"), work("D", "proposed")
+	e, eReordered := work("E", "proposed", "B", "C"), work("E", "active", "C", "B")
 	aElsewhere := work("A", "active", "B", "C")
 	aElsewhere.Source = []byte("A elsewhere")
 	rev := func(r *project.Record) string { return project.Revision(r.Source) }
@@ -192,19 +193,24 @@ func TestCompareDescribesOtherVersions(t *testing.T) {
 			{Source: branch, Revision: ""}, // deleted there, and current: a divergence
 		}},
 		{ID: "D", Versions: []versions.Version{{Source: here, Record: stale, Revision: rev(stale), Change: "unchanged"}}},
+		{ID: "E", Versions: []versions.Version{
+			{Source: here, Record: e, Revision: rev(e), Change: "unchanged", Older: "branch feature changed it"},
+			{Source: branch, Record: eReordered, Revision: rev(eReordered)},
+		}},
 	}}
-	v, err := Preview([]*project.Record{a, b, c, d}, []string{"A", "C", "D"})
+	v, err := Preview([]*project.Record{a, b, c, d, e}, []string{"A", "C", "D", "E"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	v.Notes = nil
-	v.Compare(res)
+	v.Compare(res, here)
 	want := []string{
 		"Some branches or checkouts could not be read (grove versions lists them), so what is said here about other versions may be incomplete.",
 		"A here is older than its current version: active on branch feature, checkout other (other).",
 		`A depends on other work elsewhere: branch feature ["B" "C"]; this uses this checkout's ["B"].`,
 		"C diverges; other current versions: deleted on branch feature.",
 		"D changed while it was being read; rerun.",
+		"E here is older than its current version: active on branch feature.",
 		"B has uncommitted changes (modified) in this checkout, which is what is read here.",
 		"B: x and y could not be ordered",
 	}

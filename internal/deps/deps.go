@@ -294,22 +294,21 @@ func Ancestry(ctx context.Context, root string) func(commit, ref string) (bool, 
 	}
 }
 
+// sameSet compares prerequisite lists, whose order means nothing.
+func sameSet(a, b []string) bool {
+	return slices.Equal(slices.Compact(slices.Sorted(slices.Values(a))), slices.Compact(slices.Sorted(slices.Values(b))))
+}
+
 func short(commit string) string { return commit[:min(len(commit), 7)] }
 
 // Compare adds what the current view (G-042) says about each item beyond
-// this checkout, from res, an inspection of every branch and checkout. The
-// View stays this checkout's: other versions, their edges included, are
-// described and never merged into it.
-func (v *View) Compare(res *versions.Result) {
+// here, the source whose records the View was built from, using res, an
+// inspection of every branch and checkout. The View stays that source's:
+// other versions, their edges included, are described and never merged in.
+func (v *View) Compare(res *versions.Result, here *versions.Source) {
 	note := func(format string, args ...any) { v.Notes = append(v.Notes, fmt.Sprintf(format, args...)) }
 	if !res.Complete {
 		note("Some branches or checkouts could not be read (grove versions lists them), so what is said here about other versions may be incomplete.")
-	}
-	var here *versions.Source
-	for _, s := range res.Sources {
-		if s.Kind == "live" && s.GitDir == res.GitDir {
-			here = s
-		}
 	}
 	for _, it := range v.Items {
 		i := slices.IndexFunc(res.Groups, func(g versions.Group) bool { return g.ID == it.ID })
@@ -342,7 +341,7 @@ func (v *View) Compare(res *versions.Result) {
 			status := "deleted"
 			if o.Record != nil {
 				status = o.Record.Status
-				if !slices.Equal(o.Record.DependsOn, mine.Record.DependsOn) {
+				if !sameSet(o.Record.DependsOn, mine.Record.DependsOn) {
 					edges = append(edges, fmt.Sprintf("%s %q", o.Source.Name(), o.Record.DependsOn))
 				}
 			}
@@ -379,9 +378,9 @@ func Order(byID map[string]*project.Record, ids []string) (order []string, reach
 		case reach[id] != nil:
 			return nil, nil, fmt.Errorf("%s is selected more than once", id)
 		case r == nil:
-			return nil, nil, fmt.Errorf("work %s is not in this checkout; context takes explicit work IDs and reads only the selected checkout", id)
+			return nil, nil, fmt.Errorf("work %s is not in this checkout; only explicit work IDs in the selected checkout can be selected", id)
 		case r.Type != "work":
-			return nil, nil, fmt.Errorf("%s is a %s; only work can be selected (related records are included as context)", id, r.Type)
+			return nil, nil, fmt.Errorf("%s is a %s; only work can be selected", id, r.Type)
 		}
 		reach[id] = map[string]bool{}
 		var visit func(*project.Record)

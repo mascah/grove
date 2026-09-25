@@ -18,8 +18,8 @@ func TestDepsUsage(t *testing.T) {
 		}
 	}
 	for _, args := range [][]string{{"deps", "G-002"}, {"deps", "G-404"}, {"deps", "G-001", "G-001"}} {
-		if code, out, _ := run(t, root, args...); code != 1 || out != "" {
-			t.Errorf("%v: %d %q", args, code, out)
+		if code, out, errOut := run(t, root, args...); code != 1 || out != "" || strings.Contains(errOut, "context") {
+			t.Errorf("%v: %d %q %q", args, code, out, errOut)
 		}
 	}
 }
@@ -47,9 +47,10 @@ func TestDepsCLI(t *testing.T) {
 		t.Fatalf("deps: %d %s", code, errOut)
 	}
 	for _, want := range []string{
-		"; target main\n", "GROUP  LAYER  ID     STATUS    NEEDS        UNLOCKS  TITLE\n",
-		"1      0      G-001  proposed  -            -        Inspect records\n",
-		"2      0      G-005  review    -            G-004    In review\n2      1      G-004  proposed  G-003 G-005  -        Next\n",
+		"; target main\n", "GROUP  LAYER  ID     STATUS    NEEDS        UNLOCKS  DELIVERY",
+		"1      0      G-001  proposed  -            -        awaiting implementation",
+		"2      0      G-005  review    -            G-004    awaiting review; candidate " + candidate[:7] + " not in HEAD, not on main  In review\n",
+		"2      1      G-004  proposed  G-003 G-005  -        awaiting implementation",
 		"G-003  done    G-004      candidate " + base[:7] + " in HEAD, on main  Done before\n",
 		"Equal layers have no declared order",
 	} {

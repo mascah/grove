@@ -35,19 +35,21 @@ func runDeps(p *project.Project, a invocation, out, errOut io.Writer) int {
 		v.Notes = append(v.Notes, "Other branches and checkouts could not be read ("+err.Error()+"), so nothing is said about other versions.")
 		code = 1
 	} else {
-		v.Compare(res)
 		target = res.Target
 		if !res.Complete {
 			code = 1
 		}
+		var here *versions.Source // this checkout, whose records the view holds
 		for _, s := range res.Sources {
 			if s.Kind == "live" && s.GitDir == res.GitDir {
+				here = s
 				checkout["head"] = s.Commit
 				if s.Ref != "" {
 					checkout["ref"] = s.Ref
 				}
 			}
 		}
+		v.Compare(res, here)
 	}
 	v.Deliver(target, deps.Ancestry(context.Background(), p.Root))
 	if code != 0 {
@@ -114,9 +116,9 @@ func depsText(w *bytes.Buffer, v *deps.View, checkout map[string]any, target str
 	case rows == nil:
 		fmt.Fprintln(w, "No unfinished work.")
 	default:
-		fmt.Fprintln(table, "GROUP\tLAYER\tID\tSTATUS\tNEEDS\tUNLOCKS\tTITLE")
+		fmt.Fprintln(table, "GROUP\tLAYER\tID\tSTATUS\tNEEDS\tUNLOCKS\tDELIVERY\tTITLE")
 		for _, it := range rows {
-			fmt.Fprintf(table, "%d\t%d\t%s\t%s\t%s\t%s\t%s\n", it.Group, it.Layer, it.ID, it.Status, list(it.Needs), list(it.Unlocks), visible(it.Title))
+			fmt.Fprintf(table, "%d\t%d\t%s\t%s\t%s\t%s\t%s\t%s\n", it.Group, it.Layer, it.ID, it.Status, list(it.Needs), list(it.Unlocks), visible(it.Delivery), visible(it.Title))
 		}
 	}
 	table.Flush()

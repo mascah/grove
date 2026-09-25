@@ -85,6 +85,13 @@ and the board both render.
   current states that diverge, current states elsewhere whose `depends_on`
   differs from this checkout's, uncommitted changes to it here, and an
   incomplete inspection. The preview never merges edges across sources.
+- **Binding.** `Compare` takes the source a View was built from, never
+  assuming the root checkout. The command's View is its checkout's. The
+  board's overview may be built from the current view, as its columns are,
+  with divergent records flagged, but a preview binds to one checkout (the
+  one `b` chose, else this one) before it orders anything, so edges from
+  different sources are never combined (G-161's Constraints). Review finding
+  2 of the first gate asked for this.
 - **Freshness.** Every involved record carries its revision (G-062). The
   board's preview is recomputed on every re-read and says when a selected
   record changed; any handoff it offers rereads before acting.
