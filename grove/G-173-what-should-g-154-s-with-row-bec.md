@@ -53,7 +53,8 @@ assign `/grove-work G-154` again on `worktree-G-154`.
 
 ## Next
 
-Waits for the owner.
+Answered; G-154's outcome and acceptance 2 and 3 are amended to the
+`without` row.
 
 ## Answer
 Drop the with row

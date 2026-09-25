@@ -87,8 +87,7 @@ or `cat grove/G-005*.md grove/G-004*.md …`). listed-constraint run 3 ran
 records, `ls grove` and one `cat` cost less than choosing, so neither
 `context`'s listing nor the distractors' titles decide anything, and the
 case cannot show G-153's search helping to find the constraint: the
-`without` row has no misses to recover. What the `with` row can still
-show is whether search is used at all and what it costs.
+`without` row has no misses to recover.
 
 **4. The runner's `holding read` and `distractors read` miss glob reads.**
 They report `holding read` false for listed-constraint runs 1, 3, 5 and
@@ -105,15 +104,19 @@ Recomputed after the fix. Commit `40e1263` makes both facts, and the
 unneeded reads, count a read through a glob or a `for` loop over paths,
 with a selftest case. `retrieval()` at that commit, rerun on the ten
 retained transcripts and post-run clones (a throwaway script importing
-`evals/run.py`, not committed; rerun at the handoff and matching the
-checkpoint's first run) gives: `holding read` true in 10 of 10;
+`evals/run.py`, not committed; rerun at `7026cbe`, the final runner, with
+the same result) gives: `holding read` true in 10 of 10;
 listed-constraint `distractors read` G-003 and G-004 in 5 of 5; unneeded
 reads G-003 and G-004 in listed-constraint runs 1, 3, 5, the shared
 fixture record G-001 "Sync tasks between two machines" in listed-constraint
 runs 1 and 5 and code-constraint runs 2 and 3, and `.gitignore` in
-code-constraint run 2. This is finding 3's reading of the transcripts. The
-reports under `--out` keep the values from `eeec725`; these are the facts
-this row is compared on.
+code-constraint run 2. The unneeded reads count files only, so G-001 read
+through `grove show` appears in no fact: counting those (listed-constraint
+run 2, code-constraint runs 1, 4, 5), G-001 was read in 8 of 10 runs, and
+a comparison on unneeded reads must add them from the transcripts, or
+`show` looks cheaper than `cat`. The reports under `--out` keep the values
+from `eeec725`; these, with that addition, are the facts a later row
+compares against. G-154's final independent review reproduced them.
 
 **5. Cost and shape.** listed-constraint $0.29 to $0.33 a run, 6 to 9
 turns, 50 to 64 seconds, $1.55 for five; code-constraint $0.34 to $0.38,
@@ -143,11 +146,11 @@ action or, in code-constraint runs 4 and 5, the question it waits on.
 **Lever.** No change is justified by this row. Both constraints were found
 and applied in every run on Claude Opus 5.5 at guides digest
 `41324c3655a1`, at the G-108 pair's cost, without search, because in
-fixtures of five and two records the agent reads them all. A `with` row
-would have cost another $3.35 to check that G-153's search text neither
-breaks this nor adds cost, but it could not show that search finds what
-the listing missed, since this fixture has nothing missed; the owner
-dropped it (G-173). Evidence
+fixtures of five and two records the agent reads them all. G-153 then
+shipped no agent-facing search, so a `with` row at main would have
+measured only the guide edits landed since this digest, and even with a
+search it could not show search finding what the listing missed, since
+this fixture has nothing missed; the owner dropped it (G-173). Evidence
 that would justify G-153's search, or its code-to-record links, needs a
 fixture large enough that reading every record costs more than choosing,
 tens of records with plausible titles, which neither case has. That is a
