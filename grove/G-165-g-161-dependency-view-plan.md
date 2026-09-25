@@ -22,10 +22,10 @@ Integration, Source and Revision, the G-116/G-117 layout-question precedent,
 `docs/commands.md`, the dependency rules of `docs/record-model.md` and step 5
 of `docs/work-shaping.md`.
 
-No board layout is approved. [G-166](G-166-g-161-dependency-layout.md) asks
-the owner to choose one; the board steps below wait for its answer. The
-shared model, the noninteractive command and the shaping-guide change do not
-depend on it and are implemented first.
+[G-166](G-166-g-161-dependency-layout.md) asked the owner to choose the board
+layout. The shared model, the noninteractive command and the shaping-guide
+change did not depend on it and were implemented first. The owner answered
+with layout B and no printed handoff; step 4 builds that.
 
 ## Observed at `05892a2`
 
@@ -87,16 +87,22 @@ and the board both render.
   incomplete inspection. The preview never merges edges across sources.
 - **Binding.** `Compare` takes the source a View was built from, never
   assuming the root checkout. The command's View is its checkout's. The
-  board's overview may be built from the current view, as its columns are,
-  with divergent records flagged; such a View has no single source, so step
-  4 gives `Compare` each item's own source (the one holding the version
-  shown) instead of one checkout. A preview binds to one checkout (the one
-  `b` chose, else this one) before it orders anything, so edges from
-  different sources are never combined (G-161's Constraints). The first
-  review gate asked for this.
+  board's overview is built from the current view, as its columns are. Each
+  row is the current state the board places its card by (`earliest`), and
+  divergent records carry the card's `⑂` tag. Such a View has no single
+  source, so it runs no `Compare`. Instead, the focused row's trees list
+  each diverging state with its own `depends_on`, never merged. This
+  replaced the per-item `Compare` first planned here, after the second
+  review gate ([G-175](G-175-g-161-deps-second-review-gate-on.md)) found
+  that the overview could drop divergent work. A preview binds to one
+  checkout (the one `b` chose, else this one) before it orders anything,
+  and runs `Compare` for it. Edges from different sources are therefore
+  never combined (G-161's Constraints). The first review gate asked for
+  this.
 - **Freshness.** Every involved record carries its revision (G-062). The
-  board's preview is recomputed on every re-read and says when a selected
-  record changed; any handoff it offers rereads before acting.
+  board's preview is recomputed on every re-read and says when a listed
+  record changed. There is no handoff (G-166), so nothing can act on a
+  stale preview.
 
 ## Command contract (chosen here, layout-independent)
 
@@ -205,6 +211,38 @@ swaps to the focused tree. Any size of project reads the same way: the list
 scrolls, and each tree shows only the focused item's ancestry, with a
 repeated node written `(shown above)`.
 
+### B as built
+
+The same synthetic backlog at 120×24 in `867a9d8`'s tests, with W-03 and
+W-05 selected and W-05 focused. Below 100 columns the list shows alone, and
+Tab gives the trees the screen and focus.
+
+```text
+
+Dependencies: 10 unfinished work, 1 connected group, 2 unconnected · 2 done or abandoned prerequisites only in the trees
+· h shows every work
+Connected · 8 work                                     │ W-05 proposed · layer 2 · connected with 7 other listed work
+    W-02 proposed  Store accounts, balances and curre… │ Monthly budget report with category totals, carry-over and
+  ●   W-03 active  Import bank statements from CSV an… │ warnings
+      W-04 proposed  Categorize transactions with edi… │
+> ●     W-05 proposed  Monthly budget report with cat… │ ← Needs
+        W-07 review [not on main]  Reconcile imported… │ W-05
+        W-08 proposed  Detect recurring transactions … │ ├─ W-03 active  Import bank statements from CSV and OFX export…
+          W-06 proposed  Export the monthly report as… │ │  └─ W-02 proposed  Store accounts, balances and currencies i…
+          W-13 proposed  Send budget alerts when a ca… │ │     └─ ✓ W-01 done  Scaffold the ledger project and its test…
+Unconnected · 2 work: no edge to another row           │ └─ W-04 proposed  Categorize transactions with editable, order…
+    W-09 proposed  Dark theme for the report viewer    │    └─ W-02 (shown above)
+    W-11 active ? Q-12  Fix rounding of foreign-curre… │
+                                                       │ → Unlocks
+                                                       │ W-05
+                                                       │ ├─ W-06 proposed  Export the monthly report as CSV and printab…
+                                                       │ └─ W-13 proposed  Send budget alerts when a category passes it…
+                                                       │
+                                                       │
+← needs · → unlocks · ✓ done · ✗ abandoned · ? open question · ● selected · indent: layer (equal: no declared order)
+↑/↓ move  Space select  p preview (2 selected)  c clear  Enter open  h history  Tab trees  b checkout  Esc board  q
+```
+
 ### Preview (both layouts)
 
 `p` with S-05 and S-03 selected (Space marks `●` in the list):
@@ -243,9 +281,19 @@ Order:    S-03 → S-05   (S-05 needs S-03)
 3. Docs: `docs/commands.md` gains `Deps`; `docs/work-shaping.md` step 5 says
    to record real prerequisites with their reasons in the dependent work and
    keep preferred order as order, never as an edge.
-4. **Waits for G-166.** The board view in the chosen layout from the board
-   (`g`), with Space selection, the preview, Enter into a record's detail and
-   back, history collapse, re-read and resize; terminal checks in
-   `internal/tui/testdata/terminal.py`; `docs/board.md`.
+4. Done. The board view in layout B, opened from the board with `g`
+   (`internal/tui/deps.go`). It covers:
+   - Space selection, which `c` clears.
+   - The preview, with no handoff.
+   - Enter into a record's detail and back.
+   - `h` for every work, the counterpart of history collapse.
+   - Tab focus between the list and the scrollable trees.
+   - `b` to choose a checkout.
+   - Re-read and resize.
+
+   Terminal checks are in `internal/tui/testdata/terminal.py`
+   (`dependencies`), and `docs/board.md` documents the view. Connected
+   groups come first, then unconnected work under one heading, where the
+   drawing numbered every group.
 5. Owner judgment at 80 and 120 columns on the real 13-item group (expanded)
    and the synthetic backlog, then review and handoff.
