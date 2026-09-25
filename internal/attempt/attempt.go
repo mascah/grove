@@ -22,6 +22,7 @@ package attempt
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -193,11 +194,75 @@ type Request struct {
 }
 
 var idPattern = regexp.MustCompile(`^[A-Z]+-[0-9]+$`)
-var budgetPattern = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?$`)
 
-// ValidBudget accepts a positive decimal dollar amount and nothing else.
-func ValidBudget(usd string) bool {
-	return budgetPattern.MatchString(usd) && strings.Trim(usd, "0.") != ""
+// ErrUnsupplied refuses a launch that has no budget or permission mode from
+// a flag or from grove.yaml: Grove itself sets no default spend or profile.
+var ErrUnsupplied = errors.New("run requires --budget USD and --permission-mode MODE, or their defaults under run: in grove.yaml; Grove itself sets no default spend or permission profile")
+
+// flags is run's option table, which grove run and the board's launch line
+// both parse through Flag (G-140).
+var flags = []struct {
+	name, what string
+	field      func(*Request) *string
+	check      func(string) error
+}{
+	{"--budget", "dollar amount", func(r *Request) *string { return &r.BudgetUSD }, func(v string) error {
+		if !project.ValidBudget(v) {
+			return errors.New("must be a positive decimal dollar amount")
+		}
+		return nil
+	}},
+	{"--permission-mode", "mode", func(r *Request) *string { return &r.PermissionMode }, nil},
+	{"--model", "model", func(r *Request) *string { return &r.Model }, nil},
+	{"--effort", "effort level", func(r *Request) *string { return &r.Effort }, nil},
+	{"--until", "bound", func(r *Request) *string { return &r.Until }, func(v string) error {
+		if v != "plan" {
+			return errors.New("must be plan")
+		}
+		return nil
+	}},
+	{"--branch", "branch name", func(r *Request) *string { return &r.Branch }, nil},
+	{"--worktree", "directory", func(r *Request) *string { return &r.Worktree }, nil},
+}
+
+// Flag consumes the run flag at args[*i], as "--name VALUE" or
+// "--name=VALUE", into req, each at most once; it reports false for any
+// other argument.
+func Flag(args []string, i *int, req *Request) (bool, error) {
+	for _, f := range flags {
+		value, inline := strings.CutPrefix(args[*i], f.name+"=")
+		if !inline && args[*i] != f.name {
+			continue
+		}
+		if !inline {
+			if *i++; *i >= len(args) {
+				return true, fmt.Errorf("%s requires a %s", f.name, f.what)
+			}
+			value = args[*i]
+		}
+		if strings.TrimSpace(value) == "" {
+			return true, fmt.Errorf("%s requires a nonempty %s", f.name, f.what)
+		}
+		if f.check != nil {
+			if err := f.check(value); err != nil {
+				return true, fmt.Errorf("%s %s", f.name, err)
+			}
+		}
+		field := f.field(req)
+		if *field != "" {
+			return true, fmt.Errorf("%s may only be supplied once", f.name)
+		}
+		*field = value
+		return true, nil
+	}
+	return false, nil
+}
+
+// Defaulted fills each launch value req leaves empty from grove.yaml's run:.
+func Defaulted(req Request, d project.RunDefaults) Request {
+	req.BudgetUSD, req.PermissionMode = cmp.Or(req.BudgetUSD, d.BudgetUSD), cmp.Or(req.PermissionMode, d.PermissionMode)
+	req.Model, req.Effort = cmp.Or(req.Model, d.Model), cmp.Or(req.Effort, d.Effort)
+	return req
 }
 
 var attemptPattern = regexp.MustCompile(`^[A-Z]+-[0-9]+\.[0-9]{8}T[0-9]{6}Z$`)
@@ -220,15 +285,6 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if !idPattern.MatchString(req.ID) {
 		return nil, fmt.Errorf("%s is not a record ID", req.ID)
 	}
-	if req.BudgetUSD == "" || req.PermissionMode == "" {
-		return nil, errors.New("run requires --budget USD and --permission-mode MODE: Grove sets no default spend or permission profile")
-	}
-	if !ValidBudget(req.BudgetUSD) {
-		return nil, fmt.Errorf("--budget must be a positive decimal dollar amount, not %q", req.BudgetUSD)
-	}
-	if req.Until != "" && req.Until != "plan" {
-		return nil, fmt.Errorf("--until must be plan, not %q", req.Until)
-	}
 	p, ds := project.Load(req.Root, req.Root)
 	if len(ds) != 0 {
 		var lines []string
@@ -236,6 +292,18 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 			lines = append(lines, d.String())
 		}
 		return nil, fmt.Errorf("the project is not valid; fix it before running:\n%s", strings.Join(lines, "\n"))
+	}
+	// What the launch runs with is recorded as resolved: a default from
+	// grove.yaml and a flag look the same in attempt.json.
+	req = Defaulted(req, p.Run)
+	if req.BudgetUSD == "" || req.PermissionMode == "" {
+		return nil, ErrUnsupplied
+	}
+	if !project.ValidBudget(req.BudgetUSD) {
+		return nil, fmt.Errorf("--budget must be a positive decimal dollar amount, not %q", req.BudgetUSD)
+	}
+	if req.Until != "" && req.Until != "plan" {
+		return nil, fmt.Errorf("--until must be plan, not %q", req.Until)
 	}
 	root := p.Root
 	var r *project.Record

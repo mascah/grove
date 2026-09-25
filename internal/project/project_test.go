@@ -333,6 +333,36 @@ func TestTarget(t *testing.T) {
 	}
 }
 
+func TestRunDefaults(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, config string
+		run          RunDefaults
+		want         string
+	}{
+		{"none", "", RunDefaults{}, ""},
+		{"budget and mode", "run:\n  budget: 50\n  permission_mode: auto\n", RunDefaults{BudgetUSD: "50", PermissionMode: "auto"}, ""},
+		{"all four", "run: {budget: 0.5, permission_mode: acceptEdits, model: opus, effort: xhigh}\n", RunDefaults{"0.5", "acceptEdits", "opus", "xhigh"}, ""},
+		{"a word for a budget", "run: {budget: x}\n", RunDefaults{}, "grove.yaml:3: run.budget: expected a positive decimal dollar amount"},
+		{"a zero budget", "run: {budget: 0}\n", RunDefaults{}, "run.budget: expected a positive"},
+		{"a spaced value", "run: {effort: \"a b\"}\n", RunDefaults{}, "run.effort: expected one word"},
+		{"a bound", "run: {until: plan}\n", RunDefaults{}, "run.until: unknown key"},
+		{"not a mapping", "run: 50\n", RunDefaults{}, "run: expected a mapping"},
+		{"a duplicate", "run:\n  model: a\n  model: b\n", RunDefaults{}, "grove.yaml:4: run.model: duplicate YAML key"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			p, ds := Load(briefFixture(t, tc.config), "")
+			if got := diagnostics(ds); tc.want == "" && got != "" || !strings.Contains(got, tc.want) {
+				t.Fatalf("wanted %q; got %s", tc.want, got)
+			}
+			if tc.want == "" && p.Run != tc.run {
+				t.Fatalf("Run = %+v, want %+v", p.Run, tc.run)
+			}
+		})
+	}
+}
+
 func TestBrief(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct{ name, config, file, want string }{

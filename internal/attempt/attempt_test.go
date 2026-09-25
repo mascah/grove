@@ -522,6 +522,28 @@ func TestInputsChanged(t *testing.T) {
 	}
 }
 
+// grove.yaml's run: supplies what a request leaves empty, and the launch
+// records the resolved values as it records flags.
+func TestDefaults(t *testing.T) {
+	skipShort(t)
+	root := fixture(t)
+	write(t, root, "grove.yaml", config+"run:\n  budget: 50\n  permission_mode: auto\n")
+	git(t, root, "commit", "-qam", "defaults")
+	fake(t, initLine+"\n"+resultLine("success", false))
+	for i, c := range []struct{ budget, want string }{{"", "50"}, {"2", "2"}} {
+		l, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: c.budget}, now.Add(time.Duration(i)*time.Hour), func(string) {})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cmd := strings.Join(l.Command, " "); !strings.Contains(cmd, "--max-budget-usd "+c.want+" --permission-mode auto ") {
+			t.Fatalf("command %q", cmd)
+		}
+		if v := await(t, root, l.Attempt, Finished); v.Launch.BudgetUSD != c.want || v.Launch.PermissionMode != "auto" {
+			t.Fatalf("attempt.json %+v", v.Launch)
+		}
+	}
+}
+
 func TestRefusals(t *testing.T) {
 	root := fixture(t)
 	fake(t, resultLine("success", false))
@@ -538,7 +560,7 @@ func TestRefusals(t *testing.T) {
 			t.Fatalf("want %q, got %v", want, err)
 		}
 	}
-	try(Request{BudgetUSD: "1"}, "run requires --budget USD and --permission-mode MODE")
+	try(Request{BudgetUSD: "1"}, "run requires --budget USD and --permission-mode MODE, or their defaults under run: in grove.yaml")
 	try(Request{PermissionMode: "auto"}, "run requires --budget USD and --permission-mode MODE")
 	try(Request{ID: "G-009", BudgetUSD: "1", PermissionMode: "auto"}, "G-009 is not in this checkout")
 	try(Request{ID: "nope", BudgetUSD: "1", PermissionMode: "auto"}, "nope is not a record ID")

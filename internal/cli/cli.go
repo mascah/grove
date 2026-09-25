@@ -33,7 +33,7 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID [--expect REVISION] (--set FIELD=VALUE | --unset FIELD)... [--commit]\n" +
 	"       grove [--project DIR] approve ID VERDICT | feedback ID TEXT | integrate ID [--cleanup]\n" +
-	"       grove [--project DIR] run ID --budget USD --permission-mode MODE [--until plan]\n" +
+	"       grove [--project DIR] run ID [--budget USD] [--permission-mode MODE] [--until plan]\n" +
 	"                                     [--model MODEL] [--effort LEVEL] [--branch NAME] [--worktree DIR]\n" +
 	"       grove [--project DIR] attempts [ID] | attempt ATTEMPT [--json] | stop ATTEMPT\n" +
 	"       grove [--project DIR] convert PATH --type TYPE --title TITLE [--slug SLUG]\n" +
@@ -100,7 +100,9 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             --max-budget-usd USD, --permission-mode MODE and --permission-prompts none, its\n" +
 	"             raw output in files under the Git common directory. --until plan ends the\n" +
 	"             attempt at a committed plan, leaving the status as found; --model and\n" +
-	"             --effort are passed to the provider. Each is recorded with the digest of the\n" +
+	"             --effort are passed to the provider. --budget and --permission-mode are\n" +
+	"             required unless grove.yaml's run: sets them; it may set --model and --effort\n" +
+	"             too, and a flag overrides it. What ran is recorded with the digest of the\n" +
 	"             worktree's grove-reviewer definition, or its absence. Refused while an attempt\n" +
 	"             of ID runs or is orphaned, when ID is not proposed or active here or on its\n" +
 	"             branch (a candidate in review awaits judgment), while an open question blocks\n" +
@@ -244,6 +246,12 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		}
 		return 0
 	case "run":
+		// Without grove.yaml's run: defaults the flags are required, which
+		// only the loaded project can tell, so it is still a usage error.
+		if d := attempt.Defaulted(a.run, p.Run); d.BudgetUSD == "" || d.PermissionMode == "" {
+			fmt.Fprintf(errOut, "grove: %s\n\n%s", attempt.ErrUnsupplied, usage)
+			return 2
+		}
 		a.run.Root = p.Root
 		l, err := attempt.Start(a.run, time.Now(), func(fact string) { fmt.Fprintln(out, visible(fact)) })
 		if err != nil {
@@ -409,23 +417,6 @@ func parseArgs(args []string) (a invocation, err error) {
 		{"--type", "record type", once(&a.convert.Type)},
 		{"--title", "title", once(&a.convert.Title)},
 		{"--source", "selector", once(&a.source)},
-		{"--budget", "dollar amount", func(value string) error {
-			if !attempt.ValidBudget(value) {
-				return errors.New("must be a positive decimal dollar amount")
-			}
-			return once(&a.run.BudgetUSD)(value)
-		}},
-		{"--permission-mode", "mode", once(&a.run.PermissionMode)},
-		{"--model", "model", once(&a.run.Model)},
-		{"--effort", "effort level", once(&a.run.Effort)},
-		{"--until", "bound", func(value string) error {
-			if value != "plan" {
-				return errors.New("must be plan")
-			}
-			return once(&a.run.Until)(value)
-		}},
-		{"--branch", "branch name", once(&a.run.Branch)},
-		{"--worktree", "directory", once(&a.run.Worktree)},
 		{"--expect", "revision", once(&a.request.Expect)},
 		{"--interaction", "mode", func(value string) error {
 			if value != "interactive" && value != "headless" {
@@ -527,14 +518,16 @@ func parseArgs(args []string) (a invocation, err error) {
 			a.cleanup = true
 			continue
 		}
-		matched := false
+		matched, err := attempt.Flag(args, &i, &a.run)
+		if err != nil {
+			return a, err
+		}
 		for _, o := range options {
-			var err error
-			if matched, err = option(&i, o.name, o.what, o.accept); err != nil {
-				return a, err
-			}
 			if matched {
 				break
+			}
+			if matched, err = option(&i, o.name, o.what, o.accept); err != nil {
+				return a, err
 			}
 		}
 		if !matched {
@@ -594,12 +587,9 @@ func parseArgs(args []string) (a invocation, err error) {
 			a.id = positional[1]
 		}
 	case "run":
-		switch {
-		case len(positional) != 2:
+		if len(positional) != 2 {
 			err = fmt.Errorf("run requires exactly one work ID")
-		case a.run.BudgetUSD == "" || a.run.PermissionMode == "":
-			err = fmt.Errorf("run requires --budget USD and --permission-mode MODE: Grove sets no default spend or permission profile")
-		default:
+		} else {
 			a.run.ID = positional[1]
 		}
 	case "attempts":

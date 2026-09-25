@@ -286,7 +286,7 @@ func (s *Source) admitLive(p *project.Project, ds []project.Diagnostic, committe
 		}
 		return
 	}
-	s.project, s.Valid, s.ConfigRevision = p, true, project.Revision(p.Config)
+	s.project, s.Valid, s.ConfigRevision, s.Run = p, true, project.Revision(p.Config), p.Run
 	if strings.Trim(s.Commit, "0") == "" { // unborn branch: nothing is committed yet
 		s.baseline = &tree{}
 	} else {

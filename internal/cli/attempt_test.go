@@ -19,7 +19,7 @@ func TestAttemptCommandsUsage(t *testing.T) {
 		code int
 		want string
 	}{
-		{[]string{"run", "G-001"}, 2, "run requires --budget USD and --permission-mode MODE"},
+		{[]string{"run", "G-001"}, 2, "run requires --budget USD and --permission-mode MODE, or their defaults under run: in grove.yaml"},
 		{[]string{"run", "G-001", "--budget", "1"}, 2, "run requires --budget USD and --permission-mode MODE"},
 		{[]string{"run", "G-001", "--budget", "NaN", "--permission-mode", "auto"}, 2, "--budget must be a positive decimal dollar amount"},
 		{[]string{"run", "G-001", "--budget", "0.0", "--permission-mode", "auto"}, 2, "--budget must be a positive decimal dollar amount"},
@@ -39,7 +39,14 @@ func TestAttemptCommandsUsage(t *testing.T) {
 			t.Fatalf("%v: exit %d\n%s", c.args, code, errOut.String())
 		}
 	}
+	// With run: defaults the flags are optional: the refusal comes from Start.
+	write(t, root, "grove.yaml", "schema_version: 3\nrecords: docs/records\nrun: {budget: 50, permission_mode: auto}\n")
 	var out, errOut bytes.Buffer
+	if code := Run([]string{"--project", root, "run", "G-009"}, t.TempDir(), &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "G-009 is not in this checkout") {
+		t.Fatalf("exit %d\n%s", code, errOut.String())
+	}
+	out.Reset()
+	errOut.Reset()
 	if code := Run([]string{"--project", root, "attempts"}, t.TempDir(), &out, &errOut); code != 0 || out.String() != "ATTEMPT  WORK  STATUS  STARTED  BRANCH  EXIT  COST\n" {
 		t.Fatalf("exit %d\n%s%s", code, out.String(), errOut.String())
 	}

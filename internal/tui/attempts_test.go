@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/mascah/grove/internal/attempt"
+	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/versions"
 )
 
@@ -130,59 +131,35 @@ func TestLaunchFromTheDetail(t *testing.T) {
 	if s := plain(m); !strings.Contains(s, "Attempts: none · R launches one") || !strings.Contains(s, "R launch   A attempts") {
 		t.Fatalf("a work detail names its attempts and the keys:\n%s", s)
 	}
+	// Without run: defaults the line says what must be typed, and a line
+	// that leaves the budget or the mode unsupplied launches nothing.
 	press(m, "R")
-	if s := plain(m); m.prompt == nil || !strings.Contains(s, "Launch W-002: budget in USD, required") || !strings.Contains(s, "on branch worktree-W-002") {
-		t.Fatalf("R opens the budget prompt:\n%s", s)
+	if s := plain(m); m.prompt == nil || !strings.Contains(s, "Launch W-002 ▏ · no budget, no mode, to the handoff, model default, effort default, on branch worktree-W-002") {
+		t.Fatalf("R opens the launch line:\n%s", s)
 	}
-	for _, bad := range []string{"", "0", "-1", "two", "NaN"} {
-		typeText(m, bad)
+	for _, c := range []struct{ typed, want string }{
+		{"", "type --budget USD and --permission-mode MODE, or set them under run: in grove.yaml"},
+		{"--budget 2", "type --budget USD and --permission-mode MODE"},
+		{"--budget 0 --permission-mode auto", "--budget must be a positive decimal dollar amount"},
+		{"--budget 2 --permission-mode auto --until review", "--until must be plan"},
+		{"--budget 2 --permission-mode auto --effort", "--effort requires a effort level"},
+		{"--budget 2 --budget 3 --permission-mode auto", "--budget may only be supplied once"},
+		{"--budget 2 --permission-mode auto --frob", "unknown option --frob"},
+		{"--budget 2 --permission-mode auto plan", "unknown option plan"},
+		{"--budget 2 --permission-mode auto --branch x", "the board chooses where an attempt runs"},
+	} {
+		typeText(m, c.typed)
 		press(m, "enter")
-		if m.prompt == nil || m.prompt.kind != "budget" || !strings.Contains(plain(m), "the budget is a positive dollar amount") {
-			t.Fatalf("budget %q is refused:\n%s", bad, plain(m))
+		if m.prompt == nil || !strings.Contains(plain(m), c.want) || len(r.launches) != 0 {
+			t.Fatalf("%q is refused with %q and nothing launches:\n%s", c.typed, c.want, plain(m))
 		}
-		for range bad {
+		for range c.typed {
 			press(m, "backspace")
 		}
 	}
-	typeText(m, "2.5")
-	press(m, "enter")
-	if s := plain(m); m.prompt == nil || m.prompt.kind != "mode" || !strings.Contains(s, "Launch W-002 for 2.5 USD: permission mode, required") {
-		t.Fatalf("the budget leads to the permission mode:\n%s", s)
-	}
-	press(m, "enter")
-	if !strings.Contains(plain(m), "type one permission mode") || len(r.launches) != 0 {
-		t.Fatal("an empty mode is refused and nothing launches")
-	}
-	typeText(m, "auto")
-	press(m, "enter")
-	if s := plain(m); m.prompt == nil || m.prompt.kind != "until" || !strings.Contains(s, "Launch W-002: plan stops it at a committed plan; Enter alone runs through") {
-		t.Fatalf("the mode leads to the optional bound:\n%s", s)
-	}
-	typeText(m, "step")
-	press(m, "enter")
-	if m.prompt == nil || m.prompt.kind != "until" || !strings.Contains(plain(m), "type plan to stop at the plan") {
-		t.Fatalf("a bound other than plan is refused:\n%s", plain(m))
-	}
-	for range "step" {
-		press(m, "backspace")
-	}
-	typeText(m, "plan")
-	press(m, "enter")
-	if s := plain(m); m.prompt == nil || m.prompt.kind != "model" || !strings.Contains(s, "Launch W-002: model, e.g. opus") {
-		t.Fatalf("the bound leads to the optional model:\n%s", s)
-	}
-	typeText(m, "opus")
-	press(m, "enter")
-	if s := plain(m); m.prompt == nil || m.prompt.kind != "effort" || !strings.Contains(s, "Launch W-002: effort, e.g. medium") {
-		t.Fatalf("the model leads to the optional effort:\n%s", s)
-	}
-	typeText(m, "x high")
-	press(m, "enter")
-	if m.prompt == nil || !strings.Contains(plain(m), "type one word") || len(r.launches) != 0 {
-		t.Fatal("an effort of two words is refused and nothing launches")
-	}
-	for range " high" {
-		press(m, "backspace")
+	typeText(m, "--budget 2.5 --permission-mode=auto --until plan --model opus --effort x")
+	if req, err := m.prompt.resolved(); err != nil || launchText(req) != "$2.5, mode auto, until plan, model opus, effort x" {
+		t.Fatalf("the line resolves what is typed as it is typed: %v %+v", err, req)
 	}
 	typeText(m, "high")
 	cmd := press(m, "enter")
@@ -204,21 +181,43 @@ func TestLaunchFromTheDetail(t *testing.T) {
 	if m.screen != detailScreen || m.openID() != "W-002" {
 		t.Fatal("Esc returns to the record")
 	}
-	// Esc cancels, and a refused launch shows why with nothing claimed.
+	// Esc cancels.
 	press(m, "R", "esc")
 	if !strings.Contains(plain(m), "cancelled; nothing was launched") {
 		t.Fatal(plain(m))
 	}
+	// With this checkout's run: defaults, Enter alone launches them, and
+	// typed flags change only what they name.
+	for i := range f.res.Sources {
+		if s := f.res.Sources[i]; s.Kind == "live" && s.GitDir == f.res.GitDir {
+			s.Run = project.RunDefaults{BudgetUSD: "50", PermissionMode: "auto"}
+		}
+	}
+	press(m, "R")
+	if s := plain(m); !strings.Contains(s, "Launch W-002 ▏ · $50, mode auto, to the handoff, model default, effort default, on branch worktree-W-002 · Enter") {
+		t.Fatalf("the line names the defaults:\n%s", s)
+	}
+	settle(m, press(m, "enter"))
+	if got := r.launches[1]; got.BudgetUSD != "50" || got.PermissionMode != "auto" || got.Until != "" || got.Model != "" || got.Effort != "" {
+		t.Fatalf("Enter alone launches the defaults: %+v", got)
+	}
+	press(m, "esc", "R")
+	typeText(m, "--until plan --effort xhigh")
+	settle(m, press(m, "enter"))
+	if got := r.launches[2]; got.BudgetUSD != "50" || got.PermissionMode != "auto" || got.Until != "plan" || got.Effort != "xhigh" {
+		t.Fatalf("typed flags override for one launch: %+v", got)
+	}
+	press(m, "esc", "R")
+	typeText(m, "--budget 2")
+	settle(m, press(m, "enter"))
+	if got := r.launches[3]; got.BudgetUSD != "2" || got.PermissionMode != "auto" {
+		t.Fatalf("a typed budget replaces the default: %+v", got)
+	}
+	// A refused launch shows why with nothing claimed.
+	press(m, "esc")
 	r.launchErr = errors.New("W-002 changed since it was read: grove/work/W-002.md is sha256:new here, not sha256:old")
 	press(m, "R")
-	typeText(m, "1")
-	press(m, "enter")
-	typeText(m, "auto")
-	press(m, "enter", "enter", "enter") // no bound, model or effort
 	settle(m, press(m, "enter"))
-	if r.launches[1].Until != "" || r.launches[1].Model != "" || r.launches[1].Effort != "" {
-		t.Fatalf("Enter alone asks for nothing more: %+v", r.launches[1])
-	}
 	if s := plain(m); !strings.Contains(s, "NOT DONE: W-002 changed since it was read") {
 		t.Fatalf("a refusal shows:\n%s", s)
 	}
@@ -254,10 +253,7 @@ func TestLaunchPlace(t *testing.T) {
 		if m.prompt == nil {
 			t.Fatalf("%s: no prompt:\n%s", id, plain(m))
 		}
-		typeText(m, "1")
-		press(m, "enter")
-		typeText(m, "auto")
-		press(m, "enter", "enter", "enter")
+		typeText(m, "--budget 1 --permission-mode auto")
 		settle(m, press(m, "enter"))
 		return r.launches[0]
 	}
@@ -382,10 +378,7 @@ func TestFeedbackContinuesOnTheCandidateBranch(t *testing.T) {
 	if m.prompt == nil || !strings.Contains(plain(m), "on branch feature in /repo/feat") {
 		t.Fatalf("the continuation runs on the candidate's branch:\n%s", plain(m))
 	}
-	typeText(m, "1")
-	press(m, "enter")
-	typeText(m, "acceptEdits")
-	press(m, "enter", "enter", "enter")
+	typeText(m, "--budget 1 --permission-mode acceptEdits")
 	settle(m, press(m, "enter"))
 	if got := r.launches[0]; got.Branch != "feature" || got.Worktree != "/repo/feat" || got.Expect == "" {
 		t.Fatalf("%+v", got)

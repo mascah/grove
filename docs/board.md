@@ -103,13 +103,18 @@ reported instead; the board never creates a checkout.
 
 Work's detail also names its attempts
 ([G-046](../grove/G-046-managed-runs.md)): how many, and the latest with its
-state and time. `R` on proposed or active work asks for a budget in USD, then a
-permission mode, both typed each time since neither has a default; then, where
-Enter alone asks for nothing, the bound (`plan` stops the attempt at a
-committed plan), a model and an effort
-([G-134](../grove/G-134-bound-an-attempt-at-its-plan-and.md)); and launches
-one attempt as [`run`](commands.md#attempts) does; it runs on the
-branch the record's current state stands on when that is not the target, in
+state and time. `R` on proposed or active work opens one launch line
+([G-140](../grove/G-140-default-an-attempt-s-budget-mode.md)) naming the
+launch it would start: budget, permission mode, bound, model and effort from
+this checkout's `grove.yaml` `run:` defaults, and where it runs. Enter
+launches it. Text typed there is `run`'s own flags, such as `--until plan
+--effort xhigh` ([G-134](../grove/G-134-bound-an-attempt-at-its-plan-and.md)),
+which override the defaults for that launch; what `run` refuses the line
+refuses with the same message, and `--branch` and `--worktree` too, since
+the board chooses where. Without a default for the budget or the mode, the
+line says so and refuses Enter until `--budget` and `--permission-mode` are
+typed. Esc cancels. It launches one attempt as
+[`run`](commands.md#attempts) does; it runs on the branch the record's current state stands on when that is not the target, in
 that branch's checkout, so after feedback the next attempt continues on the
 candidate's branch, and otherwise in a new `worktree-ID`. It is refused up
 front for work in review, done or abandoned, work an open question blocks,

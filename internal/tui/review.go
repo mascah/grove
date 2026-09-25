@@ -55,14 +55,15 @@ type actMsg struct {
 // prompt is the open question on the last row: text to type for a verdict or
 // feedback, or y/n for the merge and its cleanup.
 type prompt struct {
-	kind             string // approve, feedback, integrate, cleanup; budget and mode for a launch; stop
+	kind             string // approve, feedback, integrate, cleanup, launch, stop, resolve
 	text             string
 	id, root, branch string // the record, the checkout the action runs in, the branch judged
 	target, wt       string // integrate: the target and the branch's checkout, if any
 	cleanup          bool
-	req              *attempt.Request // launch: what Start is asked for, filled in by the prompt
-	attempt          string           // stop: the attempt
-	expect           string           // resolve: the question's revision after the editor
+	req              *attempt.Request    // launch: what Start is asked for, resolved on Enter
+	run              project.RunDefaults // launch: grove.yaml's defaults in this checkout
+	attempt          string              // stop: the attempt
+	expect           string              // resolve: the question's revision after the editor
 }
 
 // outcome is what an action returned, shown on the result screen until Esc.
@@ -577,16 +578,10 @@ func (m *Model) promptRow(w int) string {
 	case "integrate":
 		// The question first: a long checkout path is what truncation drops.
 		text = fmt.Sprintf("Merge branch %s into %s and mark %s done? y/n   (runs in %s)", p.branch, p.target, p.id, p.root)
-	case "budget":
-		text = fmt.Sprintf("Launch %s: budget in USD, required (Enter continues, Esc cancels): %s▏   (%s)", p.id, p.text, p.where())
-	case "mode":
-		text = fmt.Sprintf("Launch %s for %s USD: permission mode, required, e.g. acceptEdits or auto (Enter continues, Esc cancels): %s▏", p.id, p.req.BudgetUSD, p.text)
-	case "until":
-		text = fmt.Sprintf("Launch %s: plan stops it at a committed plan; Enter alone runs through to the handoff (Esc cancels): %s▏", p.id, p.text)
-	case "model":
-		text = fmt.Sprintf("Launch %s: model, e.g. opus or sonnet; Enter alone for the provider's default (Esc cancels): %s▏", p.id, p.text)
-	case "effort":
-		text = fmt.Sprintf("Launch %s: effort, e.g. medium or xhigh; Enter alone for the default, then it launches (Esc cancels): %s▏", p.id, p.text)
+	case "launch":
+		req, _ := p.resolved() // a line that does not parse yet shows what it has so far
+		// What is typed comes first: truncation drops the help at the end.
+		text = fmt.Sprintf("Launch %s %s▏ · %s, %s · Enter launches; flags such as --until plan or --effort xhigh change it; Esc cancels", p.id, p.text, launchText(req), p.where())
 	case "stop":
 		text = fmt.Sprintf("Stop attempt %s of %s? Its partial work stays. y/n", p.attempt, p.id)
 	case "resolve":

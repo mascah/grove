@@ -142,7 +142,7 @@ prerequisites, related records, and linked documents in full):
 ## Attempts
 
 Grove starts an agent only through `run` or the board's `R`, one assigned
-work ID per attempt. `run ID --budget USD --permission-mode MODE [--until
+work ID per attempt. `run ID [--budget USD] [--permission-mode MODE] [--until
 plan] [--model MODEL] [--effort LEVEL] [--branch NAME] [--worktree DIR]`
 starts one bounded implementation
 attempt of proposed or active work as a Grove-owned `claude -p "/grove-work
@@ -155,9 +155,15 @@ then starts an owner process in its own session that runs the provider there
 with `--output-format stream-json`, `--max-budget-usd`, `--permission-mode`
 and `--permission-prompts none`, its stdout and stderr written straight to
 files under the Git common directory (`.git/grove/attempts/ATTEMPT/`, shared
-by every worktree, never committed). Budget and permission mode are required:
-Grove sets no default spend or profile. Grove starts one process and never
-retries; subagents the provider starts share the budget.
+by every worktree, never committed). Budget and permission mode are required,
+from the flags or from the launching checkout's `grove.yaml` `run:` defaults
+([record model](record-model.md#configuration-and-discovery),
+[G-140](../grove/G-140-default-an-attempt-s-budget-mode.md)), which may also
+set the model and effort; a flag overrides its default for one launch, and
+`attempt.json` records the resolved values alike. Without either source `run`
+is refused as a usage error: Grove itself sets no default spend or profile.
+Grove starts one process and never retries; subagents the provider starts
+share the budget.
 
 Three options shape one launch, recorded in `attempt.json` and reported as
 the attempt's `Requested:` fact ([G-134](../grove/G-134-bound-an-attempt-at-its-plan-and.md)).
@@ -207,7 +213,8 @@ another executable, for fakes.
 ## Init
 
 `init` runs at the top of a Git checkout (or `--project /absolute/path`). It
-writes `grove.yaml` (`records: grove`, `brief: grove/brief.md`), the record
+writes `grove.yaml` (`records: grove`, `brief: grove/brief.md`, and no `run:`
+launch defaults), the record
 root, a placeholder brief that states no intent, the `grove-work` and
 `grove-shape` entrypoints for Claude Code (`.claude/skills/`) and Codex
 (`.agents/skills/`), and Claude Code's `grove-reviewer` agent definition

@@ -8,8 +8,12 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
+	"unicode"
+
+	"go.yaml.in/yaml/v3"
 )
 
 type Project struct {
@@ -18,7 +22,21 @@ type Project struct {
 	Config    []byte // exact grove.yaml bytes
 	Brief     string // configured brief, relative to Root with forward slashes; "" when none
 	Target    string // configured integration target branch; "" when none
+	Run       RunDefaults
 	Records   []*Record
+}
+
+// RunDefaults are grove.yaml's optional run: values, which grove run and the
+// board's launch use for any flag not given (G-140); "" where none is set.
+type RunDefaults struct {
+	BudgetUSD, PermissionMode, Model, Effort string
+}
+
+var budgetPattern = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?$`)
+
+// ValidBudget accepts a positive decimal dollar amount and nothing else.
+func ValidBudget(usd string) bool {
+	return budgetPattern.MatchString(usd) && strings.Trim(usd, "0.") != ""
 }
 
 // Load reads a whole project. Any diagnostics make the project unsuitable for
@@ -50,11 +68,11 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 		return p, []Diagnostic{{Path: "grove.yaml", Message: err.Error()}}
 	}
 	p.Config = source
-	config, recordDir, brief, target := parseConfig(source, func(dir string) error { return checkRecordRoot(fsys, dir) })
+	config, recordDir, brief, target, run := parseConfig(source, func(dir string) error { return checkRecordRoot(fsys, dir) })
 	if len(config.errors) != 0 {
 		return p, sortedDiagnostics(config.errors)
 	}
-	p.RecordDir, p.Brief, p.Target = recordDir, brief, target
+	p.RecordDir, p.Brief, p.Target, p.Run = recordDir, brief, target, run
 	recordRoot := path.Clean(filepath.ToSlash(recordDir))
 	var ds []Diagnostic
 	err = fs.WalkDir(fsys, recordRoot, func(relative string, entry fs.DirEntry, walkErr error) error {
@@ -106,7 +124,7 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 // clean brief path it names, with the diagnostics LoadFS would give short of
 // whether the folder exists on disk.
 func ParseConfig(source []byte) (recordDir, brief string, ds []Diagnostic) {
-	config, recordDir, brief, _ := parseConfig(source, nil)
+	config, recordDir, brief, _, _ := parseConfig(source, nil)
 	return recordDir, brief, sortedDiagnostics(config.errors)
 }
 
@@ -114,7 +132,7 @@ func ParseConfig(source []byte) (recordDir, brief string, ds []Diagnostic) {
 // inspects the record folder in the order LoadFS always has. The target is
 // only compared with branch names, never passed to Git, so only likely
 // mistakes are refused: surrounding spaces and a full ref name.
-func parseConfig(source []byte, checkRoot func(string) error) (config *metadata, recordDir, brief, target string) {
+func parseConfig(source []byte, checkRoot func(string) error) (config *metadata, recordDir, brief, target string, run RunDefaults) {
 	config = parseMapping("grove.yaml", source, 0)
 	version, ok := config.integerField("schema_version", true)
 	if ok && version != 3 {
@@ -122,10 +140,11 @@ func parseConfig(source []byte, checkRoot func(string) error) (config *metadata,
 	}
 	recordDir = config.stringField("records", true)
 	for key := range config.fields {
-		if key != "schema_version" && key != "records" && key != "brief" && key != "target" {
+		if key != "schema_version" && key != "records" && key != "brief" && key != "target" && key != "run" {
 			config.problem(key, "unknown configuration key")
 		}
 	}
+	run = config.runField()
 	brief = config.stringField("brief", false)
 	target = config.stringField("target", false)
 	if target != "" && (strings.TrimSpace(target) != target || strings.HasPrefix(target, "refs/")) {
@@ -141,7 +160,7 @@ func parseConfig(source []byte, checkRoot func(string) error) (config *metadata,
 		}
 	}
 	if len(config.errors) != 0 {
-		return config, recordDir, "", ""
+		return config, recordDir, "", "", RunDefaults{}
 	}
 	if brief != "" {
 		clean := path.Clean(filepath.ToSlash(brief))
@@ -150,7 +169,46 @@ func parseConfig(source []byte, checkRoot func(string) error) (config *metadata,
 		}
 		brief = clean
 	}
-	return config, recordDir, brief, target
+	return config, recordDir, brief, target, run
+}
+
+// runField reads the run: mapping, whose keys are named as run's flags. Each
+// value is one word; the budget is a dollar amount, which YAML may type as a
+// number. Problems name the key as run.KEY.
+func (m *metadata) runField() RunDefaults {
+	n, ok := m.fields["run"]
+	if !ok {
+		return RunDefaults{}
+	}
+	if n.Kind != yaml.MappingNode || n.Tag != "!!map" {
+		m.problem("run", "expected a mapping of budget, permission_mode, model and effort")
+		return RunDefaults{}
+	}
+	sub := &metadata{path: m.path, offset: m.offset, fields: map[string]*yaml.Node{}}
+	sub.addFields(n.Content)
+	var run RunDefaults
+	words := map[string]*string{"permission_mode": &run.PermissionMode, "model": &run.Model, "effort": &run.Effort}
+	for key, v := range sub.fields {
+		switch {
+		case key == "budget" && v.Kind == yaml.ScalarNode && (v.Tag == "!!int" || v.Tag == "!!float" || v.Tag == "!!str") && ValidBudget(v.Value):
+			run.BudgetUSD = v.Value
+		case key == "budget":
+			sub.problem(key, "expected a positive decimal dollar amount")
+		case words[key] == nil:
+			sub.problem(key, "unknown key; run: takes budget, permission_mode, model and effort")
+		default:
+			if value := sub.stringField(key, false); strings.ContainsFunc(value, unicode.IsSpace) {
+				sub.problem(key, "expected one word, without whitespace")
+			} else {
+				*words[key] = value
+			}
+		}
+	}
+	for _, d := range sub.errors {
+		d.Field = strings.TrimSuffix("run."+d.Field, ".")
+		m.errors = append(m.errors, d)
+	}
+	return run
 }
 
 func dedicated(recordDir string) bool {

@@ -87,7 +87,12 @@ func parseMapping(path string, source []byte, offset int) *metadata {
 		m.problem("", "expected a YAML mapping")
 		return m
 	}
-	nodes := doc.Content[0].Content
+	m.addFields(doc.Content[0].Content)
+	return m
+}
+
+// addFields takes a mapping node's alternating keys and values.
+func (m *metadata) addFields(nodes []*yaml.Node) {
 	for i := 0; i < len(nodes); i += 2 {
 		key, value := nodes[i], nodes[i+1]
 		if key.Kind != yaml.ScalarNode || key.Tag != "!!str" {
@@ -100,7 +105,6 @@ func parseMapping(path string, source []byte, offset int) *metadata {
 		}
 		m.fields[key.Value] = value
 	}
-	return m
 }
 
 func (m *metadata) stringField(key string, required bool) string {

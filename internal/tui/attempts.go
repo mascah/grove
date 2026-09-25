@@ -3,6 +3,7 @@ package tui
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"maps"
 	"path/filepath"
@@ -19,8 +20,8 @@ import (
 )
 
 // Managed attempts (G-046): R on proposed or active work launches one
-// bounded attempt through G-045's attempt.Start, after a typed budget and
-// permission mode; A lists attempts and Enter opens one, showing its facts,
+// bounded attempt through G-045's attempt.Start from one line, grove.yaml's
+// run: defaults with any flags typed over them (G-140); A lists attempts and Enter opens one, showing its facts,
 // an outcome derived from them, the final report and recent activity; x
 // stops one. The board only observes: each attempt's owner process and files
 // are G-045's, so closing the board changes nothing and reopening it reads
@@ -675,7 +676,7 @@ func (m *Model) launch() {
 			req.Branch, req.Worktree = strings.TrimPrefix(ref, "refs/heads/"), s.Worktree
 		}
 	}
-	m.prompt = &prompt{kind: "budget", id: g.ID, root: m.root, req: &req}
+	m.prompt = &prompt{kind: "launch", id: g.ID, root: m.root, req: &req, run: here.Source.Run}
 }
 
 // where says where a launch will run, for its prompt.
@@ -689,34 +690,53 @@ func (p *prompt) where() string {
 	return "on branch worktree-" + p.id
 }
 
-// launchKey takes Enter in the launch prompt: the budget, checked, then the
-// permission mode, neither with a default (G-045); then the optional bound,
-// model and effort (G-134), where Enter alone asks for nothing, then the
-// launch.
+// resolved is the launch the line asks for: the flags typed on it, parsed by
+// run's own table, over grove.yaml's run: defaults. Where it runs is the
+// board's choice, so --branch and --worktree are refused.
+func (p *prompt) resolved() (attempt.Request, error) {
+	req := *p.req
+	args := strings.Fields(p.text)
+	var err error
+	for i := 0; i < len(args) && err == nil; i++ {
+		var ok bool
+		if strings.HasPrefix(args[i], "--branch") || strings.HasPrefix(args[i], "--worktree") {
+			err = errors.New("the board chooses where an attempt runs; grove run takes --branch and --worktree")
+		} else if ok, err = attempt.Flag(args, &i, &req); err == nil && !ok {
+			err = errors.New("unknown option " + args[i])
+		}
+	}
+	return attempt.Defaulted(req, p.run), err
+}
+
+// launchKey takes Enter on the launch line: the resolved launch starts, or
+// the line stays open saying what is wrong.
 func (m *Model) launchKey(p *prompt) tea.Cmd {
-	text := strings.TrimSpace(p.text)
+	req, err := p.resolved()
 	switch {
-	case p.kind == "budget" && !attempt.ValidBudget(text):
-		m.notice = "the budget is a positive dollar amount, such as 2 or 0.5"
-	case p.kind == "budget":
-		p.req.BudgetUSD, p.kind, p.text = text, "mode", ""
-	case p.kind == "mode" && (text == "" || strings.ContainsAny(text, " \t")):
-		m.notice = "type one permission mode, such as acceptEdits or auto, or Esc"
-	case p.kind == "mode":
-		p.req.PermissionMode, p.kind, p.text = text, "until", ""
-	case p.kind == "until" && text != "" && text != "plan":
-		m.notice = "type plan to stop at the plan, or nothing to run through to the handoff"
-	case p.kind == "until":
-		p.req.Until, p.kind, p.text = text, "model", ""
-	case strings.ContainsAny(text, " \t"):
-		m.notice = "type one word, or nothing for the provider's default"
-	case p.kind == "model":
-		p.req.Model, p.kind, p.text = text, "effort", ""
+	case err != nil:
+		m.notice = err.Error()
+	case req.BudgetUSD == "" || req.PermissionMode == "":
+		m.notice = "type --budget USD and --permission-mode MODE, or set them under run: in grove.yaml"
 	default:
-		p.req.Effort = text
+		p.req = &req
 		return m.act(p)
 	}
 	return nil
+}
+
+// launchText names a resolved launch briefly enough for one row.
+func launchText(r attempt.Request) string {
+	budget, mode, until := "no budget", "no mode", "to the handoff"
+	if r.BudgetUSD != "" {
+		budget = "$" + r.BudgetUSD
+	}
+	if r.PermissionMode != "" {
+		mode = "mode " + r.PermissionMode
+	}
+	if r.Until != "" {
+		until = "until " + r.Until
+	}
+	return fmt.Sprintf("%s, %s, %s, model %s, effort %s", budget, mode, until, cmp.Or(r.Model, "default"), cmp.Or(r.Effort, "default"))
 }
 
 // attemptsBody is the attempts screen: one row per attempt in its group,

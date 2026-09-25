@@ -563,16 +563,16 @@ def attempt_lifecycle(root, wt, base):
     s.expect("Board: current view")
     s.send(ENTER)
     mark = s.expect("Attempts: none")
+    # Without run: in grove.yaml the one launch line needs the budget and the
+    # mode typed, in run's own flags, and refuses what run refuses.
     s.send(b"R")
-    mark = s.expect("budget in USD", mark)
-    s.send(b"1" + ENTER)
-    mark = s.expect("permission mode", mark)
-    s.send(b"auto" + ENTER)
-    mark = s.expect("plan stops it at a committed plan", mark)
+    mark = s.expect("Launch G-001 ▏ · no budget, no mode, to the handoff, model default, effort default", mark)
     s.send(ENTER)
-    mark = s.expect("model, e.g. opus", mark)
-    s.send(ENTER)
-    mark = s.expect("effort, e.g. medium", mark)
+    mark = s.expect("type --budget USD and --permission-mode MODE", mark)
+    s.send(b"--frob" + ENTER)
+    mark = s.expect("unknown option --frob", mark)
+    s.send(b"\x7f" * len("--frob") + b"--budget 1 --permission-mode auto")
+    mark = s.expect("$1, mode auto, to the handoff", mark)
     s.send(ENTER)
     s.expect("Launch of an attempt of G-001", mark)
     s.expect("started; owner pid", mark)
@@ -593,6 +593,11 @@ def attempt_lifecycle(root, wt, base):
     found = attempts_of(root)
     check(len(found) == 1 and list(found.values())[0] == (True, False) and count() == 1, f"the attempt outlives the board: {found}, {count()} starts")
     first = list(found)[0]
+
+    # From here this checkout's run: defaults launch with Enter alone.
+    with open(os.path.join(root, "grove.yaml"), "a") as f:
+        f.write("run:\n  budget: 1\n  permission_mode: auto\n")
+    git(root, "commit", "-qam", "defaults")
 
     s = Session(root, env=env)  # reconnect: the same attempt, never a second start
     s.expect("Board: current view")
@@ -628,15 +633,7 @@ def attempt_lifecycle(root, wt, base):
     # The next attempt persists a question and ends: a wait, which a launch then refuses.
     open(question, "w").close()
     s.send(b"R")
-    mark = s.expect("budget in USD", mark)
-    s.send(b"1" + ENTER)
-    mark = s.expect("permission mode", mark)
-    s.send(b"auto" + ENTER)
-    mark = s.expect("plan stops it at a committed plan", mark)
-    s.send(ENTER)
-    mark = s.expect("model, e.g. opus", mark)
-    s.send(ENTER)
-    mark = s.expect("effort, e.g. medium", mark)
+    mark = s.expect("Launch G-001 ▏ · $1, mode auto, to the handoff, model default, effort default", mark)
     s.send(ENTER)
     s.expect("started; owner pid", mark)
     mark = s.expect("The board has been re-read.", mark)  # Esc waits for the re-read; both may be one frame
@@ -676,15 +673,9 @@ def attempt_lifecycle(root, wt, base):
     mark = s.expect("R launches one", mark)
     open(finish, "w").close()
     s.send(b"R")
-    mark = s.expect("budget in USD", mark)
-    s.send(b"1" + ENTER)
-    mark = s.expect("permission mode", mark)
-    s.send(b"auto" + ENTER)
-    mark = s.expect("plan stops it at a committed plan", mark)
-    s.send(ENTER)
-    mark = s.expect("model, e.g. opus", mark)
-    s.send(ENTER)
-    mark = s.expect("effort, e.g. medium", mark)
+    mark = s.expect("$1, mode auto", mark)
+    s.send(b"--effort xhigh")  # a typed flag overrides for this launch only
+    mark = s.expect("$1, mode auto, to the handoff, model default, effort xhigh", mark)
     s.send(ENTER)
     s.expect("worktree: reusing", mark)
     s.expect("started; owner pid", mark)
@@ -698,6 +689,9 @@ def attempt_lifecycle(root, wt, base):
     check(code == 0 and out == b"", f"exit {code}, stdout {out!r}")
     found = attempts_of(root)
     check(len(found) == 3 and all(v == (False, True) for v in found.values()) and count() == 3, f"three attempts, all ended: {found}, {count()} starts")
+    launched = [json.load(open(os.path.join(root, ".git", "grove", "attempts", name, "attempt.json"))) for name in sorted(found)]
+    asked = [(l["budget_usd"], l["permission_mode"], l.get("effort", "")) for l in launched]
+    check(asked == [("1", "auto", ""), ("1", "auto", ""), ("1", "auto", "xhigh")], f"typed, defaulted, then overridden: {asked}")
 
 
 attempt_lifecycle.mutates = True  # attempts, a worktree and the fake's commit change the repository on purpose

@@ -228,8 +228,27 @@ say. Conflicting names, or a branch that is missing or unreadable, leave no
 target and give a note. A target branch with no project yet, as while Grove
 is adopted on another branch, lacks every record.
 
+Optional `run:` is a mapping of launch defaults for `grove run` and the
+board's `R` ([G-140](../grove/G-140-default-an-attempt-s-budget-mode.md)),
+each named as the flag it stands in for:
+
+```yaml
+run:
+  budget: 50
+  permission_mode: auto
+  model: opus
+  effort: high
+```
+
+Every key is optional. `budget` is a positive decimal dollar amount, as
+`--budget` takes; `permission_mode`, `model` and `effort` are each one word.
+Any other key under `run:`, a bound included, is refused: a bound is one
+launch's mandate. `init` does not write `run:`, so a project without it
+requires `--budget` and `--permission-mode` on every launch. A launch reads
+only its own checkout's `grove.yaml`, so branches need not agree.
+
 `schema_version` versions the configuration and record schema together. Require
-both keys, with `brief` and `target` optional; accept exactly 3 and refuse a missing or
+both keys, with `brief`, `target` and `run` optional; accept exactly 3 and refuse a missing or
 other version without guessing, migrating, or rewriting files. The number is
 this CLI's, unrelated to the sibling skills CLI's schema numbering or
 `grove.toml` configuration.

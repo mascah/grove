@@ -29,7 +29,8 @@ type Source struct {
 	Present        bool   // grove.yaml exists at the project prefix
 	Valid          bool   // present, validated, and stable while being read
 	ConfigRevision string
-	Note           string // live: why changes against HEAD are unknown
+	Run            project.RunDefaults // a valid source's grove.yaml run: defaults (G-140)
+	Note           string              // live: why changes against HEAD are unknown
 	Diagnostics    []string
 	project        *project.Project
 	baseline       *tree  // live: the HEAD commit's project
@@ -237,7 +238,7 @@ func (s *Source) admit(t *tree) {
 			s.fail(d.String())
 		}
 	default:
-		s.Present, s.Valid, s.project, s.ConfigRevision = true, true, t.project, project.Revision(t.project.Config)
+		s.Present, s.Valid, s.project, s.ConfigRevision, s.Run = true, true, t.project, project.Revision(t.project.Config), t.project.Run
 	}
 }
 
