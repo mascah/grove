@@ -2,9 +2,9 @@
 id: "G-170"
 type: work
 title: "Give every distributed build and attempt attributable release identity"
-status: review
+status: done
 created: "2026-09-25T21:04:55Z"
-updated: "2026-09-25T22:59:39Z"
+updated: "2026-09-25T23:00:06Z"
 relates_to: ["G-062", "G-152", "G-169"]
 candidate: "74ec79f"
 approved: "74ec79f"
