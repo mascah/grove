@@ -203,7 +203,7 @@ func TestIntegrateRefusesConflictsBeforeAnythingChanges(t *testing.T) {
 		moved := git(t, root, "rev-parse", "--short=7", "HEAD")
 		refs := git(t, root, "for-each-ref")
 		facts := refused(t, root, false, "merge of feature into main refused: it conflicts with main at "+moved+" in code.txt; nothing was merged, main is unchanged at "+moved+
-			" and G-001 stays in review. Next: in "+wt+", git merge main, resolve the conflicts and commit, then hand that commit to review as the new candidate; or there, grove feedback G-001 \"conflicts with main at "+moved+" in code.txt; merge main and resolve\" returns it to an implementer")
+			" and G-001 stays in review. Next: in "+wt+", git merge main, resolve the conflicts and commit, then hand that commit to review as the new candidate; or there, grove feedback G-001 'conflicts with main at "+moved+"; merge main and resolve' returns it to an implementer")
 		if len(facts) != 1 || !strings.HasPrefix(facts[0], "approval: ") {
 			t.Fatalf("facts %q", facts)
 		}

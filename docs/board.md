@@ -90,7 +90,8 @@ header adds a Review block (the candidate, whether it is approved, whether
 only the record changed since it or the tip is a new candidate, what
 merging it into the target would do, as `deps` says it, with the target
 commit that was read and a note when the board read the target at another
-commit, and which checkout each action runs in), the content opens
+commit, or that it could not be predicted, and which checkout each action
+runs in), the content opens
 at its `## Evidence`, and the sidebar lists the candidate's changed files
 against the target with their added and removed line counts. Under each
 file a row names the other records that describe it, as `described by G-140

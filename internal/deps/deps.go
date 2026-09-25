@@ -294,7 +294,7 @@ func (v *View) Deliver(target string, contains func(commit, ref string) (bool, e
 			it.Delivery = "awaiting review; " + where()
 			if target != "" && predict != nil {
 				if ms, err := predict([]string{c}); err != nil {
-					it.Delivery += "; the merge into " + target + " cannot be predicted: " + err.Error()
+					it.Delivery += "; the merge into " + target + " could not be predicted: " + err.Error()
 				} else {
 					it.Merge = &ms[0]
 					it.Delivery += "; " + it.Merge.Text(target)
@@ -327,7 +327,7 @@ func (v *View) mergeOrder(target string, predict func([]string) ([]versions.Merg
 	}
 	ms, err := predict(commits)
 	if err != nil {
-		v.Notes = append(v.Notes, fmt.Sprintf("Merging the candidates of %s into %s in this order cannot be predicted: %v", strings.Join(ids, ", "), target, err))
+		v.Notes = append(v.Notes, fmt.Sprintf("Merging the candidates of %s into %s in this order could not be predicted: %v", strings.Join(ids, ", "), target, err))
 		return
 	}
 	var steps []string
