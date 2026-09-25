@@ -4,9 +4,10 @@ type: work
 title: "Give adopting projects the record model the guides cite"
 status: review
 created: "2026-09-25T03:53:22Z"
-updated: "2026-09-25T04:37:28Z"
+updated: "2026-09-25T14:36:17Z"
 relates_to: ["G-135", "G-143"]
 candidate: "6def6c6"
+approved: "6def6c6"
 ---
 
 ## Outcome
@@ -131,3 +132,5 @@ Integration, as given:
 go run ./cmd/grove approve G-144 "VERDICT"   # in this worktree
 go run ./cmd/grove integrate G-144           # in the main checkout
 ```
+
+Verdict on candidate 6def6c6, 2026-09-25: approved
