@@ -2,9 +2,9 @@
 id: "G-151"
 type: work
 title: "Strip Grove-repository pointers from the shipped guides and model"
-status: review
+status: done
 created: "2026-09-25T19:06:01Z"
-updated: "2026-09-25T20:09:01Z"
+updated: "2026-09-25T20:09:10Z"
 kind: fix
 priority: 1
 size: small
