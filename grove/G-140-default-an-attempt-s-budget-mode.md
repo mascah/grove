@@ -2,9 +2,9 @@
 id: "G-140"
 type: work
 title: "Default an attempt's budget, mode, model and effort from grove.yaml and launch from one line"
-status: proposed
+status: active
 created: "2026-09-24T23:52:07Z"
-updated: "2026-09-24T23:53:31Z"
+updated: "2026-09-25T04:12:06Z"
 relates_to: ["G-045", "G-046", "G-134", "G-135"]
 ---
 
