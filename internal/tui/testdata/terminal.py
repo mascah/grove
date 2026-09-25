@@ -714,8 +714,52 @@ def attempt_lifecycle(root, wt, base):
 
 attempt_lifecycle.mutates = True  # attempts, a worktree and the fake's commit change the repository on purpose
 
+def dependencies(root, wt, base):
+    """board -> g -> focus and select -> preview -> back -> a record's detail -> back -> refresh -> resize -> exit, reading nothing into stdout (G-161)."""
+    with open(os.path.join(root, "grove", "work", "G-002-second.md"), "w") as f:
+        f.write('---\nid: G-002\ntype: work\ntitle: Second needs first\nstatus: proposed\ndepends_on: ["G-001"]\n---\nAn outcome.\n')
+    git(root, "add", "-A")
+    git(root, "commit", "-qm", "second")
+    s = Session(root)
+    mark = s.expect("Board: current view")
+    s.send(b"g")  # each frame's lines are searched from where the frame began
+    s.expect("Connected · 2 work", mark)
+    s.expect("← Needs", mark)
+    mark = s.expect("G-002 proposed · layer 1", mark)  # the board's focused card
+    s.send(b"\x1b[A")  # up
+    mark = s.expect("active · layer 0", mark)  # G-001 in the current view: feature's state; redraws start at the first changed cell
+    s.send(DOWN)
+    mark = s.expect("proposed · layer 1", mark)
+    s.send(b" p")
+    s.expect("Selection preview", mark)
+    s.expect("Order:    G-002", mark)
+    s.expect("Outside the selection, not added", mark)
+    mark = s.expect("awaiting implementation", mark)  # G-001 is proposed in this checkout, whatever feature holds
+    s.send(ESC)
+    time.sleep(0.2)  # alone: an Esc followed at once by a letter reads as Alt
+    mark = s.expect("p preview (1 selected)", mark)
+    s.send(ENTER)
+    mark = s.expect("dependencies › G-002", mark)
+    s.send(ESC)
+    time.sleep(0.2)
+    mark = s.expect("Connected · 2 work", mark)
+    s.send(b"r")
+    mark = s.expect("Reading branches and checkouts", mark)
+    s.resize(24, 80)
+    mark = s.expect("Tab tree", mark)
+    s.send(b"\t")
+    s.expect("G-002 proposed · layer 1", mark)
+    s.send(b"q")
+    code, out = s.finish()
+    s.restored()
+    check(code == 0 and out == b"", f"exit {code}, stdout {out!r}")
+
+
+dependencies.mutates = True  # the second record's commit changes the repository on purpose
+
+
 SCENARIOS = [select_and_show, leave_without_selecting, refuses_without_terminal, blocked_git, hangup, output_failure, resize, focus_rereads, writes_no_logs, review_and_integrate,
-             attempt_lifecycle]
+             attempt_lifecycle, dependencies]
 
 
 def main():

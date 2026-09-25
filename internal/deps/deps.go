@@ -57,12 +57,13 @@ type View struct {
 
 var unfinished = []string{"proposed", "active", "review"}
 
-// Overview is the unfinished work in records, ordered by group, layer and
-// ID, with the prerequisites of that work which are not unfinished.
-func Overview(records []*project.Record) *View {
+// Overview is the unfinished work in records, or every work with every,
+// ordered by group, layer and ID, with the prerequisites of those rows which
+// are not rows.
+func Overview(records []*project.Record, every bool) *View {
 	var rows []string
 	for _, r := range records {
-		if r.Type == "work" && slices.Contains(unfinished, r.Status) {
+		if r.Type == "work" && (every || slices.Contains(unfinished, r.Status)) {
 			rows = append(rows, r.ID)
 		}
 	}
@@ -92,6 +93,9 @@ func build(records []*project.Record, rows, selected []string) *View {
 	reach := map[string]map[string]bool{}
 	var visit func(from string, r *project.Record)
 	visit = func(from string, r *project.Record) {
+		if r == nil { // a board's current view can name work whose current state deletes it
+			return
+		}
 		for _, next := range r.DependsOn {
 			if !reach[from][next] {
 				reach[from][next] = true
@@ -177,7 +181,10 @@ func build(records []*project.Record, rows, selected []string) *View {
 		}
 	}
 	for _, p := range slices.Sorted(maps.Keys(neededBy)) {
-		it := item(byID[p])
+		it := Item{ID: p, Title: "(not among the records read)", Needs: []string{}, Unlocks: []string{}}
+		if byID[p] != nil {
+			it = item(byID[p])
+		}
 		it.Outside, it.NeededBy = true, neededBy[p]
 		v.Items = append(v.Items, it)
 	}
@@ -275,6 +282,8 @@ func (v *View) Deliver(target string, contains func(commit, ref string) (bool, e
 			it.Delivery = "done without a candidate: delivery unrecorded; establish it by Git ancestry or behaviour"
 		case it.Status == "abandoned":
 			it.Delivery = "abandoned: will not be delivered"
+		case it.Status == "":
+			it.Delivery = "not among the records read: nothing is known about its delivery"
 		}
 	}
 }

@@ -31,7 +31,7 @@ func backlog() []*project.Record {
 }
 
 func TestOverviewLayersGroupsAndUnlocks(t *testing.T) {
-	v := Overview(backlog())
+	v := Overview(backlog(), false)
 	type row struct {
 		id            string
 		group, layer  int
@@ -219,5 +219,30 @@ func TestCompareDescribesOtherVersions(t *testing.T) {
 	}
 	if !reflect.DeepEqual(v.Items[0].Needs, []string{"B"}) {
 		t.Errorf("edges were merged: %v", v.Items[0].Needs)
+	}
+}
+
+// A board's current view can hold work whose prerequisite's current state
+// deletes it, and every work includes done and abandoned rows.
+func TestOverviewEveryWorkAndMissingPrerequisites(t *testing.T) {
+	v := Overview(append(backlog(), work("S-20", "proposed", "S-99")), false)
+	last := v.Items[len(v.Items)-1]
+	if last.ID != "S-99" || !last.Outside || last.Status != "" || !reflect.DeepEqual(last.NeededBy, []string{"S-20"}) {
+		t.Fatalf("missing prerequisite %+v", last)
+	}
+	v.Deliver("", func(string, string) (bool, error) { return false, nil })
+	if last = v.Items[len(v.Items)-1]; !strings.Contains(last.Delivery, "not among the records read") {
+		t.Errorf("delivery %q", last.Delivery)
+	}
+	every := Overview(backlog(), true)
+	var rows []string
+	for _, it := range every.Items {
+		if it.Outside {
+			t.Errorf("every work lists %s outside", it.ID)
+		}
+		rows = append(rows, it.ID)
+	}
+	if len(rows) != 12 || every.Items[0].ID != "S-01" || every.Items[0].Layer != 0 {
+		t.Errorf("every work %v", rows)
 	}
 }

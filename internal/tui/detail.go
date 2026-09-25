@@ -66,7 +66,7 @@ func (m *Model) crumbs(w int) string {
 	parts := []string{"board"}
 	for i, id := range m.stack {
 		if m.workDepth != 0 && i == m.workDepth-1 {
-			parts = append(parts, "attempts")
+			parts = append(parts, map[bool]string{true: "dependencies", false: "attempts"}[m.workBack == depsScreen])
 		}
 		parts = append(parts, id)
 	}

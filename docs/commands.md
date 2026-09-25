@@ -178,7 +178,7 @@ selected, order, items[]: {id, title, status, revision, candidate, outside,
 layer, group, needs, unlocks, needed_by, delivery}, questions[]: {id, title,
 blocks}, notes}`, with `selected` null for the overview. The command writes
 nothing. [G-161](../grove/G-161-dependency-view.md) owns it; the board's
-dependency view is still to come.
+`g` shows the same interpretation ([Dependencies](board.md#dependencies)).
 
 ## Attempts
 

@@ -24,6 +24,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/mascah/grove/internal/attempt"
+	"github.com/mascah/grove/internal/deps"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/versions"
 )
@@ -65,6 +66,9 @@ type Backend struct {
 	// (G-125); nil leaves e out.
 	Edit   func(path string, done func(error) tea.Msg) tea.Cmd
 	Answer func(ctx context.Context, root, id, expect string) ([]string, error)
+	// Ancestry answers whether a commit is in a ref in the checkout at root,
+	// for the dependency preview's delivery (G-161); nil leaves it unread.
+	Ancestry func(ctx context.Context, root string) func(commit, ref string) (bool, error)
 }
 
 type screen int
@@ -79,6 +83,7 @@ const (
 	resultScreen
 	attemptsScreen
 	attemptScreen
+	depsScreen
 )
 
 var statuses = [5]string{"proposed", "active", "review", "done", "abandoned"}
@@ -261,6 +266,18 @@ type Model struct {
 	workBack        screen           // where Esc leaves a record o opened from an attempt
 	workDepth       int              // that record's place on the stack, 0 when none
 
+	// The dependency view (G-161): its focus and explicit selection, kept as
+	// IDs, and the preview of that selection, recomputed on every re-read.
+	depsAt     string
+	depsPicked []string // in the order marked
+	depsAll    bool     // every work, not only unfinished
+	depsTree   bool     // below wideWidth, the tree instead of the list
+	previewing bool
+	preview    *deps.View
+	previewErr string            // why no preview could be computed
+	previewOn  string            // the checkout it is bound to
+	previewRev map[string]string // the revisions the shown preview read
+
 	// Workspace is the explicitly selected, freshly resolved result, if any.
 	Workspace *versions.Workspace
 }
@@ -413,6 +430,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if cmd == nil {
 		cmd = m.wantDiff()
 	}
+	if cmd == nil {
+		cmd = m.wantPreview()
+	}
 	if read := m.wantAttempts(); read != nil {
 		cmd = tea.Batch(cmd, read)
 	}
@@ -431,6 +451,7 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		}
 		m.pending, m.cancel, m.hist, m.md, m.asOf = "", nil, map[string]lineage{}, nil, ""
 		m.changes, m.diffs, m.diff = map[string]changesRead{}, map[string]diffRead{}, ""
+		m.preview, m.previewErr = nil, "" // computed again from what was read
 		if msg.err != nil {
 			m.res, m.failure = nil, msg.err.Error()
 			m.screen, m.cardID = boardScreen, ""
@@ -476,6 +497,8 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		m.pending, m.reading, m.cancel = "", "", nil
 		m.diffs[msg.key] = diffRead{msg.text, msg.err}
 		m.clampScroll()
+	case previewMsg:
+		m.gotPreview(msg)
 	case attemptsMsg:
 		return m.gotAttempts(msg)
 	case editedMsg:
@@ -592,6 +615,8 @@ func (m *Model) key(k string) tea.Cmd {
 			m.screen, m.scroll = m.listBack, 0
 		case attemptScreen:
 			m.screen, m.scroll = m.runBack, 0
+		case depsScreen:
+			m.leaveDeps()
 		default:
 			m.screen, m.scroll = m.back, 0
 		}
@@ -612,6 +637,8 @@ func (m *Model) key(k string) tea.Cmd {
 		return m.attemptsKey(k)
 	case attemptScreen:
 		return m.attemptKey(k)
+	case depsScreen:
+		return m.depsKey(k)
 	}
 	return nil
 }
@@ -671,6 +698,8 @@ func (m *Model) boardKey(k string) tea.Cmd {
 		}
 	case "A":
 		m.openAttempts("")
+	case "g":
+		m.openDeps()
 	case "enter":
 		// Opening a card shows its detail. It never resolves a workspace,
 		// even when only one version exists.
