@@ -2,9 +2,9 @@
 id: "G-177"
 type: work
 title: "Predict whether a candidate in review merges cleanly into the target"
-status: proposed
+status: active
 created: "2026-09-25T21:39:27Z"
-updated: "2026-09-25T21:41:22Z"
+updated: "2026-09-25T23:04:15Z"
 kind: feature
 relates_to: ["G-161", "G-162", "G-163", "G-044", "G-060", "G-057", "G-030", "G-178", "G-180"]
 ---
