@@ -158,8 +158,14 @@ func (m *Model) searchKey(msg tea.KeyPressMsg) {
 			m.openDetail(hits[m.hit].id)
 			m.query = ""
 		}
-	case "up", "down", "pgup", "pgdown":
+	case "up", "down":
 		m.hit = m.moved(m.hit, k)
+	case "pgup", "pgdown":
+		page := max(m.height-6, 1)
+		if strings.TrimSpace(m.query) != "" {
+			page = max(page/2, 1) // each hit is two rows
+		}
+		m.hit += map[string]int{"pgup": -page, "pgdown": page}[k]
 	case "backspace":
 		if n := len(m.query); n != 0 {
 			_, size := lastRune(m.query)

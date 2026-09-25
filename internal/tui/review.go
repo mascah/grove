@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	tea "charm.land/bubbletea/v2"
@@ -11,6 +12,7 @@ import (
 	"github.com/charmbracelet/x/ansi"
 
 	"github.com/mascah/grove/internal/attempt"
+	"github.com/mascah/grove/internal/handoff"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/versions"
 )
@@ -359,16 +361,12 @@ func (m *Model) changesSection(v *versions.Version, w int, heading func(string),
 // describedBy names the records, other than the open one, that link a
 // changed file or name it in a code span (G-153), each once at its first
 // tier, in the inspection's order. It reads the loaded records only: no Git
-// process, nothing stored. A file is a path from the repository's top, or
-// a rename's two; a link resolves within the project, under the prefix.
+// process, nothing stored. A file is a path from the repository's top, or a
+// rename's two; the prefix, which ends in a slash, makes it a project path,
+// and a file outside the project can only be named by a code span.
+// ponytail: matched on every frame, about 20 ms for 60 files over 150
+// records; cache by changes key if reviews grow larger.
 func (m *Model) describedBy(file string) string {
-	var paths []string
-	for _, p := range strings.Split(file, " → ") {
-		if rest, ok := strings.CutPrefix(p, m.res.Prefix+"/"); ok && m.res.Prefix != "" {
-			p = rest
-		}
-		paths = append(paths, p)
-	}
 	var found []string
 	for i := range m.res.Groups {
 		g := &m.res.Groups[i]
@@ -378,8 +376,15 @@ func (m *Model) describedBy(file string) string {
 		best := -1
 		vs, _ := m.searched(g)
 		for _, v := range vs {
-			for _, p := range paths {
-				if tier, _ := pathTier(p, m.mentionsOf(v)); tier >= 0 && (best < 0 || tier < best) {
+			ms := m.mentionsOf(v)
+			for _, p := range strings.Split(file, " → ") {
+				tier := -1
+				if rest, in := strings.CutPrefix(p, m.res.Prefix); in {
+					tier, _ = pathTier(rest, ms)
+				} else if slices.ContainsFunc(ms, func(mn handoff.Mention) bool { return mn.Span != "" && names(mn.Span, p) }) {
+					tier = 2
+				}
+				if tier >= 0 && (best < 0 || tier < best) {
 					best = tier
 				}
 			}

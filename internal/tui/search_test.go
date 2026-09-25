@@ -167,4 +167,12 @@ func TestSearchMatchesBodiesByTier(t *testing.T) {
 	if m.openID() != "W-002" {
 		t.Fatalf("Enter opens the hit's record: %s", m.openID())
 	}
+	// A checkout's own board searches its own copy, once.
+	press(m, "esc")
+	chooseCheckout(m, 1)
+	press(m, "/")
+	typeText(m, "needle")
+	if s = plain(m); !strings.Contains(s, "text: Another needle.") || strings.Contains(s, "One needle") || strings.Contains(s, " · on ") {
+		t.Fatalf("checkout feat's board searches its copy alone:\n%s", s)
+	}
 }
