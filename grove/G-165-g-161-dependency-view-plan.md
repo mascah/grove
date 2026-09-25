@@ -88,10 +88,12 @@ and the board both render.
 - **Binding.** `Compare` takes the source a View was built from, never
   assuming the root checkout. The command's View is its checkout's. The
   board's overview may be built from the current view, as its columns are,
-  with divergent records flagged, but a preview binds to one checkout (the
-  one `b` chose, else this one) before it orders anything, so edges from
-  different sources are never combined (G-161's Constraints). Review finding
-  2 of the first gate asked for this.
+  with divergent records flagged; such a View has no single source, so step
+  4 gives `Compare` each item's own source (the one holding the version
+  shown) instead of one checkout. A preview binds to one checkout (the one
+  `b` chose, else this one) before it orders anything, so edges from
+  different sources are never combined (G-161's Constraints). The first
+  review gate asked for this.
 - **Freshness.** Every involved record carries its revision (G-062). The
   board's preview is recomputed on every re-read and says when a selected
   record changed; any handoff it offers rereads before acting.
@@ -101,13 +103,14 @@ and the board both render.
 `grove [--project DIR] deps [WORK_ID...] [--json]`, read-only.
 
 - Without IDs: the overview of unfinished work in the checkout, one row each,
-  `GROUP LAYER ID STATUS NEEDS UNLOCKS TITLE`, ordered by group, layer and
-  ID, then the notes (open blocking questions, abandoned or undelivered
-  prerequisites, current-view notes).
+  `GROUP LAYER ID STATUS NEEDS UNLOCKS DELIVERY TITLE`, ordered by group,
+  layer and ID; then the prerequisites that are not unfinished
+  (`ID STATUS NEEDED BY DELIVERY TITLE`), open blocking questions and notes.
 - With IDs: the selection preview: `Selected:` as given, `Order:`, a table
-  `ID STATUS ROLE DELIVERY` for the selection and every outside prerequisite,
-  then questions and notes, ending with the reminder that the preview adds no
-  work and authorizes nothing.
+  `ORDER ID STATUS NEEDS DELIVERY TITLE`, the prerequisites outside the
+  selection in the same form as above, then questions and notes, ending with
+  the reminder that the preview adds no work and authorizes nothing.
+  `docs/commands.md` owns the shipped contract.
 - The checkout (root, ref, HEAD) and target head the output. `--json` prints
   the same model with revisions. An incomplete inspection prints everything,
   says so on stderr and exits 1, as `versions` does; an unknown or non-work

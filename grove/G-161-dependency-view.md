@@ -124,8 +124,49 @@ not a technical prerequisite between the two proposals.
 
 ## Next
 
-The owner can assign this independently through `$grove-work G-161` after the
-proposal is committed. Preparation should produce concrete terminal layouts
-and a small shared relationship/preview design, with owner judgment of
-readability. G-163 does not block this read-only outcome. No implementation
-has been assigned by this shaping session.
+**Checkpoint, 2026-09-25, headless `/grove-work G-161`.** Waiting on open
+question [G-166](G-166-g-161-dependency-layout.md) (board layout and preview
+handoff), which only the owner can answer. Status stays `active`.
+
+- Branch `worktree-G-161` in `.claude/worktrees/worktree-G-161`, based on
+  `main` `05892a2`. The implementation was examined at `c92d16f`. Started from
+  G-161 `sha256:705f8dda…`. The plan is
+  [G-165](G-165-g-161-dependency-view-plan.md).
+- Done, plan steps 1–3:
+  - `internal/deps` is the shared interpretation. It holds `Order`, moved
+    unchanged from `context`, and `Overview`, `Preview`, `Deliver`,
+    `Ancestry` and `Compare`.
+  - `grove deps [WORK_ID...] [--json]` shows the overview and the selection
+    preview.
+  - `docs/commands.md#dependencies` and a README row document the command.
+  - Step 5 of `docs/work-shaping.md` now says real prerequisites and their
+    reasons go in the dependent record, and preferred order is never an edge.
+- Acceptance so far:
+  - Item 2 is met for the CLI.
+  - Item 3 is met for the CLI, except the stale board handoff, which waits
+    on G-166 part 2.
+  - Item 4 is met.
+  - Item 6 is met for the CLI half: `context` and `deps` share `Order`, and
+    `TestDepsCLI` checks that they agree.
+  - Item 7 is met for the shaping half.
+  - Items 1 and 5 and the board half of 6 need the board.
+- Verification at `c92d16f` (only records changed afterwards):
+  - `gofmt -l .` printed nothing.
+  - `go vet ./...` was clean.
+  - `grove check` printed "OK: 158 records".
+  - `go test -count=1 -timeout 120s ./...` passed every package.
+- Review [G-168](G-168-g-161-deps-review.md) had two rounds:
+  - Round 1 found four issues. They were fixed in `c92d16f` with
+    regressions.
+  - One finding was rejected with a reason.
+  - Round 2 found nothing consequential.
+- Pending, plan steps 4–5, once G-166 is resolved:
+  - Build the board view in the chosen layout.
+  - `Compare` needs a source per item for a current-view overview (see the
+    plan's Binding bullet).
+  - Terminal checks.
+  - `docs/board.md`.
+  - The owner judges it at 80 and 120 columns.
+  - A final review of the combined candidate, then handoff into review.
+- No command is running. Resume by answering G-166, setting it `resolved`,
+  and relaunching `/grove-work G-161` (or `grove run G-161`) on this branch.
