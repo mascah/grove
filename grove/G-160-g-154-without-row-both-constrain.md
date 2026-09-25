@@ -76,11 +76,13 @@ settle the syntax, so this is the topic leaving a user-facing choice open,
 not the constraint being missed; it is noise in this case's check, not a
 retrieval result.
 
-**3. At this size every run reads every record, so the listing is not
-what finds the constraint.** Reading the transcripts, not the facts alone:
-all ten runs read the holding record, and all five listed-constraint runs
-read both distractors. Runs 2 and 4 of listed-constraint and 1, 4, 5 of
-code-constraint used `grove show` on each record; the others `cat` the
+**3. At this size every run reads nearly every record, so the listing is
+not what finds the constraint.** Reading the transcripts, not the facts
+alone: all ten runs read the holding record, all five listed-constraint
+runs read both distractors, and 8 of 10 read the unrelated G-001 (not
+listed-constraint runs 3 and 4). Runs 2 and 4 of listed-constraint and 1,
+4, 5 of code-constraint used `grove show` on the records they read; the
+others `cat` the
 record files by glob (`cat grove/G-00*.md`, a `for` over `grove/G-*.md`,
 or `cat grove/G-005*.md grove/G-004*.md …`). listed-constraint run 3 ran
 `grove context G-005` after it had already read G-002 to G-005. With five or two
@@ -146,7 +148,7 @@ action or, in code-constraint runs 4 and 5, the question it waits on.
 **Lever.** No change is justified by this row. Both constraints were found
 and applied in every run on Claude Opus 5.5 at guides digest
 `41324c3655a1`, at the G-108 pair's cost, without search, because in
-fixtures of five and two records the agent reads them all. G-153 then
+fixtures of five and two records the agent reads nearly all of them. G-153 then
 shipped no agent-facing search, so a `with` row at main would have
 measured only the guide edits landed since this digest, and even with a
 search it could not show search finding what the listing missed, since
