@@ -99,9 +99,9 @@ own policy.
 - A document the binary ships (`grove guide work|shape|model`, the
   reviewer definition) links only within itself or to `https://`, names
   another shipped document by its command, never by path, never links a
-  record, and names none beyond its own example IDs, nor Grove's repository
-  or the predecessor, which an adopting project lacks and where a `G-` ID
-  names its own record (G-146, G-151).
+  record or names one beyond its own example IDs, and never names Grove's
+  repository or the predecessor: an adopting project lacks them, and a `G-`
+  ID there names its own record (G-146, G-151).
 - Keep the board's text escaping and exact source targeting, with freshness
   checks before acting on a selected version (G-017, G-011).
 - Escape a rendered body before glamour and filter it to glamour's own

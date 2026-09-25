@@ -279,8 +279,10 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 				t.Errorf("%s names %s, which is a live ID in an adopting project", name, id)
 			}
 		}
+		// Hard-wrapped prose splits a phrase across lines as often as not.
+		prose := strings.ReplaceAll(strings.Join(strings.Fields(strings.ToLower(text)), " "), "’", "'")
 		for _, phrase := range []string{"grove's own repository", "grove's repository", "grove's own records", "command reference", "predecessor"} {
-			if strings.Contains(strings.ToLower(text), phrase) {
+			if strings.Contains(prose, phrase) {
 				t.Errorf("%s mentions %q, which an adopting project lacks", name, phrase)
 			}
 		}
