@@ -4,7 +4,7 @@
     python3 evals/run.py run --runs N --budget USD --model MODEL \\
         --permission-mode MODE --config-dir DIR [--case NAME]... [--out DIR]
     python3 evals/run.py run --harness codex --runs N --model MODEL --effort EFFORT \\
-        --permission-mode MODE --config-dir DIR --max-seconds S [--case NAME]... [--out DIR]
+        --permission-mode MODE --config-dir DIR --max-seconds S --max-plan-percent P [--case NAME]... [--out DIR]
     python3 evals/run.py selftest
 
 `run` spends money: every spend parameter is required and has no default.
@@ -224,6 +224,19 @@ def events(path):
             continue
 
 
+def plan_readings(path):
+    """The account's five-hour plan use, (used_percent, resets_at), from each token_count event of a Codex rollout."""
+    limits = ((ev.get("payload") or {}).get("rate_limits") or {} for ev in events(path) if (ev.get("payload") or {}).get("type") == "token_count")
+    return [(p["used_percent"], p.get("resets_at") or 0) for p in (l.get("primary") or {} for l in limits) if p.get("used_percent") is not None]
+
+
+def plan_used(home):
+    """The newest five-hour plan reading any session under this CODEX_HOME left: 0 once its window has reset, None with no reading."""
+    rollouts = glob.glob(os.path.join(home, "sessions", "**", "rollout-*.jsonl"), recursive=True)
+    readings = plan_readings(max(rollouts, key=os.path.getmtime)) if rollouts else []
+    return None if not readings else readings[-1][0] if readings[-1][1] > time.time() else 0
+
+
 def unwrap(cmd):
     """The script of Codex's SHELL -lc 'SCRIPT' wrapping, or the command as given."""
     try:
@@ -381,6 +394,7 @@ def codex_facts(transcript, rdir, args):
         shutil.copy(rollout[-1], os.path.join(rdir, "rollout.jsonl"))
         context = next((ev.get("payload") or {} for ev in events(rollout[-1]) if ev.get("type") == "turn_context"), {})
         reason = None if context else "the rollout has no turn_context"
+    readings = plan_readings(rollout[-1]) if rollout else []
     last = os.path.join(rdir, "last-message.txt")
     messages = [i.get("text", "") for i in items if i.get("type") == "agent_message"]
     return {
@@ -388,6 +402,7 @@ def codex_facts(transcript, rdir, args):
         "permission_mode_reported": {k: context.get(k) for k in ("approval_policy", "sandbox_policy")} if context else None,
         "reported_reason": reason,
         "cost_usd": None, "cost_reason": "Codex reports tokens, not dollars",
+        "plan_percent": {"first": readings[0][0], "last": readings[-1][0]} if readings else None,
         "tokens": {k: sum(u.get(k) or 0 for u in usage) for k in dict.fromkeys(k for u in usage for k in u if isinstance(u[k], int))} if usage else None,
         "turns": len(usage), "tool_calls": sum(i.get("type") in ("command_execution", "file_change", "mcp_tool_call", "web_search") for i in items),
         "duration_ms": None, "duration_reason": "Codex reports no duration; wall_seconds is the runner's",
@@ -423,6 +438,7 @@ def report(path, meta, runs, unrun):
             f = f if f.get("unneeded") is not None else dict.fromkeys(("guide", "brief", "list", "context_or_show"), f.get("reason", "-")) | {"unneeded": []}
             cost = "not reported" if r.get("cost_reason") else r.get("cost_usd")
             tokens = ", ".join(f"{k.removesuffix('_tokens')} {v}" for k, v in r["tokens"].items()) if r.get("tokens") else "-"
+            tokens += f"; plan {r['plan_used']} points" if r.get("plan_used") is not None else ""
             model = "/".join(str(v) for v in (r.get("model_reported"), r.get("effort_reported")) if v) or r.get("reported_reason") or "-"
             turns = f"{r.get('turns')} ({r['tool_calls']} tool calls)" if "tool_calls" in r else r.get("turns")
             seconds = r["duration_ms"] / 1000 if r.get("duration_ms") else r.get("wall_seconds") or 0
@@ -446,6 +462,8 @@ def run(args):
             raise SystemExit("--harness codex needs --max-seconds: Codex bounds no dollars, so each run is killed at that cap")
         if args.max_seconds < 1:
             raise SystemExit("--max-seconds must be at least 1")
+        if args.max_plan_percent is None or not 0 < args.max_plan_percent <= 100:  # G-141: a ChatGPT login spends the plan's five-hour window
+            raise SystemExit("--harness codex needs --max-plan-percent between 1 and 100: no run starts once the five-hour plan use, plus the largest run's, would reach it")
         if args.budget is not None:
             raise SystemExit("--budget is Claude's: Codex has no flag that would enforce it; --max-seconds is the cap")
         if not args.effort:
@@ -453,8 +471,8 @@ def run(args):
         if args.permission_mode not in CODEX_MODES:
             raise SystemExit(f"--permission-mode for Codex is one of {', '.join(CODEX_MODES)}, not {args.permission_mode!r}")
     else:
-        if args.effort is not None or args.max_seconds is not None:
-            raise SystemExit("--effort and --max-seconds are Codex's; Claude's cap is --budget")
+        if args.effort is not None or args.max_seconds is not None or args.max_plan_percent is not None:
+            raise SystemExit("--effort, --max-seconds and --max-plan-percent are Codex's; Claude's cap is --budget")
         if args.budget is None:
             raise SystemExit("--harness claude needs --budget")
         if not re.fullmatch(r"[0-9]+(\.[0-9]+)?", args.budget) or float(args.budget) <= 0:
@@ -505,7 +523,7 @@ def run_on(args, found, recorded=None):
     meta = {"started": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "output": work, "harness": args.harness,
             "runs per case": args.runs}
     if codex:
-        meta.update({"cap per run (seconds)": args.max_seconds, "cap (seconds)": args.max_seconds * args.runs * len(cases),
+        meta.update({"cap per run (seconds)": args.max_seconds, "cap (seconds)": args.max_seconds * args.runs * len(cases), "cap (five-hour plan use, percent)": args.max_plan_percent,
                      "cost": "not reported: Codex reports tokens, not dollars, and has no budget flag", "model": args.model, "reasoning effort": args.effort})
     else:
         meta.update({"budget per run (USD)": args.budget, "cap (USD)": f"{float(args.budget) * args.runs * len(cases):.2f}", "model": args.model})
@@ -537,22 +555,32 @@ def run_on(args, found, recorded=None):
                      "login shell": f"{shell} -lc resolves grove to the built binary, with the runner's PATH", "config dir system skills": system_skills(args.config_dir)})
     meta.update({args.harness: version, GROVE: grove_version, "base commit": git(ROOT, "rev-parse", "HEAD") + (" with uncommitted changes" if git(ROOT, "status", "--porcelain") else ""),
                  "fixture commit": git(template, "rev-parse", "HEAD")})
-    print(f"output {work}; " + (f"at most {meta['cap (seconds)']} seconds of Codex time, and Codex bounds no dollars" if codex
+    print(f"output {work}; " + (f"at most {meta['cap (seconds)']} seconds of Codex time, stopping before the five-hour plan use would reach {args.max_plan_percent}%" if codex
                                  else f"spending at most ${meta['cap (USD)']}"), file=sys.stderr)
     runs = []
-    for name in cases:
-        for n in range(1, args.runs + 1):
-            print(f"{name} {n}/{args.runs}", file=sys.stderr)
-            try:
-                runs.append(one(args, grove, template, work, name, n, meta))
-            except Exception as err:  # a runner failure on one run is reported, and the rest still run
-                r = {"case": name, "run": n, "error": str(err), "checks": {"runner": f"fail: {err}"}}
-                os.makedirs(os.path.join(work, f"{name}-{n}"), exist_ok=True)
-                json.dump(r, open(os.path.join(work, f"{name}-{n}", "run.json"), "w"), indent=1)
-                runs.append(r)
-            if codex:  # Codex installs its bundled skills on the first run
-                meta["config dir system skills"] = system_skills(args.config_dir)
+    for name, n in ((name, n) for name in cases for n in range(1, args.runs + 1)):
+        used = plan_used(args.config_dir) if codex else 0
+        step = max((r["plan_used"] for r in runs if r.get("plan_used") is not None), default=0)
+        if codex and (used is None and runs or used is not None and used + step >= args.max_plan_percent):
+            meta["stopped"] = (f"before {name} {n}: " + ("the last run reported no plan use, so the next could not be bounded" if used is None
+                               else f"five-hour plan use {used}% plus the largest run's {step} points would reach --max-plan-percent {args.max_plan_percent}"))
+            print(meta["stopped"], file=sys.stderr)
             report(os.path.join(work, "report.md"), meta, runs, [c for c in CASES if c not in cases])
+            break
+        print(f"{name} {n}/{args.runs}", file=sys.stderr)
+        try:
+            runs.append(one(args, grove, template, work, name, n, meta))
+        except Exception as err:  # a runner failure on one run is reported, and the rest still run
+            r = {"case": name, "run": n, "error": str(err), "checks": {"runner": f"fail: {err}"}}
+            os.makedirs(os.path.join(work, f"{name}-{n}"), exist_ok=True)
+            json.dump(r, open(os.path.join(work, f"{name}-{n}", "run.json"), "w"), indent=1)
+            runs.append(r)
+        if codex:  # Codex installs its bundled skills on the first run
+            meta["config dir system skills"] = system_skills(args.config_dir)
+            if runs[-1].get("plan_percent"):  # from the reading before it, which the run's own first reading already includes some of
+                runs[-1]["plan_used"] = runs[-1]["plan_percent"]["last"] - (runs[-1]["plan_percent"]["first"] if used is None else used)
+                json.dump(runs[-1], open(os.path.join(work, f"{name}-{n}", "run.json"), "w"), indent=1)
+        report(os.path.join(work, "report.md"), meta, runs, [c for c in CASES if c not in cases])
     print(os.path.join(work, "report.md"))
     return runs
 
@@ -576,7 +604,9 @@ def fake(harness, argv):
         rollout = os.path.join(os.environ["CODEX_HOME"], "sessions", "2026", "09", "24", f"rollout-2026-09-24T00-00-00-{thread}.jsonl")
         os.makedirs(os.path.dirname(rollout), exist_ok=True)
         approve = "--approve-for-me" in argv
-        open(rollout, "w").write(json.dumps({"type": "session_meta", "payload": {"id": thread}}) + "\n" + json.dumps({"type": "turn_context", "payload": {
+        spent = 5 * len(glob.glob(os.path.join(os.environ["CODEX_HOME"], "sessions", "**", "rollout-*.jsonl"), recursive=True))
+        plan = lambda used: json.dumps({"type": "event_msg", "payload": {"type": "token_count", "rate_limits": {"primary": {"used_percent": used, "resets_at": time.time() + 3600}}}}) + "\n"
+        open(rollout, "w").write(plan(spent) + plan(spent + 5) + json.dumps({"type": "session_meta", "payload": {"id": thread}}) + "\n" + json.dumps({"type": "turn_context", "payload": {
             "model": argv[argv.index("-m") + 1], "effort": argv[argv.index("-c") + 1].partition("=")[2],
             "approval_policy": "on-request" if approve else "never", "sandbox_policy": {"type": "workspace-write" if approve else argv[argv.index("-s") + 1]}}}) + "\n")
         emit({"type": "thread.started", "thread_id": thread})
@@ -659,6 +689,7 @@ def selftest():
             os.environ["GROVE_EVAL_FAKE"] = mode
             args = argparse.Namespace(harness=harness, runs=1, budget=None if harness == "codex" else "0.01", model="fake-model", effort="high" if harness == "codex" else None,
                                       permission_mode=("approve-for-me" if mode in ("good", "bad") else "workspace-write") if harness == "codex" else "fake", max_seconds=60 if harness == "codex" else None,
+                                      max_plan_percent=100 if harness == "codex" else None,
                                       config_dir=home if harness == "codex" else config, case=[], out=os.path.join(tmp, "out-" + harness, mode), claude=shims["claude"], codex=shims["codex"])
             for r in run(args):
                 failed = {k for k, v in r["checks"].items() if v != "pass"}
@@ -668,7 +699,7 @@ def selftest():
                 if harness == "codex":
                     assert r["model_reported"] == "fake-model" and r["effort_reported"] == "high" and r["permission_mode_reported"]["approval_policy"] == ("on-request" if mode in ("good", "bad") else "never"), r
                     assert r["cost_usd"] is None and r["cost_reason"] and r["tokens"]["output_tokens"] == 10 and not r["is_error"] and r["turns"] == 1, r
-                    assert os.path.exists(os.path.join(tmp, "out-" + harness, mode, f"{r['case']}-1", "rollout.jsonl"))
+                    assert os.path.exists(os.path.join(tmp, "out-" + harness, mode, f"{r['case']}-1", "rollout.jsonl")) and r["plan_used"] == 5, r
                 f = r["retrieval"]
                 if mode == "worse":
                     assert not (f["guide"] or f["brief"] or f["list"] or f["context_or_show"]), f
@@ -678,17 +709,25 @@ def selftest():
                 assert "tasks.py" in f["files_read"] and "grove/brief.md" in f["files_read"] and len(f["unneeded"]) == 1 and f["unneeded"][0].endswith(outside), f
     assert open(os.path.join(tmp, "out-claude", "good", "report.md")).read().count("- config dir synced skills: pdf") == 1
     text = open(os.path.join(tmp, "out-codex", "good", "report.md")).read()
-    assert "- config dir system skills: openai-docs" in text and "| fake-model/high | not reported | input 100, cached_input 60, output 10 | 1 (" in text, text
+    assert "- config dir system skills: openai-docs" in text and "| fake-model/high | not reported | input 100, cached_input 60, output 10; plan 5 points | 1 (" in text, text
     assert "- login: Logged in" in text and "resolves grove to the built binary" in text, text
     open(os.path.join(tmp, "empty.jsonl"), "w").close()
     assert retrieval(os.path.join(tmp, "empty.jsonl"), "codex", tmp, set())["reason"].startswith("unavailable"), "a Codex trace without commands"
+    guarded = os.path.join(tmp, "guarded")  # a window 5 points from the cap: the first run spends 5, and the second is refused
+    shutil.copytree(home, guarded, ignore=shutil.ignore_patterns("sessions"))
+    os.environ["GROVE_EVAL_FAKE"] = "good"
+    runs = run(argparse.Namespace(**(vars(args) | {"config_dir": guarded, "runs": 3, "case": ["companion"], "max_plan_percent": 10, "out": os.path.join(tmp, "out-guarded")})))
+    assert len(runs) == 1 and runs[0]["plan_used"] == 5, runs
+    assert "- stopped: before companion 2: five-hour plan use 5% plus the largest run's 5 points would reach --max-plan-percent 10" in open(os.path.join(tmp, "out-guarded", "report.md")).read()
     for harness, change, reason in (("codex", {"max_seconds": None}, "needs --max-seconds"), ("codex", {"budget": "1"}, "--budget is Claude's"),
+                                    ("codex", {"max_plan_percent": None}, "needs --max-plan-percent"), ("codex", {"max_plan_percent": 101}, "needs --max-plan-percent"),
                                     ("codex", {"effort": None}, "needs --effort"), ("codex", {"permission_mode": "auto"}, "one of"),
-                                    ("claude", {"effort": "high"}, "are Codex's"), ("claude", {"max_seconds": 60}, "are Codex's"), ("claude", {"budget": None}, "needs --budget")):
-        valid = dict(harness=harness, runs=1, budget=None, model="fake", effort="high", permission_mode="workspace-write", max_seconds=60,
+                                    ("claude", {"effort": "high"}, "are Codex's"), ("claude", {"max_seconds": 60}, "are Codex's"), ("claude", {"max_plan_percent": 50}, "are Codex's"),
+                                    ("claude", {"budget": None}, "needs --budget")):
+        valid = dict(harness=harness, runs=1, budget=None, model="fake", effort="high", permission_mode="workspace-write", max_seconds=60, max_plan_percent=100,
                      config_dir=home, case=[], out=os.path.join(tmp, "refused"), claude=shims["claude"], codex=shims["codex"])
         if harness == "claude":
-            valid.update(budget="0.01", effort=None, max_seconds=None, permission_mode="fake", config_dir=config)
+            valid.update(budget="0.01", effort=None, max_seconds=None, max_plan_percent=None, permission_mode="fake", config_dir=config)
         try:
             run(argparse.Namespace(**(valid | change)))
             raise AssertionError(f"{harness} {change} accepted")
@@ -714,7 +753,7 @@ def selftest():
             if name.startswith("skills/"):
                 os.rmdir(os.path.dirname(path))
     args = argparse.Namespace(runs=1, budget="0.01", model="fake", permission_mode="fake", config_dir=config, case=[], claude=shims["claude"], codex=shims["codex"],
-                              harness="claude", effort=None, max_seconds=None)
+                              harness="claude", effort=None, max_seconds=None, max_plan_percent=None)
     for name, content, reason in (("settings.json", '{"autoMemoryEnabled": false, "hooks": {}}', "key hooks"),
                                   ("settings.json", '{"autoMemoryEnabled": true}', "autoMemoryEnabled"), ("settings.json", '{"tui": "fullscreen"}', "autoMemoryEnabled"),
                                   ("settings.json", "[]", "key not an object"), ("skills/mine/SKILL.md", "", "skills/mine"),
@@ -749,6 +788,7 @@ def main():
     p.add_argument("--effort", help="Codex only, required: passed as -c model_reasoning_effort=EFFORT")
     p.add_argument("--permission-mode", required=True, help=f"Claude's --permission-mode; for Codex one of {', '.join(CODEX_MODES)}")
     p.add_argument("--max-seconds", type=int, help="Codex only, required: each run is killed at this cap")
+    p.add_argument("--max-plan-percent", type=int, help="Codex only, required: no run starts once the five-hour plan use, plus the largest run's, would reach it")
     p.add_argument("--config-dir", required=True, help="CLAUDE_CONFIG_DIR or CODEX_HOME for every run; must hold no customization")
     p.add_argument("--case", action="append", default=[], help=f"one of {', '.join(CASES)}; default all")
     p.add_argument("--out", help="output directory; default a new temporary one")

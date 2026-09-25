@@ -163,6 +163,14 @@ reorders it, and the runner refuses to start unless the login shell finds
 the built `grove` with that `PATH`, so the Codex sessions' tools are the
 Claude row's.
 
+**Adjustment, 2026-09-24, after the runs.** The attempt ran 9½ Codex runs
+on `gpt-6-astra` at `high`, which G-139 recommended and the owner never
+approved, and took the ChatGPT Plus five-hour window from 12% to 95% before
+the owner stopped it. The owner's rule is
+[G-141](G-141-never-run-gpt-6-astra-unless-the.md). The runner now requires
+`--max-plan-percent` and records each run's plan use from the rollouts'
+`rate_limits`; no further runs are spent, and the report covers the 9 made.
+
 ## Steps
 
 1. Commit this plan and G-139; checkpoint G-135's Next (this session,

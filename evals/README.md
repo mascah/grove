@@ -16,7 +16,7 @@ python3 evals/run.py selftest     # free: a fake claude and codex, asserts every
 python3 evals/run.py run --runs 5 --budget 3 --model MODEL \
     --permission-mode MODE --config-dir ~/.cache/grove-evals/claude
 python3 evals/run.py run --harness codex --runs 5 --model MODEL --effort EFFORT \
-    --permission-mode MODE --max-seconds 600 --config-dir ~/.cache/grove-evals/codex
+    --permission-mode MODE --max-seconds 600 --max-plan-percent 50 --config-dir ~/.cache/grove-evals/codex
 ```
 
 `run` spends up to runs × cases × budget dollars and prints that cap first.
@@ -47,8 +47,17 @@ memories -m MODEL -c model_reasoning_effort=EFFORT` with `$grove-shape TOPIC
 --interaction headless` as the prompt. Codex has no budget flag, so no dollar
 cap exists: `--max-seconds` is required, each run is killed at it, and the
 runner prints the cap, runs × cases × seconds, before the first run.
-`--budget` is refused with Codex, and `--effort` and `--max-seconds` with
-Claude. `--permission-mode` is a sandbox (`read-only`, `workspace-write`,
+A ChatGPT login spends the plan's five-hour window instead, and seconds do
+not bound that: G-135's `gpt-6-astra` runs took 8 to 12 points of a Plus
+window each ([G-141](../grove/G-141-never-run-gpt-6-astra-unless-the.md)).
+`--max-plan-percent P` is required too: before each run the runner reads
+the newest five-hour reading any rollout under `CODEX_HOME` holds, and
+starts no run once that reading plus the largest run's use so far would
+reach P, or once a run reported no reading; the report says where it
+stopped. It cannot stop a run already started. Model, effort, runs and both
+caps are the owner's explicit answer, never a default (G-141).
+`--budget` is refused with Codex, and `--effort`, `--max-seconds` and
+`--max-plan-percent` with Claude. `--permission-mode` is a sandbox (`read-only`, `workspace-write`,
 `danger-full-access`), passed as `-s`, or `approve-for-me`, the
 workspace-write sandbox with Codex's automatic reviewer on approval
 requests, the nearest to Claude's `auto`.
@@ -71,8 +80,9 @@ writes and the per-directory `trust_level` Codex writes for each clone.
 Codex installs its bundled skills under `skills/.system` on the first run;
 the report lists them. Skills Codex discovers outside `CODEX_HOME`, such as
 under `~/.agents`, are not checked. Cost is "not reported": Codex reports
-tokens, which the report shows per kind; tokens spent by `approve-for-me`'s
-reviewer are not among them.
+tokens, which the report shows per kind with the plan points; tokens spent
+by `approve-for-me`'s reviewer are not among them, though its plan use is
+in the account-wide readings.
 
 ## What a run does
 
@@ -109,6 +119,7 @@ touched records and `grove check` output, with the state before the run) and
 base and fixture commits, requested and reported model, cost, turns,
 duration, exit, checks, retrieval facts, final message; for Codex also the
 thread, reported effort, approval and sandbox policy, tokens and tool calls,
+the first and last five-hour plan readings and the points the run used,
 with a reason beside each fact Codex does not report). The clone
 and remote stay too. `report.md` summarizes every run, lists cases not run,
 and says when the harness was unavailable. Its harness column (exit status,
