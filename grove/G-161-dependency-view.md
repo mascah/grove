@@ -4,10 +4,11 @@ type: work
 title: "See work dependencies and preview a selected assignment"
 status: review
 created: "2026-09-25T20:35:15Z"
-updated: "2026-09-25T21:34:58Z"
+updated: "2026-09-25T22:54:10Z"
 kind: feature
 relates_to: ["G-035", "G-042", "G-043", "G-023", "G-047", "G-054", "G-060", "G-162"]
 candidate: "83e7f3823f3444832b5c9866300e201f06691674"
+approved: "83e7f3823f3444832b5c9866300e201f06691674"
 ---
 
 ## Outcome
@@ -224,3 +225,5 @@ next commit sets only `status=review`. Awaiting the owner's judgment, including 
   - In this checkout: `grove approve G-161 "VERDICT"`, or
     `grove feedback G-161 "TEXT"`.
   - In the target's checkout: `grove integrate G-161`.
+
+Verdict on candidate 83e7f38, 2026-09-25: approved
