@@ -279,8 +279,8 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 				t.Errorf("%s names %s, which is a live ID in an adopting project", name, id)
 			}
 		}
-		for _, phrase := range []string{"Grove's own repository", "Grove's own records", "command reference", "predecessor"} {
-			if strings.Contains(text, phrase) {
+		for _, phrase := range []string{"grove's own repository", "grove's repository", "grove's own records", "command reference", "predecessor"} {
+			if strings.Contains(strings.ToLower(text), phrase) {
 				t.Errorf("%s mentions %q, which an adopting project lacks", name, phrase)
 			}
 		}
