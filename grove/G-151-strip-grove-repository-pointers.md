@@ -2,13 +2,14 @@
 id: "G-151"
 type: work
 title: "Strip Grove-repository pointers from the shipped guides and model"
-status: active
+status: review
 created: "2026-09-25T19:06:01Z"
-updated: "2026-09-25T19:22:18Z"
+updated: "2026-09-25T19:32:12Z"
 kind: fix
 priority: 1
 size: small
 relates_to: ["G-110", "G-144", "G-146", "G-149", "G-152"]
+candidate: "80aa23e"
 ---
 
 ## Outcome
