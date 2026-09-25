@@ -87,5 +87,7 @@ paid run.
 6. After G-153 integrates: merge main, the `with` row, the review
    completed across both rows; handoff into Review.
 
-Steps 1 to 4 done, 2026-09-25 (G-154's Next has the evidence); step 5
-waits on G-158.
+Steps 1 to 5 done, 2026-09-25 (G-154's Next has the evidence; step 5's
+review is [G-160](G-160-g-154-without-row-both-constrain.md)); step 6
+waits on G-153's integration, and first makes `holding read` and
+`distractors read` count a glob read, as G-160 finds they must.

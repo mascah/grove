@@ -113,13 +113,14 @@ supplies the mandate before any paid run; it names a Claude model, and no
 attempt passes `--harness codex` or names `gpt-6-astra`. G-153 starts after
 the `without` row's review is read (owner decision, 2026-09-25).
 
-**Checkpoint, 2026-09-25 (headless `/grove-work G-154`).** Waiting on
-[G-158](G-158-what-mandate-should-the-g-154-wi.md), the mandate for the
-`without` row, which this assignment did not supply; nothing has been
-spent. G-154 alone, on `worktree-G-154` in
-`.claude/worktrees/worktree-G-154`, base main `b684951`, started from this
-record at `sha256:d569262b…`. Plan
-[G-155](G-155-g-154-listed-and-code-constraint.md), committed `ef16843`.
+**Checkpoint, 2026-09-25, second headless `/grove-work G-154`.** The
+`without` row is run and reviewed; the `with` row waits for G-153 to be
+integrated, and G-153 waits for the owner to read
+[G-160](G-160-g-154-without-row-both-constrain.md). G-154 alone, on
+`worktree-G-154` in `.claude/worktrees/worktree-G-154`, base main
+`b684951`; plan [G-155](G-155-g-154-listed-and-code-constraint.md) at
+`sha256:fc27deb1…`, this record at `sha256:8efad9e4…` when the session
+started. Status stays `active`: acceptance 2 and 3 are half done.
 
 - Done, plan steps 1 and 2 (acceptance 1 and 4): `listed-constraint` and
   `code-constraint` in `evals/run.py`, each on its own copy of the fixture
@@ -133,13 +134,33 @@ record at `sha256:d569262b…`. Plan
   [G-159](G-159-g-154-runner-cases-review.md), three rounds, examined
   `47223ed`; every consequential finding fixed, one post-cap fix
   (`c895666`) self-checked only, one informational coverage gap open.
-- Verification at `c895666`: `python3 evals/run.py selftest` prints
-  `selftest: ok`; `go run ./cmd/grove check` OK (153 records); `gofmt -l .`
-  empty and `go vet ./...` clean; links in the README and the new records
-  resolve. No Go file changed, so the Go suite was not run.
+- Done, step 5 (acceptance 2 and 3 for the `without` row): under
+  [G-158](G-158-what-mandate-should-the-g-154-wi.md)'s answer, "Use the
+  G-122 settings" (`claude-opus-5-5`, 5 runs, $5 a run, `auto`,
+  `~/.cache/grove-evals/claude`), both cases ran at `eeec725`, guides
+  digest `41324c3655a1`, as two foreground pieces, one per case, into
+  `~/.cache/grove-evals/runs/2026-09-25-G-154-without/{listed-constraint,code-constraint}`;
+  $3.35 spent, never the Codex harness. Review
+  [G-160](G-160-g-154-without-row-both-constrain.md), examined `eeec725`:
+  both constraints found and applied in 10 of 10 runs, because at five and
+  two records every run reads every record; code-constraint runs 4 and 5
+  also blocked on an unplanted syntax question; the runner's `holding
+  read` and `distractors read` miss reads through a glob (5 of 10
+  false negatives). Lever: none from this row.
+- Verification at the checkpoint commit: `python3 evals/run.py selftest`
+  prints `selftest: ok`; `go run ./cmd/grove check` passes; links in
+  G-160 resolve. No code changed.
 - No command is running.
 
-Continuation, once G-158 is resolved: assign `/grove-work G-154` again on
-this branch. It runs G-158's command exactly (step 5), writes the
-`without` row's review record, and checkpoints for G-153; the `with` row
-(step 6) follows G-153's integration, after `git merge main` here.
+Pending judgments, the owner's: read G-160, then start G-153 or not, since
+the row shows these fixtures cannot show search finding what the listing
+misses; and whether a larger-fixture case deserves its own work.
+
+Continuation, once G-153's candidate is on main: assign `/grove-work
+G-154` again on this branch. It runs `git merge main`, first makes the
+runner's `holding read` and `distractors read` count a glob read, with a
+selftest case, and recomputes the `without` row's facts from its
+transcripts (G-160 Disposition); then runs the `with` row with the same
+two commands under G-158's mandate and a new `--out`
+(`2026-MM-DD-G-154-with/…`), completes the review across both rows, and
+hands off into Review (plan step 6).
