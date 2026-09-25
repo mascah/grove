@@ -68,8 +68,9 @@ No new execution provider, daemon, self-update, schema migration or broad
 compatibility promise is authorized. [G-101](G-101-attempt-mechanism.md) remains
 the runner decision; [G-152](G-152-shipped-document.md) names the shipped-document
 boundary. G-040's marker-only approach would be extended, with existing
-project ownership preserved. Release policy belongs to
-[G-172](G-172-first-release-policy.md), not an inferred schema change here.
+project ownership preserved. Release policy belongs to a first-release
+policy record (named G-172 when this was shaped, a record no branch holds),
+not an inferred schema change here.
 
 ## Acceptance
 

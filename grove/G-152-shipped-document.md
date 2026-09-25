@@ -10,22 +10,24 @@ updated: "2026-09-25T19:06:02Z"
 ## Meaning
 
 A document the `grove` binary carries and prints or writes wherever it runs:
-the work guide and the shaping guide (`grove guide work|shape`), the record
-model (`grove guide model`) and the reviewer agent definition that `grove
-init` writes. It is read in projects that hold none of Grove's files and
+the work, shaping and review guides (`grove guide work|shape|review`) and
+the record model (`grove guide model`). It is read in projects that hold none of Grove's files and
 whose own `G-` IDs are live, so it must read the same, and be true, in every
 one of them: it links only within itself or to `https://`, names another
 shipped document by the command that prints it, and names no Grove record,
 path, invocation or history. This repository's file is the one editable
 owner; the binary's copy is what an adopting project reads, and `grove
-version` names that copy: its guides digest covers the two guides and the
+version` names that copy: its guides digest covers the three guides and the
 model, and its content digest covers every shipped document together with
 the adapters `init` generates ([G-170](G-170-release-identity.md)).
 
 Not shipped: the brief, the command reference, the board guide, AGENTS.md,
-this repository's records, and its own `.claude/skills/` adapters, which
-read the documents as files. The adapters `init` writes are generated text
-under the same rule, not documents.
+this repository's records, and its own `.claude/skills/`,
+`.agents/skills/` and `.claude/agents/` adapters, which read the documents
+as files. The adapters `init` writes, the `grove-reviewer` agent definition
+among them, are generated text under the same rule, not documents: they
+load a shipped guide by command with their entrypoint revision
+([G-169](G-169-harness-upgrade-compatibility.md)).
 
 ## Relationships
 
@@ -34,5 +36,7 @@ The rule lives in AGENTS.md's constraints; its reason is
 [G-151](G-151-strip-grove-repository-pointers.md) extends from links to
 mentions. `TestGuideAndVersionNeedNoProject` enforces it. Delivered
 by [G-040](G-040-portable-bootstrap.md) (the guides, `init`),
-[G-134](G-134-bound-an-attempt-at-its-plan-and.md) (the reviewer definition)
+[G-134](G-134-bound-an-attempt-at-its-plan-and.md) (the reviewer definition,
+whose body [G-169](G-169-harness-upgrade-compatibility.md) moved into the
+review guide)
 and [G-144](G-144-give-adopting-projects-the-recor.md) (the model).
