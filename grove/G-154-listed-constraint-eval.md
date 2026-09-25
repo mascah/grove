@@ -2,11 +2,12 @@
 id: "G-154"
 type: work
 title: "Evaluate whether agents find a constraint held in a listed record or in the code they touch"
-status: active
+status: review
 created: "2026-09-25T19:15:12Z"
-updated: "2026-09-25T19:29:49Z"
+updated: "2026-09-25T21:42:28Z"
 relates_to: ["G-108", "G-122", "G-135", "G-153"]
 kind: investigation
+candidate: "357c5079248dfec989cf155a1bf7833f20e5cc5a"
 ---
 
 ## Outcome
