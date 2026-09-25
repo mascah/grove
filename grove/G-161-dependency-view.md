@@ -2,9 +2,9 @@
 id: "G-161"
 type: work
 title: "See work dependencies and preview a selected assignment"
-status: proposed
+status: active
 created: "2026-09-25T20:35:15Z"
-updated: "2026-09-25T20:38:13Z"
+updated: "2026-09-25T20:48:00Z"
 kind: feature
 relates_to: ["G-035", "G-042", "G-043", "G-023", "G-047", "G-054", "G-060", "G-162"]
 ---
