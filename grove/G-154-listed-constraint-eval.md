@@ -4,10 +4,11 @@ type: work
 title: "Evaluate whether agents find a constraint held in a listed record or in the code they touch"
 status: review
 created: "2026-09-25T19:15:12Z"
-updated: "2026-09-25T21:42:28Z"
+updated: "2026-09-25T22:38:41Z"
 relates_to: ["G-108", "G-122", "G-135", "G-153"]
 kind: investigation
 candidate: "357c5079248dfec989cf155a1bf7833f20e5cc5a"
+approved: "357c5079248dfec989cf155a1bf7833f20e5cc5a"
 ---
 
 ## Outcome
@@ -203,3 +204,5 @@ Pending judgments, the owner's: the Outcome's amendment after G-173; the
 rubric's owner column in G-160; whether a larger-fixture case, which could
 also carry a later search's `with` row, deserves its own work (G-160
 Disposition).
+
+Verdict on candidate 357c507, 2026-09-25: approved
