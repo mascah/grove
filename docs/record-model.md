@@ -12,9 +12,9 @@ commands this document does not.
 
 `schema_version: 3` is the one schema Grove reads. Grove keeps no backward
 compatibility before its first release: schemas 1 and 2, their type folders,
-typed `W-`/`Q-`/`D-`/`T-`/`P-`/`R-` IDs and per-type counters were deleted. A
-commit from before that conversion is inspected with the CLI built from that
-commit; the current CLI reports such a branch in `versions` and the board as a
+typed `W-`/`Q-`/`D-`/`T-`/`P-`/`R-` IDs and per-type counters were deleted by
+the conversion to schema 3. A commit from before it is inspected with the CLI
+built from that commit; the current CLI reports such a branch in `versions` and the board as a
 source it cannot inspect.
 
 - **Discovery.** Every `.md` file beneath the record root, at any depth, is a
@@ -288,7 +288,8 @@ well as a shared common directory
 Allocation in one local repository:
 
 1. Take `grove/lock` in the common directory, one lock for every worktree and
-   every record type.
+   every record type. It is an `flock`, which the kernel releases when the
+   holder exits, so a crash leaves no stale lock.
 2. Reserve the next number and durably save the advanced counter while holding
    the lock. If locking or persistence fails, no ID is issued and no record is
    created.
@@ -374,7 +375,10 @@ if the project no longer validates. It requires Git and never overwrites.
 `source`. `update <id> [--expect REVISION] [--commit]` with `--set FIELD=VALUE` and
 `--unset FIELD` changes `title`, `status`, `relates_to`, work planning fields,
 `candidate` and `approved`, question `blocks`, plan and review `work`, or review `examined` by editing only those frontmatter entries plus `updated`,
-and prints `{id, path, revision, changed}`.
+and prints `{id, path, revision, changed}`. A refused request, a stale
+revision or a result that would not validate leaves the record's bytes
+unchanged; once the file is replaced, a later failure (directory sync, final
+validation, output) is reported as an applied update, never as nothing written.
 `--commit`, after a change, runs `git add` and
 `git commit` for the record's file alone with a generated message, adds
 `commit` to the result (`null` when nothing changed), and reports a commit Git

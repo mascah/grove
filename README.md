@@ -73,7 +73,7 @@ point Codex at the right binary.
 | Command usage | `grove --help` |
 | Command behaviour | [Command reference](docs/commands.md), [record model](docs/record-model.md) |
 | The board | [docs/board.md](docs/board.md) |
-| Record types, fields, statuses, validation and lifecycle | [Record model](docs/record-model.md) |
+| Record types, fields, statuses, validation and lifecycle | [Record model](docs/record-model.md), printed by `grove guide model` |
 | Executing assigned work (`grove-work`) | [Work guide](docs/work-execution.md), loaded by the [Claude](.claude/skills/grove-work/SKILL.md) and [Codex](.agents/skills/grove-work/SKILL.md) adapters; [G-032](grove/G-032-dogfood-review.md) records which invocations were exercised |
 | Shaping ideas into proposed work (`grove-shape`) | [Shaping guide](docs/work-shaping.md), loaded by the [Claude](.claude/skills/grove-shape/SKILL.md) and [Codex](.agents/skills/grove-shape/SKILL.md) adapters; [G-050](grove/G-050-shaping-review.md) records what was exercised |
 | How well the guides steer an agent, measured (behavioral evaluations) | [evals/README.md](evals/README.md); [G-108](grove/G-108-workflow-evals.md) owns the outcome |
