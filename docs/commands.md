@@ -294,7 +294,10 @@ changed refuses the same way: a selection none of whose members can start is
 refused, naming each wait, whether the launching checkout or the reused
 branch holds it. The launch prints the selection as the preview does. A running or orphaned attempt whose selection
 shares any member refuses the launch, so overlapping selections cannot both
-own a record. Every refusal comes before a write, except
+own a record. After feedback reopens a group, a selection that leaves out a member
+still sharing the candidate on that branch is refused: the group runs again
+together, on the same branch (`--branch` names it when the IDs are given in
+another order than the branch's name). Every refusal comes before a write, except
 that what an existing branch holds is checked in its checkout, so a branch
 that had no worktree keeps the one `run` made.
 

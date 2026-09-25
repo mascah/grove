@@ -43,6 +43,7 @@ import (
 	"github.com/mascah/grove/internal/deps"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/repo"
+	"github.com/mascah/grove/internal/update"
 	"golang.org/x/sys/unix"
 )
 
@@ -443,9 +444,20 @@ func onBranch(s *Selection, dir, branch, worktree, until string, contains func(s
 	if wp == nil {
 		return fmt.Errorf("the project on %s at %s does not load: %s", branch, worktree, wds[0].String())
 	}
+	selected := func(id string) bool { return slices.ContainsFunc(s.Members, func(m Member) bool { return m.ID == id }) }
 	for _, c := range wp.Records {
-		if slices.ContainsFunc(s.Members, func(m Member) bool { return m.ID == c.ID }) && c.Status != "proposed" && c.Status != "active" {
+		if !selected(c.ID) {
+			continue
+		}
+		if c.Status != "proposed" && c.Status != "active" {
 			return fmt.Errorf("%s is %s on %s at %s; judge that candidate (approve, feedback) before another attempt", c.ID, c.Status, branch, worktree)
+		}
+		// Feedback reopens a group sharing a candidate (G-188); its next
+		// candidate is the group's, so the group runs again together.
+		for _, o := range wp.Records {
+			if o.Type == "work" && !selected(o.ID) && (o.Status == "active" || o.Status == "review") && c.Candidate != "" && update.SameCommit(o.Candidate, c.Candidate) {
+				return fmt.Errorf("%s shares candidate %s with %s on %s and was reopened with it; select them together (grove run %s %s)", o.ID, short(c.Candidate), c.ID, branch, strings.Join(s.Selected, " "), o.ID)
+			}
 		}
 	}
 	w, err := selectionOf(wp, s.Selected, until, contains)
@@ -460,12 +472,21 @@ func onBranch(s *Selection, dir, branch, worktree, until string, contains func(s
 				continue
 			}
 			s.Members[i].Status = o.Status
-			if o.Wait != "" && o.Wait != s.Members[i].Wait {
-				s.Members[i].Wait = strings.TrimPrefix(s.Members[i].Wait+"; "+o.Wait+" (on "+branch+")", "; ")
+			waits := strings.Split(s.Members[i].Wait, "; ")
+			for _, wait := range strings.Split(o.Wait, "; ") {
+				if wait != "" && !slices.Contains(waits, wait) {
+					waits = append(waits, wait+" (on "+branch+")")
+				}
 			}
+			s.Members[i].Wait = strings.Trim(strings.Join(waits, "; "), "; ")
 		}
 	}
-	s.Outside, s.Notes = w.Outside, append(s.Notes, w.Notes...)
+	s.Outside = w.Outside
+	for _, n := range w.Notes {
+		if !slices.Contains(s.Notes, n) {
+			s.Notes = append(s.Notes, n)
+		}
+	}
 	return nil
 }
 

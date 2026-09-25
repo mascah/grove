@@ -11,7 +11,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -84,6 +86,25 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 			where = w
 		}
 		return fmt.Errorf("candidate %s on %s is shared by %s, and merging it integrates all of them, but %s; judge each first (grove approve ID VERDICT in %s); %s is unchanged", short(r.Candidate), name, ids(group), strings.Join(waiting, ", "), where, p.Target)
+	}
+	// The merge carries every commit the branch holds, so unfinished work
+	// whose candidate it contains, such as a member reopened with a group's
+	// feedback and not handed off again, would arrive unapproved.
+	for _, o := range branchRecords(res, from) {
+		if o.Type != "work" || o.Candidate == "" || slices.Contains(group, o) || o.Status == "done" || o.Status == "abandoned" || o.Status == "review" && update.SameCommit(o.Approved, o.Candidate) {
+			continue
+		}
+		carried, err := ancestor(root, o.Candidate, from.Commit)
+		if err != nil {
+			return err
+		}
+		landed, err := ancestor(root, o.Candidate, "HEAD")
+		if err != nil {
+			return err
+		}
+		if carried && !landed {
+			return fmt.Errorf("merging %s would also carry %s's candidate %s, which is %s without an approval; hand it off and judge it with %s, or move it off %s; %s is unchanged", name, o.ID, short(o.Candidate), o.Status, ids(group), name, p.Target)
+		}
 	}
 	if others, err := versions.Others(context.Background(), root, r.Candidate, from.Commit, paths...); err != nil {
 		return err
@@ -301,6 +322,16 @@ func ignored(worktree string) ([]string, error) {
 		}
 	}
 	return files, nil
+}
+
+// ancestor reports whether commit is an ancestor of ref in root's repository.
+func ancestor(root, commit, ref string) (bool, error) {
+	_, err := repo.Git(root, "merge-base", "--is-ancestor", commit, ref)
+	var exit *exec.ExitError
+	if errors.As(err, &exit) && exit.ExitCode() == 1 {
+		return false, nil
+	}
+	return err == nil, err
 }
 
 func head(root string) (string, error) {

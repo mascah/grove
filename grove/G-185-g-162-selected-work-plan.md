@@ -211,8 +211,8 @@ the reason given:
 
 - **Waits under `--until plan`.** Only an open question stops a member of a
   plan-bounded launch; an undelivered prerequisite, outside or selected, does
-  not, since preparing a plan needs its prerequisites named, not delivered
-  (this plan was itself prepared so). Without the bound, one ID is a
+  not, since preparing a plan needs its prerequisites named, not delivered;
+  the work guide's step 2 says so too. Without the bound, one ID is a
   selection of one, so single-work `run` and the board's `R` now also refuse
   work whose prerequisite is undelivered, as the guide's step 2 already
   treats it as an external blocker.
@@ -225,6 +225,12 @@ the reason given:
 - **Unreadable candidates.** An outside prerequisite done with a candidate
   Git cannot read here counts as not in the base: a base that held the
   commit could read it.
+- **A reopened group runs together.** After feedback reopens a group,
+  `run` refuses a selection that leaves out a member still sharing the
+  candidate on that branch, and `integrate` refuses a merge that would
+  carry the candidate of unfinished, unapproved work outside the group:
+  continuing one member alone would otherwise merge its sibling's code
+  without the approval feedback withdrew.
 - **Waiting members' records.** A waiting member's checkpoint, question or
   plan is committed before the shared candidate, since `approve` counts any
   file but the group's records changed after it as a new candidate.

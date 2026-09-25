@@ -147,3 +147,31 @@ func TestGroupFeedbackReopensEveryMember(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A member reopened with the group's feedback and continued alone: the
+// next candidate carries its sibling's code, which lost its approval, so
+// integration refuses with the target unchanged.
+func TestGroupRefusesToCarryAReopenedSibling(t *testing.T) {
+	t.Parallel()
+	root, wt, _ := groupFixture(t)
+	if _, err := update.Feedback(wt, "G-001", "One more case.", now); err != nil {
+		t.Fatal(err)
+	}
+	write(t, wt, "code.txt", "both changes, and the case\n")
+	git(t, wt, "commit", "-qam", "feat: the case")
+	next := git(t, wt, "rev-parse", "HEAD")
+	if _, err := update.Apply(wt, update.Request{ID: "G-001", Set: []update.Field{{Name: "status", Value: "review"}, {Name: "candidate", Value: next}}, Commit: true}, now, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := update.Approve(wt, "G-001", "Now right.", now); err != nil {
+		t.Fatal(err)
+	}
+	main := git(t, root, "rev-parse", "HEAD")
+	err := Run(Request{Root: root, ID: "G-001"}, now, func(string) {})
+	if err == nil || !strings.Contains(err.Error(), "merging feature would also carry G-003's candidate") || !strings.Contains(err.Error(), "which is active without an approval") {
+		t.Fatal(err)
+	}
+	if git(t, root, "rev-parse", "HEAD") != main {
+		t.Fatal("main moved")
+	}
+}

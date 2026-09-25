@@ -515,7 +515,10 @@ Candidate, review, approval and integration name the facts:
   and the branch only where Git agrees and the worktree holds no ignored
   files. Merging a shared candidate merges the whole group, so `integrate`
   of any member refuses, naming them, until every member is approved in
-  review, then writes done for each, each committed alone. The merge is of
+  review, then writes done for each, each committed alone; and it refuses a
+  merge that would carry the candidate of other unfinished, unapproved work
+  on the branch, such as a member reopened by feedback and not handed off
+  again. The merge is of
   the commit the checks read, so a branch that moves meanwhile is not merged. A squash or rebase that lands a
   different commit is a manual merge that names that commit as the candidate
   in the same `update`. The check needs Git, as `update` already does;

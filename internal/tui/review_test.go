@@ -424,7 +424,9 @@ func TestReviewNamesTheGroupSharingACandidate(t *testing.T) {
 	for _, s := range []*versions.Source{fx.cFeat, fx.feat} {
 		o := version(s, "W-003", "Build on it", "review")
 		o.Record.Candidate, o.Record.Approved = "abcdef1", "abcdef1"
-		f.res.Groups = append(f.res.Groups, versions.Group{ID: "W-003", Versions: []versions.Version{o}})
+		done := version(s, "W-004", "Reopened by hand", "proposed") // same commit, not in review
+		done.Record.Candidate = "abcdef1"
+		f.res.Groups = append(f.res.Groups, versions.Group{ID: "W-003", Versions: []versions.Version{o}}, versions.Group{ID: "W-004", Versions: []versions.Version{done}})
 	}
 	m := openReview(t, f, 160, 36)
 	f.mu.Lock()
@@ -439,7 +441,7 @@ func TestReviewNamesTheGroupSharingACandidate(t *testing.T) {
 	}
 	press(m, "esc")
 	press(m, "i")
-	if s := plain(m); !strings.Contains(s, "Merge branch feature into main and mark W-001 and W-003 done? y/n") {
+	if s := plain(m); !strings.Contains(s, "Merge branch feature into main and mark W-001 and W-003 done? y/n") || strings.Contains(s, "W-004 done") {
 		t.Fatalf("i names the group:\n%s", s)
 	}
 }

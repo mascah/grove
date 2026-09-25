@@ -329,3 +329,31 @@ func TestSelectionWaitsBothPlaces(t *testing.T) {
 		t.Fatal("its own work's listing must say it is broken")
 	}
 }
+
+// After feedback reopens a group, relaunching part of it is refused: the
+// next candidate is the group's.
+func TestSelectionReopenedGroupRunsTogether(t *testing.T) {
+	t.Parallel()
+	root := chain(t)
+	wt := filepath.Join(root, ".claude", "worktrees", "worktree-G-001-G-003")
+	git(t, root, "worktree", "add", "-q", "-b", "worktree-G-001-G-003", wt)
+	shared := git(t, wt, "rev-parse", "HEAD")
+	write(t, wt, "grove/G-001-first.md", strings.Replace(fmt.Sprintf(work, "active"), "---\n\n## Outcome", "candidate: \""+shared+"\"\n---\n\n## Outcome", 1))
+	write(t, wt, "grove/G-003.md", strings.Replace(readFile(t, wt, "grove/G-003.md"), "status: proposed\n", "status: active\ncandidate: \""+shared+"\"\n", 1))
+	git(t, wt, "commit", "-qam", "reopened by feedback")
+	_, err := Preview(Request{Root: root, IDs: []string{"G-001"}, Branch: "worktree-G-001-G-003", BudgetUSD: "1", PermissionMode: "auto"})
+	if err == nil || !strings.Contains(err.Error(), "G-003 shares candidate "+shared[:7]+" with G-001 on worktree-G-001-G-003 and was reopened with it; select them together (grove run G-001 G-003)") {
+		t.Fatal(err)
+	}
+	l, err := Preview(Request{Root: root, IDs: []string{"G-001", "G-003"}, BudgetUSD: "1", PermissionMode: "auto"})
+	if err != nil || !l.WorktreeReused {
+		t.Fatalf("%+v %v", l, err)
+	}
+	seen := map[string]bool{}
+	for _, n := range l.Selection.Notes {
+		if seen[n] {
+			t.Fatalf("note repeated: %q", n)
+		}
+		seen[n] = true
+	}
+}

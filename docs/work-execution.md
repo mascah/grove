@@ -149,7 +149,10 @@ record, its plan, or its checkpoint names.
   (`grove show ID`) before deciding what it stops: the listing has only its
   title and status.
   Selecting work authorizes that work; it never authorizes acquiring its
-  unselected prerequisites.
+  unselected prerequisites. An external blocker stops implementation, not
+  preparation: an assignment given `--until plan` prepares a unit whose
+  prerequisites are undelivered, naming them in the plan, and only an open
+  blocking question stops it.
 - If nothing can start and the wait is already recorded accurately, return it
   now. Nothing needs to be written or created.
 
@@ -466,9 +469,12 @@ their group. `approve` binds each record's own verdict, and the group's
 record commits do not count as later changes. `feedback` on any of them
 reopens them all: the others are set `active` with their approvals dropped
 and a line naming that feedback appended, each committed alone, since the
-next candidate replaces the shared one. `integrate` of any of them merges
-the commit, and so all of them: it refuses, naming them, until every one is
-approved in review, then writes `done` for each, committed alone.
+next candidate replaces the shared one, so the next attempt selects them all
+again: `grove run` refuses a selection that leaves one out. `integrate` of
+any of them merges the commit, and so all of them: it refuses, naming them,
+until every one is approved in review, then writes `done` for each,
+committed alone. It also refuses a merge that would carry the candidate of
+other unfinished work on the branch that no approval covers.
 
 A further commit on the branch after the handoff is a new candidate, which
 `approve` refuses until `candidate` names it: set it and reconsider, since

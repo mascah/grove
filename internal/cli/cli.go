@@ -262,6 +262,9 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 			}
 			branch, _ := update.Branch(p.Root)
 			fmt.Fprintf(errOut, "Next: %s active on branch %s in %s; continue there with /grove-work %s\n", strings.Join(ids, ", ")+map[bool]string{true: " is", false: " are"}[len(ids) == 1], visible(cmp.Or(branch, "(detached HEAD)")), visible(p.Root), strings.Join(ids, " "))
+			if len(ids) > 1 && branch != "" {
+				fmt.Fprintf(errOut, "or launch the group again: grove run %s --branch %s\n", strings.Join(ids, " "), visible(branch))
+			}
 		}
 		if a.request.Commit || a.command != "update" { // approve and feedback always commit
 			object["commit"] = nil // a no-op commits nothing
