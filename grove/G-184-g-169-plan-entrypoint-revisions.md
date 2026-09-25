@@ -33,7 +33,8 @@ revision.
   `docs/work-review.md` as a file. `grove.Reviewer` (the embed of that file)
   is removed; the template is generated in `entrypoints.go`.
 - **Entrypoint revision.** An integer, `grove.EntrypointRevision = 2`, with
-  `MinEntrypointRevision = 1`, separate from the release version and the
+  `MinEntrypointRevision = 2` (1 before review round 1; see Adjustment),
+  separate from the release version and the
   record schema. Every managed file carries a line
   `grove entrypoint revision 2` (an HTML comment in Markdown, a `#` comment
   in YAML) after the marker. A marked file with no such line predates
@@ -71,9 +72,25 @@ revision.
   Init and Attempts sections and `init`'s help; the guide says nothing new
   beyond the grammar.
 
+**Adjustment after review round 1 (G-187), bounded and technical.** The
+plan served revision 1. The review showed that revision-less files are at
+least two generations: before G-134 the work skill rejected `--until plan`
+and there was no reviewer, and the pilot adopter holds that generation. A
+`run --until plan` there would have launched and contradicted the guide
+after spend. Nothing in such a file says which generation it is, and every
+revision-1 file carries a grammar and review brief that the next guide
+change would contradict. So revision 1 (`legacy`) is not served:
+`init --check` exits 1 on it and `run` refuses it. From revision 2 an
+entrypoint holds nothing the guides evolve, so the drift cannot recur.
+Also from that review: the term G-186 names the concept apart from
+[Revision](G-062-revision.md); the usage placeholder is `N`; the docs say
+`run` checks against the launching `grove`, not the session's; and the
+adapters' data rule no longer suggests passing the bound to commands. The
+shaping guide needed no new sentence: its Inputs already said all the old
+shaping adapter did.
+
 Rejected: comparing against a list of historical template digests (a
-growing table, and an edited file would still need a verdict); refusing
-legacy files now (they work with this binary); gating `guide` without the
+growing table, and an edited file would still need a verdict); gating `guide` without the
 flag (it would break a person's read).
 
 ## Steps
