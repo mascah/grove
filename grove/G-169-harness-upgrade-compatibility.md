@@ -2,9 +2,10 @@
 id: "G-169"
 type: work
 title: "Keep installed harness entrypoints compatible with Grove upgrades"
-status: proposed
+status: active
 created: "2026-09-25T21:04:46Z"
-updated: "2026-09-25T21:04:46Z"
+updated: "2026-09-25T23:04:50Z"
+relates_to: ["G-101", "G-150", "G-152", "G-040", "G-110", "G-170"]
 ---
 
 ## Outcome
