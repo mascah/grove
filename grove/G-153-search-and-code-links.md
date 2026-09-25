@@ -2,9 +2,9 @@
 id: "G-153"
 type: work
 title: "Search record bodies and list the records that describe the code a change touches"
-status: proposed
+status: active
 created: "2026-09-25T19:15:12Z"
-updated: "2026-09-25T19:17:28Z"
+updated: "2026-09-25T20:41:04Z"
 relates_to: ["G-042", "G-065", "G-108", "G-114", "G-146", "G-151", "G-152", "G-154"]
 kind: feature
 size: medium
