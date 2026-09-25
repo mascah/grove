@@ -7,6 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/versions"
 )
 
@@ -105,5 +106,73 @@ func TestSearchReachesEveryRecord(t *testing.T) {
 	}
 	if press(m, "ctrl+c") == nil {
 		t.Fatal("Ctrl-C must still interrupt")
+	}
+}
+
+// withBody gives a test version its own body, and so its own revision.
+func withBody(v versions.Version, body string) versions.Version {
+	src := []byte("---\nid: " + v.Record.ID + "\n---\n\n" + body)
+	r := *v.Record
+	r.Source = src
+	v.Record, v.Revision = &r, project.Revision(src)
+	return v
+}
+
+// / finds a record by its body: a title hit first, then a link to the path
+// or under it, then a code span naming it, then the text, each hit saying
+// why and escaping the line; a diverging record shows each current state.
+func TestSearchMatchesBodiesByTier(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	var vs []versions.Version
+	for _, s := range []*versions.Source{fx.cMain, fx.main} {
+		vs = append(vs,
+			withBody(version(s, "W-001", "Inspect records", "active"), "See [the search](../../internal/tui/search.go).\n"),
+			withBody(version(s, "Q-001", "Which way?", "open"), "It lives in `search.go` now.\n\nA needle \x1b[2J here.\n"),
+			version(s, "D-001", "Search tiers", "accepted"),
+			withBody(version(s, "W-002", "Split", "proposed"), "One needle.\n"))
+	}
+	for _, s := range []*versions.Source{fx.cFeat, fx.feat} {
+		vs = append(vs, withBody(version(s, "W-002", "Split", "active"), "Another needle.\n"))
+	}
+	m := open(t, &fake{res: result(fx.main, fx.sources(), vs...)}, 120, 30)
+	press(m, "/")
+	typeText(m, "internal/tui/search.go")
+	s := plain(m)
+	if !strings.Contains(s, "2 of 4 records") || !strings.Contains(s, "> W-001") || !strings.Contains(s, "link: See [the search](../../internal/tui/search.go).") ||
+		!strings.Contains(s, "code span: It lives in `search.go` now.") || strings.Index(s, "W-001") > strings.Index(s, "Q-001") {
+		t.Fatalf("a path finds the link, then the code span naming it:\n%s", s)
+	}
+	for range len("/search.go") {
+		press(m, "backspace")
+	}
+	if s = plain(m); !strings.Contains(s, "1 of 4 records") || !strings.Contains(s, "link: See") {
+		t.Fatalf("a directory finds the link under it, and a code span naming only the file is not a hit:\n%s", s)
+	}
+	press(m, "esc", "/")
+	typeText(m, "search")
+	if s = plain(m); !strings.Contains(s, "3 of 4 records") || !strings.Contains(s, "> D-001") || !strings.Contains(s, "          title") ||
+		strings.Index(s, "D-001") > strings.Index(s, "W-001") || strings.Index(s, "D-001") > strings.Index(s, "Q-001") {
+		t.Fatalf("a title hit comes first:\n%s", s)
+	}
+	press(m, "esc", "/")
+	typeText(m, "NEEDLE")
+	raw := m.render()
+	s = ansi.Strip(raw)
+	if strings.Contains(raw, "\x1b[2J") || !strings.Contains(s, `text: A needle \x1b[2J here.`) || !strings.Contains(s, "2 of 4 records") ||
+		!strings.Contains(s, "text · on branch main, checkout . (main): One needle.") || !strings.Contains(s, "text · on branch feature, checkout feat (feature): Another needle.") {
+		t.Fatalf("a body word finds each current state, escaped:\n%q", s)
+	}
+	press(m, "down", "down", "enter")
+	if m.openID() != "W-002" {
+		t.Fatalf("Enter opens the hit's record: %s", m.openID())
+	}
+	// A checkout's own board searches its own copy, once.
+	press(m, "esc")
+	chooseCheckout(m, 1)
+	press(m, "/")
+	typeText(m, "needle")
+	if s = plain(m); !strings.Contains(s, "text: Another needle.") || strings.Contains(s, "One needle") || strings.Contains(s, " · on ") {
+		t.Fatalf("checkout feat's board searches its copy alone:\n%s", s)
 	}
 }

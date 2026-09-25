@@ -87,7 +87,13 @@ header adds a Review block (the candidate, whether it is approved, whether
 only the record changed since it or the tip is a new candidate, whether the
 target holds it, and which checkout each action runs in), the content opens
 at its `## Evidence`, and the sidebar lists the candidate's changed files
-against the target with their added and removed line counts. Enter on a file
+against the target with their added and removed line counts. Under each
+file a row names the other records that describe it, as `described by G-140
+link, G-121 code span`, or says `no record names it`: a record describes a
+file when a link in its body resolves to that project path or a code span
+names it, as search matches a path, over the records the board already
+holds, with no further Git read and nothing stored. Which of their claims the
+change left true is the reader's judgment. Enter on a file
 shows its diff in the content pane, escaped like record text with added,
 removed and hunk lines coloured, and Esc returns to the content. `a` asks for
 a verdict and approves the candidate in the branch's checkout, `f` asks for
@@ -260,9 +266,26 @@ question](#answering-a-question)).
 
 `/` on the board searches every record of the project in its current state,
 of every type, including hidden Abandoned work, Done beyond its page, pages
-and terms: typing filters by ID, type, status and title, not the body; ↑/↓
-move, Enter opens the detail, Esc closes. Letters typed there filter rather
-than act; Ctrl-C still interrupts.
+and terms. Typed text matches in four tiers, and a record hits once, at the
+first that applies:
+
+1. `title`: the ID, type, status or title contains it, in any case;
+2. `link`: a Markdown link in the body resolves, as
+   [`context`](commands.md#context) resolves links, to that project path or
+   to a path under it, so `internal/tui` finds links to its files;
+3. `code span`: a code span in the body is that path or its last
+   components, so `` `ws.rs` `` answers `crates/server/src/ws.rs`, and every
+   file a span could mean;
+4. `text`: a line of the body contains it, in any case.
+
+Hits are listed by tier, then in the inspection's order; there is no score.
+With a query each hit has a second row with its tier and the line that
+matched, escaped like any other text. In the current view each current state
+of a diverging record is matched on its own and names where it is held, so
+neither hides the other; a checkout's own board searches its own copy. The
+count is of records. ↑/↓ move, Enter opens the detail, Esc closes. Letters
+typed there filter rather than act; Ctrl-C still interrupts. Search reads the
+records already loaded and writes nothing.
 
 ## Rendering
 

@@ -2,12 +2,14 @@
 id: "G-153"
 type: work
 title: "Search record bodies and list the records that describe the code a change touches"
-status: proposed
+status: review
 created: "2026-09-25T19:15:12Z"
-updated: "2026-09-25T19:17:28Z"
+updated: "2026-09-25T21:11:30Z"
 relates_to: ["G-042", "G-065", "G-108", "G-114", "G-146", "G-151", "G-152", "G-154"]
 kind: feature
 size: medium
+candidate: "a6c2fa4168eb559bde9c8263dcbe4761df011ce2"
+approved: "a6c2fa4168eb559bde9c8263dcbe4761df011ce2"
 ---
 
 ## Outcome
@@ -133,6 +135,23 @@ reviews, most flagged records had claims the change left intact; reconsider
 an index when search over the current view passes about a second or hit
 lists need ranking to be readable.
 
+## Scope at preparation
+
+Narrowed 2026-09-25 by the headless `/grove-work G-153` session under the
+owner's rule in Next: "if agents already find and apply the listed
+constraint without search, preparation narrows this record to the board
+search and the review listing". G-154's `without` row (review G-160 on
+`worktree-G-154` at `5ff6eb3`, examined `eeec725`) found both constraints
+applied in 10 of 10 runs without search, since at fixtures of five and two
+records every run reads every record, and named no lever. So `grove
+search`, its `--help` and commands.md entry, and the guide and reviewer
+sentences are out of this record: nothing yet shows an agent needs them.
+They are the owner's to reshape as their own work once a case large enough
+that reading every record costs more than choosing shows the listing
+missing a constraint (G-160 Disposition). Consequence for G-154: its
+`with` row needs a guides or CLI change to compare; this record now makes
+none, so that row compares nothing new until such work lands.
+
 ## Acceptance
 
 1. On the board, `/` finds a record by a word that occurs only in its body,
@@ -141,38 +160,129 @@ lists need ranking to be readable.
    lists the records whose links resolve to it or under it, and those naming
    it in a code span, each with its tier. A divergent record shows every
    current content. [board.md](../docs/board.md) documents it.
-2. `grove search QUERY [--json]` in a checkout prints the same tiers over
-   that checkout's records, escapes control characters in snippets, prints
-   the header alone when nothing matches, refuses an empty query as usage
-   (exit 2), writes nothing, and is documented in
-   [commands.md](../docs/commands.md) and `grove --help`.
+2. Narrowed out at preparation (Scope at preparation): `grove search QUERY
+   [--json]` in a checkout printing the same tiers.
 3. The board's review detail lists, beside each file the candidate changes,
    the records that link it or name it in a code span, with the reason, and
    says when no record names a file; it stores nothing and starts no Git
    process the view did not already start. The owner judges the layout in a
    real terminal, and the terminal lifecycle checks pass.
-4. The work guide, the shaping guide and the reviewer definition name the
-   command where they ask for a text search or the knowledge check, in the
-   shipped copies; the guides digest changes and Evidence records it, so the
-   G-108 pair reruns comparably.
+4. Narrowed out at preparation: the work guide, the shaping guide and the
+   reviewer definition naming the command.
 5. Evidence records two observations with their commands: on this
    repository, the review listing for the five merges in Constraints
    reproduces the link pairs there; on nullsec, read from its checkout
-   without writing, `grove search` for a `.rs` path names the decisions the
-   Constraints cite.
+   without writing, the board search's matcher for a `.rs` path names the
+   decisions the Constraints cite.
 6. The checks in AGENTS.md pass, no package exceeds five seconds, and no
    file is written anywhere by search or the review listing.
 
+## Evidence
+
+Headless `/grove-work G-153` of 2026-09-25, G-153 alone, on
+`worktree-G-153` (`.claude/worktrees/worktree-G-153`), base main
+`3f2b923`. Started from this record at `sha256:18a4d3a4…`; narrowed and
+planned in `aab404d` (record `sha256:8f6ea855…`, plan
+[G-164](G-164-g-153-board-body-search-and-revi.md) `sha256:bb752dc4…`);
+implementation `702b576`, review fixes `7f00b39`.
+
+What changed, per acceptance item:
+
+1. Board `/` matches in four tiers, first that applies: `title` (ID, type,
+   status, title, as before), `link` (a body link resolving, through
+   context's own `resolve`, to the path or under it), `code span` (the span
+   is the path or its last components), `text` (a body line, any case).
+   Hits sort by tier, then inspection order; with a query each hit has a
+   second row with its tier and the escaped line. In the current view each
+   current state (`currentStates`, G-042's `Older`) is its own hit naming
+   where it is held; a checkout's board searches its own copy. The count is
+   of records. [board.md](../docs/board.md#search) documents it. Tests:
+   `TestSearchMatchesBodiesByTier` (body word, tier order, path and
+   directory query, span by file name, divergent states, hostile line
+   escaped, checkout board), and the existing `TestSearchReachesEveryRecord`.
+2. Narrowed out (Scope at preparation).
+3. The review detail's Changes section has, under each file, `described by
+   ID tier, …` or `no record names it`: link or code span only, the open
+   record excluded, each ID once, renames by either side, the prefix
+   stripped as Git gives it, a file outside the project by code span only.
+   It reads the loaded records: no Git process (the test asserts the only
+   read is the one changes read), nothing stored (`internal/handoff`
+   `Mentions` is pure; the model's cache is in memory and dropped per
+   result). Test: `TestReviewListsRecordsDescribingEachFile`, with and
+   without a prefix. **The owner's layout judgment in a real terminal is
+   open.**
+4. Narrowed out.
+5. Observations, by throwaway harnesses in `internal/tui` (a `_test.go`
+   calling `pathTier` or `match` with `handoff.Mentions`, run then deleted,
+   never committed):
+   - This repository: for each merge, `git archive MERGE^1 grove.yaml grove`
+     extracted under `/tmp`, loaded with `project.LoadFS`, against `git
+     diff --name-only MERGE^1 MERGE` outside `grove/`. Code-file link pairs
+     reproduce Constraints exactly: G-144 `c294ab5` 4 code files, 3 link
+     pairs (guides.go G-107, cli.go and init.go G-140); G-135 `c6c5a4d` 1,
+     1; G-125 `9f94493` 9, 9; G-114 `38443ee` 0 code files; G-123 `1d36a99`
+     6, 5. Span pairs are more than Constraints counted (12, 4, 32, 0, 10
+     against 7, 5, 20, -, 5), since a span naming a file's last components
+     (`model.go`) counts for every file it could mean. The reviewer
+     reproduced the link pairs independently.
+   - nullsec, loaded read-only with `project.LoadFS(os.DirFS(...))` at
+     `3eb2785`, `git status` clean after: `match` for
+     `crates/sim/src/warp_profile.rs` lists decision G-016, page G-101 and
+     plan G-122 by code span; for `crates/server/src/ws.rs`, decision G-033
+     and works G-055, G-066, G-068 and plans G-113, G-117, G-124 by code
+     span, then pages G-102, G-103, G-104 by text. The installed `grove show`
+     from nullsec's checkout confirms both decisions name the files.
+6. At `7f00b39`: `go vet ./...` clean, `gofmt -l .` empty, `go run
+   ./cmd/grove check` OK; `go test -count=1 -timeout 120s ./...` passed
+   at `702b576`, and tui and handoff again uncached at `7f00b39`;
+   `python3 internal/tui/testdata/terminal.py` on a binary built at
+   `7f00b39`: all 11 checks ok. Under `-short` tui 0.7 s and handoff
+   1.0 s; the full tui run is 11.7 s, as on main at `3f2b923` (11.7 s, the
+   pty test, skipped under `-short`); cli, integrate, update and versions
+   exceed five seconds uncached on main as well, untouched here. Parsing
+   every body here takes 17 ms once, a cached search pass 5 ms.
+
+Decisions: the matcher's tiers live in `internal/tui/search.go`, the body
+walk in `internal/handoff` beside `resolve`, so links mean exactly what
+`context` lists; a span naming last components lists every file it could
+mean (the record's design); the review listing shows plain rows, not
+selectable entries, so Tab order is unchanged.
+
+Review: [G-167](G-167-g-153-board-search-and-review-li.md).
+
+Limits: the owner's layout judgment (acceptance 3); span matching is at file
+granularity and over-reports common file names; G-154's `with` row has no
+product change to measure (Scope at preparation); no Linux run.
+
 ## Next
 
-Wait for [G-154](G-154-listed-constraint-eval.md)'s `without` row and read
-its review before assigning (owner decision, 2026-09-25): if agents already
-find and apply the listed constraint without search, preparation narrows
-this record to the board search and the review listing before the plan is
-fixed. Then assign. Needs a plan covering where the matcher lives so the board, the CLI
-and the review view share one (`links` and `resolve` are in
-`internal/handoff`, `hits` in `internal/tui`), the review sidebar's layout,
-and the exact guide sentences. [G-154](G-154-listed-constraint-eval.md)
-measures whether agents find and apply what the lookup lists; its
-`without` row runs first, its `with` row after this lands. Reconcile with G-151 at whichever
-integrates second, since both edit the shipped guides.
+In review, awaiting the owner. Candidate: the commit that adds this
+handoff, on `worktree-G-153` from main `3f2b923`; code at `7f00b39`.
+Review G-167 examined `ab21640`, which differs from the candidate only in
+this record and G-167. Owner's judgments: the narrowing (Scope at
+preparation), which the owner may reverse; and the layout of the search
+hits and the review listing in a real terminal (acceptance 3), for
+example:
+
+```sh
+go run ./cmd/grove          # then / and type internal/tui/search.go, or a word from a body
+```
+
+and a work record in review with a candidate, whose detail lists under
+each changed file the records that describe it. Then, from this checkout:
+
+```sh
+grove approve G-153 "VERDICT"
+```
+
+and from main's checkout:
+
+```sh
+grove integrate G-153 --cleanup
+```
+
+G-154's `with` row compares nothing new after this (Scope at preparation);
+reshaping `grove search` and the guide sentences as their own work is the
+owner's choice.
+
+Verdict on candidate a6c2fa4, 2026-09-25: fine with deferring the grove search command for now

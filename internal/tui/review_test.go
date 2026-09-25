@@ -333,3 +333,54 @@ func TestReviewActionsNeedTheRightCheckout(t *testing.T) {
 		t.Fatalf("a on active work:\n%s", s)
 	}
 }
+
+// Beside each changed file the review lists the other records that link it
+// or name it in a code span, or says none does; it reads nothing more. A
+// path under the project's prefix, which Git gives with its slash, is
+// matched as a project path, one outside it only by a code span, and a
+// rename by either side.
+func TestReviewListsRecordsDescribingEachFile(t *testing.T) {
+	t.Parallel()
+	for _, prefix := range []string{"", "proj/"} {
+		fx := newFixture()
+		f := reviewFixture(fx, false)
+		for _, s := range []*versions.Source{fx.cMain, fx.main, fx.cFeat, fx.feat} {
+			f.res.Groups = append(f.res.Groups,
+				versions.Group{ID: "Q-002", Versions: []versions.Version{withBody(version(s, "Q-002", "Where?", "open"), "In `x.go`, and [bin](../../bin.dat).\n")}},
+				versions.Group{ID: "D-002", Versions: []versions.Version{withBody(version(s, "D-002", "Keep x", "accepted"), "[x](../../internal/x.go), [old](../../old/y.go), `Cargo.toml`\n")}})
+		}
+		for i := range f.res.Groups {
+			for j := range f.res.Groups[i].Versions {
+				if v := &f.res.Groups[i].Versions[j]; v.Record.ID == "W-001" {
+					*v = withBody(*v, "Changes [x](../../internal/x.go).\n")
+					v.Record.Candidate = "abcdef1"
+				}
+			}
+		}
+		f.res.Prefix = prefix
+		changes := f.changes
+		f.changes = func(target, candidate, tip, path string) (*versions.Changes, error) {
+			c, err := changes(target, candidate, tip, path)
+			for i := range c.Files {
+				c.Files[i].Path = prefix + c.Files[i].Path
+			}
+			c.Files = append(c.Files, versions.Change{Path: prefix + "old/y.go → " + prefix + "new/y.go", Added: 1}, versions.Change{Path: "Cargo.toml", Added: 1})
+			return c, err
+		}
+		m := openReview(t, f, 160, 50)
+		s := plain(m)
+		want := []string{"internal/x.go  +12 −3", "described by Q-002 code span, D-002 link", "grove/work/W-001.md  +5 −1", "no record names it",
+			"bin.dat  binary", "described by Q-002 link", "new/y.go  +1 −0", "described by D-002 link", "Cargo.toml  +1 −0", "described by D-002 code span"}
+		at := 0
+		for _, w := range want {
+			i := strings.Index(s[at:], w)
+			if i < 0 {
+				t.Fatalf("prefix %q: the review lacks %q in order:\n%s", prefix, w, s)
+			}
+			at += i + len(w)
+		}
+		if strings.Contains(s, "W-001 link") || strings.Join(f.reads, ";") != "changes main abcdef1 a grove/work/W-001.md" {
+			t.Fatalf("prefix %q: the open record is not listed, and nothing more is read: %v\n%s", prefix, f.reads, s)
+		}
+	}
+}
