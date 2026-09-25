@@ -11,10 +11,6 @@ relates_to: ["G-118", "G-122", "G-141"]
 
 ## Question
 
-## Next
-
-## Question
-
 [G-154](G-154-listed-constraint-eval.md) acceptance 2 runs its two cases
 under "an owner mandate naming a Claude model, runs, budget and permission
 mode", and its Next says the owner supplies it before any paid run. The

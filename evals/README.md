@@ -189,9 +189,11 @@ Every case also reports whether `grove search` ran, which exists only once
 [G-153](../grove/G-153-search-and-code-links.md) lands. The G-154 cases add
 `holding read`, whether the record holding the constraint was read, and
 `distractors read`, which of the case's distractors were: a record counts as
-read when a read above names its file or a `grove show` or `grove context`
-names its ID; a `--include PATH` on a `grove` command, which prints that
-file, counts as a read of the file. `context` on another record that only
+read when a read above names its file, a `grove show` names its ID, or a
+`grove context` names the ID of a work record (it refuses any other type);
+a `--include PATH` on a `grove` command naming a file in the clone counts
+as a read of that file. These come from the command, not its result: a
+command that failed still counts. `context` on another record that only
 lists it is not a reading, and neither is a `grep` that prints a matching
 line. A distractor read through `show` is in `distractors read` and not in
 the unneeded reads, which count files only: compare the two together.

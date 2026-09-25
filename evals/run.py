@@ -176,7 +176,7 @@ def build(work, cases):
         for key, kind, title, _ in case["records"]:
             rel = sh(grove, "--project", path, "new", kind, title).stdout.strip()
             fill(path, rel, key)
-            recs[key] = {"id": os.path.basename(rel)[:5], "path": rel}
+            recs[key] = {"id": os.path.basename(rel)[:5], "path": rel, "type": kind}
         for key, _, _, fields in case["records"]:
             sets = [a for k, v in fields.items() for a in ("--set", f"{k}={json.dumps([recs[x]['id'] for x in v])}" if isinstance(v, list) else f"{k}={v}")]
             sets += ["--set", f"candidate={base}"] if fields.get("status") == "done" else []  # done needs a candidate HEAD holds
@@ -353,13 +353,14 @@ def retrieval(transcript, harness, clone, created, case=None, fixture=None):
             used.update(words[:1])
             invoked.append(words)
             # context --include PATH prints the file in full: a read of it (the listing's own advice)
-            rel += [norm(w.removeprefix("--include=")) for i, w in enumerate(words) if w.startswith("--include=")]
-            rel += [norm(words[i + 1]) for i, w in enumerate(words[:-1]) if w == "--include"]
+            included = [w.removeprefix("--include=") for w in words if w.startswith("--include=")] + [words[i + 1] for i, w in enumerate(words[:-1]) if w == "--include"]
+            rel += [norm(f) for f in included if os.path.isfile(os.path.join(clone, f))]
     recs, case = (fixture or {}).get("records", {}), case or {}
     distractors = case.get("distractors", ())
     needed = NEEDED | {r["path"] for k, r in recs.items() if k not in distractors}
-    # A record is read when its file is, or when show or context names its ID; a context listing it is not a reading.
-    read = lambda r: r["path"] in rel or any(w[0] in ("show", "context") and r["id"] in w[1:] for w in invoked if w)
+    # A record is read when its file is, or when show names its ID, or context names a work record's (it refuses any
+    # other type); a context listing it is not a reading. The command, not its result: a refused one still counts.
+    read = lambda r: r["path"] in rel or any((w[0] == "show" or w[0] == "context" and r["type"] == "work") and r["id"] in w[1:] for w in invoked if w)
     facts = {
         "guide": "guide" in used,
         "brief": "brief" in used or "grove/brief.md" in rel,
@@ -699,11 +700,12 @@ def fake(harness, argv):
         tool("Bash", command="grove list && cat tasks.py")
         # an unneeded read outside the clone; Codex's goes through a command, so the file must exist
         tool("Read", file_path=os.path.abspath(__file__) if codex else os.path.expanduser("~/.claude/CLAUDE.md"))
-        if case.get("holding"):  # good reads it through show, surfaced through context, bad only lists it or never looks
+        if case.get("holding"):  # good reads it through show, surfaced through --include or its file; bad only lists it, or tries context on a decision
             hold = recs[case["holding"]]
             other = next((r for k, r in recs.items() if k != case["holding"] and k not in case["distractors"]), None)
-            read = {"good": f"grove show {hold['id']}", "bad": f"grove context {other['id']}" if other else "true",
-                    "surfaced": f"grove context {other['id']} --include={hold['path']}" if other else f"grove context {hold['id']}"}[mode]
+            sep = "=" if codex else " "  # both forms of --include
+            read = {"good": f"grove show {hold['id']}", "bad": f"grove context {(other or hold)['id']}",
+                    "surfaced": f"grove context {other['id']} --include{sep}{hold['path']}" if other else f"cat {hold['path']}"}[mode]
             tool("Bash", command=read + ("" if mode == "bad" else " && grove search tasks.py"))
         for key in case.get("distractors", ())[:1]:  # one distractor's file read; surfaced shows the other too
             tool("Bash", command=f"cat {recs[key]['path']}")
@@ -790,11 +792,13 @@ def selftest():
                     continue
                 found, listed = bool(case.get("holding")) and mode != "bad", r["case"] == "listed-constraint"
                 assert f["guide"] and f["brief"] and f["list"] and f["search"] == found and f.get("holding_read", False) == found, f
-                assert f["context_or_show"] == (found or listed and mode == "bad"), f  # bad's context on the due record lists the holding record, and is not a reading of it
+                # bad's context lists the holding record (listed) or is refused on a decision (code): neither reads it; surfaced code reads its file
+                assert f["context_or_show"] == (bool(case.get("holding")) and not (mode == "surfaced" and not listed)), f
+                assert mode != "surfaced" or r["case"] != "code-constraint" or any("keep-the-owner" in p for p in f["files_read"]), f
                 distractor = [os.path.basename(p)[:5] for p in f["files_read"] if "export-tasks-as-csv" in p]
                 assert len(distractor) == listed and f.get("distractors_read", [None])[:1] == (distractor[:1] if case.get("holding") else [None]), f
                 assert len(f.get("distractors_read") or []) == (2 if listed and mode == "surfaced" else len(distractor)), f  # the second through show
-                assert not (listed and mode == "surfaced") or any("add-tasks-export" in p for p in f["files_read"]), f  # read through --include=
+                assert not (listed and mode == "surfaced") or any("add-tasks-export" in p for p in f["files_read"]), f  # read through --include, spaced on claude, = on codex
                 outside = "evals/run.py" if harness == "codex" else ".claude/CLAUDE.md"
                 assert "tasks.py" in f["files_read"] and "grove/brief.md" in f["files_read"] and len(f["unneeded"]) == 1 + len(distractor) and f["unneeded"][0].endswith(outside), f
     assert open(os.path.join(tmp, "out-claude", "good", "report.md")).read().count("- config dir synced skills: pdf") == 1
