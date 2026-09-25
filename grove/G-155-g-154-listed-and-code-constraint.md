@@ -90,4 +90,7 @@ paid run.
 Steps 1 to 5 done, 2026-09-25 (G-154's Next has the evidence; step 5's
 review is [G-160](G-160-g-154-without-row-both-constrain.md)); step 6
 waits on G-153's integration, and first makes `holding read` and
-`distractors read` count a glob read, as G-160 finds they must.
+`distractors read` count a glob read, as G-160 finds they must. The glob
+fix is done (`40e1263`); step 6 now waits on
+[G-173](G-173-what-should-g-154-s-with-row-bec.md), since G-153 shipped no
+agent-facing search for a `with` row to measure.
