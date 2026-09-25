@@ -2,9 +2,9 @@
 id: "G-173"
 type: question
 title: "What should G-154's with row become now that G-153 shipped no agent-facing search?"
-status: open
+status: resolved
 created: "2026-09-25T21:19:37Z"
-updated: "2026-09-25T21:19:53Z"
+updated: "2026-09-25T21:24:49Z"
 blocks: ["G-154"]
 relates_to: ["G-153", "G-158", "G-160"]
 ---
@@ -54,3 +54,6 @@ assign `/grove-work G-154` again on `worktree-G-154`.
 ## Next
 
 Waits for the owner.
+
+## Answer
+Drop the with row
