@@ -187,8 +187,9 @@ with no command is reported unavailable, not as reading nothing. A `grove` run t
 inside `$(…)` is missed, and a heredoc line starting with `grove` is counted:
 read the transcript before resting a conclusion on one fact.
 
-Every case also reports whether `grove search` ran, which exists only once
-[G-153](../grove/G-153-search-and-code-links.md) lands. The G-154 cases add
+Every case also reports whether `grove search` ran, a command no Grove
+release has yet: [G-153](../grove/G-153-search-and-code-links.md) shipped
+body search on the board only. The G-154 cases add
 `holding read`, whether the record holding the constraint was read, and
 `distractors read`, which of the case's distractors were: a record counts as
 read when a read above names its file, a `grove show` names its ID, or a
@@ -228,11 +229,16 @@ stays readable and in place; tags stay lowercase and no file moves.
 
 ## Comparing two guides digests
 
-The G-154 cases measure whether [G-153](../grove/G-153-search-and-code-links.md)'s
-search changes what agents find. Its `without` row runs from a checkout whose
-`grove version` digest predates G-153, its `with` row from one holding G-153's
-integrated candidate, with the same cases, runs, model, budget, permission mode
-and config directory; each report's digest line says which row it is.
+The G-154 cases can measure whether an agent-facing retrieval change, such as
+a `grove search` command or guide text that points at it, changes what agents
+find. Their `without` row ran at guides digest `41324c3655a1`
+([G-160](../grove/G-160-g-154-without-row-both-constrain.md)); a `with` row
+runs from a checkout holding the change, with the same cases, runs, model,
+budget, permission mode and config directory; each report's digest line says
+which row it is. [G-153](../grove/G-153-search-and-code-links.md) shipped no
+such change, so G-154 ran no `with` row
+([G-173](../grove/G-173-what-should-g-154-s-with-row-bec.md)); the work that
+ships one carries it.
 Compare per case and row: the rubric's constraint row, `holding read`,
 `distractors read`, `search`, the unneeded reads, turns and cost.
 

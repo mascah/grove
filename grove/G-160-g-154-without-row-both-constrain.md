@@ -101,6 +101,20 @@ wrong: 5 of 10 `holding read` values are false negatives. Unneeded reads
 count only paths too: the one reported is `.gitignore` (code-constraint
 run 2); the distractors read by glob appear nowhere.
 
+Recomputed after the fix. Commit `40e1263` makes both facts, and the
+unneeded reads, count a read through a glob or a `for` loop over paths,
+with a selftest case. `retrieval()` at that commit, rerun on the ten
+retained transcripts and post-run clones (a throwaway script importing
+`evals/run.py`, not committed; rerun at the handoff and matching the
+checkpoint's first run) gives: `holding read` true in 10 of 10;
+listed-constraint `distractors read` G-003 and G-004 in 5 of 5; unneeded
+reads G-003 and G-004 in listed-constraint runs 1, 3, 5, the shared
+fixture record G-001 "Sync tasks between two machines" in listed-constraint
+runs 1 and 5 and code-constraint runs 2 and 3, and `.gitignore` in
+code-constraint run 2. This is finding 3's reading of the transcripts. The
+reports under `--out` keep the values from `eeec725`; these are the facts
+this row is compared on.
+
 **5. Cost and shape.** listed-constraint $0.29 to $0.33 a run, 6 to 9
 turns, 50 to 64 seconds, $1.55 for five; code-constraint $0.34 to $0.38,
 9 turns, 56 to 72 seconds, $1.80 for five; $3.35 for the row against the
@@ -129,22 +143,21 @@ action or, in code-constraint runs 4 and 5, the question it waits on.
 **Lever.** No change is justified by this row. Both constraints were found
 and applied in every run on Claude Opus 5.5 at guides digest
 `41324c3655a1`, at the G-108 pair's cost, without search, because in
-fixtures of five and two records the agent reads them all. The `with` row
-is still worth its $3.35 as G-154 plans it, as a check that G-153's search
-text neither breaks this nor adds cost, but it cannot show that search
-finds what the listing missed: this fixture has nothing missed. Evidence
+fixtures of five and two records the agent reads them all. A `with` row
+would have cost another $3.35 to check that G-153's search text neither
+breaks this nor adds cost, but it could not show that search finds what
+the listing missed, since this fixture has nothing missed; the owner
+dropped it (G-173). Evidence
 that would justify G-153's search, or its code-to-record links, needs a
 fixture large enough that reading every record costs more than choosing,
 tens of records with plausible titles, which neither case has. That is a
 new case and an owner choice, not a change to these two, whose `without`
 row the `with` row must match.
 
-Before the `with` row, the runner's `holding read` and `distractors read`
-should count a read through a glob that matches the record's file
-(finding 4), with a selftest case, and this row's facts should be
-recomputed from the retained transcripts, so the two rows compare on the
-same definition. Until then, read those two columns against the
-transcripts, as this record does.
+The runner's `holding read` and `distractors read` now count a read
+through a glob (finding 4, `40e1263`), and this row's facts are
+recomputed on that definition, so a later `with` row compares against
+them.
 
 Finding 2's syntax question is fixture noise. Removing it means naming the
 syntax in the topic, which would change the case after its `without` row;
@@ -164,5 +177,8 @@ the implementing session. Five runs show a pattern, not a rate. The row
 was run as two pieces with separate reports rather than G-158's single
 command with one `--out`; the arguments are otherwise identical, and the
 cap per piece is half. The checks saw the clone; the trace showed no write
-outside it. The `with` row and the comparison across rows (G-154
-acceptance 3) are open.
+outside it. The `with` row was dropped by the owner's answer to
+[G-173](G-173-what-should-g-154-s-with-row-bec.md), since G-153 shipped no
+agent-facing search, so this record makes no comparison across rows; a
+later search command or guide text carries its own `with` row on these
+cases.

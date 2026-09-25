@@ -15,8 +15,7 @@ The owner has repeatable evidence of whether an agent shaping in an adopting
 project finds and applies a constraint that the selected record does not
 hold: one kept in a listed prerequisite or plan among plausible distractors,
 and one kept in a record that describes the file the proposal must touch;
-and of whether [G-153](G-153-search-and-code-links.md)'s search changes
-that, at what cost in reading.
+at what cost in reading.
 
 Owner intent, shaping conversation 2026-09-25: evaluate body search and
 code-to-record links against Grove's existing retrieval before paying for
@@ -30,6 +29,14 @@ before [G-153](G-153-search-and-code-links.md) starts, so its `without`
 row is the baseline G-153's preparation reads; and it runs on Claude only.
 The Codex row and `gpt-6-astra` are outside this work, whatever a later
 mandate says about model, runs, budget and permission mode.
+
+Owner answer to [G-173](G-173-what-should-g-154-s-with-row-bec.md),
+2026-09-25: "Drop the with row". G-153 shipped body search on the board
+only, with no `grove search` and no guide text, so a headless `with` row
+had nothing to measure. This work ends on its `without` row; a later
+agent-facing search, shaped as its own work, carries its own `with` row
+on these cases. The outcome no longer asks whether G-153's search changes
+the result, and acceptance 2 and 3 were amended to match.
 
 ## Constraints
 
@@ -80,6 +87,9 @@ run count, on Claude only:
   brief does not. The same checks; retrieval facts say whether that decision
   was read, and, on the `with` row, whether `grove search` ran.
 
+The `with` row was dropped (G-173); the runner and the README keep the
+comparison for the work that ships a search.
+
 A linked review record compares rows per case: found and applied, holding
 record read, unneeded reads, turns and cost, and says whether the difference
 justifies the next lever or none.
@@ -95,9 +105,10 @@ has no product to test; scoring the retrieval facts.
    them and the two-digest comparison.
 2. Under an owner mandate naming a Claude model, runs, budget and
    permission mode, and never through the Codex harness, each case runs on
-   its `without` row, and on its `with` row once G-153's
-   candidate is integrated, retaining per run what the README lists.
-3. A review record linked by `work` reports the pattern per case and row:
+   its `without` row, retaining per run what the README lists. (The `with`
+   row was dropped by the owner's answer to G-173.)
+3. A review record linked by `work` reports the pattern per case on the
+   `without` row:
    whether the constraint was found and applied, whether the holding record
    was read, unneeded reads and cost; names the lever it points at or
    concludes that no change is justified; and says whether a symbol-level

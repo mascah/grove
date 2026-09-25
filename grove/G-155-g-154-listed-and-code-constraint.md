@@ -84,8 +84,10 @@ paid run.
 4. Mandate question, blocking G-154; checkpoint.
 5. Under the mandate: the `without` row, one run set per case, and a
    review record of its pattern (G-154 acceptance 3 for that row).
-6. After G-153 integrates: merge main, the `with` row, the review
-   completed across both rows; handoff into Review.
+6. The glob fix, the `without` row's facts recomputed into G-160, the
+   final independent review, and handoff into Review. (Was: after G-153
+   integrates, merge main and run the `with` row; the owner's answer to
+   G-173 dropped that row.)
 
 Steps 1 to 5 done, 2026-09-25 (G-154's Next has the evidence; step 5's
 review is [G-160](G-160-g-154-without-row-both-constrain.md)); step 6
@@ -94,3 +96,5 @@ waits on G-153's integration, and first makes `holding read` and
 fix is done (`40e1263`); step 6 now waits on
 [G-173](G-173-what-should-g-154-s-with-row-bec.md), since G-153 shipped no
 agent-facing search for a `with` row to measure.
+[G-173](G-173-what-should-g-154-s-with-row-bec.md) was answered "Drop the
+with row" (2026-09-25), so step 6 ends on the `without` row.
