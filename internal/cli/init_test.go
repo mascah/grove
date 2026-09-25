@@ -244,7 +244,7 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 		{[]string{"guide", "shape"}, "# Shaping Grove work\n"},
 		{[]string{"guide", "model"}, "# Record model\n"},
 		{[]string{"guide", "review"}, "# Reviewing Grove work\n"},
-		{[]string{"guide", "work", "--entrypoint", "1"}, "# Executing assigned Grove work\n"},
+		{[]string{"guide", "work", "--entrypoint", "2"}, "# Executing assigned Grove work\n"},
 		{[]string{"guide", "shape", "--entrypoint=2"}, "# Shaping Grove work\n"},
 		{[]string{"version"}, "grove "}, // ends with the content digests, checked below
 	} {
@@ -322,9 +322,11 @@ func runInitCheck(t *testing.T, root string) (int, string, string) {
 	return code, out.String(), errOut.String()
 }
 
-// An install from before entrypoint revisions is diagnosed without a write,
-// refreshed by init with the project's own file kept, and then current; a
-// newer, older-than-served or missing entrypoint fails the check.
+// An install from before entrypoint revisions is diagnosed without a write as
+// legacy, which this binary does not serve, refreshed by init with the
+// project's own file kept, and then current; a newer, older-than-served or
+// missing entrypoint fails the check, and other text at a served revision
+// does not.
 func TestInitCheckDiagnosesAnOldInstallAndInitRefreshesIt(t *testing.T) {
 	t.Parallel()
 	root := emptyRepo(t)
@@ -336,7 +338,7 @@ func TestInitCheckDiagnosesAnOldInstallAndInitRefreshesIt(t *testing.T) {
 	write(t, root, custom, "our own shaping skill\n")
 	before := hashes(t, root)
 	code, out, errOut := runInitCheck(t, root)
-	legacy := " (no revision line, so revision 1, which this grove serves; init rewrites it)\n"
+	legacy := " (no revision line: written before entrypoint revisions, with a grammar and review brief of its own that this grove cannot vouch for; init rewrites it)\n"
 	want := "custom " + custom + " (no init marker: the project's own, not judged; delete it to get the managed version)\n" +
 		"legacy .agents/skills/grove-shape/agents/openai.yaml" + legacy +
 		"legacy .agents/skills/grove-work/SKILL.md" + legacy +
@@ -344,7 +346,7 @@ func TestInitCheckDiagnosesAnOldInstallAndInitRefreshesIt(t *testing.T) {
 		"legacy .claude/agents/grove-reviewer.md" + legacy +
 		"legacy .claude/skills/grove-shape/SKILL.md" + legacy +
 		"legacy .claude/skills/grove-work/SKILL.md" + legacy
-	if code != 0 || out != want {
+	if code != 1 || out != want || !strings.Contains(errOut, "grove: 6 entrypoints are missing or unusable with this grove; nothing was written.") {
 		t.Fatalf("check of an old install: %d\n%s%s", code, out, errOut)
 	}
 	if !reflect.DeepEqual(hashes(t, root), before) {
@@ -378,7 +380,7 @@ func TestInitCheckDiagnosesAnOldInstallAndInitRefreshesIt(t *testing.T) {
 	for _, revision := range []string{"99", "0", "two"} {
 		write(t, root, work, strings.Replace(grove.Entrypoints()[work], current, "grove entrypoint revision "+revision, 1))
 		code, out, errOut := runInitCheck(t, root)
-		if code != 1 || !strings.Contains(out, fmt.Sprintf("incompatible %s (revision %s; this grove serves %d through %d; init rewrites it)\n", work, revision, grove.MinEntrypointRevision, grove.EntrypointRevision)) || !strings.Contains(errOut, "grove: 1 entrypoints are missing or unusable with this grove; nothing was written.") {
+		if code != 1 || !strings.Contains(out, fmt.Sprintf("incompatible %s (revision %s; this grove serves %s; init rewrites it)\n", work, revision, grove.ServedEntrypoints())) || !strings.Contains(errOut, "grove: 1 entrypoints are missing or unusable with this grove; nothing was written.") {
 			t.Fatalf("revision %s: %d\n%s%s", revision, code, out, errOut)
 		}
 	}
@@ -404,9 +406,9 @@ func TestGuideServesEntrypointRevisions(t *testing.T) {
 			t.Errorf("%s does not load its guide with its revision", relative)
 		}
 	}
-	for _, revision := range []string{"0", "3", "99", "02", "two"} {
+	for _, revision := range []string{"0", "1", "3", "99", "02", "two"} {
 		var out, errOut bytes.Buffer
-		if code := Run([]string{"guide", "work", "--entrypoint", revision}, t.TempDir(), &out, &errOut); code != 1 || out.Len() != 0 || !strings.Contains(errOut.String(), "is revision "+revision+", and this grove serves entrypoint revisions 1 through 2; nothing was printed.\nRerun `grove init`") {
+		if code := Run([]string{"guide", "work", "--entrypoint", revision}, t.TempDir(), &out, &errOut); code != 1 || out.Len() != 0 || !strings.Contains(errOut.String(), "is revision "+revision+", and this grove serves "+grove.ServedEntrypoints()+"; nothing was printed.\nRerun `grove init`") {
 			t.Fatalf("%s: %d %q %q", revision, code, out.String(), errOut.String())
 		}
 	}

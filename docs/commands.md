@@ -239,9 +239,10 @@ committed, so `run` refuses a worktree without `.claude/skills/grove-work/SKILL.
 the skill the prompt names, which `init` writes and you commit
 ([G-150](../grove/G-150-launch-attempts-only-where-the-w.md)); a new branch
 is checked in HEAD before it is created. It likewise refuses a worktree
-whose `grove-work` skill or reviewer definition carries an
+whose marked `grove-work` skill or reviewer definition carries an
 [entrypoint revision](#entrypoint-revisions) the launching `grove` does not
-serve, which would stop at its first guide after the spend began
+serve, legacy included, which would stop or contradict the guide after the
+spend began
 ([G-169](../grove/G-169-harness-upgrade-compatibility.md)). An open
 question that blocks the work is the wait the headless guide persists, so rerunning with nothing
 changed refuses the same way. Every refusal comes before a write, except
@@ -307,28 +308,34 @@ the binary prints, so installing another `grove` changes what a fresh
 session follows without rewriting them. What an entrypoint needs of the
 binary is its *entrypoint revision*, an integer apart from the release
 version and the record schema, written in each managed file as
-`grove entrypoint revision N` and passed as `grove guide NAME --entrypoint N`.
-This `grove` writes revision 2 and serves revisions 1 and 2. Revision 1 is
-what `init` wrote before revisions existed: marked files with no revision
-line, which kept the assignment grammar and the whole review brief
-themselves and load the guides without `--entrypoint`. They still work;
-their grammar and review brief stay as written until `init` rewrites them.
+`grove entrypoint revision N` and passed as
+`grove guide NAME --entrypoint N`. From revision 2 an entrypoint holds
+nothing the guides evolve (the assignment grammar and the review brief are
+the guides'), so a guide change never needs a new revision; one changes only
+when an entrypoint needs something an older `grove` lacks, or a newer one
+stops serving what an older entrypoint asks. This `grove` writes and serves
+revision 2. What `init` wrote before revisions existed, marked files with no
+revision line, is revision 1, `legacy`: each generation kept its own
+assignment grammar and review brief (the earliest rejects `--until plan`,
+and has no reviewer), and nothing in the file says which, so it is not
+served. Refresh it with `init`.
 
 `guide --entrypoint N` refuses a revision it does not serve, printing
 nothing and saying how to repair it, and a `grove` from before revisions
 refuses the option; either way the entrypoint stops at its first command,
 before any work. A plain `guide` always prints, since a person reads it the
-same way; a revision-1 file therefore reaches diagnosis through
-`init --check` and `run`, not through `guide`.
+same way, and a legacy file loads its guide that way: an interactive session
+through one is not stopped by `guide`, so a legacy install reaches diagnosis
+through `init --check` and `run`.
 
 `init --check` diagnoses each managed path and writes nothing, one line
 each: `current` (this `grove`'s template), `compatible` (a served revision
-in other text, older or edited), `legacy` (revision 1), `incompatible` (a
-revision this `grove` does not serve, newer or older, or not a number),
-`missing`, `custom` (no marker: yours, listed and never judged), or
+in other text, older or edited), `legacy` (no revision line), `incompatible`
+(a stated revision this `grove` does not serve, newer or older, or not a
+number), `missing`, `custom` (no marker: yours, listed and never judged), or
 `conflict` (not a file `init` could replace). It exits 1 when any path is
-missing, incompatible or a conflict. Different text alone never makes a file
-incompatible.
+legacy, incompatible, missing or a conflict. Different text alone never
+makes a file incompatible.
 
 Upgrading is installing the new `grove`, then in the target's checkout
 `init --check`, `init`, and committing what it updated; `init` rewrites only
@@ -338,7 +345,10 @@ another checkout never touches: run `init` in that worktree and commit it
 there, or merge the target after the refresh is committed. A session that
 already loaded an entrypoint or a guide keeps what it read, so start a new
 session (or reload skills) after refreshing. `run` checks the worktree it
-launches in, and refuses an unserved revision before any spend.
+launches in against the launching `grove`, and refuses an unserved revision
+before any spend; the `grove` the session itself runs (`PATH` or the
+project's instructions) is not checked, so where it differs, the session's
+first `guide` is what stops it.
 
 Check which `grove` answers before `init`: the predecessor also has an
 `init`, which would write its own scaffolding instead. Codex runs each

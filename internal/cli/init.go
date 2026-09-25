@@ -207,8 +207,8 @@ func sortedKeys(m map[string]string) []string {
 }
 
 // checkInit diagnoses each entrypoint init manages against this binary and
-// writes nothing. It exits 1 when one is missing, incompatible, or not a
-// file init could replace.
+// writes nothing. It exits 1 when one is missing, of a revision this binary
+// does not serve (legacy or incompatible), or not a file init could replace.
 func checkInit(root string, out, errOut io.Writer) int {
 	files := grove.Entrypoints()
 	failed := 0
@@ -236,14 +236,14 @@ func checkInit(root string, out, errOut io.Writer) int {
 			case "current":
 				note = " (revision " + revision + ")"
 			case "legacy":
-				note = " (no revision line, so revision 1, which this grove serves; init rewrites it)"
+				note = " (no revision line: written before entrypoint revisions, with a grammar and review brief of its own that this grove cannot vouch for; init rewrites it)"
 			case "compatible":
 				note = " (revision " + revision + ", which this grove serves, in other text; init rewrites it)"
 			case "incompatible":
-				note = fmt.Sprintf(" (revision %s; this grove serves %d through %d; init rewrites it)", revision, grove.MinEntrypointRevision, grove.EntrypointRevision)
+				note = " (revision " + revision + "; this grove serves " + grove.ServedEntrypoints() + "; init rewrites it)"
 			}
 		}
-		if verdict == "missing" || verdict == "incompatible" || verdict == "conflict" {
+		if verdict == "missing" || verdict == "legacy" || verdict == "incompatible" || verdict == "conflict" {
 			failed++
 		}
 		if _, err := fmt.Fprintf(out, "%s %s%s\n", verdict, visible(relative), visible(note)); err != nil {

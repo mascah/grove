@@ -414,11 +414,15 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	// nobody committed is absent there. A new branch is checked in HEAD
 	// before it exists: kept at a HEAD without the skill, it would refuse
 	// every later launch too.
-	// An entrypoint whose revision this grove does not serve stops at the
-	// first guide it loads, after the spend has begun (G-169).
+	// A marked entrypoint whose revision this grove does not serve would
+	// stop, or contradict the guide, after the spend has begun (G-169). A
+	// custom one is the project's own and is not judged.
 	incompatible := func(path, where, content string) error {
-		if verdict, revision := grove.Diagnose(path, content); verdict == "incompatible" {
-			return fmt.Errorf("%s in %s is entrypoint revision %s, which this grove does not serve (%d through %d), so the attempt would stop at its first guide; run grove init with this grove, commit what it wrote, and launch again", filepath.Join(prefix, path), where, revision, grove.MinEntrypointRevision, grove.EntrypointRevision)
+		if verdict, revision := grove.Diagnose(path, content); verdict != "custom" && !grove.SupportsEntrypoint(revision) {
+			if verdict == "legacy" {
+				revision = "1 (no revision line)"
+			}
+			return fmt.Errorf("%s in %s is entrypoint revision %s, and this grove serves %s; run grove init with this grove, commit what it wrote, and launch again", filepath.Join(prefix, path), where, revision, grove.ServedEntrypoints())
 		}
 		return nil
 	}
