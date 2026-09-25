@@ -737,7 +737,7 @@ def dependencies(root, wt, base):
     mark = s.expect("awaiting implementation", mark)  # G-001 is proposed in this checkout, whatever feature holds
     s.send(ESC)
     time.sleep(0.2)  # alone: an Esc followed at once by a letter reads as Alt
-    mark = s.expect("p preview (1 selected)", mark)
+    mark = s.expect("p preview (1", mark)
     s.send(ENTER)
     mark = s.expect("dependencies › G-002", mark)
     s.send(ESC)
@@ -746,7 +746,7 @@ def dependencies(root, wt, base):
     s.send(b"r")
     mark = s.expect("Reading branches and checkouts", mark)
     s.resize(24, 80)
-    mark = s.expect("Tab tree", mark)
+    mark = s.expect("Tab trees", mark)
     s.send(b"\t")
     s.expect("G-002 proposed · layer 1", mark)
     s.send(b"q")

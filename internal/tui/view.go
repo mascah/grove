@@ -274,17 +274,14 @@ func (m *Model) render() string {
 	case m.screen == depsScreen && m.previewing:
 		rows, hints = m.depsBody(w, body), pick(w, "↑/↓ PgUp/PgDn scroll   r re-read   Esc back to the list   q quit", "↑↓ scroll  r  Esc back  q quit")
 	case m.screen == depsScreen:
-		picked, tree := fmt.Sprintf("p preview (%d selected)", len(m.depsPicked)), ""
-		if w < wideWidth {
-			tree = "Tab tree  "
-			if m.depsTree {
-				tree = "Tab list  "
-			}
+		move, tab := "↑/↓ move", "Tab trees"
+		if m.depsTree {
+			move, tab = "↑/↓ PgUp/PgDn scroll the trees", "Tab list"
 		}
 		rows, hints = m.depsBody(w, body), pick(w,
-			"↑/↓ move   Space select   "+picked+"   Enter open   h history   "+tree+"s sources   r refresh   Esc board   q quit",
-			fmt.Sprintf("↑↓  Space select  p preview (%d)  Enter open  h history  %sEsc  q", len(m.depsPicked), tree),
-			fmt.Sprintf("↑↓  Space  p (%d)  Enter  h  Tab  Esc  q", len(m.depsPicked)))
+			fmt.Sprintf("%s  Space select  p preview (%d selected)  c clear  Enter open  h history  %s  b checkout  Esc board  q", move, len(m.depsPicked), tab),
+			fmt.Sprintf("↑↓  Space select  p preview (%d)  c  Enter open  h history  %s  Esc  q", len(m.depsPicked), tab),
+			fmt.Sprintf("↑↓  Space  p (%d)  Enter  h  %s  Esc  q", len(m.depsPicked), tab))
 	case m.screen == attemptScreen:
 		answer, key := "", ""
 		if v := m.attemptOf(m.runID); v != nil && m.waits(v) {

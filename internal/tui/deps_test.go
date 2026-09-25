@@ -2,6 +2,8 @@ package tui
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -275,7 +277,105 @@ func TestDepsPreviewBindsToOneCheckout(t *testing.T) {
 	if cmd := press(m, "p"); cmd != nil {
 		t.Fatal("no preview should be read")
 	}
-	if screen := plain(m); !strings.Contains(screen, "work W-20 is not in this checkout") || !strings.Contains(screen, "only; b chooses another checkout") {
+	if screen := plain(m); !strings.Contains(screen, "work W-20 is not in this checkout") || !strings.Contains(screen, "c clears the selection") {
 		t.Errorf("the preview does not explain its binding:\n%s", screen)
 	}
+}
+
+// Review G-161 gate 2: each finding's regression.
+func TestDepsReviewRegressions(t *testing.T) {
+	t.Run("the trees fit the smallest terminal", func(t *testing.T) {
+		for _, w := range []int{40, 45, 50, 60} {
+			m, _, _ := openDeps(t, w, 10)
+			focusOn(t, m, "W-05")
+			press(m, "tab", "down", "down")
+			plain(m) // panicked below 60 columns
+		}
+	})
+	t.Run("every layer indents", func(t *testing.T) {
+		f := newFixture()
+		var vs []versions.Version
+		for i := range 8 {
+			v := version(f.main, fmt.Sprintf("W-%02d", i), "Chain link", "proposed")
+			if i > 0 {
+				v.Record.DependsOn = []string{fmt.Sprintf("W-%02d", i-1)}
+			}
+			vs = append(vs, v)
+		}
+		m := open(t, &fake{res: result(f.main, []*versions.Source{f.main}, vs...)}, 120, 30)
+		press(m, "g")
+		last := -1
+		for i := range 8 {
+			for _, r := range strings.Split(plain(m), "\n") {
+				if at := strings.Index(r, fmt.Sprintf("W-%02d proposed", i)); at >= 0 && at < 54 {
+					if at <= last {
+						t.Errorf("W-%02d at column %d, not deeper than %d", i, at, last)
+					}
+					last = at
+				}
+			}
+		}
+	})
+	t.Run("a failed re-read closes the preview", func(t *testing.T) {
+		m, f, asked := openDeps(t, 120, 40)
+		press(m, "space")
+		deliver(m, press(m, "p"))
+		f.err = errors.New("boom")
+		deliver(m, press(m, "r"))
+		f.err = nil
+		n := len(*asked)
+		if cmd := deliver(m, press(m, "r")); cmd != nil || m.previewing || len(*asked) != n {
+			t.Fatalf("the board read Git for a closed preview: %q", (*asked)[n:])
+		}
+		press(m, "g")
+		if m.previewing {
+			t.Fatal("g reopened the preview")
+		}
+	})
+	t.Run("divergent work is listed as the board places it", func(t *testing.T) {
+		f := newFixture()
+		res := result(f.main, f.sources(),
+			version(f.cMain, "W-001", "Done here", "done"), version(f.main, "W-001", "Done here", "done"),
+			version(f.cFeat, "W-001", "Reopened there", "proposed"), version(f.feat, "W-001", "Reopened there", "proposed"))
+		res.Groups[0].Versions[2].Record.DependsOn = []string{"W-002"}
+		m := open(t, &fake{res: res}, 120, 30)
+		press(m, "g")
+		screen := plain(m)
+		for _, want := range []string{"W-001 proposed", "⑂ 2 current states", "done, needs nothing", "proposed, needs W-002"} {
+			if !strings.Contains(screen, want) {
+				t.Errorf("missing %q:\n%s", want, screen)
+			}
+		}
+	})
+	t.Run("the trees scroll", func(t *testing.T) {
+		m, _, _ := openDeps(t, 80, 14)
+		focusOn(t, m, "W-05")
+		press(m, "tab")
+		if !strings.Contains(plain(m), "more rows · Tab, then ↓") {
+			t.Fatalf("no count of the rows below:\n%s", plain(m))
+		}
+		press(m, "pgdown", "pgdown")
+		if screen := plain(m); !strings.Contains(screen, "above") || !strings.Contains(screen, "W-13 proposed") || strings.Contains(screen, "more rows") {
+			t.Fatalf("the end of the trees is out of reach:\n%s", screen)
+		}
+		press(m, "tab", "down")
+		if m.depsAt != "W-07" || m.scroll != 0 {
+			t.Fatalf("Tab back should move the list: %s %d", m.depsAt, m.scroll)
+		}
+	})
+	t.Run("b chooses a checkout and returns, c clears", func(t *testing.T) {
+		m, _, _ := openDeps(t, 120, 40)
+		press(m, "space", "b")
+		if m.screen != chooserScreen {
+			t.Fatalf("b opened %v", m.screen)
+		}
+		press(m, "down", "enter")
+		if m.screen != depsScreen || !m.hasBoard {
+			t.Fatalf("choosing returned to %v", m.screen)
+		}
+		press(m, "c")
+		if len(m.depsPicked) != 0 {
+			t.Fatal("c did not clear the selection")
+		}
+	})
 }

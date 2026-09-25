@@ -454,7 +454,7 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		m.preview, m.previewErr = nil, "" // computed again from what was read
 		if msg.err != nil {
 			m.res, m.failure = nil, msg.err.Error()
-			m.screen, m.cardID = boardScreen, ""
+			m.screen, m.cardID, m.previewing = boardScreen, "", false
 			m.leaveVersions()
 			return nil
 		}
@@ -776,6 +776,7 @@ func (m *Model) chooserKey(k string) {
 			m.hasBoard, m.lost = false, false
 			m.screen, m.col, m.onShelf, m.cardID = boardScreen, 0, false, ""
 			m.settleFocus()
+			m.reopenDeps()
 			return
 		}
 		if m.choice > len(live) {
@@ -785,6 +786,7 @@ func (m *Model) chooserKey(k string) {
 			m.board, m.hasBoard, m.lost = keyOf(s), true, false
 			m.screen, m.col, m.onShelf, m.cardID = boardScreen, 0, false, ""
 			m.settleFocus()
+			m.reopenDeps()
 		} else {
 			m.notice = "that checkout cannot fill the board: " + sourceProblem(s)
 		}
@@ -1018,22 +1020,15 @@ func (m *Model) cardRows() int {
 func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
 	for _, g := range m.res.Groups {
 		states := currentStates(g)
-		best, work, deleted, uncommitted := -1, false, false, false
-		var rec *project.Record
+		work, deleted, uncommitted := false, false, false
 		for _, state := range states {
 			uncommitted = uncommitted || !slices.ContainsFunc(state, committed)
-			r := state[0].Record
-			if r == nil {
-				deleted = true
-				continue
-			}
-			if r.Type != "work" {
-				continue
-			}
-			work = true
-			if i := slices.Index(statuses[:], r.Status); i >= 0 && (best < 0 || i < best) {
-				best, rec = i, r
-			}
+			deleted = deleted || state[0].Record == nil
+			work = work || state[0].Record != nil && state[0].Record.Type == "work"
+		}
+		best, rec := -1, earliest(states)
+		if rec != nil {
+			best = slices.Index(statuses[:], rec.Status)
 		}
 		var tags []string
 		if len(states) > 1 {
@@ -1058,6 +1053,22 @@ func (m *Model) currentCards() (columns [len(statuses)][]card, shelf []card) {
 	}
 	newestFirst(columns[doneColumn])
 	return
+}
+
+// earliest is the work record a card stands for among current states: the
+// one in the earliest status, or nil when none is work in a known status.
+func earliest(states [][]*versions.Version) *project.Record {
+	var rec *project.Record
+	for _, state := range states {
+		r := state[0].Record
+		if r == nil || r.Type != "work" || !slices.Contains(statuses[:], r.Status) {
+			continue
+		}
+		if rec == nil || slices.Index(statuses[:], r.Status) < slices.Index(statuses[:], rec.Status) {
+			rec = r
+		}
+	}
+	return rec
 }
 
 // committed reports a version held by a commit: a branch's, or a checkout's

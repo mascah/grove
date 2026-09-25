@@ -1,7 +1,6 @@
 package tui
 
 import (
-	"cmp"
 	"context"
 	"fmt"
 	"maps"
@@ -37,7 +36,9 @@ func (m *Model) depsRecords() []*project.Record {
 	for i := range m.res.Groups {
 		g := &m.res.Groups[i]
 		if m.current() {
-			if r := m.record(g); r != nil {
+			if r := earliest(currentStates(*g)); r != nil {
+				out = append(out, r) // the state the board places the card by
+			} else if r := m.record(g); r != nil && r.Type != "work" {
 				out = append(out, r)
 			}
 			continue
@@ -73,8 +74,16 @@ func depsRows(v *deps.View) (rows []deps.Item, size map[int]int) {
 			size[it.Group]++
 		}
 	}
-	alone := func(it deps.Item) int { return min(2-size[it.Group], 1) } // 1 for a group of one
-	slices.SortStableFunc(rows, func(a, b deps.Item) int { return cmp.Compare(alone(a), alone(b)) })
+	alone := func(it deps.Item) bool { return size[it.Group] == 1 }
+	slices.SortStableFunc(rows, func(a, b deps.Item) int {
+		if alone(a) == alone(b) {
+			return 0
+		}
+		if alone(a) {
+			return 1
+		}
+		return -1
+	})
 	return rows, size
 }
 
@@ -94,7 +103,36 @@ func (m *Model) openDeps() {
 	if m.res == nil {
 		return
 	}
-	m.screen, m.depsAt, m.scroll = depsScreen, m.cardID, 0
+	m.screen, m.depsAt, m.scroll, m.previewing = depsScreen, m.cardID, 0, false
+}
+
+// reopenDeps returns a choice made from the dependency view to it, whose
+// preview is computed again from the chosen checkout.
+func (m *Model) reopenDeps() {
+	if m.back == depsScreen {
+		m.screen, m.preview, m.previewErr = depsScreen, nil, ""
+	}
+}
+
+// place says where a row stands among the rows: connected or not.
+func place(it deps.Item, size map[int]int) string {
+	if n := size[it.Group]; n > 1 {
+		return fmt.Sprintf("connected with %d other listed work", n-1)
+	}
+	return "unconnected"
+}
+
+// treeArea is the height the list and the trees share, and treeWidth the
+// trees' width.
+func (m *Model) treeArea(v *deps.View, rows []deps.Item, size map[int]int, w, n int) int {
+	return max(n-len(m.depsHead(v, rows, size, w))-len(depsLegend(w)), 1)
+}
+
+func treeWidth(w int) int {
+	if w >= wideWidth {
+		return w - w*9/20 - 3
+	}
+	return w
 }
 
 func (m *Model) depsKey(k string) tea.Cmd {
@@ -102,13 +140,18 @@ func (m *Model) depsKey(k string) tea.Cmd {
 		m.scrollKey(k)
 		return nil
 	}
-	v, _ := m.depsOverview()
-	rows, _ := depsRows(v)
+	v, byID := m.depsOverview()
+	rows, size := depsRows(v)
 	at := m.depsFocus(rows)
 	switch k {
 	case "up", "k", "down", "j", "pgup", "pgdown":
-		if len(rows) != 0 {
-			m.depsAt = rows[min(max(m.moved(at, k), 0), len(rows)-1)].ID
+		switch {
+		case len(rows) == 0:
+		case m.depsTree: // the trees have focus: scroll them
+			all := m.treeRows(rows[at], place(rows[at], size), byID, openBlocks(byID), true, treeWidth(m.width))
+			m.scroll = min(max(m.moved(m.scroll, k), 0), max(len(all)-m.treeArea(v, rows, size, m.width, m.height-3), 0))
+		default:
+			m.depsAt, m.scroll = rows[min(max(m.moved(at, k), 0), len(rows)-1)].ID, 0
 		}
 	case "space":
 		if at < 0 {
@@ -126,10 +169,14 @@ func (m *Model) depsKey(k string) tea.Cmd {
 			return nil
 		}
 		m.previewing, m.preview, m.previewErr, m.previewRev, m.scroll = true, nil, "", nil, 0
+	case "c":
+		m.depsPicked = nil
+	case "b":
+		m.back, m.screen, m.choice = depsScreen, chooserScreen, 0
 	case "h":
 		m.depsAll = !m.depsAll
 	case "tab":
-		m.depsTree = !m.depsTree
+		m.depsTree, m.scroll = !m.depsTree, 0
 	case "enter":
 		if at >= 0 {
 			m.openWork(rows[at].ID) // Esc from the record returns here
@@ -169,13 +216,13 @@ func (m *Model) bound() *versions.Source {
 // and reads what Git says of the candidates it names, when no other read is
 // pending. A re-read of the board clears it, so it is computed again.
 func (m *Model) wantPreview() tea.Cmd {
-	if !m.previewing || m.preview != nil || m.previewErr != "" || m.pending != "" || m.done || m.res == nil {
+	if !m.previewing || m.screen != depsScreen || m.preview != nil || m.previewErr != "" || m.pending != "" || m.done || m.res == nil {
 		return nil
 	}
 	src := m.bound()
 	switch {
 	case src == nil:
-		m.previewErr = "No checkout to bind the preview to: the board's checkout changed or was removed. Press b to choose one."
+		m.previewErr = "No checkout to bind the preview to: the board's checkout changed or was removed. Esc, then b chooses one."
 		return nil
 	case !src.Valid:
 		m.previewErr = label(src) + " cannot be read: " + sourceProblem(src)
@@ -191,7 +238,7 @@ func (m *Model) wantPreview() tea.Cmd {
 	}
 	view, err := deps.Preview(records, m.depsPicked)
 	if err != nil {
-		m.previewErr = err.Error() + ". The preview reads " + label(src) + " only; b chooses another checkout."
+		m.previewErr = err.Error() + ". The preview reads " + label(src) + " only: Esc, then b chooses another checkout, or c clears the selection."
 		return nil
 	}
 	view.Compare(m.res, src)
@@ -227,23 +274,14 @@ func (m *Model) gotPreview(msg previewMsg) {
 	m.clampScroll()
 }
 
-// depsBody is the list with the focused tree beside it from wideWidth, or
-// either alone below it (Tab swaps), under a summary and above the legend.
-func (m *Model) depsBody(w, n int) []string {
-	if m.previewing {
-		return m.scrolled(m.previewRows(w), n, w)
-	}
-	if s := m.boardSource(); !m.current() && (s == nil || !s.Valid) {
-		return fit(wrapAll("No board: "+m.contextProblem(s)+". Press b to view another checkout.", w), n, w)
-	}
-	v, byID := m.depsOverview()
-	rows, size := depsRows(v)
-	at := m.depsFocus(rows)
+// depsHead is the list's summary, wrapped: how much work, how connected, and
+// what the list leaves to the trees.
+func (m *Model) depsHead(v *deps.View, rows []deps.Item, size map[int]int, w int) []string {
 	connected, alone := 0, 0
-	for g, n := range size {
+	for _, n := range size {
 		if n > 1 {
 			connected++
-		} else if g != 0 {
+		} else {
 			alone++
 		}
 	}
@@ -258,8 +296,27 @@ func (m *Model) depsBody(w, n int) []string {
 	for i := range top {
 		top[i] = bold(top[i])
 	}
-	legend := wrap("← needs · → unlocks · ✓ done · ✗ abandoned · ? open question · ● selected · indent: layer (equal: no declared order)", w)
-	area := n - len(top) - len(legend)
+	return top
+}
+
+func depsLegend(w int) []string {
+	return wrap("← needs · → unlocks · ✓ done · ✗ abandoned · ? open question · ● selected · indent: layer (equal: no declared order)", w)
+}
+
+// depsBody is the list with the focused trees beside it from wideWidth, or
+// either alone below it (Tab swaps), under a summary and above the legend.
+func (m *Model) depsBody(w, n int) []string {
+	if m.previewing {
+		return m.scrolled(m.previewRows(w), n, w)
+	}
+	if s := m.boardSource(); !m.current() && (s == nil || !s.Valid) {
+		return fit(wrapAll("No board: "+m.contextProblem(s)+". b chooses another checkout.", w), n, w)
+	}
+	v, byID := m.depsOverview()
+	rows, size := depsRows(v)
+	at := m.depsFocus(rows)
+	top, legend := m.depsHead(v, rows, size, w), depsLegend(w)
+	area := m.treeArea(v, rows, size, w, n)
 	blockedBy := openBlocks(byID)
 	list := func(w int) []string {
 		if len(rows) == 0 {
@@ -277,6 +334,7 @@ func (m *Model) depsBody(w, n int) []string {
 			case size[it.Group] > 1 && it.Group != group:
 				lines = append(lines, bold(line(fmt.Sprintf("Connected · %d work", size[it.Group]), w)))
 			case size[it.Group] == 1 && (i == 0 || size[rows[i-1].Group] > 1):
+				alone := len(rows) - i // the unconnected rows come last
 				lines = append(lines, bold(line(fmt.Sprintf("Unconnected · %d work: no edge to another row", alone), w)))
 			}
 			group = it.Group
@@ -287,7 +345,9 @@ func (m *Model) depsBody(w, n int) []string {
 			if slices.Contains(m.depsPicked, it.ID) {
 				picked = "●"
 			}
-			text := picked + " " + strings.Repeat("  ", min(it.Layer, w/16)) + it.ID + " " + it.Status
+			// Every layer indents, however deep: a cap would draw dependent
+			// work level with its prerequisite.
+			text := picked + " " + strings.Repeat("  ", it.Layer) + it.ID + " " + it.Status
 			for _, q := range blockedBy[it.ID] {
 				text += " ? " + q
 			}
@@ -302,13 +362,14 @@ func (m *Model) depsBody(w, n int) []string {
 		if at < 0 {
 			return fit(nil, area, w)
 		}
-		place := "unconnected"
-		if n := size[rows[at].Group]; n > 1 {
-			place = fmt.Sprintf("connected with %d other listed work", n-1)
-		}
-		out := m.treeRows(rows[at], place, byID, blockedBy, w)
+		all := m.treeRows(rows[at], place(rows[at], size), byID, blockedBy, m.depsTree, w)
+		start := min(m.scroll, max(len(all)-area, 0))
+		out := slices.Clone(all[start:])
 		if len(out) > area {
-			out = append(out[:area-1], line(fmt.Sprintf("… %d more rows", len(out)-area+1), w))
+			out = append(out[:area-1], line(fmt.Sprintf("↓ %d more rows · Tab, then ↓", len(out)-area+1), w))
+		}
+		if start > 0 {
+			out[0] = line(fmt.Sprintf("↑ %d above", start+1), w)
 		}
 		return fit(out, area, w)
 	}
@@ -316,7 +377,7 @@ func (m *Model) depsBody(w, n int) []string {
 	switch {
 	case w >= wideWidth:
 		lw := w * 9 / 20
-		left, right := list(lw), tree(w-lw-3)
+		left, right := list(lw), tree(treeWidth(w))
 		for i := range area {
 			body = append(body, left[i]+" │ "+right[i])
 		}
@@ -342,10 +403,11 @@ func openBlocks(byID map[string]*project.Record) map[string][]string {
 }
 
 // treeRows describes one row: its title and place, then what it needs, down
-// to the work with no prerequisites, what it unlocks, and the open questions
-// blocking it. A record met again is written (shown above), never expanded
-// twice.
-func (m *Model) treeRows(it deps.Item, place string, byID map[string]*project.Record, blockedBy map[string][]string, w int) []string {
+// to the work with no prerequisites, what it unlocks, the open questions
+// blocking it, and in the current view each diverging state with its own
+// prerequisites, which the list never merges. A record met again is written
+// (shown above), never expanded twice. focused marks the pane Tab gave focus.
+func (m *Model) treeRows(it deps.Item, place string, byID map[string]*project.Record, blockedBy map[string][]string, focused bool, w int) []string {
 	unlocks := map[string][]string{}
 	for _, id := range slices.Sorted(maps.Keys(byID)) {
 		if r := byID[id]; r.Type == "work" && (m.depsAll || r.Status == "proposed" || r.Status == "active" || r.Status == "review") {
@@ -371,7 +433,11 @@ func (m *Model) treeRows(it deps.Item, place string, byID map[string]*project.Re
 		}
 		return nil
 	}
-	out := []string{bold(line(fmt.Sprintf("%s %s · layer %d · %s", it.ID, it.Status, it.Layer, place), w))}
+	head := fmt.Sprintf("%s %s · layer %d · %s", it.ID, it.Status, it.Layer, place)
+	out := []string{bold(line(head, w))}
+	if focused {
+		out[0] = hot(line("> "+head, w))
+	}
 	out = append(out, wrap(it.Title, w)...)
 	section := func(title string, next func(string) []string) {
 		out = append(out, line("", w), bold(line(title, w)))
@@ -385,6 +451,27 @@ func (m *Model) treeRows(it deps.Item, place string, byID map[string]*project.Re
 		out = append(out, line("", w), bold(line("? Blocked by open questions, not by work", w)))
 		for _, q := range qs {
 			out = append(out, line(name(q), w))
+		}
+	}
+	if g := m.groupOf(it.ID); m.current() && g != nil {
+		if states := currentStates(*g); len(states) > 1 {
+			out = append(out, line("", w))
+			out = append(out, wrap(fmt.Sprintf("⑂ %d current states; the list and trees use the one the board places the card by, %s:", len(states), it.Status), w)...)
+			for _, state := range states {
+				text := "deleted"
+				if r := state[0].Record; r != nil {
+					needs := strings.Join(r.DependsOn, " ")
+					if needs == "" {
+						needs = "nothing"
+					}
+					text = r.Status + ", needs " + needs
+				}
+				where := label(state[0].Source)
+				if len(state) > 1 {
+					where += fmt.Sprintf(" and %d more", len(state)-1)
+				}
+				out = append(out, wrap("  "+where+": "+text, w)...)
+			}
 		}
 	}
 	return out
