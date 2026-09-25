@@ -40,6 +40,7 @@ CASES = {
 # The G-108 pair is the regression rerun for a guide edit; the G-154 cases run only when --case names them.
 DEFAULT = ("missing-choice", "companion")
 # Files some step of the shaping guide needs for these topics; any other read is listed as unneeded.
+READERS = ("cat", "head", "tail", "sed", "nl", "less", "awk")
 NEEDED = {"AGENTS.md", "CLAUDE.md", "grove.yaml", "grove/brief.md", "tasks.py", ".agents/skills/grove-shape/SKILL.md"}
 # ponytail: the largest five-hour plan use one G-135 run took (gpt-6-astra, G-143); every run is assumed to take at least this, measure per model if it binds
 PLAN_POINTS_FLOOR = 13
@@ -327,8 +328,10 @@ def retrieval(transcript, harness, clone, created, case=None, fixture=None):
                 words = shlex.split(part)
             except ValueError:
                 continue
-            if words and words[0] in ("cat", "head", "tail", "sed", "nl", "less", "awk"):
-                files += [w for w in words[1:] if not w.startswith("-") and os.path.isfile(os.path.join(clone, w))]
+            # for F in PATHS; do cat "$F"; done reads PATHS; a glob reads every file it matches in the clone
+            loop = len(words) > 3 and words[0] == "for" and words[2] == "in" and re.search(rf"\b({'|'.join(READERS)})\b[^;&|\n]*\$\{{?{re.escape(words[1])}\b", cmd)
+            if words and words[0] in READERS or loop:
+                files += [f for w in words[3 if loop else 1:] if not w.startswith("-") for f in sorted(glob.glob(os.path.join(clone, w))) if os.path.isfile(f)]
     clone = os.path.realpath(clone)
 
     def norm(f):
@@ -708,7 +711,8 @@ def fake(harness, argv):
                     "surfaced": f"grove context {other['id']} --include{sep}{hold['path']}" if other else f"cat {hold['path']}"}[mode]
             tool("Bash", command=read + ("" if mode == "bad" else " && grove search tasks.py"))
         for key in case.get("distractors", ())[:1]:  # one distractor's file read; surfaced shows the other too
-            tool("Bash", command=f"cat {recs[key]['path']}")
+            pattern = recs[key]["path"][:len("grove/G-000")] + "*.md"  # good reads it by glob, surfaced by a loop over one
+            tool("Bash", command={"good": f"cat {pattern}", "surfaced": f'for f in {pattern}; do echo "== $f"; cat "$f"; done'}.get(mode, f"cat {recs[key]['path']}"))
         for key in case.get("distractors", ())[1:] if mode == "surfaced" else ():
             tool("Bash", command=f"grove --project . show {recs[key]['id']}")
     branch = "worktree-shape-" + ("hide-finished" if missing else "tag-filter")
@@ -819,6 +823,10 @@ def selftest():
     assert "- login: Logged in" in text and "resolves grove to the built binary" in text, text
     open(os.path.join(tmp, "empty.jsonl"), "w").close()
     assert retrieval(os.path.join(tmp, "empty.jsonl"), "codex", tmp, set())["reason"].startswith("unavailable"), "a Codex trace without commands"
+    listing = os.path.join(tmp, "listing.jsonl")  # a loop that only names the files, ls and grep over a glob read nothing
+    open(listing, "w").write(json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {
+        "command": 'for f in grove/*.md; do echo "$f"; done; ls grove/*; grep -l tag grove/*.md'}}]}}) + "\n")
+    assert retrieval(listing, "claude", os.path.join(out, "listed-constraint-1", "p"), set())["files_read"] == [], "listing is not reading"
     guarded = os.path.join(tmp, "guarded")  # each run spends 5, and the floor keeps 13 in hand: two runs start, the third is refused
     shutil.copytree(home, guarded, ignore=shutil.ignore_patterns("sessions"))
     os.environ["GROVE_EVAL_FAKE"] = "good"

@@ -179,7 +179,9 @@ the brief, `tasks.py`, `tasks/`, the Codex adapter
 `.agents/skills/grove-shape/SKILL.md`, the records it wrote, and a G-154
 case's own records other than its distractors. Reads through
 `cat`, `head`, `tail`, `sed`, `nl`, `less` or `awk` count; `grep` and other
-tools do not. Codex has no read tool: every read is a command, which it
+tools do not. A glob among their arguments reads every file it matches in
+the clone after the run, and `for F in PATHS; do …; done` reads `PATHS`
+when one of those programs is given `$F` in the same command. Codex has no read tool: every read is a command, which it
 wraps as `SHELL -lc 'SCRIPT'` and the runner unwraps; a Codex trace
 with no command is reported unavailable, not as reading nothing. A `grove` run through a wrapper such as `timeout` or
 inside `$(…)` is missed, and a heredoc line starting with `grove` is counted:
