@@ -2,9 +2,9 @@
 id: "G-150"
 type: work
 title: "Launch attempts only where the worktree holds the entrypoints init wrote"
-status: review
+status: done
 created: "2026-09-25T19:06:01Z"
-updated: "2026-09-25T20:11:09Z"
+updated: "2026-09-25T20:12:11Z"
 kind: fix
 priority: 1
 size: small
