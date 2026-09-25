@@ -582,9 +582,11 @@ func TestRefusals(t *testing.T) {
 	git(t, root, "commit", "-qam", "review")
 	try(Request{BudgetUSD: "1", PermissionMode: "auto"}, "G-001 is review; only proposed or active work runs")
 	git(t, root, "revert", "--no-edit", "HEAD")
-	// The branch's own record already in review: judgment, not another attempt.
+	// The branch's own record already in review: judgment, not another
+	// attempt, even where the branch lacks the skill.
 	wt := filepath.Join(root, ".claude", "worktrees", "worktree-G-001")
 	git(t, root, "worktree", "add", "-q", "-b", "worktree-G-001", wt)
+	git(t, wt, "rm", "-q", SkillPath)
 	write(t, wt, "grove/G-001-first.md", strings.Replace(fmt.Sprintf(work, "review"), "---\n\n## Outcome", "candidate: \""+git(t, root, "rev-parse", "HEAD")+"\"\n---\n\n## Outcome", 1))
 	git(t, wt, "commit", "-qam", "review")
 	if _, err := Start(Request{Root: root, ID: "G-001", BudgetUSD: "1", PermissionMode: "auto"}, now, func(string) {}); err == nil || !strings.Contains(err.Error(), "G-001 is review on worktree-G-001 at "+wt+"; judge that candidate") {

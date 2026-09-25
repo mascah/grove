@@ -410,16 +410,13 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	// every later launch too.
 	skill := filepath.Join(prefix, SkillPath)
 	if _, err := repo.Git(root, "rev-parse", "-q", "--verify", "refs/heads/"+branch); err != nil {
-		if _, err := repo.Git(root, "cat-file", "-e", "HEAD:"+filepath.ToSlash(skill)); err != nil {
+		if _, err := repo.Git(root, "cat-file", "-e", head+":"+filepath.ToSlash(skill)); err != nil {
 			return nil, fmt.Errorf("%s is not committed at HEAD %s, so the attempt's worktree would not hold the grove-work skill its prompt names; commit the files grove init wrote and launch again", skill, short(head))
 		}
 	}
 	base, reused, err := prepareWorktree(root, branch, worktree, head, report)
 	if err != nil {
 		return nil, err
-	}
-	if _, err := os.Stat(filepath.Join(worktree, skill)); err != nil {
-		return nil, fmt.Errorf("%s is not in %s on %s, so the attempt would not find the grove-work skill its prompt names; commit the files grove init wrote to %s and launch again", skill, worktree, branch, branch)
 	}
 	// The branch may hold what an earlier attempt persisted: a candidate in
 	// review awaiting the owner, or the question the headless guide writes
@@ -437,6 +434,11 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		if err := blocked(wp, req.ID); err != nil {
 			return nil, fmt.Errorf("%v (on %s at %s)", err, branch, worktree)
 		}
+	}
+	// After the branch's own waits: a candidate in review is judged, not
+	// given another commit.
+	if _, err := os.Stat(filepath.Join(worktree, skill)); err != nil {
+		return nil, fmt.Errorf("%s is not in %s on %s, so the attempt would not find the grove-work skill its prompt names; commit the files grove init wrote to %s and launch again", skill, worktree, branch, branch)
 	}
 	prompt := "/grove-work " + req.ID
 	if req.Until != "" {

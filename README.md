@@ -59,7 +59,7 @@ GOBIN="$HOME/.local/bin" go install github.com/mascah/grove/cmd/grove@COMMIT  # 
 grove version     # must print "grove v…"; a usage error means another grove answered
 grove init        # at the checkout's top, or: grove --project /absolute/path init
 grove check
-git add grove.yaml grove .claude .agents && git commit -m "chore: set up grove"
+git add grove.yaml grove .claude .agents && git commit -m "chore: set up grove"   # at the top
 ```
 
 Commit what `init` wrote before the first attempt: an attempt's worktree
