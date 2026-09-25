@@ -77,7 +77,7 @@ func Run(ctx context.Context, root string, input, screen *os.File) (*versions.Wo
 func Live() Backend {
 	b := Backend{
 		Inspect: versions.InspectContext, Resolve: versions.ResolveContext, History: versions.HistoryContext,
-		Changes: versions.ChangesContext, Diff: versions.DiffContext, Ancestry: deps.Ancestry,
+		Changes: versions.ChangesContext, Diff: versions.DiffContext, Ancestry: deps.Ancestry, Predict: versions.PredictContext,
 		Approve: func(_ context.Context, root, id, verdict string) ([]string, error) {
 			res, err := update.Approve(root, id, verdict, time.Now())
 			if err != nil {

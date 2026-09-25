@@ -72,6 +72,19 @@ func openDeps(t *testing.T, w, h int) (*Model, *fake, *[]string) {
 	var asked []string
 	b := f.backend()
 	b.Ancestry = ancestry(&asked)
+	// c7 conflicts with main in x.go; anything else merges cleanly.
+	b.Predict = func(_ context.Context, root, target string, commits []string) ([]versions.Merge, error) {
+		asked = append(asked, root+" predict "+target+" "+strings.Join(commits, " "))
+		var out []versions.Merge
+		for _, c := range commits {
+			m := versions.Merge{Target: "ttttttt", Commit: c, Outcome: "clean", Conflicts: []string{}}
+			if c == "c7" {
+				m.Outcome, m.Conflicts = "conflict", []string{"x.go"}
+			}
+			out = append(out, m)
+		}
+		return out, nil
+	}
 	m := New(t.Context(), "/repo/.", b)
 	m.Update(tea.WindowSizeMsg{Width: w, Height: h})
 	deliver(m, m.Init())
@@ -209,7 +222,7 @@ func TestDepsPreview(t *testing.T) {
 		"Selected: W-05 W-03 W-07 (as marked)",
 		"Order:    W-03 → W-05 → W-07",
 		"1   W-03    active", "2   W-05    proposed", "3   W-07    review",
-		"awaiting review; candidate c7 not in HEAD, not on main",
+		"awaiting review; candidate c7 not in HEAD, not on main; conflicts with main at ttttttt in x.go",
 		"Outside the selection, not added",
 		"W-01    done", "needed by W-03 W-05 W-07 · needs nothing · candidate c1 in HEAD, on main",
 		"W-02    proposed", "W-04    proposed",
@@ -235,7 +248,7 @@ func TestDepsPreview(t *testing.T) {
 	if !slices.Equal(want.Order, m.preview.Order) || len(want.Items) != len(m.preview.Items) {
 		t.Errorf("board %q, command %q", m.preview.Order, want.Order)
 	}
-	if !slices.Contains(*asked, "/repo/. c7 refs/heads/main") {
+	if !slices.Contains(*asked, "/repo/. c7 refs/heads/main") || !slices.Contains(*asked, "/repo/. predict refs/heads/main c7") {
 		t.Errorf("delivery was not read in the bound checkout: %q", *asked)
 	}
 
@@ -257,6 +270,10 @@ func TestDepsPreview(t *testing.T) {
 	deliver(m, cmd)
 	if screen = plain(m); !strings.Contains(screen, "W-03 changed since this preview was last read") || !strings.Contains(screen, "1   W-03    review") || strings.Contains(screen, "changed while it was being read") {
 		t.Errorf("the re-read preview does not say W-03 changed:\n%s", screen)
+	}
+	// Two candidates in review now: merged in the preview's order (G-177).
+	if want := "Merged into main at ttttttt in this order, each onto the ones before, in objects only: W-03 merges cleanly, W-07 conflicts in x.go; the first conflict is W-07's. Grove chose no order, and a clean order is not evidence that the changes work together."; !slices.Contains(m.preview.Notes, want) {
+		t.Errorf("notes %q", m.preview.Notes)
 	}
 	press(m, "esc")
 	if m.previewing || m.screen != depsScreen {

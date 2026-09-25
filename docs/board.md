@@ -87,8 +87,11 @@ with the fields its type has.
 
 Work in `review` is a candidate to judge, and its detail is the handoff: the
 header adds a Review block (the candidate, whether it is approved, whether
-only the record changed since it or the tip is a new candidate, whether the
-target holds it, and which checkout each action runs in), the content opens
+only the record changed since it or the tip is a new candidate, what
+merging it into the target would do, as `deps` says it, with the target
+commit that was read and a note when the board read the target at another
+commit, or that it could not be predicted, and which checkout each action
+runs in), the content opens
 at its `## Evidence`, and the sidebar lists the candidate's changed files
 against the target with their added and removed line counts. Under each
 file a row names the other records that describe it, as `described by G-140
@@ -308,7 +311,9 @@ clears the selection, and `p` previews it: bound to one checkout (the
 board's, or in the current view the one Grove started in), whose records
 alone order it, it shows the selection as marked, its order, every
 prerequisite outside it, never added, their delivery read from Git in that
-checkout at that moment, the open questions and `deps`' notes, including
+checkout at that moment, each candidate in review's predicted merge into
+the target and, for two or more, where the first conflict lands merging them
+in the selection's order, the open questions and `deps`' notes, including
 other versions of a record elsewhere. Work the checkout lacks is refused
 with the reason; `b` chooses another checkout and returns here. A re-read
 (`r`, or focus returning) computes the preview again and names the records

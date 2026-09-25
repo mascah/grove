@@ -2,9 +2,7 @@ package versions
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -20,36 +18,48 @@ type Change struct {
 }
 
 // Changes is what the review view shows about a candidate (G-044): its files
-// against the target, whether the target already contains it, and what the
-// branch tip changed after it besides the record itself, which makes the tip
-// a new candidate.
+// against the target, whether the target already contains it, what merging
+// it into the target would do (G-177), and what the branch tip changed after
+// it besides the record itself, which makes the tip a new candidate.
 type Changes struct {
 	Base     string // the merge base of the target and the candidate; "" without a target
 	OnTarget bool   // the target contains the candidate
-	Files    []Change
-	After    []string
+	Merge    *Merge // nil without a target, or when it could not be predicted
+	// Unpredicted says why a merge with a target could not be predicted,
+	// as on a Git before 2.38, whose merge-tree cannot write a tree.
+	Unpredicted string
+	Files       []Change
+	After       []string
 }
 
-// ChangesContext reads a candidate's changes in root's repository: three Git
-// processes, on demand, never during a board load. target is the branch
-// grove.yaml names, or "" when none applies, in which case Base and Files
-// are empty. After leaves out recordPaths, the files of the records sharing
-// the candidate. Once ctx is done the error is ctx.Err().
+// ChangesContext reads a candidate's changes in root's repository, on demand,
+// never during a board load: every fact against one resolved target commit,
+// with a merge performed in objects only when ancestry does not already
+// answer it. target is the branch grove.yaml names, or "" when none applies,
+// in which case Base, Merge and Files are empty. After leaves out
+// recordPaths, the files of the records sharing the candidate. Once ctx is
+// done the error is ctx.Err().
 func ChangesContext(ctx context.Context, root, target, candidate, tip string, recordPaths ...string) (*Changes, error) {
 	c := &Changes{}
 	if target != "" {
-		base, err := repo.GitContext(ctx, root, "merge-base", target, candidate)
+		resolved, err := resolveCommits(ctx, root, "refs/heads/"+target, candidate)
+		if err != nil {
+			return nil, err
+		}
+		at, full := resolved[0], resolved[1]
+		base, err := repo.GitContext(ctx, root, "merge-base", at, full)
 		if err != nil {
 			return nil, err
 		}
 		c.Base = strings.TrimSpace(base)
-		if _, err := repo.GitContext(ctx, root, "merge-base", "--is-ancestor", candidate, target); err == nil {
-			c.OnTarget = true
+		c.OnTarget = c.Base == full
+		if m, _, err := predict(ctx, root, at, c.Base, full); ctx.Err() != nil {
+			return nil, ctx.Err()
+		} else if err != nil {
+			c.Unpredicted = err.Error()
 		} else {
-			var exit *exec.ExitError
-			if !errors.As(err, &exit) || exit.ExitCode() != 1 { // exit 1 is Git's answer: not an ancestor
-				return nil, err
-			}
+			m.Target = at
+			c.Merge = &m
 		}
 		out, err := repo.GitContext(ctx, root, "diff", "--numstat", "-z", c.Base, candidate)
 		if err != nil {
