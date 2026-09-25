@@ -347,6 +347,16 @@ func TestDepsReviewRegressions(t *testing.T) {
 			}
 		}
 	})
+	t.Run("a prerequisite not read is not called done", func(t *testing.T) {
+		f := newFixture()
+		v := version(f.main, "W-001", "Needs a deleted record", "proposed")
+		v.Record.DependsOn = []string{"W-999"}
+		m := open(t, &fake{res: result(f.main, []*versions.Source{f.main}, v)}, 120, 30)
+		press(m, "g")
+		if screen := plain(m); !strings.Contains(screen, "· 1 prerequisite not among the records read") || strings.Contains(screen, "done or abandoned prerequisite") {
+			t.Errorf("heading:\n%s", screen)
+		}
+	})
 	t.Run("the trees scroll", func(t *testing.T) {
 		m, _, _ := openDeps(t, 80, 14)
 		focusOn(t, m, "W-05")

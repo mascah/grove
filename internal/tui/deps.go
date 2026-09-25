@@ -290,7 +290,19 @@ func (m *Model) depsHead(v *deps.View, rows []deps.Item, size map[int]int, w int
 	if m.depsAll {
 		head = fmt.Sprintf("Dependencies: every work, %d, %s · h shows unfinished only", len(rows), shape)
 	} else if collapsed := len(v.Items) - len(rows); collapsed != 0 {
-		head += fmt.Sprintf(" · %d done or abandoned %s only in the trees · h shows every work", collapsed, plural(collapsed, "prerequisite", "prerequisites"))
+		missing := 0
+		for _, it := range v.Items {
+			if it.Outside && it.Status == "" {
+				missing++
+			}
+		}
+		if n := collapsed - missing; n != 0 {
+			head += fmt.Sprintf(" · %d done or abandoned %s only in the trees", n, plural(n, "prerequisite", "prerequisites"))
+		}
+		if missing != 0 {
+			head += fmt.Sprintf(" · %d %s not among the records read", missing, plural(missing, "prerequisite", "prerequisites"))
+		}
+		head += " · h shows every work"
 	}
 	top := wrap(head, w)
 	for i := range top {
