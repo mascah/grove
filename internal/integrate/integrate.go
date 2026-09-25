@@ -126,11 +126,15 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 		report(fmt.Sprintf("merge: merge commit %s on %s (was %s)", short(after), p.Target, short(before)))
 	}
 
-	for _, m := range group {
+	for i, m := range group {
 		done, err := update.Apply(root, update.Request{ID: m.ID, Set: []update.Field{{Name: "status", Value: "done"}}, Commit: true}, now, nil)
 		if err != nil {
+			rest := ""
+			if i+1 < len(group) {
+				rest = "; then mark the rest of the group done the same way: " + ids(group[i+1:])
+			}
 			// update says whether the file was written before the commit failed.
-			return fmt.Errorf("merged as %s, but marking %s done failed: %v; once that is repaired, commit the staged record here: git commit -m 'docs(%s): set status=done' -- %s (or, if it was not written, grove update %s --set status=done --commit)", short(after), m.ID, err, m.ID, m.Path, m.ID)
+			return fmt.Errorf("merged as %s, but marking %s done failed: %v; once that is repaired, commit the staged record here: git commit -m 'docs(%s): set status=done' -- %s (or, if it was not written, grove update %s --set status=done --commit)%s", short(after), m.ID, err, m.ID, m.Path, m.ID, rest)
 		}
 		if done.Changed {
 			report(fmt.Sprintf("done: %s done at commit %s", m.ID, short(done.Commit)))

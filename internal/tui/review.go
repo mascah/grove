@@ -105,7 +105,8 @@ func (m *Model) changesKey(v *versions.Version) string {
 }
 
 // sharing is the work records on v's source whose candidate is v's (G-188),
-// v's own included, as their paths, or with paths false, the others' IDs:
+// v's own included, as their paths, or with paths false, the IDs of the
+// others in review:
 // one candidate handed off for a selection is judged per record and
 // integrated as the group.
 func (m *Model) sharing(v *versions.Version, paths bool) []string {
@@ -119,7 +120,7 @@ func (m *Model) sharing(v *versions.Version, paths bool) []string {
 			switch {
 			case paths:
 				out = append(out, o.Path)
-			case o.Record.ID != v.Record.ID:
+			case o.Record.ID != v.Record.ID && o.Record.Status == "review": // what the action covers
 				out = append(out, o.Record.ID)
 			}
 		}

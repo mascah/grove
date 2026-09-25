@@ -378,7 +378,7 @@ func prepare(req Request) (*prepared, error) {
 		return nil, err
 	}
 	contains := containsIn(root, base)
-	s, err := selectionOf(p, req.IDs, contains)
+	s, err := selectionOf(p, req.IDs, req.Until, contains)
 	if err != nil {
 		return nil, err
 	}
@@ -413,7 +413,7 @@ func prepare(req Request) (*prepared, error) {
 	// review awaiting the owner, or the question the headless guide writes
 	// for a missing decision. Either is a wait, not a reason to spend again.
 	if reused {
-		if err := onBranch(s, filepath.Join(worktree, prefix), branch, worktree, contains); err != nil {
+		if err := onBranch(s, filepath.Join(worktree, prefix), branch, worktree, req.Until, contains); err != nil {
 			return nil, err
 		}
 	} else if exists {
@@ -436,9 +436,9 @@ func prepare(req Request) (*prepared, error) {
 }
 
 // onBranch rereads the members as the attempt's checkout at dir holds them,
-// keeping the launching checkout's revisions: a member judged there, or
-// waiting there, is what the attempt would meet.
-func onBranch(s *Selection, dir, branch, worktree string, contains func(string) (bool, error)) error {
+// keeping the launching checkout's revisions and waits: a member judged
+// there, or waiting in either place, is what the attempt would meet.
+func onBranch(s *Selection, dir, branch, worktree, until string, contains func(string) (bool, error)) error {
 	wp, wds := project.Load(dir, dir)
 	if wp == nil {
 		return fmt.Errorf("the project on %s at %s does not load: %s", branch, worktree, wds[0].String())
@@ -448,18 +448,24 @@ func onBranch(s *Selection, dir, branch, worktree string, contains func(string) 
 			return fmt.Errorf("%s is %s on %s at %s; judge that candidate (approve, feedback) before another attempt", c.ID, c.Status, branch, worktree)
 		}
 	}
-	w, err := selectionOf(wp, s.Selected, contains)
+	w, err := selectionOf(wp, s.Selected, until, contains)
 	if err != nil {
 		return fmt.Errorf("%v (on %s at %s)", err, branch, worktree)
 	}
+	// A wait in either place stands: the owner's question on the target is
+	// one the agent in the branch's worktree would never see.
 	for i := range s.Members {
 		for _, o := range w.Members {
-			if o.ID == s.Members[i].ID {
-				s.Members[i].Status, s.Members[i].Wait = o.Status, o.Wait
+			if o.ID != s.Members[i].ID {
+				continue
+			}
+			s.Members[i].Status = o.Status
+			if o.Wait != "" && o.Wait != s.Members[i].Wait {
+				s.Members[i].Wait = strings.TrimPrefix(s.Members[i].Wait+"; "+o.Wait+" (on "+branch+")", "; ")
 			}
 		}
 	}
-	s.Outside, s.Notes = w.Outside, w.Notes
+	s.Outside, s.Notes = w.Outside, append(s.Notes, w.Notes...)
 	return nil
 }
 
@@ -489,17 +495,14 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		return nil, err
 	}
 	defer unlock()
-	views, err := List(root, "")
-	if err != nil {
-		return nil, err
-	}
 	// Overlapping selections cannot both own a record.
-	for _, v := range views {
-		if v.Status != Running && v.Status != Orphaned {
-			continue
+	for _, m := range l.Members() {
+		views, err := List(root, m.ID)
+		if err != nil {
+			return nil, err
 		}
-		for _, m := range l.Members() {
-			if v.Launch.Includes(m.ID) {
+		for _, v := range views {
+			if v.Status == Running || v.Status == Orphaned {
 				return nil, fmt.Errorf("attempt %s of %s is %s since %s; stop it or wait for its result before another attempt", v.Launch.Attempt, m.ID, v.Status, v.Launch.Started.UTC().Format(time.RFC3339))
 			}
 		}
@@ -536,7 +539,7 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	}
 	// A branch checked out just now is read as the reused one was.
 	if pre.branchExists && !reused {
-		if err := onBranch(l.Selection, filepath.Join(worktree, prefix), branch, worktree, containsIn(root, base)); err != nil {
+		if err := onBranch(l.Selection, filepath.Join(worktree, prefix), branch, worktree, l.Until, containsIn(root, base)); err != nil {
 			return nil, err
 		}
 		if err := l.Selection.startable(); err != nil {
@@ -1045,8 +1048,13 @@ func ListDir(dir, id string) ([]View, error) {
 		if errors.Is(err, os.ErrNotExist) {
 			continue // being written, or left without its attempt.json
 		}
-		if err != nil {
+		// An unreadable attempt fails the listing of its own first ID, or of
+		// every attempt, not every other work's: its selection is unknown.
+		if err != nil && (id == "" || strings.HasPrefix(name, id+".")) {
 			return nil, err
+		}
+		if err != nil {
+			continue
 		}
 		if id != "" && !v.Launch.Includes(id) {
 			continue

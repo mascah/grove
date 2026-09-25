@@ -133,8 +133,9 @@ typed. Esc cancels. It launches one attempt as
 that branch's checkout, so after feedback the next attempt continues on the
 candidate's branch, and otherwise in a new `worktree-ID`. It is refused up
 front for work in review, done or abandoned, work an open question blocks,
-and work with an attempt still running or orphaned; `run`'s own refusals
-follow, and one more: the record in this checkout changed since the board
+and work with an attempt still running or orphaned, counting selections that
+include it; `run`'s own refusals follow, such as a prerequisite not yet
+delivered without `--until plan`, and one more: the record in this checkout changed since the board
 read it.
 
 `A` lists the attempts of the open work, or on the board every attempt

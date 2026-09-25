@@ -152,11 +152,12 @@ func (m *Model) attemptOf(id string) *attempt.View {
 	return &m.attempts[i]
 }
 
-// latest reports whether v is its work's newest attempt, or its work has
-// none listed; it copies nothing, since every row of the list asks.
+// latest reports whether v is its work's newest attempt, counting the
+// selections that include it, or its work has none listed; it copies
+// nothing, since every row of the list asks.
 func (m *Model) latest(v *attempt.View) bool {
 	for i := range m.attempts {
-		if m.attempts[i].Launch.Work == v.Launch.Work {
+		if m.attempts[i].Launch.Includes(v.Launch.Work) {
 			return m.attempts[i].Launch.Attempt == v.Launch.Attempt
 		}
 	}
@@ -513,7 +514,7 @@ func (m *Model) answeredSince(work string, ended time.Time) string {
 // attemptTag marks a card whose work has an attempt that may be running.
 func (m *Model) attemptTag(work string) string {
 	for _, v := range m.attempts {
-		if v.Launch.Work == work && live(&v) {
+		if v.Launch.Includes(work) && live(&v) {
 			return map[attempt.Status]string{attempt.Running: "● running", attempt.Orphaned: "● orphaned"}[v.Status]
 		}
 	}

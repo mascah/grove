@@ -405,8 +405,9 @@ candidate on each, then commit those record changes together and nothing
 else, so `git diff --stat CANDIDATE HEAD` shows only their records. The
 records on a branch whose candidate is the same commit are one group, judged
 per unit and integrated together. A unit never started because it waits stays
-as it was, with a checkpoint naming its wait; its records, plans and questions
-are record files and do not hold the others back. If a started unit is
+as it was, with a checkpoint naming its wait; commit that checkpoint, and any
+question or plan it needs, before the candidate commit, since any file but
+the group's records changed after the candidate makes a new one. If a started unit is
 incomplete (failed, out of budget, stopped, or at the review cap) with
 changes outside the record root on the branch, nothing on that branch enters
 review, since integrating it would carry the unfinished code: the complete

@@ -292,3 +292,40 @@ func TestRunSelection(t *testing.T) {
 		t.Fatal("no member line")
 	}
 }
+
+// A wait in the launching checkout stands on a reused branch too, since the
+// agent in the branch's worktree would never see it; bounded at plans, a
+// prerequisite outside the selection stops nothing; an unreadable attempt
+// fails only listings that could include it.
+func TestSelectionWaitsBothPlaces(t *testing.T) {
+	t.Parallel()
+	root := chain(t)
+	wt := filepath.Join(root, ".claude", "worktrees", "worktree-G-001")
+	git(t, root, "worktree", "add", "-q", "-b", "worktree-G-001", wt)
+	write(t, root, "grove/G-002-q.md", question) // blocks G-001, on main only
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-qm", "question on main")
+	_, err := Preview(Request{Root: root, IDs: []string{"G-001"}, BudgetUSD: "1", PermissionMode: "auto"})
+	if err == nil || !strings.Contains(err.Error(), "G-001 blocked by open question G-002 (Which colour?)") {
+		t.Fatal(err)
+	}
+	// Bounded at its plan, G-003 is not stopped by G-001 being unfinished;
+	// through to the handoff it is.
+	if _, err := Preview(Request{Root: root, IDs: []string{"G-003"}, BudgetUSD: "1", PermissionMode: "auto"}); err == nil || !strings.Contains(err.Error(), "G-003 needs G-001, which is proposed and not selected") {
+		t.Fatal(err)
+	}
+	if l, err := Preview(Request{Root: root, IDs: []string{"G-003"}, BudgetUSD: "1", PermissionMode: "auto", Until: "plan"}); err != nil || l.Selection.Members[0].Wait != "" || l.Selection.Outside[0].ID != "G-001" {
+		t.Fatalf("%+v %v", l, err)
+	}
+	dir, err := Dir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(t, dir, "G-004.20260101T000000Z/attempt.json", "{not json")
+	if _, err := List(root, "G-003"); err != nil {
+		t.Fatalf("another work's broken attempt: %v", err)
+	}
+	if _, err := List(root, "G-004"); err == nil {
+		t.Fatal("its own work's listing must say it is broken")
+	}
+}

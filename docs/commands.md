@@ -219,7 +219,10 @@ A member **waits**, and the agent does not start it, when an open question
 blocks it, when an outside prerequisite is not delivered at the base
 (proposed, active, review or abandoned, or done with a candidate the base
 lacks; done without a candidate is reported as unrecorded delivery), or when
-a selected prerequisite waits. The agent implements the members one at a
+a selected prerequisite waits. One ID is a selection of one, so work whose
+prerequisite is undelivered is refused too. Bounded by `--until plan`, only
+an open question stops a member: a plan needs its prerequisites named, not
+delivered. The agent implements the members one at a
 time in that order; a new question, an outside blocker or a failure stops
 that member and every member that needs it while the rest continue, and
 budget exhaustion or `stop` ends everything with what is committed kept. The
@@ -273,7 +276,8 @@ the skill the prompt names, which `init` writes and you commit
 is checked in HEAD before it is created. An open question that blocks the
 work is the wait the headless guide persists, so rerunning with nothing
 changed refuses the same way: a selection none of whose members can start is
-refused, naming each wait. A running or orphaned attempt whose selection
+refused, naming each wait, whether the launching checkout or the reused
+branch holds it. The launch prints the selection as the preview does. A running or orphaned attempt whose selection
 shares any member refuses the launch, so overlapping selections cannot both
 own a record. Every refusal comes before a write, except
 that what an existing branch holds is checked in its checkout, so a branch

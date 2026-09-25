@@ -127,7 +127,8 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             committed grove-work skill (.claude/skills/grove-work/SKILL.md, which init\n" +
 	"             writes), while an attempt whose selection shares a member runs or is orphaned,\n" +
 	"             when a member is not proposed or active here or on its branch (a candidate in\n" +
-	"             review awaits judgment), when no member can start, when a member record has\n" +
+	"             review awaits judgment), when no member can start (with --until plan only\n" +
+	"             an open question stops one), when a member record has\n" +
 	"             uncommitted changes here, or when the worktree path is something else. Prints\n" +
 	"             one line per fact and the attempt id. A result is facts, never acceptance: the\n" +
 	"             records' own statuses on the branch are the handoff.\n" +
@@ -313,6 +314,11 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		}
 		fmt.Fprintf(out, "attempt: %s started; owner pid %d, session %s, budget %s USD, permission mode %s\n", l.Attempt, l.Owner, l.SessionID, l.BudgetUSD, l.PermissionMode)
 		fmt.Fprintf(out, "requested: %s\n", visible(attempt.Requested(l)))
+		if len(l.Members()) > 1 { // what the preview showed, as launched
+			for _, fact := range attempt.Explain(l, visible) {
+				fmt.Fprintln(out, fact)
+			}
+		}
 		fmt.Fprintf(out, "inspect: grove attempt %s; stop: grove stop %s\n", l.Attempt, l.Attempt)
 		return 0
 	case "attempts":

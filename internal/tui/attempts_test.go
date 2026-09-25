@@ -931,4 +931,13 @@ func TestSelectionAttempt(t *testing.T) {
 	if rows := strings.Join(m.attemptsBody(120, 30), "\n"); !strings.Contains(ansi.Strip(rows), "W-002+2") {
 		t.Fatalf("the list does not show the selection:\n%s", rows)
 	}
+	// A running selection marks every member's card, and supersedes an
+	// earlier attempt of any member.
+	running := v
+	running.Status, running.Result = attempt.Running, nil
+	earlier := view("W-003", "20260922T010000Z", attempt.Finished, &attempt.Result{ExitCode: 1})
+	m.attempts = []attempt.View{running, earlier}
+	if m.attemptTag("W-003") != "● running" || m.latest(&earlier) {
+		t.Fatalf("tag %q, earlier latest %v", m.attemptTag("W-003"), m.latest(&earlier))
+	}
 }

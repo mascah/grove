@@ -67,9 +67,11 @@ func (l *Launch) Includes(id string) bool {
 
 // selectionOf interprets ids in p, where the attempt starts from base: each
 // member must be proposed or active work, and waits on an open question, on
-// an outside prerequisite base does not definitely hold, or on a selected
-// prerequisite that waits. contains answers whether base holds a commit.
-func selectionOf(p *project.Project, ids []string, contains func(commit string) (bool, error)) (*Selection, error) {
+// an outside prerequisite base does not hold, or on a selected prerequisite
+// that waits. Bounded at plans, only questions stop a member: a plan needs
+// its prerequisites named, not delivered. contains answers whether base
+// holds a commit; a candidate Git cannot read here is not in it.
+func selectionOf(p *project.Project, ids []string, until string, contains func(commit string) (bool, error)) (*Selection, error) {
 	byID := map[string]*project.Record{}
 	for _, r := range p.Records {
 		byID[r.ID] = r
@@ -101,7 +103,6 @@ func selectionOf(p *project.Project, ids []string, contains func(commit string) 
 		case it.Status == "done" && it.Candidate == "":
 			o.Delivery = "done without a candidate: delivery unrecorded"
 		case it.Status == "done":
-			// A candidate Git cannot read here is not in the base either.
 			in, err := contains(it.Candidate)
 			switch {
 			case err != nil:
@@ -117,7 +118,7 @@ func selectionOf(p *project.Project, ids []string, contains func(commit string) 
 			o.Delivery = "not delivered: " + it.Status
 			wait = "needs " + it.ID + ", which is " + it.Status + " and not selected"
 		}
-		if wait != "" {
+		if wait != "" && until == "" {
 			for _, id := range it.NeededBy {
 				waits[id] = append(waits[id], wait)
 			}
@@ -130,7 +131,7 @@ func selectionOf(p *project.Project, ids []string, contains func(commit string) 
 			return nil, fmt.Errorf("%s is %s; only proposed or active work runs", id, r.Status)
 		}
 		for _, prior := range s.Members { // earlier in order, so already decided
-			if reach[id][prior.ID] && prior.Wait != "" {
+			if reach[id][prior.ID] && prior.Wait != "" && until == "" {
 				waits[id] = append(waits[id], "needs "+prior.ID+", which waits")
 			}
 		}

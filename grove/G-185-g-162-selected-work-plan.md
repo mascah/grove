@@ -203,3 +203,28 @@ new provider. Budget is the provider's enforcement, so an overrun inside one
 turn is the provider's. Waits are detected at launch and by the agent;
 Grove does not interrupt a running attempt when a record changes on the
 target, and reports it afterwards per member.
+
+## Adjustments during implementation
+
+Bounded technical adjustments made in the attempt of 2026-09-25, each for
+the reason given:
+
+- **Waits under `--until plan`.** Only an open question stops a member of a
+  plan-bounded launch; an undelivered prerequisite, outside or selected, does
+  not, since preparing a plan needs its prerequisites named, not delivered
+  (this plan was itself prepared so). Without the bound, one ID is a
+  selection of one, so single-work `run` and the board's `R` now also refuse
+  work whose prerequisite is undelivered, as the guide's step 2 already
+  treats it as an external blocker.
+- **Waits in both places.** On a reused or existing branch, a member waits
+  if either the launching checkout or the branch holds a wait: the owner's
+  question on the target is one the agent in the branch would never see.
+- **Digest mismatch.** The refusal prints what the launch would run now
+  rather than a field-by-field difference, since the digest cannot be
+  reversed and the preview is not stored.
+- **Unreadable candidates.** An outside prerequisite done with a candidate
+  Git cannot read here counts as not in the base: a base that held the
+  commit could read it.
+- **Waiting members' records.** A waiting member's checkpoint, question or
+  plan is committed before the shared candidate, since `approve` counts any
+  file but the group's records changed after it as a new candidate.
