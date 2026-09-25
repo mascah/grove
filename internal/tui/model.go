@@ -24,6 +24,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/mascah/grove/internal/attempt"
+	"github.com/mascah/grove/internal/handoff"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/versions"
 )
@@ -208,11 +209,12 @@ type Model struct {
 	reading   string // the key a pending history, changes or diff read was asked for
 	acting    string // the running action, for the banner
 	cancel    context.CancelFunc
-	hist      map[string]lineage     // by commit and path, for the current result only
-	changes   map[string]changesRead // by candidate, tip, target and path, likewise
-	diffs     map[string]diffRead    // by base, candidate and path, likewise
-	md        map[string][]string    // rendered Markdown by key and width, for the current result only
-	done      bool                   // the session is ending: start nothing more
+	hist      map[string]lineage           // by commit and path, for the current result only
+	changes   map[string]changesRead       // by candidate, tip, target and path, likewise
+	diffs     map[string]diffRead          // by base, candidate and path, likewise
+	md        map[string][]string          // rendered Markdown by key and width, for the current result only
+	mentions  map[string][]handoff.Mention // each record's links and code spans by revision and path, likewise
+	done      bool                         // the session is ending: start nothing more
 
 	board         sourceKey
 	hasBoard      bool // a checkout's own board; otherwise the current view
@@ -429,7 +431,7 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		if msg.gen != m.gen || m.pending != "inspect" {
 			return nil
 		}
-		m.pending, m.cancel, m.hist, m.md, m.asOf = "", nil, map[string]lineage{}, nil, ""
+		m.pending, m.cancel, m.hist, m.md, m.mentions, m.asOf = "", nil, map[string]lineage{}, nil, nil, ""
 		m.changes, m.diffs, m.diff = map[string]changesRead{}, map[string]diffRead{}, ""
 		if msg.err != nil {
 			m.res, m.failure = nil, msg.err.Error()

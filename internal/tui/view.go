@@ -717,6 +717,18 @@ func currentText(g *versions.Group, target string) string {
 	return b.String()
 }
 
+// heldBy names where one state is held: each place, or counts beyond three.
+func heldBy(state []*versions.Version) string {
+	if len(state) > 3 {
+		return held(state)
+	}
+	var labels []string
+	for _, v := range state {
+		labels = append(labels, label(v.Source))
+	}
+	return strings.Join(labels, ", ")
+}
+
 // stateText names one current state, where it is held, and whether the
 // integration target holds it.
 func stateText(state []*versions.Version, target string) string {
@@ -724,15 +736,7 @@ func stateText(state []*versions.Version, target string) string {
 	if r := state[0].Record; r != nil {
 		text = r.Status + " \"" + r.Title + "\""
 	}
-	names := held(state)
-	if len(state) <= 3 {
-		var labels []string
-		for _, v := range state {
-			labels = append(labels, label(v.Source))
-		}
-		names = strings.Join(labels, ", ")
-	}
-	text += " on " + names
+	text += " on " + heldBy(state)
 	switch {
 	case !slices.ContainsFunc(state, committed):
 		text += ", uncommitted"

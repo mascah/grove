@@ -348,11 +348,50 @@ func (m *Model) changesSection(v *versions.Version, w int, heading func(string),
 				counts = fmt.Sprintf("+%d −%d", f.Added, f.Removed)
 			}
 			item(ansi.Truncate(safe(f.Path), max(w-2-ansi.StringWidth(counts)-2, 8), "…") + "  " + counts)
+			plain("    " + m.describedBy(f.Path))
 		}
 		if len(read.c.After) != 0 {
 			plain("  after the candidate: " + strings.Join(read.c.After, ", "))
 		}
 	}
+}
+
+// describedBy names the records, other than the open one, that link a
+// changed file or name it in a code span (G-153), each once at its first
+// tier, in the inspection's order. It reads the loaded records only: no Git
+// process, nothing stored. A file is a path from the repository's top, or
+// a rename's two; a link resolves within the project, under the prefix.
+func (m *Model) describedBy(file string) string {
+	var paths []string
+	for _, p := range strings.Split(file, " → ") {
+		if rest, ok := strings.CutPrefix(p, m.res.Prefix+"/"); ok && m.res.Prefix != "" {
+			p = rest
+		}
+		paths = append(paths, p)
+	}
+	var found []string
+	for i := range m.res.Groups {
+		g := &m.res.Groups[i]
+		if g.ID == m.openID() {
+			continue
+		}
+		best := -1
+		vs, _ := m.searched(g)
+		for _, v := range vs {
+			for _, p := range paths {
+				if tier, _ := pathTier(p, m.mentionsOf(v)); tier >= 0 && (best < 0 || tier < best) {
+					best = tier
+				}
+			}
+		}
+		if best >= 0 {
+			found = append(found, g.ID+" "+tiers[best])
+		}
+	}
+	if len(found) == 0 {
+		return "no record names it"
+	}
+	return "described by " + strings.Join(found, ", ")
 }
 
 // diffRows renders a diff for the content pane: every line escaped like
