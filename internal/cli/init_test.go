@@ -78,7 +78,7 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 		}
 		portable[relative] = string(source)
 	}
-	for _, name := range []string{"work", "shape"} {
+	for _, name := range []string{"work", "shape", "model"} {
 		var guide, guideErr bytes.Buffer
 		if code := Run([]string{"guide", name}, t.TempDir(), &guide, &guideErr); code != 0 {
 			t.Fatal(guideErr.String())
@@ -245,6 +245,7 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 	}{
 		{[]string{"guide", "work"}, "# Executing assigned Grove work\n"},
 		{[]string{"guide", "shape"}, "# Shaping Grove work\n"},
+		{[]string{"guide", "model"}, "# Record model\n"},
 		{[]string{"version"}, "grove "}, // ends with the guide digest, checked below
 	} {
 		var out, errOut bytes.Buffer
@@ -255,6 +256,20 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 	var version, versionErr bytes.Buffer
 	if code := Run([]string{"version"}, t.TempDir(), &version, &versionErr); code != 0 || !regexp.MustCompile(`^grove \S.* guides sha256:[0-9a-f]{12}\n$`).MatchString(version.String()) {
 		t.Fatalf("version=%q", version.String())
+	}
+	// The model ships verbatim into projects whose own G- IDs are live, so it
+	// links to no record and names no G- ID beyond its format examples.
+	var model, modelErr bytes.Buffer
+	Run([]string{"guide", "model"}, t.TempDir(), &model, &modelErr)
+	for _, link := range regexp.MustCompile(`\]\(([^)]*)\)`).FindAllStringSubmatch(model.String(), -1) {
+		if !strings.HasPrefix(link[1], "#") && !strings.HasPrefix(link[1], "https://") {
+			t.Errorf("the record model links outside itself: %s", link[1])
+		}
+	}
+	for _, id := range regexp.MustCompile(`G-[0-9]+`).FindAllString(model.String(), -1) {
+		if id != "G-001" && id != "G-003" && id != "G-1000" {
+			t.Errorf("the record model names %s, which is a live ID in an adopting project", id)
+		}
 	}
 	for _, args := range [][]string{{"guide"}, {"guide", "both"}, {"guide", "work", "shape"}, {"version", "x"}, {"init", "here"}} {
 		var out, errOut bytes.Buffer

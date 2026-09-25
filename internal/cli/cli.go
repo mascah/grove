@@ -29,7 +29,7 @@ import (
 const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] list [--status VALUE]... | show ID [--json] | brief [--json] | check\n" +
 	"       grove [--project DIR] init\n" +
-	"       grove guide work|shape | version\n" +
+	"       grove guide work|shape|model | version\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID [--expect REVISION] (--set FIELD=VALUE | --unset FIELD)... [--commit]\n" +
 	"       grove [--project DIR] approve ID VERDICT | feedback ID TEXT | integrate ID [--cleanup]\n" +
@@ -60,10 +60,11 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             work guide reviews through. Existing files are kept; a file init wrote before\n" +
 	"             (marked as managed) is updated when its template changed. Prints one line\n" +
 	"             per path; on any conflict nothing is written and the reasons are printed.\n" +
-	"  guide      Print the work or shaping guide this binary carries; the generated\n" +
-	"             entrypoints read it from here, so the workflow version is the binary's.\n" +
+	"  guide      Print the work or shaping guide, or the record model they cite, that\n" +
+	"             this binary carries; the generated entrypoints read the guides from here,\n" +
+	"             so the workflow version is the binary's.\n" +
 	"  version    Print this binary's module version, its VCS revision when stamped, and\n" +
-	"             a digest of the guides it carries.\n" +
+	"             a digest of the guides and record model it carries.\n" +
 	"  new        Create a work, question, decision, term, plan, review, or page record with\n" +
 	"             the next shared ID, flat in the record root; a page is general knowledge\n" +
 	"             with a title and no status.\n" +
@@ -149,6 +150,9 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"Without it, search upward from the current directory, stopping at Git boundaries.\n" +
 	"Project/file context is written to stderr; results are written to stdout.\n"
 
+// guideFiles maps each guide name to its embedded file.
+var guideFiles = map[string]string{"work": "docs/work-execution.md", "shape": "docs/work-shaping.md", "model": "docs/record-model.md"}
+
 // Run returns 0 on success, 1 for inspection/output errors, and 2 for usage errors.
 // cwd is explicit so callers and tests never need to change the process directory.
 func Run(args []string, cwd string, out, errOut io.Writer) int {
@@ -166,9 +170,9 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 	case "version":
 		return writeResult(out, errOut, []byte(versionLine()))
 	case "guide":
-		source, err := fs.ReadFile(grove.Guides, "docs/work-"+map[string]string{"work": "execution", "shape": "shaping"}[a.id]+".md")
+		source, err := fs.ReadFile(grove.Guides, guideFiles[a.id])
 		if err != nil {
-			panic(err) // the two names were validated and both files are embedded
+			panic(err) // the name was validated and every file is embedded
 		}
 		return writeResult(out, errOut, source)
 	case "init":
@@ -575,8 +579,8 @@ func parseArgs(args []string) (a invocation, err error) {
 			err = fmt.Errorf("%s takes no positional arguments", a.command)
 		}
 	case "guide":
-		if len(positional) != 2 || (positional[1] != "work" && positional[1] != "shape") {
-			err = fmt.Errorf("guide requires one argument, work or shape")
+		if len(positional) != 2 || guideFiles[positional[1]] == "" {
+			err = fmt.Errorf("guide requires one argument, work, shape or model")
 		} else {
 			a.id = positional[1]
 		}

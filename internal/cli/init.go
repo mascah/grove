@@ -294,10 +294,10 @@ func versionLine() string {
 		line += ")"
 	}
 	digest := sha256.New()
-	for _, name := range []string{"docs/work-execution.md", "docs/work-shaping.md"} {
-		source, err := fs.ReadFile(grove.Guides, name)
+	for _, name := range []string{"work", "shape", "model"} {
+		source, err := fs.ReadFile(grove.Guides, guideFiles[name])
 		if err != nil {
-			panic(err) // both files are embedded
+			panic(err) // every file is embedded
 		}
 		digest.Write(source)
 	}

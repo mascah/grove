@@ -57,7 +57,7 @@ output is facts, not permission.
 | Starting | This guide, the repository's agent instructions, the direction document (`grove brief` prints it when `grove.yaml` names one), and `grove list`. |
 | The topic touches existing records | Those records in full (`grove show ID`), and `grove versions ID`. For existing work being refined, `grove context IDs`, adding `--include PATH` for a plan or document the record names. |
 | A claim depends on how something behaves | The actual code, configuration, or command output. |
-| A field's meaning or allowed value matters, or the CLI refuses a change | The record model. |
+| A field's meaning or allowed value matters, or the CLI refuses a change | The record model, which `grove guide model` prints. |
 | Not by default | Every record, historical reviews, the whole code base, other repositories. |
 
 A title and a status in a listing say nothing about a record's constraints.
@@ -143,7 +143,7 @@ Edit bodies as ordinary text. If `update` refuses because the revision is
 stale, somebody changed the record: reread it, reconcile, and only then retry.
 Never bypass the check by editing frontmatter by hand or retrying blindly.
 
-Use only the record types, fields, and statuses the record model documents.
+Use only the record types, fields, and statuses the record model (`grove guide model`) documents.
 Where the schema has term records, domain vocabulary that the conversation
 settles belongs in one (`grove new term "Name"`) when it settles: its meaning,
 its relationships to other terms, its boundaries, and the misleading

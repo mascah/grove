@@ -84,7 +84,7 @@ everything an assignment could touch, and do not skip what a step requires.
 | Deciding what can start | Any open blocking question or undelivered prerequisite the listing shows (`grove show ID`). |
 | Preparing or implementing a unit | Its current plan: the document the record itself names as its plan, or the `current` plan record that `context` lists as `plan for` it. |
 | Before implementing a unit | Every question blocking it, open or resolved, and every prerequisite it builds on, with the plan or review of a prerequisite whose interface it uses, and the terms and decisions it links. |
-| When the activity needs it | A related record, decision, review, or the direction document; the record model when a field's meaning or allowed values matter or the CLI refuses a change. A status change through `grove update` needs none of these. |
+| When the activity needs it | A related record, decision, review, or the direction document; the record model (`grove guide model` prints it) when a field's meaning or allowed values matter or the CLI refuses a change. A status change through `grove update` needs none of these. |
 | Not by default | Every related record, historical reviews, spent handoff prompts. |
 
 `context` draws the same line. Sources are read in full with exact revisions:

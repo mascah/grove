@@ -13,7 +13,7 @@ has one owner; read each when the task needs it, not up front:
 - [`docs/commands.md`](docs/commands.md) and [`docs/board.md`](docs/board.md):
   command and board behaviour beyond `grove --help`.
 - [`docs/record-model.md`](docs/record-model.md): configuration, record schema,
-  validation and lifecycle.
+  validation and lifecycle, shipped as `grove guide model`.
 - [`docs/work-execution.md`](docs/work-execution.md) and
   [`docs/work-shaping.md`](docs/work-shaping.md): the shared workflows.
 - Work records under `grove/`: each outcome, its acceptance, evidence and
@@ -96,6 +96,9 @@ own policy.
   key may cancel, never during the board load (G-030).
 - Bare `grove` opens the board (Bubble Tea v2, `internal/tui`), and explicit
   subcommands stay noninteractive (G-017).
+- A document the binary ships (`grove guide work|shape|model`, the
+  reviewer definition) links only to other shipped documents, never to a
+  record, since its `G-` IDs would name the adopting project's own (G-146).
 - Keep the board's text escaping and exact source targeting, with freshness
   checks before acting on a selected version (G-017, G-011).
 - Escape a rendered body before glamour and filter it to glamour's own
