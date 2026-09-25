@@ -109,24 +109,44 @@ G-134's routing experiment: a bounded preparation attempt at `xhigh`, then
 implementation at `medium`, both on Opus 5.5. A Codex provider, if the
 report favours it, is separate work that revisits G-101.
 
-Checkpoint, 2026-09-24, headless `/grove-work G-135 --until plan`:
-preparation done, implementation not started, status left `proposed`.
+Handoff, 2026-09-25, interactive `/grove-work G-135` on `worktree-G-135`,
+base main `132709e`, from G-135 at `sha256:0baef170…` and plan
+[G-138](G-138-g-135-codex-eval-row-plan.md) at `sha256:4f455a34…`.
 
-- Branch `worktree-G-135` in `.claude/worktrees/worktree-G-135`, based on
-  main `132709e`; G-135 read at `sha256:0baef170…`.
-- Plan: [G-138](G-138-g-135-codex-eval-row-plan.md),
-  `grove/G-138-g-135-codex-eval-row-plan.md` at
-  `sha256:44786ba824a993ce7f89eae49ba50ea3c4fdc18364722915fa11af7549463369`.
-  It records a free, logged-out `codex exec --json` probe (event shapes up
-  to authentication, what Codex writes into a new `CODEX_HOME`).
-- Waiting on the owner: question
-  [G-139](G-139-what-mandate-and-login-should-th.md) blocks G-135 with the
-  mandate the record's Next says is agreed at assignment (login of the
-  clean `CODEX_HOME`, runs, model, effort, permission mode, cap, and a
-  same-digest Claude pair). Only plan steps 4 and 5, the paid runs and the
-  report, need it; steps 2 and 3 do not.
-- Commands still owned: none. Pending judgment: the owner's approval of
-  G-138, given by launching the continuation.
-- Continuation: `/grove-work G-135 --interaction headless` (or
-  `$grove-work G-135 --interaction headless`) on `worktree-G-135`, or
-  `grove run G-135`; interactive, `/grove-work G-135`.
+- **Incident.** The headless attempt built the runner (`c57fd37`,
+  `e00a92e`, `1e1a345`, reviewed at plan step 3), then ran Codex on
+  `gpt-6-astra`/`high`, which G-139 recommended and the owner never
+  approved: G-139 let a blank item take the recommendation. Nine and a half
+  runs took the ChatGPT Plus five-hour window from 12% to 95%; the owner
+  stopped the attempt. The owner's rule is
+  [G-141](G-141-never-run-gpt-6-astra-unless-the.md); the guide fix is
+  captured, unassigned, as [G-142](G-142-keep-a-blank-mandate-answer-from.md).
+  The owner rejected putting the rule in `AGENTS.md`.
+- **Acceptance 1.** `--harness codex` as built, plus a required
+  `--max-plan-percent` (`48358b7`, `f37be4e`, `4513c69`): no run starts
+  once the newest five-hour reading plus the largest run's use, at least
+  13 points, would reach it; each run's plan use is in `run.json` and the
+  report. `--harness claude` unchanged.
+- **Acceptance 2.** Clone checks unchanged, reported per run; retrieval
+  from the Codex commands.
+- **Acceptance 3.** `python3 evals/run.py selftest` covers the Codex branch,
+  the time and plan cap refusals, the stop, the new-home floor, a reset
+  window and a missing `resets_at`: "selftest: ok" at `4513c69`.
+- **Acceptance 4.** [G-143](G-143-g-135-codex-eval-row-pattern-pla.md), on
+  the nine completed runs only, by the owner's direction: the pattern
+  matched Claude's (5 of 5 blocking, 4 of 4 no question), Codex read
+  outside the clone in every run and read the owner's Grove checkout in
+  five, about 9 plan points a run; a Codex provider is not worth shaping
+  now. Its general guide finding is captured, unassigned, as
+  [G-144](G-144-give-adopting-projects-the-recor.md). Companion 5 was not
+  completed and nothing more was spent.
+- **Verification** at `4513c69`: `python3 evals/run.py selftest` ok;
+  `go run ./cmd/grove check` OK. No Go file changed since `132709e`, so the
+  Go suite was not rerun.
+- **Review.** [G-145](G-145-g-135-plan-cap-guard-and-report.md): three
+  independent rounds, every consequential finding fixed; four low points
+  open at the cap.
+- **Next action.** Owner judgment: in this checkout, `go run ./cmd/grove
+  approve G-135 "VERDICT"` or `go run ./cmd/grove feedback G-135 "TEXT"`;
+  after approval, in main's checkout, `go run ./cmd/grove integrate G-135`.
+  G-141, G-142, G-144 merge with it; G-142 and G-144 then await shaping.
