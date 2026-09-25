@@ -163,14 +163,24 @@ func (m *Model) latest(v *attempt.View) bool {
 	return true
 }
 
-// attemptsOf lists one work's attempts, newest first; "" lists every one.
+// selected names an attempt's work in the list: its first ID as given, and
+// how many more a selection has.
+func selected(v *attempt.View) string {
+	if n := len(v.Launch.Members()); n > 1 {
+		return fmt.Sprintf("%s+%d", v.Launch.Work, n-1)
+	}
+	return v.Launch.Work
+}
+
+// attemptsOf lists the attempts whose selection includes work, newest
+// first; "" lists every one.
 func (m *Model) attemptsOf(work string) []attempt.View {
 	if work == "" {
 		return m.attempts
 	}
 	var out []attempt.View
 	for _, v := range m.attempts {
-		if v.Launch.Work == work {
+		if v.Launch.Includes(work) {
 			out = append(out, v)
 		}
 	}
@@ -194,17 +204,17 @@ func (m *Model) outcome(v *attempt.View) (kind, text string) {
 	if r == nil {
 		return string(v.Status), string(v.Status)
 	}
-	work := v.Launch.Work
-	review := r.Record != nil && r.Record.Status == "review" && r.Record.Candidate != ""
+	work, rec, uncommitted, with := handedOff(v)
+	review := rec != nil && rec.Status == "review" && rec.Candidate != ""
 	// The record is read from the worktree's files, so it is the handoff only
 	// if the owner found it committed when the process ended. Later commits
 	// to the branch, such as an approval, change nothing about that.
-	if review && !r.RecordUncommitted {
-		return "candidate", fmt.Sprintf("candidate ready: %s in review on %s with candidate %s", work, v.Launch.Branch, short7(r.Record.Candidate))
+	if review && !uncommitted {
+		return "candidate", fmt.Sprintf("candidate ready: %s in review on %s with candidate %s", strings.Join(append([]string{work}, with...), ", "), v.Launch.Branch, short7(rec.Candidate))
 	}
 	unsaid := ""
 	if review {
-		unsaid = "; its record says review with candidate " + short7(r.Record.Candidate) + ", uncommitted"
+		unsaid = "; its record says review with candidate " + short7(rec.Candidate) + ", uncommitted"
 	}
 	exit := fmt.Sprintf("exit %d", r.ExitCode)
 	if r.Signal != "" {
@@ -232,17 +242,39 @@ func (m *Model) outcome(v *attempt.View) (kind, text string) {
 	// record readable and committed and nothing left uncommitted, is the plan
 	// awaiting the owner, not a missing handoff; anything less is no plan to
 	// approve by launching again.
-	if v.Launch.Until == "plan" && !review && r.Record != nil && !r.RecordUncommitted && !r.Dirty {
+	if v.Launch.Until == "plan" && !review && rec != nil && !uncommitted && !r.Dirty {
 		return "plan", "plan ready: " + work + " stopped at its plan on " + v.Launch.Branch
 	}
 	status, none := "unreadable", ", with no candidate"
-	if r.Record != nil {
-		status = r.Record.Status
+	if rec != nil {
+		status = rec.Status
 	}
 	if review {
 		none = ""
 	}
 	return "unhanded", fmt.Sprintf("ended without a handoff: %s is %s on %s%s%s", work, status, v.Launch.Branch, none, unsaid)
+}
+
+// handedOff is the record an ended attempt stands for: its work's, or for a
+// selection the first member the worktree held committed in review with a
+// candidate, with the other members sharing that candidate (G-188).
+func handedOff(v *attempt.View) (work string, rec *attempt.State, uncommitted bool, with []string) {
+	r := v.Result
+	ready := func(s *attempt.State, uncommitted bool) bool {
+		return s != nil && s.Status == "review" && s.Candidate != "" && !uncommitted
+	}
+	work, rec, uncommitted = v.Launch.Work, r.Record, r.RecordUncommitted
+	for _, ms := range r.Members {
+		if !ready(rec, uncommitted) && ready(ms.Record, ms.Uncommitted) {
+			work, rec, uncommitted = ms.ID, ms.Record, false
+		}
+	}
+	for _, ms := range r.Members {
+		if ms.ID != work && ready(rec, uncommitted) && ready(ms.Record, ms.Uncommitted) && sameCommit(ms.Record.Candidate, rec.Candidate) {
+			with = append(with, ms.ID)
+		}
+	}
+	return work, rec, uncommitted, with
 }
 
 func (m *Model) outcomeOf(v *attempt.View) string {
@@ -290,6 +322,9 @@ type standing struct {
 func (m *Model) standingOf(v *attempt.View) standing {
 	kind, text := m.outcome(v)
 	work := v.Launch.Work
+	if v.Result != nil {
+		work, _, _, _ = handedOff(v)
+	}
 	s := standing{group: settled, state: sentence(text)}
 	status, current := "", ""
 	if g := m.groupOf(work); g != nil {
@@ -299,7 +334,8 @@ func (m *Model) standingOf(v *attempt.View) standing {
 	}
 	cand := ""
 	if kind == "candidate" {
-		cand = v.Result.Record.Candidate
+		_, rec, _, _ := handedOff(v)
+		cand = rec.Candidate
 	}
 	latest := m.latest(v)
 	switch {
@@ -762,7 +798,7 @@ func (m *Model) attemptsBody(w, n int) []string {
 	const tw = 11 // "14m so far"
 	idw, sw := 0, 0
 	for i, v := range list {
-		idw = max(idw, ansi.StringWidth(safe(v.Launch.Work)))
+		idw = max(idw, ansi.StringWidth(safe(selected(&v))))
 		sw = max(sw, ansi.StringWidth(safe(st[i].short)))
 	}
 	idw, sw = min(idw, 12), min(sw, 32)
@@ -776,7 +812,7 @@ func (m *Model) attemptsBody(w, n int) []string {
 			group = st[i].group
 			rows = append(rows, tones[group].Bold(true).Render(line(" "+groupNames[group], w)))
 		}
-		text := line(v.Launch.Work, idw) + "  "
+		text := line(selected(&v), idw) + "  "
 		if titleW > 0 {
 			text += line(m.titleOf(v.Launch.Work), titleW) + "  "
 		}
@@ -872,6 +908,30 @@ func (m *Model) attemptRows(w int) []string {
 		started += " · ended " + r.Finished.Local().Format("15:04:05") + " after " + age(r.Finished.Sub(l.Started))
 	}
 	field("Started", started, lipgloss.NewStyle())
+	// A selection's members, each where the branch left it, or at launch.
+	if members := l.Members(); len(members) > 1 {
+		states := map[string]string{}
+		if r := v.Result; r != nil {
+			for _, ms := range r.Members {
+				states[ms.ID] = attempt.MemberStanding(l, ms)
+			}
+		}
+		for i, mb := range members {
+			state := states[mb.ID]
+			switch {
+			case state != "":
+			case mb.Wait != "":
+				state = "waited at launch: " + mb.Wait
+			default:
+				state = "could start at launch"
+			}
+			label := ""
+			if i == 0 {
+				label = "Members"
+			}
+			field(label, mb.ID+" · "+state, lipgloss.NewStyle())
+		}
+	}
 	rows = append(rows, m.metricRows(w)...)
 
 	rows = append(rows, blank)

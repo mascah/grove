@@ -894,3 +894,41 @@ func TestMovedTipRereadsTheBoard(t *testing.T) {
 		t.Fatalf("the finished read saw the move: %d→%d", inspects, f.inspects)
 	}
 }
+
+// A selection's attempt (G-162) is listed by its first ID and how many
+// more, found from any member, stands for the members its worktree handed
+// off together, and lists each member's state.
+func TestSelectionAttempt(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	r := &runs{}
+	ok := &attempt.Final{Subtype: "success"}
+	cand := &attempt.State{Status: "review", Candidate: "c0ffee12"}
+	v := view("W-002", "20260923T010000Z", attempt.Finished, &attempt.Result{Events: attempt.Events{Result: ok}, Record: &attempt.State{Status: "proposed"},
+		Members: []attempt.MemberState{{ID: "W-001", Record: cand}, {ID: "W-002", Record: &attempt.State{Status: "proposed"}}, {ID: "W-003", Record: cand}}})
+	v.Launch.Selection = &attempt.Selection{Selected: []string{"W-002", "W-001", "W-003"}, Order: []string{"W-001", "W-002", "W-003"},
+		Members: []attempt.Member{{ID: "W-001"}, {ID: "W-002", Wait: "blocked by open question Q-002 (Red or blue?)"}, {ID: "W-003"}}}
+	r.set(v)
+	m := openRuns(t, &fake{res: fx.twoBranches()}, r, 120, 36)
+	if got := m.outcomeOf(&v); got != "candidate ready: W-001, W-003 in review on worktree-W-002 with candidate c0ffee1" {
+		t.Fatal(got)
+	}
+	if got := m.attemptsOf("W-003"); len(got) != 1 {
+		t.Fatalf("%+v", got)
+	}
+	m.openAttempt(v.Launch.Attempt)
+	settle(m, m.wantAttempts())
+	s := plain(m)
+	for _, want := range []string{
+		"Members  W-001 · awaiting judgment: review, candidate c0ffee12",
+		"W-002 · not started: blocked by open question Q-002 (Red or blue?)",
+		"W-003 · awaiting judgment: review, candidate c0ffee12",
+	} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("lacks %q:\n%s", want, s)
+		}
+	}
+	if rows := strings.Join(m.attemptsBody(120, 30), "\n"); !strings.Contains(ansi.Strip(rows), "W-002+2") {
+		t.Fatalf("the list does not show the selection:\n%s", rows)
+	}
+}

@@ -33,8 +33,9 @@ type Changes struct {
 // ChangesContext reads a candidate's changes in root's repository: three Git
 // processes, on demand, never during a board load. target is the branch
 // grove.yaml names, or "" when none applies, in which case Base and Files
-// are empty. Once ctx is done the error is ctx.Err().
-func ChangesContext(ctx context.Context, root, target, candidate, tip, recordPath string) (*Changes, error) {
+// are empty. After leaves out recordPaths, the files of the records sharing
+// the candidate. Once ctx is done the error is ctx.Err().
+func ChangesContext(ctx context.Context, root, target, candidate, tip string, recordPaths ...string) (*Changes, error) {
 	c := &Changes{}
 	if target != "" {
 		base, err := repo.GitContext(ctx, root, "merge-base", target, candidate)
@@ -58,7 +59,7 @@ func ChangesContext(ctx context.Context, root, target, candidate, tip, recordPat
 			return nil, err
 		}
 	}
-	after, err := Others(ctx, root, candidate, tip, recordPath)
+	after, err := Others(ctx, root, candidate, tip, recordPaths...)
 	if err != nil {
 		return nil, err
 	}

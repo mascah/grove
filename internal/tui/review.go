@@ -59,8 +59,9 @@ type actMsg struct {
 type prompt struct {
 	kind             string // approve, feedback, integrate, cleanup, launch, stop, resolve
 	text             string
-	id, root, branch string // the record, the checkout the action runs in, the branch judged
-	target, wt       string // integrate: the target and the branch's checkout, if any
+	id, root, branch string   // the record, the checkout the action runs in, the branch judged
+	target, wt       string   // integrate: the target and the branch's checkout, if any
+	sharing          []string // feedback, integrate: the other records sharing the candidate
 	cleanup          bool
 	req              *attempt.Request    // launch: what Start is asked for, resolved on Enter
 	run              project.RunDefaults // launch: grove.yaml's defaults in this checkout
@@ -98,9 +99,33 @@ func (m *Model) openRecord() *project.Record {
 }
 
 // changesKey names one changes read: the candidate, the tip it is judged
-// against, the target, and the record's path.
-func changesKey(target string, v *versions.Version) string {
-	return v.Record.Candidate + "\x00" + v.Source.Commit + "\x00" + target + "\x00" + v.Path
+// against, the target, and the paths of the records sharing the candidate.
+func (m *Model) changesKey(v *versions.Version) string {
+	return v.Record.Candidate + "\x00" + v.Source.Commit + "\x00" + m.res.Target + "\x00" + strings.Join(m.sharing(v, true), "\x00")
+}
+
+// sharing is the work records on v's source whose candidate is v's (G-188),
+// v's own included, as their paths, or with paths false, the others' IDs:
+// one candidate handed off for a selection is judged per record and
+// integrated as the group.
+func (m *Model) sharing(v *versions.Version, paths bool) []string {
+	var out []string
+	for i := range m.res.Groups {
+		for j := range m.res.Groups[i].Versions {
+			o := &m.res.Groups[i].Versions[j]
+			if o.Source != v.Source || o.Record == nil || o.Record.Type != "work" || !sameCommit(o.Record.Candidate, v.Record.Candidate) {
+				continue
+			}
+			switch {
+			case paths:
+				out = append(out, o.Path)
+			case o.Record.ID != v.Record.ID:
+				out = append(out, o.Record.ID)
+			}
+		}
+	}
+	slices.Sort(out)
+	return out
 }
 
 // wantChanges starts reading the shown record's changes when its detail is
@@ -117,13 +142,13 @@ func (m *Model) wantChanges() tea.Cmd {
 	if v == nil || v.Record == nil || v.Record.Candidate == "" {
 		return nil
 	}
-	key := changesKey(m.res.Target, v)
+	key := m.changesKey(v)
 	if _, held := m.changes[key]; held || key == m.reading {
 		return nil
 	}
-	target, candidate, tip, path := m.res.Target, v.Record.Candidate, v.Source.Commit, v.Path
+	target, candidate, tip, paths := m.res.Target, v.Record.Candidate, v.Source.Commit, m.sharing(v, true)
 	cmd := m.read("changes", func(ctx context.Context, gen int) tea.Msg {
-		c, err := m.backend.Changes(ctx, m.root, target, candidate, tip, path)
+		c, err := m.backend.Changes(ctx, m.root, target, candidate, tip, paths...)
 		return changesMsg{gen, key, c, err}
 	})
 	m.reading = key
@@ -139,7 +164,7 @@ func (m *Model) diffOf(v *versions.Version) (from, to, path string, ok bool) {
 	if m.diff == "" || v == nil || v.Record == nil {
 		return "", "", "", false
 	}
-	read, held := m.changes[changesKey(m.res.Target, v)]
+	read, held := m.changes[m.changesKey(v)]
 	if !held || read.c == nil || read.c.Base == "" {
 		return "", "", "", false
 	}
@@ -271,7 +296,7 @@ func (m *Model) reviewRows(g *versions.Group, v *versions.Version) []string {
 	} else {
 		parts = append(parts, "not yet approved")
 	}
-	switch read, held := m.changes[changesKey(m.res.Target, v)]; {
+	switch read, held := m.changes[m.changesKey(v)]; {
 	case m.backend.Changes == nil:
 	case !held:
 		parts = append(parts, "reading its changes…")
@@ -282,7 +307,7 @@ func (m *Model) reviewRows(g *versions.Group, v *versions.Version) []string {
 	default:
 		parts = append(parts, "only the record changed since it")
 	}
-	if read, held := m.changes[changesKey(m.res.Target, v)]; held && read.c != nil && m.res.Target != "" {
+	if read, held := m.changes[m.changesKey(v)]; held && read.c != nil && m.res.Target != "" {
 		if read.c.OnTarget {
 			parts = append(parts, "on "+m.res.Target)
 		} else {
@@ -311,7 +336,7 @@ func (m *Model) changeEntries(v *versions.Version) []entry {
 	if v == nil || v.Record == nil || v.Record.Candidate == "" {
 		return nil
 	}
-	read, held := m.changes[changesKey(m.res.Target, v)]
+	read, held := m.changes[m.changesKey(v)]
 	if !held || read.c == nil {
 		return nil
 	}
@@ -328,7 +353,7 @@ func (m *Model) changesSection(v *versions.Version, w int, heading func(string),
 	if m.backend.Changes == nil || v == nil || v.Record == nil || v.Record.Candidate == "" {
 		return
 	}
-	read, held := m.changes[changesKey(m.res.Target, v)]
+	read, held := m.changes[m.changesKey(v)]
 	switch {
 	case !held:
 		heading("Changes")
@@ -485,7 +510,7 @@ func (m *Model) action(k string) {
 			m.notice = "candidate " + short7(r.Candidate) + " is already approved; i integrates it"
 			return
 		}
-		m.prompt = &prompt{kind: map[string]string{"a": "approve", "f": "feedback"}[k], id: g.ID, root: root, branch: branch}
+		m.prompt = &prompt{kind: map[string]string{"a": "approve", "f": "feedback"}[k], id: g.ID, root: root, branch: branch, sharing: m.sharing(v, false)}
 	case "i":
 		if m.backend.Integrate == nil {
 			return
@@ -500,7 +525,7 @@ func (m *Model) action(k string) {
 			return
 		}
 		wt, branch, _ := m.judgeRoot(g, v)
-		m.prompt = &prompt{kind: "integrate", id: g.ID, root: root, branch: branch, target: m.res.Target, wt: wt}
+		m.prompt = &prompt{kind: "integrate", id: g.ID, root: root, branch: branch, target: m.res.Target, wt: wt, sharing: m.sharing(v, false)}
 	}
 }
 
@@ -618,10 +643,14 @@ func (m *Model) promptRow(w int) string {
 	case "approve":
 		text = fmt.Sprintf("Approve %s on branch %s · verdict (Enter records it, Esc cancels): %s▏", p.id, p.branch, p.text)
 	case "feedback":
-		text = fmt.Sprintf("Feedback on %s, returning it to active on branch %s (Enter records it, Esc cancels): %s▏", p.id, p.branch, p.text)
+		them := "it"
+		if p.sharing != nil {
+			them = "it and " + strings.Join(p.sharing, ", ") + ", which share its candidate,"
+		}
+		text = fmt.Sprintf("Feedback on %s, returning %s to active on branch %s (Enter records it, Esc cancels): %s▏", p.id, them, p.branch, p.text)
 	case "integrate":
 		// The question first: a long checkout path is what truncation drops.
-		text = fmt.Sprintf("Merge branch %s into %s and mark %s done? y/n   (runs in %s)", p.branch, p.target, p.id, p.root)
+		text = fmt.Sprintf("Merge branch %s into %s and mark %s done? y/n   (runs in %s)", p.branch, p.target, strings.Join(append([]string{p.id}, p.sharing...), " and "), p.root)
 	case "launch":
 		req, _ := p.resolved() // a line that does not parse yet shows what it has so far
 		// What is typed comes first: truncation drops the help at the end.

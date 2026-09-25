@@ -384,3 +384,32 @@ func TestReviewListsRecordsDescribingEachFile(t *testing.T) {
 		}
 	}
 }
+
+// Records sharing a candidate on the branch (G-188) are named where the
+// action covers them, and their files are not changes after the candidate.
+func TestReviewNamesTheGroupSharingACandidate(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	f := reviewFixture(fx, true)
+	for _, s := range []*versions.Source{fx.cFeat, fx.feat} {
+		o := version(s, "W-003", "Build on it", "review")
+		o.Record.Candidate, o.Record.Approved = "abcdef1", "abcdef1"
+		f.res.Groups = append(f.res.Groups, versions.Group{ID: "W-003", Versions: []versions.Version{o}})
+	}
+	m := openReview(t, f, 160, 36)
+	f.mu.Lock()
+	reads := strings.Join(f.reads, "\n")
+	f.mu.Unlock()
+	if !strings.Contains(reads, "changes main abcdef1 a grove/work/W-001.md,grove/work/W-003.md") {
+		t.Fatalf("the changes read leaves out both records. files:\n%s", reads)
+	}
+	press(m, "f")
+	if s := plain(m); !strings.Contains(s, "Feedback on W-001, returning it and W-003, which share its candidate, to active on branch feature") {
+		t.Fatalf("f names the group:\n%s", s)
+	}
+	press(m, "esc")
+	press(m, "i")
+	if s := plain(m); !strings.Contains(s, "Merge branch feature into main and mark W-001 and W-003 done? y/n") {
+		t.Fatalf("i names the group:\n%s", s)
+	}
+}

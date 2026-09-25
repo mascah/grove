@@ -152,9 +152,9 @@ func (f *fake) backend() Backend {
 		f.mu.Unlock()
 	}
 	if f.changes != nil {
-		b.Changes = func(_ context.Context, root, target, candidate, tip, path string) (*versions.Changes, error) {
-			log(&f.reads, "changes "+target+" "+candidate+" "+tip[:1]+" "+path)
-			return f.changes(target, candidate, tip, path)
+		b.Changes = func(_ context.Context, root, target, candidate, tip string, paths ...string) (*versions.Changes, error) {
+			log(&f.reads, "changes "+target+" "+candidate+" "+tip[:1]+" "+strings.Join(paths, ","))
+			return f.changes(target, candidate, tip, strings.Join(paths, ","))
 		}
 	}
 	if f.diff != nil {

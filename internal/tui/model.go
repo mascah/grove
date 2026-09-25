@@ -42,7 +42,7 @@ type Backend struct {
 	// Changes reads a candidate's files against the target and what the tip
 	// changed after it, when a detail with a candidate is open; nil leaves
 	// the section out. Diff reads one of those files.
-	Changes func(ctx context.Context, root, target, candidate, tip, recordPath string) (*versions.Changes, error)
+	Changes func(ctx context.Context, root, target, candidate, tip string, recordPaths ...string) (*versions.Changes, error)
 	Diff    func(ctx context.Context, root, from, to, path string) (string, error)
 	// Approve, Feedback and Integrate write: in root, the checkout of the
 	// branch judged, or of the target. Nil leaves the action out.
