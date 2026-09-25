@@ -653,3 +653,6 @@ func (q commitQueue) nonStale(o *objects, stale int) bool {
 	}
 	return false
 }
+
+// Name is how notes name a source: "branch B" or "checkout L (B)".
+func (s *Source) Name() string { return name(s) }

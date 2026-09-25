@@ -37,6 +37,7 @@ go run ./cmd/grove check
 | `versions` | Show each record's versions across branches and worktrees, current or older | [Versions](docs/commands.md#versions) |
 | `workspace` | Print the checkout holding a selected version | [Workspace](docs/commands.md#workspace) |
 | `context` | Assemble staged context for selected work | [Context](docs/commands.md#context) |
+| `deps` | Show how unfinished work depends on other work, or preview a selection's order | [Dependencies](docs/commands.md#dependencies) |
 | `init` | Set up Grove in a Git checkout | [Init](docs/commands.md#init) |
 | `guide`, `version` | Print a workflow guide or the record model; name this build | [Version and guide](docs/commands.md#version-and-guide) |
 

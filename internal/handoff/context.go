@@ -16,6 +16,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/mascah/grove/internal/deps"
 	"github.com/mascah/grove/internal/project"
 )
 
@@ -203,7 +204,7 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 	for _, r := range p.Records {
 		byID[r.ID] = r
 	}
-	order, reach, err := selection(byID, ids)
+	order, reach, err := deps.Order(byID, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -328,56 +329,4 @@ func assemble(ctx context.Context, dir *os.Root, root string, ids []string, opts
 	slices.SortFunc(b.Sources, func(x, y Source) int { return strings.Compare(x.Path, y.Path) })
 	b.SourceBytes = opts.MaxBytes - s.remaining
 	return b, nil
-}
-
-// selection validates the requested IDs and orders them so that each follows
-// the selected work it depends on, directly or through unselected work; ties
-// keep the requested order. reach maps each ID to its transitive prerequisites.
-// Load has already refused dependency cycles and non-work targets.
-func selection(byID map[string]*project.Record, ids []string) (order []string, reach map[string]map[string]bool, err error) {
-	if len(ids) == 0 {
-		return nil, nil, errors.New("context requires at least one work ID")
-	}
-	reach = map[string]map[string]bool{}
-	for _, id := range ids {
-		r := byID[id]
-		switch {
-		case reach[id] != nil:
-			return nil, nil, fmt.Errorf("%s is selected more than once", id)
-		case r == nil:
-			return nil, nil, fmt.Errorf("work %s is not in this checkout; context takes explicit work IDs and reads only the selected checkout", id)
-		case r.Type != "work":
-			return nil, nil, fmt.Errorf("%s is a %s; only work can be selected (related records are included as context)", id, r.Type)
-		}
-		reach[id] = map[string]bool{}
-		var visit func(*project.Record)
-		visit = func(r *project.Record) {
-			for _, next := range r.DependsOn {
-				if !reach[id][next] {
-					reach[id][next] = true
-					visit(byID[next])
-				}
-			}
-		}
-		visit(r)
-	}
-	placed := map[string]bool{}
-	for len(order) < len(ids) {
-		before := len(order)
-		for _, id := range ids {
-			ready := !placed[id]
-			for _, other := range ids {
-				ready = ready && (!reach[id][other] || placed[other])
-			}
-			if ready {
-				placed[id] = true
-				order = append(order, id)
-				break
-			}
-		}
-		if len(order) == before { // Load refuses cycles; never spin if one gets here
-			return nil, nil, errors.New("the selected work depends on itself in a cycle")
-		}
-	}
-	return order, reach, nil
 }
