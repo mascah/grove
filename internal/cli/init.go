@@ -236,7 +236,7 @@ func checkInit(root string, out, errOut io.Writer) int {
 			case "current":
 				note = " (revision " + revision + ")"
 			case "legacy":
-				note = " (no revision line: written before entrypoint revisions, with a grammar and review brief of its own that this grove cannot vouch for; init rewrites it)"
+				note = " (no revision line: written before entrypoint revisions, so this grove cannot tell what it expects; init rewrites it)"
 			case "compatible":
 				note = " (revision " + revision + ", which this grove serves, in other text; init rewrites it)"
 			case "incompatible":

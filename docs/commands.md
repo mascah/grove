@@ -324,9 +324,10 @@ served. Refresh it with `init`.
 nothing and saying how to repair it, and a `grove` from before revisions
 refuses the option; either way the entrypoint stops at its first command,
 before any work. A plain `guide` always prints, since a person reads it the
-same way, and a legacy file loads its guide that way: an interactive session
-through one is not stopped by `guide`, so a legacy install reaches diagnosis
-through `init --check` and `run`.
+same way, and a legacy skill loads its guide that way; so the work and
+shaping guides' Inputs tell a session loaded through a managed skill with no
+revision line to stop and name the repair. A legacy reviewer loads no guide
+and is reached only through `init --check` and `run`.
 
 `init --check` diagnoses each managed path and writes nothing, one line
 each: `current` (this `grove`'s template), `compatible` (a served revision

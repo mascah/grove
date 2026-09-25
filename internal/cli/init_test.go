@@ -338,7 +338,7 @@ func TestInitCheckDiagnosesAnOldInstallAndInitRefreshesIt(t *testing.T) {
 	write(t, root, custom, "our own shaping skill\n")
 	before := hashes(t, root)
 	code, out, errOut := runInitCheck(t, root)
-	legacy := " (no revision line: written before entrypoint revisions, with a grammar and review brief of its own that this grove cannot vouch for; init rewrites it)\n"
+	legacy := " (no revision line: written before entrypoint revisions, so this grove cannot tell what it expects; init rewrites it)\n"
 	want := "custom " + custom + " (no init marker: the project's own, not judged; delete it to get the managed version)\n" +
 		"legacy .agents/skills/grove-shape/agents/openai.yaml" + legacy +
 		"legacy .agents/skills/grove-work/SKILL.md" + legacy +

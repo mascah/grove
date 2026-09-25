@@ -57,6 +57,12 @@ members.
 Anything else in an assignment is an error to report. These inputs are this
 guide's, and the entrypoint that loaded it defers to them.
 
+An entrypoint that `grove init` wrote names its `grove entrypoint revision`
+and loads this guide with `--entrypoint`. If the one that loaded it carries
+the line `Managed by grove init` and no revision, it predates this guide's
+inputs: before any other step, stop and say to run `grove init --check`,
+then `grove init`, commit, and start a new session.
+
 ## Authority
 
 Records own outcomes, constraints, and acceptance; plans describe

@@ -34,6 +34,12 @@ the two disagree, repository and user instructions win.
   other value is an error to report. Headless shaping follows the same steps
   with the [bounds below](#headless-shaping).
 
+An entrypoint that `grove init` wrote names its `grove entrypoint revision`
+and loads this guide with `--entrypoint`. If the one that loaded it carries
+the line `Managed by grove init` and no revision, it predates this guide's
+inputs: before any other step, stop and say to run `grove init --check`,
+then `grove init`, commit, and start a new session.
+
 ## Four kinds of statement
 
 Keep these apart in the conversation and in everything written:
