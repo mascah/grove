@@ -218,7 +218,18 @@ the implementation after it can differ in both. The launch also records the
 sha256 of the worktree's `.claude/agents/grove-reviewer.md`, the reviewer
 definition `init` writes and step 6 reviews through, or `none` where there is
 none, which the launch warns of: without it the attempt has no independent
-reviewer, and work whose record requires one stays active. An attempt started
+reviewer, and work whose record requires one stays active. It records the
+sha256 of the worktree's `.claude/skills/grove-work/SKILL.md` as `skill`,
+and in `differs_from_template` which of that skill and the reviewer are not
+byte for byte the launching `grove`'s templates: a custom, older or newer
+file keeps its own digest and never borrows the template's identity, and the
+attempt's `Entrypoints:` fact says which (an attempt from before this says
+they were not recorded). A skill the harness prefers over the worktree's,
+such as a personal one of the same name, is not seen. `grove_version` is the
+launching `grove`'s
+[version](#version-and-guide) line. The `grove` the agent itself runs is not
+recorded: `PATH` or the project's instructions choose it, and it need not be
+the launching one. An attempt started
 by hand, such as an interactive `/grove-work`, writes no attempt files: it is
 visible only as its branch, its worktree and the checkpoint in the work's
 Next.
@@ -295,15 +306,59 @@ act.
 
 ## Version and guide
 
-`version` prints the module version and, when the build stamped it, the VCS
-revision with `modified` for a dirty tree; `go run` prints `(devel)`, which
-means this checkout's files. Build from a primary checkout or a clone: for a
-linked worktree that lies inside its repository, Go only recognises the
-enclosing checkout's `.git` directory and stamps that checkout's revision and
-cleanliness instead (observed with go 1.26.2). The predecessor rejects
-`version` as an unknown command, so the line tells the two apart, and the
-line ends with a digest of the embedded guides and record model, which names
-the workflow even when no revision was stamped.
+`version` names the executable and the workflow content it ships, in one
+line that `attempt.json` also records as `grove_version`:
+
+```text
+grove VERSION (COMMIT[, vcs OTHER][, modified]) guides sha256:GUIDES content sha256:CONTENT
+```
+
+- `VERSION` is the release stamp, else the module version Go recorded: for
+  `go build` in a checkout, a tag or pseudo-version from that checkout, with
+  `+dirty` for uncommitted changes; for `go install …@VERSION`, that tag or
+  pseudo-version; `(devel)` for `go run` and a tree without `.git`; and
+  `(version unknown)` without build information.
+- `COMMIT` is the stamped commit, else Go's `vcs.revision`, else
+  `commit unknown`, as `go run`, a build from a source archive without
+  `.git` and a `go install` print it. Where Go recorded a different commit
+  from the stamp, `vcs OTHER` follows it. `modified` is Go's `vcs.modified`:
+  the checkout Go found had uncommitted changes, stamped or not. Build from a
+  primary checkout or a clone: for a linked worktree that lies inside its
+  repository, Go only recognises the enclosing checkout's `.git` directory
+  and takes that checkout's pseudo-version, commit and cleanliness instead
+  (observed with go 1.26.2 and 1.26.8), which a stamp then shows as `vcs OTHER`; the
+  `content` digest still names the worktree's own files.
+- `guides` digests the work and shaping guides and the record model, which
+  `guide` prints. `content` digests the workflow the binary ships into a
+  session or a project: those three, the reviewer definition and the other
+  harness entrypoints `init` writes. It leaves out the `grove.yaml` and
+  placeholder brief `init` creates once and never rewrites. Neither digest
+  describes a project's installed files, which may be custom or from another
+  release; an attempt records those itself ([Attempts](#attempts)).
+
+The predecessor rejects `version` as an unknown command, so the line tells
+the two apart.
+
+A release build stamps the version and the full commit through the linker,
+with `-trimpath` so no machine path enters the binary; Go embeds no build
+time. The same command serves a clone and an extracted source archive:
+
+```sh
+go build -trimpath -ldflags "-X github.com/mascah/grove.version=v0.1.0 -X github.com/mascah/grove.commit=$(git rev-parse HEAD)" -o bin/grove ./cmd/grove
+bin/grove version        # grove v0.1.0 (<that commit>) guides sha256:… content sha256:…
+go version -m bin/grove  # Go's own record: -trimpath=true, and vcs.* from a clone
+```
+
+`bin/` is ignored, so an artifact leaves the tree clean for the next one;
+`-o grove` would write into this repository's `grove/` record directory.
+From an archive, pass the commit the archive was made from instead of
+`git rev-parse`. With `-trimpath`, Go leaves `-ldflags` out of the build
+settings, so `version` is where the stamp is read. A stamp is a claim the
+builder makes: `version` prints it as given, and only the builder's inputs
+make it true. Without a stamp, the line falls back as above and never
+presents a release. Every artifact of one release, whatever its platform,
+prints the same version, commit, `guides` and `content`, with neither `vcs`
+nor `modified`; any difference means one was built from other inputs.
 
 `go install …@COMMIT` resolves only a pushed commit, and rebuilding an
 installed binary is manual.

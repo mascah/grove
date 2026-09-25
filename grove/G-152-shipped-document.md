@@ -17,8 +17,10 @@ whose own `G-` IDs are live, so it must read the same, and be true, in every
 one of them: it links only within itself or to `https://`, names another
 shipped document by the command that prints it, and names no Grove record,
 path, invocation or history. This repository's file is the one editable
-owner; the binary's copy is what an adopting project reads, and the guides
-digest in `grove version` names that copy.
+owner; the binary's copy is what an adopting project reads, and `grove
+version` names that copy: its guides digest covers the two guides and the
+model, and its content digest covers every shipped document together with
+the adapters `init` generates ([G-170](G-170-release-identity.md)).
 
 Not shipped: the brief, the command reference, the board guide, AGENTS.md,
 this repository's records, and its own `.claude/skills/` adapters, which

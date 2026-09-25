@@ -61,7 +61,7 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, needle := range []string{"disable-model-invocation: true", managedMarker, "Assignment: $ARGUMENTS", "grove guide work", "stop and say so"} {
+	for _, needle := range []string{"disable-model-invocation: true", grove.ManagedMarker, "Assignment: $ARGUMENTS", "grove guide work", "stop and say so"} {
 		if !strings.Contains(string(adapter), needle) {
 			t.Fatalf("the Claude adapter lacks %q:\n%s", needle, adapter)
 		}
@@ -69,7 +69,7 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 	portable := map[string]string{".claude/skills/grove-work/SKILL.md": string(adapter)}
 	// The reviewer is written verbatim from this repository's own copy, which
 	// must carry the marker or init would keep what it just wrote as the user's.
-	if !strings.Contains(grove.Reviewer, managedMarker) || !strings.Contains(grove.Reviewer, "name: grove-reviewer\n") {
+	if !strings.Contains(grove.Reviewer, grove.ManagedMarker) || !strings.Contains(grove.Reviewer, "name: grove-reviewer\n") {
 		t.Fatal("the embedded reviewer definition must be named grove-reviewer and carry the managed marker")
 	}
 	for _, relative := range []string{".claude/agents/grove-reviewer.md", ".claude/skills/grove-shape/SKILL.md", ".agents/skills/grove-work/SKILL.md", ".agents/skills/grove-shape/SKILL.md", ".agents/skills/grove-work/agents/openai.yaml"} {
@@ -247,7 +247,7 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 		{[]string{"guide", "work"}, "# Executing assigned Grove work\n"},
 		{[]string{"guide", "shape"}, "# Shaping Grove work\n"},
 		{[]string{"guide", "model"}, "# Record model\n"},
-		{[]string{"version"}, "grove "}, // ends with the guide digest, checked below
+		{[]string{"version"}, "grove "}, // ends with the content digests, checked below
 	} {
 		var out, errOut bytes.Buffer
 		if code := Run(c.args, t.TempDir(), &out, &errOut); code != 0 || !strings.HasPrefix(out.String(), c.prefix) {
@@ -255,7 +255,7 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 		}
 	}
 	var version, versionErr bytes.Buffer
-	if code := Run([]string{"version"}, t.TempDir(), &version, &versionErr); code != 0 || !regexp.MustCompile(`^grove \S.* guides sha256:[0-9a-f]{12}\n$`).MatchString(version.String()) {
+	if code := Run([]string{"version"}, t.TempDir(), &version, &versionErr); code != 0 || version.String() != grove.Identity().String()+"\n" || !regexp.MustCompile(`^grove \S.* guides sha256:[0-9a-f]{12} content sha256:[0-9a-f]{12}\n$`).MatchString(version.String()) {
 		t.Fatalf("version=%q", version.String())
 	}
 	// The shipped documents reach projects that have no docs folder and live

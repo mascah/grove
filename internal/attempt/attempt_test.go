@@ -14,6 +14,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/mascah/grove"
 	"github.com/mascah/grove/internal/repo"
 	"golang.org/x/sys/unix"
 )
@@ -203,6 +204,9 @@ func TestRunToResult(t *testing.T) {
 	for _, kv := range [][2]string{{"CLAUDECODE", "1"}, {"CLAUDE_CODE_ENTRYPOINT", "cli"}, {"CLAUDE_PID", "1"}, {"GIT_DIR", "/nowhere"}, {"GIT_WORK_TREE", "/nowhere"}, {"CLAUDE_CONFIG_DIR", "/kept"}} {
 		t.Setenv(kv[0], kv[1]) // repo.Command drops the Git ones for the test's own Git processes
 	}
+	// The skill init writes, committed: its launch matches this grove's template.
+	write(t, root, SkillPath, grove.Entrypoints()[SkillPath])
+	git(t, root, "commit", "-qam", "the managed skill")
 	fake(t, initLine+"\necho '{\"type\":\"assistant\"}'\necho '{\"type\":\"weird\"}'\n"+resultLine("success", false))
 	l, facts := start(t, root, now)
 	if len(facts) != 2 || !strings.Contains(facts[0], "worktree-G-001 created at") || facts[1] != "warning: "+ReviewerPath+" is not in "+filepath.Join(root, ".claude", "worktrees", "worktree-G-001")+", so the attempt has no independent reviewer and work whose record requires one stays active; commit the files grove init wrote to give it one" {
@@ -226,6 +230,9 @@ func TestRunToResult(t *testing.T) {
 	}
 	if l.Until != "" || l.Model != "" || l.Effort != "" || l.Reviewer != "none" || strings.Contains(cmd, "--until") || strings.Contains(cmd, "--model") || strings.Contains(cmd, "--effort") {
 		t.Fatalf("an unbounded launch without a reviewer definition asks for nothing more: %+v", l)
+	}
+	if l.GroveVersion != grove.Identity().String() || l.Skill != fmt.Sprintf("sha256:%x", sha256.Sum256([]byte(grove.Entrypoints()[SkillPath]))) || l.Differs != nil {
+		t.Fatalf("the launch names this grove as version does, and the template skill: %+v", l)
 	}
 	v := await(t, root, l.Attempt, Finished)
 	r := v.Result
@@ -494,7 +501,10 @@ func TestInputsChanged(t *testing.T) {
 		t.Fatalf("cost by model %v", got)
 	}
 	facts := strings.Join(Facts(v, func(s string) string { return s }), "\n")
-	for _, want := range []string{"Requested: until plan, model opus, effort xhigh, reviewer .claude/agents/grove-reviewer.md sha256:", "Cost by model: claude-opus-5-5 $2.50, claude-sonnet-5 $0.50"} {
+	for _, want := range []string{"Requested: until plan, model opus, effort xhigh, reviewer .claude/agents/grove-reviewer.md sha256:", "Cost by model: claude-opus-5-5 $2.50, claude-sonnet-5 $0.50",
+		// Custom files keep their own digests, and say they are not the templates.
+		"Entrypoints: worktree skill sha256:" + fmt.Sprintf("%x", sha256.Sum256([]byte("---\nname: grove-work\n---\n"))) + "; differ from the launching grove's templates: .claude/skills/grove-work/SKILL.md, .claude/agents/grove-reviewer.md",
+		"Agent's grove: not recorded"} {
 		if !strings.Contains(facts, want) {
 			t.Fatalf("facts lack %q:\n%s", want, facts)
 		}
@@ -765,5 +775,15 @@ func TestReadActivityEntriesAndMetrics(t *testing.T) {
 	a = write(first, `{"type":"assistant","parent_tool_use_id":null,"message":{"id":"c","usage":{"input_tokens":1},"content":[]}}`)
 	if m := a.Metrics; m.Ended || m.Turns != 3 {
 		t.Fatalf("a message after the result: %+v", m)
+	}
+}
+
+// An attempt launched before entrypoints were recorded says so rather than
+// borrowing a reader's templates.
+func TestFactsOfAnEarlierLaunch(t *testing.T) {
+	t.Parallel()
+	facts := strings.Join(Facts(&View{Launch: Launch{GroveVersion: "grove (devel) 47852e3"}}, func(s string) string { return s }), "\n")
+	if !strings.Contains(facts, "by grove (devel) 47852e3 with") || !strings.Contains(facts, "\nEntrypoints: not recorded at launch\n") {
+		t.Fatal(facts)
 	}
 }

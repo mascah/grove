@@ -57,7 +57,7 @@ Build one binary from a named commit, put it on `PATH`, and check which
 ```sh
 go build -o "$HOME/.local/bin/grove" ./cmd/grove   # from a clone at that commit
 GOBIN="$HOME/.local/bin" go install github.com/mascah/grove/cmd/grove@COMMIT  # or from the module; pushed commits only
-grove version     # must print "grove v…"; a usage error means another grove answered
+grove version     # must print "grove … content sha256:…"; a usage error means another grove answered
 grove init        # at the checkout's top, or: grove --project /absolute/path init
 grove check
 git add grove.yaml grove .claude .agents && git commit -m "chore: set up grove"   # at the top
