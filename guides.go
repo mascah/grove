@@ -1,7 +1,8 @@
 // Package grove embeds the shared workflow guides, the record model they cite
 // and the reviewer definition, so a built binary carries the workflow of its
 // own commit: the files stay the one editable owner, and grove guide prints the
-// guides and the model wherever it runs.
+// guides and the model wherever it runs. It also owns the entrypoint templates
+// init writes and the build identity that names all of them.
 package grove
 
 import "embed"
@@ -12,6 +13,9 @@ import "embed"
 //
 //go:embed docs/work-execution.md docs/work-shaping.md docs/record-model.md
 var Guides embed.FS
+
+// GuideFiles maps each guide name grove guide takes to its file in Guides.
+var GuideFiles = map[string]string{"work": "docs/work-execution.md", "shape": "docs/work-shaping.md", "model": "docs/record-model.md"}
 
 // Reviewer is the grove-reviewer agent definition the work guide's step 6
 // names, which init writes verbatim: this repository's copy is the one

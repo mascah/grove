@@ -28,6 +28,15 @@ func Facts(v *View, visible func(string) string) []string {
 	}
 	line("Worktree: %s on %s from %s (%s)", visible(l.Worktree), visible(l.Branch), short(l.Base), reuse)
 	line("Started: %s by %s with %s (%s), owner pid %d", l.Started.UTC().Format(time.RFC3339), l.GroveVersion, visible(l.Executable), visible(l.ClaudeVersion), l.Owner)
+	switch {
+	case l.Skill == "":
+		line("Entrypoints: not recorded at launch")
+	case len(l.Differs) == 0:
+		line("Entrypoints: skill %s; the skill and any reviewer match the launching grove's templates", l.Skill)
+	default:
+		line("Entrypoints: skill %s; differ from the launching grove's templates: %s", l.Skill, visible(strings.Join(l.Differs, ", ")))
+	}
+	line("Agent's grove: not recorded; PATH or the project's instructions choose it, which may not be the launching grove")
 	line("Bounds: budget %s USD, permission mode %s, prompts none; one process, no retries; subagents share the budget", l.BudgetUSD, l.PermissionMode)
 	line("Requested: %s", visible(Requested(l)))
 	line("Session: %s", l.SessionID)

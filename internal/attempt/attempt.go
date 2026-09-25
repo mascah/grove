@@ -34,12 +34,12 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
-	"runtime/debug"
 	"slices"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/mascah/grove"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/repo"
 	"golang.org/x/sys/unix"
@@ -79,19 +79,25 @@ type Launch struct {
 	RecordRevision string   `json:"record_revision"` // as HEAD held it at launch
 	Base           string   `json:"base"`            // the commit the worktree started from, or continues on
 	Branch         string   `json:"branch"`
-	Worktree       string   `json:"worktree"`        // absolute checkout the process runs in
-	Prefix         string   `json:"prefix"`          // the project's path inside the checkout, "" at its top
-	WorktreeReused bool     `json:"worktree_reused"` // it existed before this attempt
-	Command        []string `json:"command"`         // the exact argv, command[0] the executable as resolved
-	Executable     string   `json:"executable"`      // command[0] as given (claude or GROVE_CLAUDE)
-	ClaudeVersion  string   `json:"claude_version"`  // `--version` at launch
-	GroveVersion   string   `json:"grove_version"`
+	Worktree       string   `json:"worktree"`         // absolute checkout the process runs in
+	Prefix         string   `json:"prefix"`           // the project's path inside the checkout, "" at its top
+	WorktreeReused bool     `json:"worktree_reused"`  // it existed before this attempt
+	Command        []string `json:"command"`          // the exact argv, command[0] the executable as resolved
+	Executable     string   `json:"executable"`       // command[0] as given (claude or GROVE_CLAUDE)
+	ClaudeVersion  string   `json:"claude_version"`   // `--version` at launch
+	GroveVersion   string   `json:"grove_version"`    // the launching grove's version line; the agent's grove is not recorded
 	Model          string   `json:"model,omitempty"`  // requested; the actual one is in the result's init
 	Effort         string   `json:"effort,omitempty"` // requested reasoning effort, passed as --effort
 	Until          string   `json:"until,omitempty"`  // the assignment's bound: "plan", or "" to run through
 	// Reviewer is the sha256 of the worktree's grove-reviewer definition at
 	// launch, "none" when it had none, "" for an attempt before this field.
-	Reviewer       string    `json:"reviewer,omitempty"`
+	Reviewer string `json:"reviewer,omitempty"`
+	// Skill is the sha256 of the worktree's grove-work skill at launch, ""
+	// for an attempt before this field. Differs names which of the skill and
+	// the reviewer differ from the launching executable's templates: a custom,
+	// older or newer file keeps its own digest, never the template's identity.
+	Skill          string    `json:"skill,omitempty"`
+	Differs        []string  `json:"differs_from_template,omitempty"`
 	BudgetUSD      string    `json:"budget_usd"`
 	PermissionMode string    `json:"permission_mode"`
 	SessionID      string    `json:"session_id"` // generated here, passed as --session-id
@@ -455,10 +461,20 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if req.Effort != "" {
 		command = append(command, "--effort", req.Effort)
 	}
-	reviewer := "none"
-	if def, err := os.ReadFile(filepath.Join(worktree, prefix, ReviewerPath)); err == nil {
-		reviewer = fmt.Sprintf("sha256:%x", sha256.Sum256(def))
-	} else {
+	var differs []string
+	installed := func(path string) string {
+		def, err := os.ReadFile(filepath.Join(worktree, prefix, path))
+		if err != nil {
+			return "none"
+		}
+		if string(def) != grove.Entrypoints()[path] {
+			differs = append(differs, path)
+		}
+		return fmt.Sprintf("sha256:%x", sha256.Sum256(def))
+	}
+	skillDigest := installed(SkillPath)
+	reviewer := installed(ReviewerPath)
+	if reviewer == "none" {
 		report(fmt.Sprintf("warning: %s is not in %s, so the attempt has no independent reviewer and work whose record requires one stays active; commit the files grove init wrote to give it one", filepath.Join(prefix, ReviewerPath), worktree))
 	}
 	l := &Launch{
@@ -466,7 +482,7 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		RecordPath: r.Path, RecordRevision: project.Revision(r.Source),
 		Base: base, Branch: branch, Worktree: worktree, Prefix: prefix, WorktreeReused: reused,
 		Command: command, Executable: exe, ClaudeVersion: strings.TrimSpace(string(version)),
-		GroveVersion: groveVersion(), Model: req.Model, Effort: req.Effort, Until: req.Until, Reviewer: reviewer, BudgetUSD: req.BudgetUSD,
+		GroveVersion: grove.Identity().String(), Model: req.Model, Effort: req.Effort, Until: req.Until, Reviewer: reviewer, Skill: skillDigest, Differs: differs, BudgetUSD: req.BudgetUSD,
 		PermissionMode: req.PermissionMode, SessionID: session, Started: now.UTC(),
 	}
 	// The directory appears complete or not at all: a reader never sees an
@@ -1091,20 +1107,6 @@ func uuid() (string, error) {
 	b[6] = b[6]&0x0f | 0x40
 	b[8] = b[8]&0x3f | 0x80
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16]), nil
-}
-
-func groveVersion() string {
-	info, ok := debug.ReadBuildInfo()
-	if !ok {
-		return "grove (no build information)"
-	}
-	line := "grove " + info.Main.Version
-	for _, s := range info.Settings {
-		if s.Key == "vcs.revision" {
-			line += " " + s.Value
-		}
-	}
-	return line
 }
 
 func writeJSON(path string, v any) error {

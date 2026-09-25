@@ -152,9 +152,6 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"Without it, search upward from the current directory, stopping at Git boundaries.\n" +
 	"Project/file context is written to stderr; results are written to stdout.\n"
 
-// guideFiles maps each guide name to its embedded file.
-var guideFiles = map[string]string{"work": "docs/work-execution.md", "shape": "docs/work-shaping.md", "model": "docs/record-model.md"}
-
 // Run returns 0 on success, 1 for inspection/output errors, and 2 for usage errors.
 // cwd is explicit so callers and tests never need to change the process directory.
 func Run(args []string, cwd string, out, errOut io.Writer) int {
@@ -170,9 +167,9 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 	case "":
 		return runBoard(a, cwd, out, errOut)
 	case "version":
-		return writeResult(out, errOut, []byte(versionLine()))
+		return writeResult(out, errOut, []byte(grove.Identity().String()+"\n"))
 	case "guide":
-		source, err := fs.ReadFile(grove.Guides, guideFiles[a.id])
+		source, err := fs.ReadFile(grove.Guides, grove.GuideFiles[a.id])
 		if err != nil {
 			panic(err) // the name was validated and every file is embedded
 		}
@@ -581,7 +578,7 @@ func parseArgs(args []string) (a invocation, err error) {
 			err = fmt.Errorf("%s takes no positional arguments", a.command)
 		}
 	case "guide":
-		if len(positional) != 2 || guideFiles[positional[1]] == "" {
+		if len(positional) != 2 || grove.GuideFiles[positional[1]] == "" {
 			err = fmt.Errorf("guide requires one argument, work, shape or model")
 		} else {
 			a.id = positional[1]

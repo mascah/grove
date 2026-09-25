@@ -2,9 +2,9 @@
 id: "G-170"
 type: work
 title: "Give every distributed build and attempt attributable release identity"
-status: proposed
+status: active
 created: "2026-09-25T21:04:55Z"
-updated: "2026-09-25T21:04:55Z"
+updated: "2026-09-25T21:20:24Z"
 ---
 
 ## Outcome
