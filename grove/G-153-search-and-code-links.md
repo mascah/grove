@@ -133,6 +133,23 @@ reviews, most flagged records had claims the change left intact; reconsider
 an index when search over the current view passes about a second or hit
 lists need ranking to be readable.
 
+## Scope at preparation
+
+Narrowed 2026-09-25 by the headless `/grove-work G-153` session under the
+owner's rule in Next: "if agents already find and apply the listed
+constraint without search, preparation narrows this record to the board
+search and the review listing". G-154's `without` row (review G-160 on
+`worktree-G-154` at `5ff6eb3`, examined `eeec725`) found both constraints
+applied in 10 of 10 runs without search, since at fixtures of five and two
+records every run reads every record, and named no lever. So `grove
+search`, its `--help` and commands.md entry, and the guide and reviewer
+sentences are out of this record: nothing yet shows an agent needs them.
+They are the owner's to reshape as their own work once a case large enough
+that reading every record costs more than choosing shows the listing
+missing a constraint (G-160 Disposition). Consequence for G-154: its
+`with` row needs a guides or CLI change to compare; this record now makes
+none, so that row compares nothing new until such work lands.
+
 ## Acceptance
 
 1. On the board, `/` finds a record by a word that occurs only in its body,
@@ -141,38 +158,27 @@ lists need ranking to be readable.
    lists the records whose links resolve to it or under it, and those naming
    it in a code span, each with its tier. A divergent record shows every
    current content. [board.md](../docs/board.md) documents it.
-2. `grove search QUERY [--json]` in a checkout prints the same tiers over
-   that checkout's records, escapes control characters in snippets, prints
-   the header alone when nothing matches, refuses an empty query as usage
-   (exit 2), writes nothing, and is documented in
-   [commands.md](../docs/commands.md) and `grove --help`.
+2. Narrowed out at preparation (Scope at preparation): `grove search QUERY
+   [--json]` in a checkout printing the same tiers.
 3. The board's review detail lists, beside each file the candidate changes,
    the records that link it or name it in a code span, with the reason, and
    says when no record names a file; it stores nothing and starts no Git
    process the view did not already start. The owner judges the layout in a
    real terminal, and the terminal lifecycle checks pass.
-4. The work guide, the shaping guide and the reviewer definition name the
-   command where they ask for a text search or the knowledge check, in the
-   shipped copies; the guides digest changes and Evidence records it, so the
-   G-108 pair reruns comparably.
+4. Narrowed out at preparation: the work guide, the shaping guide and the
+   reviewer definition naming the command.
 5. Evidence records two observations with their commands: on this
    repository, the review listing for the five merges in Constraints
    reproduces the link pairs there; on nullsec, read from its checkout
-   without writing, `grove search` for a `.rs` path names the decisions the
-   Constraints cite.
+   without writing, the board search's matcher for a `.rs` path names the
+   decisions the Constraints cite.
 6. The checks in AGENTS.md pass, no package exceeds five seconds, and no
    file is written anywhere by search or the review listing.
 
 ## Next
 
-Wait for [G-154](G-154-listed-constraint-eval.md)'s `without` row and read
-its review before assigning (owner decision, 2026-09-25): if agents already
-find and apply the listed constraint without search, preparation narrows
-this record to the board search and the review listing before the plan is
-fixed. Then assign. Needs a plan covering where the matcher lives so the board, the CLI
-and the review view share one (`links` and `resolve` are in
-`internal/handoff`, `hits` in `internal/tui`), the review sidebar's layout,
-and the exact guide sentences. [G-154](G-154-listed-constraint-eval.md)
-measures whether agents find and apply what the lookup lists; its
-`without` row runs first, its `with` row after this lands. Reconcile with G-151 at whichever
-integrates second, since both edit the shipped guides.
+Preparation done 2026-09-25 by a headless `/grove-work G-153` on
+`worktree-G-153` from main `3f2b923`: scope narrowed as above, plan
+[G-164](G-164-g-153-board-body-search-and-revi.md). Implement it on this
+branch. G-151 integrated first and this record no longer edits the
+shipped guides, so there is nothing to reconcile with it.
