@@ -182,9 +182,10 @@ sha256 of the worktree's `.claude/skills/grove-work/SKILL.md` as `skill`,
 and in `differs_from_template` which of that skill and the reviewer are not
 byte for byte the launching `grove`'s templates: a custom, older or newer
 file keeps its own digest and never borrows the template's identity, and the
-attempt's `Entrypoints:` fact says which; a skill the harness prefers over
-the worktree's, such as a personal one of the same name, is not seen (an attempt from before this says
-they were not recorded). `grove_version` is the launching `grove`'s
+attempt's `Entrypoints:` fact says which (an attempt from before this says
+they were not recorded). A skill the harness prefers over the worktree's,
+such as a personal one of the same name, is not seen. `grove_version` is the
+launching `grove`'s
 [version](#version-and-guide) line. The `grove` the agent itself runs is not
 recorded: `PATH` or the project's instructions choose it, and it need not be
 the launching one. An attempt started
@@ -284,7 +285,7 @@ grove VERSION (COMMIT[, vcs OTHER][, modified]) guides sha256:GUIDES content sha
   primary checkout or a clone: for a linked worktree that lies inside its
   repository, Go only recognises the enclosing checkout's `.git` directory
   and takes that checkout's pseudo-version, commit and cleanliness instead
-  (observed with go 1.26.2), which a stamp then shows as `vcs OTHER`; the
+  (observed with go 1.26.2 and 1.26.8), which a stamp then shows as `vcs OTHER`; the
   `content` digest still names the worktree's own files.
 - `guides` digests the work and shaping guides and the record model, which
   `guide` prints. `content` digests the workflow the binary ships into a
@@ -302,11 +303,13 @@ with `-trimpath` so no machine path enters the binary; Go embeds no build
 time. The same command serves a clone and an extracted source archive:
 
 ```sh
-go build -trimpath -ldflags "-X github.com/mascah/grove.version=v0.1.0 -X github.com/mascah/grove.commit=$(git rev-parse HEAD)" -o grove ./cmd/grove
-./grove version        # grove v0.1.0 (<that commit>) guides sha256:… content sha256:…
-go version -m grove    # Go's own record: -trimpath=true, and vcs.* from a clone
+go build -trimpath -ldflags "-X github.com/mascah/grove.version=v0.1.0 -X github.com/mascah/grove.commit=$(git rev-parse HEAD)" -o bin/grove ./cmd/grove
+bin/grove version        # grove v0.1.0 (<that commit>) guides sha256:… content sha256:…
+go version -m bin/grove  # Go's own record: -trimpath=true, and vcs.* from a clone
 ```
 
+`bin/` is ignored, so an artifact leaves the tree clean for the next one;
+`-o grove` would write into this repository's `grove/` record directory.
 From an archive, pass the commit the archive was made from instead of
 `git rev-parse`. With `-trimpath`, Go leaves `-ldflags` out of the build
 settings, so `version` is where the stamp is read. A stamp is a claim the
