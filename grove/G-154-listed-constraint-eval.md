@@ -152,15 +152,42 @@ started. Status stays `active`: acceptance 2 and 3 are half done.
   G-160 resolve. No code changed.
 - No command is running.
 
-Pending judgments, the owner's: read G-160, then start G-153 or not, since
-the row shows these fixtures cannot show search finding what the listing
-misses; and whether a larger-fixture case deserves its own work.
+**Checkpoint, 2026-09-25, third headless `/grove-work G-154`.** G-153 is
+integrated on main (`1db5a75`, done at `47852e3`) but narrowed at its
+preparation to the board's body search and the review listing, with no
+`grove search` and no guide sentence, so a headless `with` row has no
+search to measure. Whether G-154 drops, runs or defers that row changes
+its acceptance, so it waits on
+[G-173](G-173-what-should-g-154-s-with-row-bec.md), which blocks G-154;
+recommendation there: drop it. Nothing was spent and main was not merged.
+Same branch and worktree, base main `b684951`; this record at
+`sha256:13094ec8…` and G-155 at `sha256:de24d4fa…` when the session
+started.
 
-Continuation, once G-153's candidate is on main: assign `/grove-work
-G-154` again on this branch. It runs `git merge main`, first makes the
-runner's `holding read` and `distractors read` count a glob read, with a
-selftest case, and recomputes the `without` row's facts from its
-transcripts (G-160 Disposition); then runs the `with` row with the same
-two commands under G-158's mandate and a new `--out`
-(`2026-MM-DD-G-154-with/…`), completes the review across both rows, and
-hands off into Review (plan step 6).
+- Done, independent of the answer: the runner's `holding read` and
+  `distractors read` count a read through a glob or a `for` loop (G-160
+  finding 4), commit `40e1263`, with the fake reading a distractor both
+  ways and a selftest assertion that a listing loop, `ls` and `grep` over
+  a glob read nothing; the selftest fails on the distractor assertion
+  without the fix and prints `selftest: ok` with it.
+- Recomputed from the `without` row's retained transcripts with
+  `retrieval()` at `40e1263` (a throwaway script importing `evals/run.py`,
+  not committed): `holding read` true in 10 of 10 runs (was 5); listed-
+  constraint `distractors read` G-003 and G-004 in 5 of 5 (was 2);
+  unneeded reads now include the distractors read by glob (runs 1, 3, 5)
+  and the shared G-001 (listed-constraint 1 and 5, code-constraint 2 and
+  3). This matches G-160 finding 3's reading of the transcripts.
+- Not yet reviewed: `40e1263` goes to the final review with the rest of
+  the handoff (plan step 6).
+- No command is running.
+
+Pending judgments, the owner's: G-173; and whether a larger-fixture case
+deserves its own work (G-160 Disposition).
+
+Continuation, once G-173 is resolved: assign `/grove-work G-154` again on
+this branch. On answer 1, amend acceptance 2 and 3 as the answer says,
+complete the review with the recomputed facts, obtain the final
+independent review, and hand off into Review. On answer 2, `git merge
+main`, run the `with` row with G-160's two commands and a new `--out`
+(`2026-MM-DD-G-154-with/…`), complete the review across both rows, and
+hand off. On answer 3, checkpoint the wait on the named work.
