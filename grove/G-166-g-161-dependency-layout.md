@@ -2,9 +2,9 @@
 id: "G-166"
 type: question
 title: "Which dependency-view layout should G-161's board implement?"
-status: open
+status: resolved
 created: "2026-09-25T20:45:48Z"
-updated: "2026-09-25T20:47:55Z"
+updated: "2026-09-25T21:08:25Z"
 blocks: ["G-161"]
 relates_to: ["G-165"]
 ---
@@ -55,3 +55,7 @@ shaping-guide change do not depend on this answer and are being built on
 Open; blocks G-161's board steps (G-165 step 4). Answer here (for example
 "B as drawn", or what changes), set `status=resolved`, and relaunch G-161;
 the board is then built in the chosen layout.
+
+## Answer
+Layout: B (layered list with a focus tree)
+Handoff: I don't think I need a printed list of `grove context IDS`, we can skip this unless it's needed for an agent
