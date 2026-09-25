@@ -329,11 +329,13 @@ def retrieval(transcript, harness, clone, created, case=None, fixture=None):
                 continue
             if words and words[0] in ("cat", "head", "tail", "sed", "nl", "less", "awk"):
                 files += [w for w in words[1:] if not w.startswith("-") and os.path.isfile(os.path.join(clone, w))]
-    rel, clone = [], os.path.realpath(clone)
-    for f in files:
+    clone = os.path.realpath(clone)
+
+    def norm(f):
         full = os.path.realpath(os.path.join(clone, f))
         p = os.path.relpath(full, clone)
-        rel.append(full if p.startswith("..") else re.sub(r"^\.claude/worktrees/[^/]+/", "", p))
+        return full if p.startswith("..") else re.sub(r"^\.claude/worktrees/[^/]+/", "", p)
+    rel = [norm(f) for f in files]
     used, invoked = set(), []  # grove subcommands actually invoked, not words that merely follow "grove" in a command
     for cmd in commands:
         for part in re.split(r"&&|\|\||;|\||\n", cmd.replace("\\\n", " ")):
@@ -350,6 +352,9 @@ def retrieval(transcript, harness, clone, created, case=None, fixture=None):
                 words = words[2:] if words[0] == "--project" else words[1:]
             used.update(words[:1])
             invoked.append(words)
+            # context --include PATH prints the file in full: a read of it (the listing's own advice)
+            rel += [norm(w.removeprefix("--include=")) for i, w in enumerate(words) if w.startswith("--include=")]
+            rel += [norm(words[i + 1]) for i, w in enumerate(words[:-1]) if w == "--include"]
     recs, case = (fixture or {}).get("records", {}), case or {}
     distractors = case.get("distractors", ())
     needed = NEEDED | {r["path"] for k, r in recs.items() if k not in distractors}
@@ -694,10 +699,16 @@ def fake(harness, argv):
         tool("Bash", command="grove list && cat tasks.py")
         # an unneeded read outside the clone; Codex's goes through a command, so the file must exist
         tool("Read", file_path=os.path.abspath(__file__) if codex else os.path.expanduser("~/.claude/CLAUDE.md"))
-        if case.get("holding") and mode != "bad":  # bad never finds the constraint
-            tool("Bash", command=f"grove show {recs[case['holding']]['id']} && grove search tasks.py")
-        for key in case.get("distractors", ())[:1]:  # one distractor read, the other left alone
+        if case.get("holding"):  # good reads it through show, surfaced through context, bad only lists it or never looks
+            hold = recs[case["holding"]]
+            other = next((r for k, r in recs.items() if k != case["holding"] and k not in case["distractors"]), None)
+            read = {"good": f"grove show {hold['id']}", "bad": f"grove context {other['id']}" if other else "true",
+                    "surfaced": f"grove context {other['id']} --include={hold['path']}" if other else f"grove context {hold['id']}"}[mode]
+            tool("Bash", command=read + ("" if mode == "bad" else " && grove search tasks.py"))
+        for key in case.get("distractors", ())[:1]:  # one distractor's file read; surfaced shows the other too
             tool("Bash", command=f"cat {recs[key]['path']}")
+        for key in case.get("distractors", ())[1:] if mode == "surfaced" else ():
+            tool("Bash", command=f"grove --project . show {recs[key]['id']}")
     branch = "worktree-shape-" + ("hide-finished" if missing else "tag-filter")
     wt = os.path.abspath(os.path.join(".claude", "worktrees", branch))
     git(".", "worktree", "add", "-q", "-b", branch, wt, "main")
@@ -777,10 +788,13 @@ def selftest():
                 if mode == "worse":
                     assert not (f["guide"] or f["brief"] or f["list"] or f["context_or_show"] or f["search"] or f.get("holding_read") or f.get("distractors_read")), f
                     continue
-                found = bool(case.get("holding")) and mode != "bad"
-                assert f["guide"] and f["brief"] and f["list"] and f["context_or_show"] == found and f["search"] == found and f.get("holding_read", False) == found, f
+                found, listed = bool(case.get("holding")) and mode != "bad", r["case"] == "listed-constraint"
+                assert f["guide"] and f["brief"] and f["list"] and f["search"] == found and f.get("holding_read", False) == found, f
+                assert f["context_or_show"] == (found or listed and mode == "bad"), f  # bad's context on the due record lists the holding record, and is not a reading of it
                 distractor = [os.path.basename(p)[:5] for p in f["files_read"] if "export-tasks-as-csv" in p]
-                assert f.get("distractors_read") == (distractor if case.get("holding") else None) and len(distractor) == (r["case"] == "listed-constraint"), f
+                assert len(distractor) == listed and f.get("distractors_read", [None])[:1] == (distractor[:1] if case.get("holding") else [None]), f
+                assert len(f.get("distractors_read") or []) == (2 if listed and mode == "surfaced" else len(distractor)), f  # the second through show
+                assert not (listed and mode == "surfaced") or any("add-tasks-export" in p for p in f["files_read"]), f  # read through --include=
                 outside = "evals/run.py" if harness == "codex" else ".claude/CLAUDE.md"
                 assert "tasks.py" in f["files_read"] and "grove/brief.md" in f["files_read"] and len(f["unneeded"]) == 1 + len(distractor) and f["unneeded"][0].endswith(outside), f
     assert open(os.path.join(tmp, "out-claude", "good", "report.md")).read().count("- config dir synced skills: pdf") == 1
@@ -789,8 +803,13 @@ def selftest():
     recs = {r["fields"]["title"]: r["fields"] for r in records(os.path.join(out, "listed-constraint-1", "p"), "main").values()}
     export, due = recs["Add tasks export"], recs["Give tasks a due date"]
     assert export["status"] == "done" and export["candidate"] and due["depends_on"] == [export["id"]] and len(due["relates_to"]) == 2, recs
-    assert records(os.path.join(out, "code-constraint-1", "p"), "main")  and "| constraint applied | brief constraint | handoff | notes |" in open(os.path.join(out, "report.md")).read()
+    assert [r["fields"]["status"] for r in records(os.path.join(out, "code-constraint-1", "p"), "main").values() if r["fields"]["type"] == "decision"] == ["accepted"]
+    assert "| constraint applied | brief constraint | handoff | notes |" in open(os.path.join(out, "report.md")).read()
     assert len({json.load(open(os.path.join(out, c + "-1", "run.json")))["fixture commit"] for c in CASES}) == 3, "the pair shares one fixture commit"
+    default = argparse.Namespace(**(vars(args) | {"harness": "claude", "budget": "0.01", "effort": None, "max_seconds": None, "max_plan_percent": None,
+                                                  "permission_mode": "fake", "config_dir": config, "case": [], "out": os.path.join(tmp, "out-default")}))
+    assert [r["case"] for r in run(default)] == list(DEFAULT), "no --case runs the pair only"
+    assert "- Cases not run: listed-constraint, code-constraint" in open(os.path.join(default.out, "report.md")).read()
     text = open(os.path.join(tmp, "out-codex", "good", "report.md")).read()
     assert "- config dir system skills: openai-docs" in text and "| fake-model/high | not reported | input 100, cached_input 60, output 10; plan 5 points | 1 (" in text, text
     assert "- login: Logged in" in text and "resolves grove to the built binary" in text, text

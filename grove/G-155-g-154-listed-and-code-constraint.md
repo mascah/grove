@@ -43,7 +43,7 @@ tags on an existing task". An `accepted` decision, "Keep the owner's
 notes in task files", names `write` in `tasks.py` in code spans, never a
 link, and states that a command rewriting a task file keeps everything
 below the title, and that `write` today drops it. The brief says nothing
-of notes. Its title shares no word with the topic.
+of notes. Its title shares no word with the topic but "task".
 
 Both cases expect a proposal and no question, like the companion: each
 constraint is answered by a record, so a question about it is an over-ask,
@@ -52,7 +52,8 @@ unchanged.
 
 **Retrieval facts added**, from the trace as today: `holding_read`,
 whether the holding record was read (a `grove show` or `grove context`
-naming its ID, or a read of its file); `distractors_read`, the distractor
+naming its ID, or a read of its file, `context --include` among them);
+`distractors_read`, the distractor
 IDs read the same way; and `search`, whether `grove search` ran, on every
 case, since it does not exist before G-153. A distractor's file counts as
 unneeded; the refined record and the holding record count as needed.

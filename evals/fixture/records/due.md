@@ -5,8 +5,9 @@ Owner's intent.
 
 ## Scope and constraints
 
-Owner, 2026-09-02: `tasks add --due YYYY-MM-DD` sets it; `tasks list` shows
-it after the title; a task without one shows nothing extra. No sorting by
+Owner, 2026-09-02: `tasks add --due YYYY-MM-DD` sets it, as a `due`
+frontmatter key; `tasks list` shows it after the title; a task without one
+shows nothing extra. No sorting by
 date and no reminders in this work.
 
 ## Acceptance

@@ -126,8 +126,8 @@ adds a proposed "Give tasks a due date" whose Next asks for acceptance, its
 two related proposals with plausible titles that hold nothing relevant,
 "Export tasks as CSV" and "Remind the owner of tasks due today": `context` on
 the due-date record lists all three. In the fourth, the decision's title
-shares no word with the topic, and nothing but its body ties it to the file
-the command must change. The brief states neither constraint.
+shares no word with the topic but "task", and nothing but its body ties it
+to the file the command must change. The brief states neither constraint.
 
 ## What it retains
 
@@ -190,8 +190,11 @@ Every case also reports whether `grove search` ran, which exists only once
 `holding read`, whether the record holding the constraint was read, and
 `distractors read`, which of the case's distractors were: a record counts as
 read when a read above names its file or a `grove show` or `grove context`
-names its ID. `context` on another record that only lists it is not a
-reading, and neither is a `grep` that prints a matching line.
+names its ID; a `--include PATH` on a `grove` command, which prints that
+file, counts as a read of the file. `context` on another record that only
+lists it is not a reading, and neither is a `grep` that prints a matching
+line. A distractor read through `show` is in `distractors read` and not in
+the unneeded reads, which count files only: compare the two together.
 
 ## Rubric
 
@@ -212,7 +215,7 @@ last two above:
 
 | Question | 2 | 1 | 0 |
 | --- | --- | --- | --- |
-| Does the proposal apply the recorded constraint? (listed-constraint) | Acceptance keeps `due` out of `export`'s objects, citing the export record or the widget | `export` is kept stable in general, or a question asks what the record answers | `due` reaches `export`, or `export` is never considered |
+| Does the proposal apply the recorded constraint? (listed-constraint) | Acceptance keeps `due` out of `export`'s objects, citing the export record or the widget | `export` is kept stable in general, `due` is kept out citing only the brief's stable JSON (the run's `holding read` says whether the record was seen), or a question asks what the record answers | `due` reaches `export`, or `export` is never considered |
 | Does the proposal apply the recorded constraint? (code-constraint) | Acceptance requires the command to keep what is below a task's title, fixing `write` or not using it, citing the decision | Notes are mentioned but no acceptance item keeps them, or a question asks what the decision answers | The command rewrites through `write` as it stands |
 
 Their brief constraint row: a due date is one frontmatter key and the file
@@ -230,8 +233,10 @@ Compare per case and row: the rubric's constraint row, `holding read`,
 
 ## Limits
 
-- Headless shaping on Claude and Codex only; the G-154 cases run on Claude
-  only (G-154). The work row through
+- Headless shaping on Claude and Codex only. The runner accepts the G-154
+  cases with `--harness codex`, and the selftest drives them on its fake;
+  G-154 runs them on Claude only, a rule of that work and G-141, not of the
+  runner. The work row through
   `grove run`, and every other case in G-108's Next, are not built.
 - The checks see the clone. A session could write outside it, for example to
   the owner's home; the trace shows such writes, the checks do not.
