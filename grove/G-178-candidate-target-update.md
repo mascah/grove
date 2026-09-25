@@ -4,9 +4,9 @@ type: work
 title: "Update a conflicting candidate to the moved target through one bounded attempt"
 status: proposed
 created: "2026-09-25T21:39:27Z"
-updated: "2026-09-25T21:41:22Z"
+updated: "2026-09-25T21:56:45Z"
 kind: feature
-relates_to: ["G-044", "G-045", "G-046", "G-057", "G-058", "G-059", "G-060", "G-101", "G-134", "G-140", "G-177", "G-179", "G-180"]
+relates_to: ["G-044", "G-045", "G-046", "G-057", "G-058", "G-059", "G-060", "G-101", "G-134", "G-140", "G-177", "G-179", "G-180", "G-182"]
 ---
 
 ## Outcome
@@ -108,6 +108,7 @@ has no notion of a previous candidate or of which content is a resolution.
 
 Assignable after G-177 or alongside it: `integrate`'s refusal already
 supplies the conflicting files, so the operation works before prediction
-exists. If the automatic form is what the owner wants, answer G-179 first
-so this record's mandate and G-180's policy are shaped together. No
+exists. G-179 is answered ([G-182](G-182-standing-policy-delegation.md)):
+the attempt this record starts by hand is the one G-180's policy starts
+automatically, so keep its mandate and refusals in one place for both. No
 implementation has been assigned by this shaping session.

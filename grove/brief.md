@@ -111,6 +111,11 @@ Human review presents changed behavior, decisions, outstanding issues and checks
 before optional diffs. Approval is tied to the candidate being integrated;
 changed candidates require reconsideration. Feedback that starts another
 implementation attempt returns work to Active and preserves prior reviews.
+A standing policy in `grove.yaml` may delegate one bounded conflict
+resolution, and the approval and integration of a candidate that meets its
+written conditions after independent review, each act attributed to the
+policy and its evidence ([G-182](G-182-standing-policy-delegation.md),
+owner, 2026-09-25); everything it does not name awaits human judgment.
 
 Interactive and headless callers share the workflow, with explicit human
 availability, authority and resource bounds. Missing human decisions become

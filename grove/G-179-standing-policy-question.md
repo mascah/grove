@@ -4,9 +4,9 @@ type: question
 title: "What may a standing owner policy do to a candidate without a per-item human act?"
 status: resolved
 created: "2026-09-25T21:39:27Z"
-updated: "2026-09-25T21:53:40Z"
+updated: "2026-09-25T21:56:44Z"
 blocks: ["G-180"]
-relates_to: ["G-058", "G-059", "G-060", "G-142", "G-162", "G-163", "G-177", "G-178"]
+relates_to: ["G-058", "G-059", "G-060", "G-142", "G-162", "G-163", "G-177", "G-178", "G-182"]
 ---
 
 ## Question

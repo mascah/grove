@@ -4,10 +4,10 @@ type: work
 title: "Resolve, approve and integrate candidates under an explicit owner policy"
 status: proposed
 created: "2026-09-25T21:39:28Z"
-updated: "2026-09-25T21:41:23Z"
+updated: "2026-09-25T21:56:44Z"
 kind: feature
 depends_on: ["G-177", "G-178"]
-relates_to: ["G-044", "G-058", "G-059", "G-060", "G-101", "G-134", "G-140", "G-142", "G-162", "G-163", "G-179"]
+relates_to: ["G-044", "G-058", "G-059", "G-060", "G-101", "G-134", "G-140", "G-142", "G-162", "G-163", "G-179", "G-182"]
 ---
 
 ## Outcome
@@ -20,9 +20,12 @@ evidence, so a set of independently implemented items can go from review to
 the target while the owner is away, and the owner judges only what the
 policy leaves to them.
 
-Owner intent, conversation 2026-09-25, as [G-179](G-179-standing-policy-question.md)
-records it. The policy's content is the owner's; this record does not
-choose it, and G-179 blocks its execution contract.
+Decision [G-182](G-182-standing-policy-delegation.md), the owner on
+2026-09-25 answering [G-179](G-179-standing-policy-question.md): option 4,
+automatic resolution plus delegated approval and integration under a
+narrow written policy the owner extends. The initial policy below is
+proposed at the owner's request and binds nobody until the owner writes it
+into `grove.yaml`.
 
 ## Constraints
 
@@ -47,18 +50,55 @@ authority and spend constraints.
 
 ### Proposed design and scope
 
-- A policy in `grove.yaml`, shape chosen in preparation: what it may do
-  (resolve, approve, integrate, in whichever combination G-179 selects) and
-  its conditions, deterministic wherever possible: verification commands
-  that must pass on the merged result, path scope or size of the change, no
-  open question blocking the work, a clean merge, the reviewer reporting
-  nothing consequential and no knowledge finding, at most one resolution per
-  target movement, and an aggregate budget.
+- A `policy:` mapping in `grove.yaml` beside `run:`, absent by default.
+  Proposed initial policy for this repository, narrow on purpose:
+
+  ```yaml
+  policy:                 # standing delegation (G-182); absent means nothing automatic
+    budget: 30            # dollars, aggregate for every automatic act in one sweep
+    resolve:
+      budget: 10          # one attempt per candidate per target movement; run: defaults otherwise
+    approve:
+      verify:             # must pass on the merged result, in a temporary worktree
+        - go test -count=1 -timeout 120s ./...
+        - go vet ./...
+        - go run ./cmd/grove check
+      max_lines: 300      # added plus removed, the record's own file excluded
+      never:              # a change to any of these always waits for the owner
+        - grove.yaml
+        - .github/**
+        - .claude/**
+        - .agents/**
+        - go.mod
+        - go.sum
+        - lefthook.yml
+    integrate: true       # merge and write done after a delegated approval
+  ```
+
+  `never` is the trust boundary: files that change what the automation
+  itself does or what CI runs. `max_lines` bounds the blast radius. `verify`
+  is this repository's final evidence from its agent instructions. The
+  budgets are guesses to adjust. Likely extensions, deliberately absent
+  from the initial policy: a `paths:` allowlist, a `kinds:` list (for
+  example only `fix` and `tooling`), a `sizes:` list, and a higher
+  `max_lines`.
+- Conditions the policy cannot switch off, so that its narrowness holds by
+  construction: the record is in review with its candidate unchanged since
+  the review; a review record examined that candidate and reports no open
+  finding and no knowledge finding; no open question blocks the work; the
+  merge is clean (a conflict goes to resolution, never to approval); the
+  merged result passed `verify`. How "no open finding" is read from a
+  review record is chosen in preparation, since the schema does not
+  structure findings: a conventional closing line the reviewer definition
+  writes, or a review field.
 - Attribution: a delegated approval writes `approved` and a verdict
-  paragraph naming the policy, the review record and the attempt, and is
-  distinguishable from the owner's own verdict wherever the record is
-  shown; the merge and `done` are the ordinary `integrate` acts. Introduce a
-  field only if prose attribution proves insufficient.
+  paragraph that keeps the `Verdict on candidate X, DATE:` prefix
+  `integrate` already quotes, with text beginning `delegated under policy`
+  and naming the `grove.yaml` revision, the review record, the attempt and
+  the verification result, so it is distinguishable from the owner's own
+  verdict wherever the record is shown; the merge and `done` are the
+  ordinary `integrate` acts. Introduce a field only if prose attribution
+  proves insufficient.
 - Verify before the target moves: make the merge in a temporary worktree,
   run the policy's commands there, and only then merge on the target. A
   failure leaves the target unchanged and the candidate in review with the
@@ -94,7 +134,10 @@ authority and spend constraints.
 
 ## Next
 
-The owner answers G-179. Then refine this scope to the selected option and
-prepare the policy shape, attribution and the verified merge before
-assignment through `$grove-work G-180`. Depends on G-177 and G-178. No
-policy, spend, merge or implementation is authorized here.
+G-179 is answered ([G-182](G-182-standing-policy-delegation.md)) and this
+scope is refined to it, with the initial policy proposed above. Preparation
+settles the policy's parsing, how a review's findings are read, the
+attribution text, the verified merge and the sweep's trigger; then
+assignment through `$grove-work G-180`, after G-177 and G-178, which it
+depends on. No policy is in `grove.yaml` yet: writing one is the owner's
+act. No spend, merge or implementation is authorized here.
