@@ -2,9 +2,9 @@
 id: "G-163"
 type: question
 title: "Where should review and integration stop a selected chain of work?"
-status: open
+status: resolved
 created: "2026-09-25T20:35:30Z"
-updated: "2026-09-25T20:38:18Z"
+updated: "2026-09-25T23:05:05Z"
 blocks: ["G-162"]
 relates_to: ["G-161"]
 ---
@@ -62,3 +62,7 @@ and refine G-162. Because the answer changes candidate/review/integration
 semantics, record a consequential choice as an attributable decision when
 made, following the shaping guide. No answer or approval is implied by
 creating these proposals.
+
+## Answer
+option 1
+
