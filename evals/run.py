@@ -354,7 +354,7 @@ def retrieval(transcript, harness, clone, created, case=None, fixture=None):
             invoked.append(words)
             # context --include PATH prints the file in full: a read of it (the listing's own advice)
             included = [w.removeprefix("--include=") for w in words if w.startswith("--include=")] + [words[i + 1] for i, w in enumerate(words[:-1]) if w == "--include"]
-            rel += [norm(f) for f in included if os.path.isfile(os.path.join(clone, f))]
+            rel += [norm(f) for f in included if not os.path.isabs(f) and os.path.isfile(os.path.join(clone, f))]  # context refuses an absolute path
     recs, case = (fixture or {}).get("records", {}), case or {}
     distractors = case.get("distractors", ())
     needed = NEEDED | {r["path"] for k, r in recs.items() if k not in distractors}

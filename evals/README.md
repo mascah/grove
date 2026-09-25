@@ -191,8 +191,9 @@ Every case also reports whether `grove search` ran, which exists only once
 `distractors read`, which of the case's distractors were: a record counts as
 read when a read above names its file, a `grove show` names its ID, or a
 `grove context` names the ID of a work record (it refuses any other type);
-a `--include PATH` on a `grove` command naming a file in the clone counts
-as a read of that file. These come from the command, not its result: a
+a `--include PATH` on a `grove` command naming a file in the clone by a
+relative path counts as a read of that file (`context` refuses an absolute
+one). These come from the command, not its result: a
 command that failed still counts. `context` on another record that only
 lists it is not a reading, and neither is a `grep` that prints a matching
 line. A distractor read through `show` is in `distractors read` and not in
