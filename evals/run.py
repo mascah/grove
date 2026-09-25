@@ -331,7 +331,7 @@ def retrieval(transcript, harness, clone, created, case=None, fixture=None):
             # for F in PATHS; do cat "$F"; done reads PATHS; a glob reads every file it matches in the clone
             loop = len(words) > 3 and words[0] == "for" and words[2] == "in" and re.search(rf"\b({'|'.join(READERS)})\b[^;&|\n]*\$\{{?{re.escape(words[1])}\b", cmd)
             if words and words[0] in READERS or loop:
-                files += [f for w in words[3 if loop else 1:] if not w.startswith("-") for f in sorted(glob.glob(os.path.join(clone, w))) if os.path.isfile(f)]
+                files += [f for w in words[3 if loop else 1:] if not w.startswith("-") for f in sorted(glob.glob(os.path.join(glob.escape(clone), w))) if os.path.isfile(f)]
     clone = os.path.realpath(clone)
 
     def norm(f):
@@ -357,7 +357,7 @@ def retrieval(transcript, harness, clone, created, case=None, fixture=None):
             invoked.append(words)
             # context --include PATH prints the file in full: a read of it (the listing's own advice)
             included = [w.removeprefix("--include=") for w in words if w.startswith("--include=")] + [words[i + 1] for i, w in enumerate(words[:-1]) if w == "--include"]
-            rel += [norm(f) for f in included if not os.path.isabs(f) and os.path.isfile(os.path.join(clone, f))]  # context refuses an absolute path
+            rel += [norm(f) for f in included if all(e not in ("", ".", "..") for e in f.split("/")) and os.path.isfile(os.path.join(clone, f))]  # context refuses what fs.ValidPath does: absolute, ./, //, ..
     recs, case = (fixture or {}).get("records", {}), case or {}
     distractors = case.get("distractors", ())
     needed = NEEDED | {r["path"] for k, r in recs.items() if k not in distractors}
@@ -827,6 +827,12 @@ def selftest():
     open(listing, "w").write(json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {
         "command": 'for f in grove/*.md; do echo "$f"; done; ls grove/*; grep -l tag grove/*.md'}}]}}) + "\n")
     assert retrieval(listing, "claude", os.path.join(out, "listed-constraint-1", "p"), set())["files_read"] == [], "listing is not reading"
+    odd = os.path.join(tmp, "odd[1]")  # a glob character in the clone's path is literal; an include context refuses is no read
+    os.makedirs(os.path.join(odd, "grove"))
+    open(os.path.join(odd, "grove", "G-002-x.md"), "w").close()
+    for cmd, want in (("cat grove/G-002-x.md", ["grove/G-002-x.md"]), ("grove context G-005 --include ./grove/G-002-x.md", [])):
+        open(listing, "w").write(json.dumps({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Bash", "input": {"command": cmd}}]}}) + "\n")
+        assert retrieval(listing, "claude", odd, set())["files_read"] == want, cmd
     guarded = os.path.join(tmp, "guarded")  # each run spends 5, and the floor keeps 13 in hand: two runs start, the third is refused
     shutil.copytree(home, guarded, ignore=shutil.ignore_patterns("sessions"))
     os.environ["GROVE_EVAL_FAKE"] = "good"
