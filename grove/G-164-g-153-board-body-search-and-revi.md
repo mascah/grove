@@ -17,9 +17,9 @@ search and the review listing. [G-154](G-154-listed-constraint-eval.md)'s
 `without` row, reviewed in G-160 on `worktree-G-154` at `5ff6eb3`, found
 both constraints applied in 10 of 10 runs without search, and named no
 lever. So this plan covers G-153 acceptance 1 (board `/` over bodies), 3
-(the review listing), the first observation of 5, and 6. `grove search`,
-the guide and reviewer sentences, and the nullsec observation through
-`grove search` are out, recorded in G-153.
+(the review listing), 5 (the nullsec observation through the board
+search's matcher instead of `grove search`), and 6. `grove search` and
+the guide and reviewer sentences are out, recorded in G-153.
 
 ## Design
 

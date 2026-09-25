@@ -175,10 +175,81 @@ none, so that row compares nothing new until such work lands.
 6. The checks in AGENTS.md pass, no package exceeds five seconds, and no
    file is written anywhere by search or the review listing.
 
-## Next
+## Evidence
 
-Preparation done 2026-09-25 by a headless `/grove-work G-153` on
-`worktree-G-153` from main `3f2b923`: scope narrowed as above, plan
-[G-164](G-164-g-153-board-body-search-and-revi.md). Implement it on this
-branch. G-151 integrated first and this record no longer edits the
-shipped guides, so there is nothing to reconcile with it.
+Headless `/grove-work G-153` of 2026-09-25, G-153 alone, on
+`worktree-G-153` (`.claude/worktrees/worktree-G-153`), base main
+`3f2b923`. Started from this record at `sha256:18a4d3a4…`; narrowed and
+planned in `aab404d` (record `sha256:8f6ea855…`, plan
+[G-164](G-164-g-153-board-body-search-and-revi.md) `sha256:bb752dc4…`);
+implementation `702b576`, review fixes `7f00b39`.
+
+What changed, per acceptance item:
+
+1. Board `/` matches in four tiers, first that applies: `title` (ID, type,
+   status, title, as before), `link` (a body link resolving, through
+   context's own `resolve`, to the path or under it), `code span` (the span
+   is the path or its last components), `text` (a body line, any case).
+   Hits sort by tier, then inspection order; with a query each hit has a
+   second row with its tier and the escaped line. In the current view each
+   current state (`currentStates`, G-042's `Older`) is its own hit naming
+   where it is held; a checkout's board searches its own copy. The count is
+   of records. [board.md](../docs/board.md#search) documents it. Tests:
+   `TestSearchMatchesBodiesByTier` (body word, tier order, path and
+   directory query, span by file name, divergent states, hostile line
+   escaped, checkout board), and the existing `TestSearchReachesEveryRecord`.
+2. Narrowed out (Scope at preparation).
+3. The review detail's Changes section has, under each file, `described by
+   ID tier, …` or `no record names it`: link or code span only, the open
+   record excluded, each ID once, renames by either side, the prefix
+   stripped as Git gives it, a file outside the project by code span only.
+   It reads the loaded records: no Git process (the test asserts the only
+   read is the one changes read), nothing stored (`internal/handoff`
+   `Mentions` is pure; the model's cache is in memory and dropped per
+   result). Test: `TestReviewListsRecordsDescribingEachFile`, with and
+   without a prefix. **The owner's layout judgment in a real terminal is
+   open.**
+4. Narrowed out.
+5. Observations, by throwaway harnesses in `internal/tui` (a `_test.go`
+   calling `pathTier` or `match` with `handoff.Mentions`, run then deleted,
+   never committed):
+   - This repository: for each merge, `git archive MERGE^1 grove.yaml grove`
+     extracted under `/tmp`, loaded with `project.LoadFS`, against `git
+     diff --name-only MERGE^1 MERGE` outside `grove/`. Code-file link pairs
+     reproduce Constraints exactly: G-144 `c294ab5` 4 code files, 3 link
+     pairs (guides.go G-107, cli.go and init.go G-140); G-135 `c6c5a4d` 1,
+     1; G-125 `9f94493` 9, 9; G-114 `38443ee` 0 code files; G-123 `1d36a99`
+     6, 5. Span pairs are more than Constraints counted (12, 4, 32, 0, 10
+     against 7, 5, 20, -, 5), since a span naming a file's last components
+     (`model.go`) counts for every file it could mean. The reviewer
+     reproduced the link pairs independently.
+   - nullsec, loaded read-only with `project.LoadFS(os.DirFS(...))` at
+     `3eb2785`, `git status` clean after: `match` for
+     `crates/sim/src/warp_profile.rs` lists decision G-016, page G-101 and
+     plan G-122 by code span; for `crates/server/src/ws.rs`, decision G-033
+     and works G-055, G-066, G-068 and plans G-113, G-117, G-124 by code
+     span, then pages G-102, G-103, G-104 by text. The installed `grove show`
+     from nullsec's checkout confirms both decisions name the files.
+6. At `7f00b39`: `go vet ./...` clean, `gofmt -l .` empty, `go run
+   ./cmd/grove check` OK; `go test -count=1 -timeout 120s ./...` passed
+   at `702b576`, and tui and handoff again uncached at `7f00b39`;
+   `python3 internal/tui/testdata/terminal.py` on a binary built at
+   `7f00b39`: all 11 checks ok. Under `-short` tui 0.7 s and handoff
+   1.0 s; the full tui run is 11.7 s, as on main at `3f2b923` (11.7 s, the
+   pty test, skipped under `-short`); cli, integrate, update and versions
+   exceed five seconds uncached on main as well, untouched here. Parsing
+   every body here takes 17 ms once, a cached search pass 5 ms.
+
+Decisions: the matcher's tiers live in `internal/tui/search.go`, the body
+walk in `internal/handoff` beside `resolve`, so links mean exactly what
+`context` lists; a span naming last components lists every file it could
+mean (the record's design); the review listing shows plain rows, not
+selectable entries, so Tab order is unchanged.
+
+Review: [G-167](G-167-g-153-board-search-and-review-li.md).
+
+Limits: the owner's layout judgment (acceptance 3); span matching is at file
+granularity and over-reports common file names; G-154's `with` row has no
+product change to measure (Scope at preparation); no Linux run.
+
+## Next
