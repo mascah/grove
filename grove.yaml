@@ -5,3 +5,5 @@ target: main
 run:
   budget: 50
   permission_mode: auto
+  model: opus
+  effort: high
