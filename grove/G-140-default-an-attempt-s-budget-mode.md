@@ -2,10 +2,11 @@
 id: "G-140"
 type: work
 title: "Default an attempt's budget, mode, model and effort from grove.yaml and launch from one line"
-status: active
+status: review
 created: "2026-09-24T23:52:07Z"
-updated: "2026-09-25T04:28:43Z"
+updated: "2026-09-25T04:28:52Z"
 relates_to: ["G-045", "G-046", "G-134", "G-135", "G-141"]
+candidate: "b18804e8a9194d596355893698e2d688a3c19130"
 ---
 
 ## Outcome
