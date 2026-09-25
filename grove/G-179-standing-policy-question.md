@@ -2,9 +2,9 @@
 id: "G-179"
 type: question
 title: "What may a standing owner policy do to a candidate without a per-item human act?"
-status: open
+status: resolved
 created: "2026-09-25T21:39:27Z"
-updated: "2026-09-25T21:41:23Z"
+updated: "2026-09-25T21:53:40Z"
 blocks: ["G-180"]
 relates_to: ["G-058", "G-059", "G-060", "G-142", "G-162", "G-163", "G-177", "G-178"]
 ---
@@ -83,3 +83,6 @@ and reopen this question for 3.
 The owner answers. Record the answer here and resolve this question with
 `grove update`; record a consequential choice as a decision attributed to
 the owner, then refine G-180's scope. No answer is implied by creating it.
+
+## Answer
+The recommendation, option 4 with a narrow initial policy.Please propose an initial one that I can extend
