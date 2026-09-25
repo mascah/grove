@@ -2,13 +2,15 @@
 id: "G-151"
 type: work
 title: "Strip Grove-repository pointers from the shipped guides and model"
-status: proposed
+status: review
 created: "2026-09-25T19:06:01Z"
-updated: "2026-09-25T19:08:15Z"
+updated: "2026-09-25T20:09:01Z"
 kind: fix
 priority: 1
 size: small
 relates_to: ["G-110", "G-144", "G-146", "G-149", "G-152"]
+candidate: "80aa23e"
+approved: "80aa23e"
 ---
 
 ## Outcome
@@ -93,8 +95,75 @@ but pinned to `main` and so not the binary's version).
    Evidence records the new guides digest from `grove version`.
 4. `go vet`, `gofmt`, `grove check` and the full uncached suite pass.
 
+## Evidence
+
+Branch `worktree-G-151`, base `main` `28aaf95`, code reviewed at `02a0e08`;
+the candidate is the commit recording this Evidence, which adds only this
+record and G-156 to it. Started
+from this record at `sha256:47d9e7e0aa18` with no plan (the record said none
+was needed). Commits: `114db6b` (text, test, rule), `be4efcb` and `02a0e08`
+(review fixes).
+
+1. Six passages rewritten or removed as proposed: the Lifecycle sentence
+   keeps the lifecycle without G-035/G-038; the work guide's G-032 and the
+   shaping guide's G-050 history sentences are gone, each paragraph ending
+   on its previous sentence; the model's two command-reference clauses are
+   gone (`grove --help` is the shipped account of usage) and the
+   predecessor clause reads "unrelated to any other tool's schema numbering
+   or configuration". Beyond the six, the model's intro "How each rule was
+   chosen is in Grove's own records and Git history" became "It states each
+   rule, not how the rule was chosen", the same pointer in other words. A
+   binary built at `02a0e08` prints only G-030 and G-031 (`guide work`),
+   G-037 (`guide shape`) and G-001, G-003 and G-1000 (`guide model`), and
+   none of "Grove's own repository/records", "command reference" or
+   "predecessor", case-insensitively.
+2. `TestGuideAndVersionNeedNoProject` checks the three guides and the
+   reviewer definition: links only to `#` or `https://`; `G-` numbers only
+   from each document's own example list (none for the reviewer); and,
+   after lower-casing, collapsing whitespace and mapping U+2019, none of
+   "grove's own repository", "grove's repository", "grove's own records",
+   "command reference", "predecessor". Mutation at `114db6b`: appending
+   "See G-035.", "See G-001.", and each phrase to each of the four documents
+   failed the test in every case except "See G-001." on the model, an
+   allowed example (G-149 finding 7's ceiling, which now holds per
+   document). At `be4efcb` and `02a0e08`: "Command reference", "The
+   Predecessor tool", "Grove's repository", "See Grove's\nrepository
+   here.", "Grove's command\nreference." and "See Grove’s repository." each
+   fail. Passes at the candidate.
+3. AGENTS.md's rule: a shipped document "never links a record or names one
+   beyond its own example IDs, and never names Grove's repository or the
+   predecessor" (G-146, G-151). README lines 77-78 still point at G-032 and
+   G-050, and `docs/commands.md` is unchanged. `grove version` guides digest
+   at the candidate: `sha256:67dab310de86`. The `guides.go` comment and the
+   [G-152](G-152-shipped-document.md) term's Relationships were reconciled.
+4. At `02a0e08`: `go vet ./...` clean, `gofmt -l .` empty, `grove check` OK
+   (150 records), `go test -count=1 -timeout 120s ./...` all ten packages
+   ok.
+
+Decision taken: the model no longer names the command reference, which
+reverses the part of [G-146](G-146-how-should-an-adopting-project-r.md)'s
+Answer that said to cite it by name; this record's design is the owner's
+selection, and G-146 stays as answered.
+
+Review: [G-156](G-156-g-151-review-shipped-guides-and.md), three rounds,
+examined `02a0e08`, nothing open beyond two accepted notes.
+
+Limits: a phrase with Markdown between its words, or an allowed example ID
+used as a provenance mention, still passes. A binary built inside this
+nested worktree stamps the enclosing `main` checkout's revision in `grove
+version` (Go finds the parent `.git` directory, not the worktree's `.git`
+file); the guides digest is this checkout's. Not in scope.
+
 ## Next
 
-Proposed 2026-09-25 from the owner's self-containment review. Small: text
-and one test. [G-110](G-110-external-preview.md) depends on it. Assign with
-`/grove-work G-151`; no plan needed beyond this record.
+In review; the candidate differs from the reviewed `02a0e08` only in
+records. When [G-110](G-110-external-preview.md) adds an
+`https://` link to the public command reference, the test's "command
+reference" entry needs changing with it. Integrator:
+
+```sh
+grove approve G-151 "VERDICT"   # in worktree-G-151
+grove integrate G-151           # in the main checkout
+```
+
+Verdict on candidate 80aa23e, 2026-09-25: approve

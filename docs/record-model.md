@@ -3,10 +3,9 @@
 This is Grove's current record contract: configuration, record types, fields,
 statuses, validation and the lifecycle rules software enforces. `grove guide
 model` prints the copy a binary carries, which is the contract that binary
-validates. How each rule was chosen is in Grove's own records and Git history,
-not here; the project's brief (`grove brief`) owns its direction, `grove
---help` gives each command's usage, and Grove's command reference covers the
-commands this document does not.
+validates. It states each rule, not how the rule was chosen; the project's
+brief (`grove brief`) owns its direction, and `grove --help` gives each
+command's usage.
 
 ## Identity and placement apart from classification
 
@@ -240,8 +239,7 @@ only its own checkout's `grove.yaml`, so branches need not agree.
 `schema_version` versions the configuration and record schema together. Require
 both keys, with `brief`, `target` and `run` optional; accept exactly 3 and refuse a missing or
 other version without guessing, migrating, or rewriting files. The number is
-this CLI's, unrelated to the predecessor skills CLI's schema numbering or
-`grove.toml` configuration.
+this CLI's, unrelated to any other tool's schema numbering or configuration.
 
 Resolve `records` relative to the directory containing `grove.yaml`. Permit a
 different relative folder, such as `docs/grove`; require it to remain inside the
@@ -404,7 +402,7 @@ refused as an applied, uncommitted update.
 `versions` reads the same project location on every local branch tip and in
 every registered worktree, validating each source alone by these rules, and
 `workspace` resolves one version it listed to its checkout; both require Git
-and read only. `grove --help` and Grove's command reference describe them.
+and read only. `grove --help` describes them.
 
 - `list`: show ID, type, status, and title, ordered by `created` ascending with
   undated records last, then the ID's number as the tie-breaker.
