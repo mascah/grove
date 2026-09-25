@@ -25,6 +25,10 @@ func TestIdentify(t *testing.T) {
 		return info
 	}
 	const rev = "0123456789abcdef0123456789abcdef01234567"
+	// Since Go 1.24 a build from a checkout takes a pseudo-version or tag from
+	// it, with +dirty for uncommitted changes; go run and a tree without .git
+	// get (devel) and no commit.
+	const pseudo = "v0.0.0-20260925211628-0123456789ab"
 	for _, c := range []struct {
 		name             string
 		info             *debug.BuildInfo
@@ -33,15 +37,15 @@ func TestIdentify(t *testing.T) {
 		want             string
 	}{
 		{"release from an archive", vcs("(devel)"), true, "v0.1.0", rev, "grove v0.1.0 (" + rev + ")"},
-		{"release from a clean clone", vcs("(devel)", "vcs.revision", rev, "vcs.modified", "false"), true, "v0.1.0", rev, "grove v0.1.0 (" + rev + ")"},
-		{"release whose stamp is not Go's checkout", vcs("(devel)", "vcs.revision", "fedcba", "vcs.modified", "true"), true, "v0.1.0", rev, "grove v0.1.0 (" + rev + ", vcs fedcba, modified)"},
-		{"release from a dirty tree", vcs("(devel)", "vcs.revision", rev, "vcs.modified", "true"), true, "v0.1.0", rev, "grove v0.1.0 (" + rev + ", modified)"},
-		{"release without its revision", vcs("(devel)"), true, "v0.1.0", "", "grove v0.1.0 (revision unknown)"},
-		{"development build", vcs("(devel)", "vcs.revision", rev, "vcs.modified", "false"), true, "", "", "grove (devel) (" + rev + ")"},
-		{"modified development build", vcs("(devel)", "vcs.revision", rev, "vcs.modified", "true"), true, "", "", "grove (devel) (" + rev + ", modified)"},
-		{"archive without a stamp", vcs("(devel)"), true, "", "", "grove (devel) (revision unknown)"},
-		{"go install of a pseudo-version", vcs("v0.0.0-20260925210455-47852e36169d"), true, "", "", "grove v0.0.0-20260925210455-47852e36169d (revision unknown)"},
-		{"no build information", nil, false, "", "", "grove (version unknown) (revision unknown)"},
+		{"release from a clean clone", vcs(pseudo, "vcs.revision", rev, "vcs.modified", "false"), true, "v0.1.0", rev, "grove v0.1.0 (" + rev + ")"},
+		{"release whose stamp is not Go's checkout", vcs(pseudo+"+dirty", "vcs.revision", "fedcba", "vcs.modified", "true"), true, "v0.1.0", rev, "grove v0.1.0 (" + rev + ", vcs fedcba, modified)"},
+		{"release from a dirty tree", vcs(pseudo+"+dirty", "vcs.revision", rev, "vcs.modified", "true"), true, "v0.1.0", rev, "grove v0.1.0 (" + rev + ", modified)"},
+		{"release without its commit", vcs("(devel)"), true, "v0.1.0", "", "grove v0.1.0 (commit unknown)"},
+		{"development build", vcs(pseudo, "vcs.revision", rev, "vcs.modified", "false"), true, "", "", "grove " + pseudo + " (" + rev + ")"},
+		{"modified development build", vcs(pseudo+"+dirty", "vcs.revision", rev, "vcs.modified", "true"), true, "", "", "grove " + pseudo + "+dirty (" + rev + ", modified)"},
+		{"go run, or an archive without a stamp", vcs("(devel)"), true, "", "", "grove (devel) (commit unknown)"},
+		{"go install of a pseudo-version", vcs(pseudo), true, "", "", "grove " + pseudo + " (commit unknown)"},
+		{"no build information", nil, false, "", "", "grove (version unknown) (commit unknown)"},
 	} {
 		got := identify(c.info, c.ok, c.version, c.stamped).String()
 		if !strings.HasPrefix(got, c.want+" guides sha256:") {
@@ -71,7 +75,9 @@ func TestIdentityDigestsCoverTheirContent(t *testing.T) {
 
 // TestStampedArchiveBuild builds a copy of the source without .git, as a
 // source archive holds it, once with the release stamp and once without, and
-// runs each outside any checkout. Skipped under -short: it builds twice.
+// runs each outside any checkout. -buildvcs=false keeps a temporary directory
+// inside some other repository from lending its commit. Skipped under -short:
+// it builds twice.
 func TestStampedArchiveBuild(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
@@ -112,15 +118,15 @@ func TestStampedArchiveBuild(t *testing.T) {
 	const rev = "0123456789abcdef0123456789abcdef01234567"
 	bin := t.TempDir()
 	stamped, unstamped := filepath.Join(bin, "grove"), filepath.Join(bin, "grove-devel")
-	run(src, "go", "build", "-trimpath", "-ldflags", "-X github.com/mascah/grove.version=v9.9.9 -X github.com/mascah/grove.revision="+rev, "-o", stamped, "./cmd/grove")
-	run(src, "go", "build", "-o", unstamped, "./cmd/grove")
+	run(src, "go", "build", "-buildvcs=false", "-trimpath", "-ldflags", "-X github.com/mascah/grove.version=v9.9.9 -X github.com/mascah/grove.commit="+rev, "-o", stamped, "./cmd/grove")
+	run(src, "go", "build", "-buildvcs=false", "-o", unstamped, "./cmd/grove")
 	here := Identity()
 	digests := " guides " + here.Guides + " content " + here.Content + "\n"
 	elsewhere := t.TempDir()
 	if got := run(elsewhere, stamped, "version"); got != "grove v9.9.9 ("+rev+")"+digests {
 		t.Fatalf("stamped: %q", got)
 	}
-	if got := run(elsewhere, unstamped, "version"); got != "grove (devel) (revision unknown)"+digests {
+	if got := run(elsewhere, unstamped, "version"); got != "grove (devel) (commit unknown)"+digests {
 		t.Fatalf("unstamped: %q", got)
 	}
 	if binary, err := os.ReadFile(stamped); err != nil || bytes.Contains(binary, []byte(src)) {

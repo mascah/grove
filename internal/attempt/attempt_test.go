@@ -503,7 +503,7 @@ func TestInputsChanged(t *testing.T) {
 	facts := strings.Join(Facts(v, func(s string) string { return s }), "\n")
 	for _, want := range []string{"Requested: until plan, model opus, effort xhigh, reviewer .claude/agents/grove-reviewer.md sha256:", "Cost by model: claude-opus-5-5 $2.50, claude-sonnet-5 $0.50",
 		// Custom files keep their own digests, and say they are not the templates.
-		"Entrypoints: skill sha256:" + fmt.Sprintf("%x", sha256.Sum256([]byte("---\nname: grove-work\n---\n"))) + "; differ from the launching grove's templates: .claude/skills/grove-work/SKILL.md, .claude/agents/grove-reviewer.md",
+		"Entrypoints: worktree skill sha256:" + fmt.Sprintf("%x", sha256.Sum256([]byte("---\nname: grove-work\n---\n"))) + "; differ from the launching grove's templates: .claude/skills/grove-work/SKILL.md, .claude/agents/grove-reviewer.md",
 		"Agent's grove: not recorded"} {
 		if !strings.Contains(facts, want) {
 			t.Fatalf("facts lack %q:\n%s", want, facts)

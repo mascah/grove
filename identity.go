@@ -9,42 +9,42 @@ import (
 	"slices"
 )
 
-// version and revision are a release build's stamp, set by the linker:
+// version and commit are a release build's stamp, set by the linker:
 //
-//	-ldflags "-X github.com/mascah/grove.version=v0.1.0 -X github.com/mascah/grove.revision=COMMIT"
+//	-ldflags "-X github.com/mascah/grove.version=v0.1.0 -X github.com/mascah/grove.commit=COMMIT"
 //
 // An unstamped build falls back to Go's build information.
-var version, revision string
+var version, commit string
 
 // Build names one executable and the workflow content it ships. Version and
-// Revision are "" when neither a stamp nor Go's build information has them.
+// Commit are "" when neither a stamp nor Go's build information has them.
 type Build struct {
 	Version  string // the stamped release, else the main module's version
-	Revision string // the stamped commit, else vcs.revision
+	Commit   string // the stamped commit, else vcs.revision
 	VCS      string // vcs.revision where it differs from the stamped commit
 	Modified bool   // vcs.modified: Go's checkout had uncommitted changes
 	Guides   string // sha256 over the work and shaping guides and the record model
-	Content  string // sha256 over every guide, the reviewer and init's entrypoint templates
+	Content  string // sha256 over the guides, the reviewer and init's other entrypoint templates
 }
 
 // Identity is this executable's Build, the one account of it that version
 // and an attempt's launch record both print.
 func Identity() Build {
 	info, ok := debug.ReadBuildInfo()
-	return identify(info, ok, version, revision)
+	return identify(info, ok, version, commit)
 }
 
-func identify(info *debug.BuildInfo, ok bool, stampedVersion, stampedRevision string) Build {
-	b := Build{Version: stampedVersion, Revision: stampedRevision}
+func identify(info *debug.BuildInfo, ok bool, stampedVersion, stampedCommit string) Build {
+	b := Build{Version: stampedVersion, Commit: stampedCommit}
 	if ok {
 		if b.Version == "" {
 			b.Version = info.Main.Version
 		}
 		for _, s := range info.Settings {
 			switch {
-			case s.Key == "vcs.revision" && b.Revision == "":
-				b.Revision = s.Value
-			case s.Key == "vcs.revision" && s.Value != b.Revision:
+			case s.Key == "vcs.revision" && b.Commit == "":
+				b.Commit = s.Value
+			case s.Key == "vcs.revision" && s.Value != b.Commit:
 				b.VCS = s.Value
 			case s.Key == "vcs.modified":
 				b.Modified = s.Value == "true"
@@ -70,7 +70,7 @@ func identify(info *debug.BuildInfo, ok bool, stampedVersion, stampedRevision st
 	return b
 }
 
-// String is the version line: a missing version or revision is said to be
+// String is the version line: a missing version or commit is said to be
 // unknown, so an unstamped build never reads as a known release.
 func (b Build) String() string {
 	line := "grove " + b.Version
@@ -78,10 +78,10 @@ func (b Build) String() string {
 		line = "grove (version unknown)"
 	}
 	switch {
-	case b.Revision == "":
-		line += " (revision unknown"
+	case b.Commit == "":
+		line += " (commit unknown"
 	default:
-		line += " (" + b.Revision
+		line += " (" + b.Commit
 	}
 	if b.VCS != "" {
 		line += ", vcs " + b.VCS

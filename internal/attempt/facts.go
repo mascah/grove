@@ -32,9 +32,9 @@ func Facts(v *View, visible func(string) string) []string {
 	case l.Skill == "":
 		line("Entrypoints: not recorded at launch")
 	case len(l.Differs) == 0:
-		line("Entrypoints: skill %s; the skill and any reviewer match the launching grove's templates", l.Skill)
+		line("Entrypoints: worktree skill %s; the worktree's skill and any reviewer match the launching grove's templates", l.Skill)
 	default:
-		line("Entrypoints: skill %s; differ from the launching grove's templates: %s", l.Skill, visible(strings.Join(l.Differs, ", ")))
+		line("Entrypoints: worktree skill %s; differ from the launching grove's templates: %s", l.Skill, visible(strings.Join(l.Differs, ", ")))
 	}
 	line("Agent's grove: not recorded; PATH or the project's instructions choose it, which may not be the launching grove")
 	line("Bounds: budget %s USD, permission mode %s, prompts none; one process, no retries; subagents share the budget", l.BudgetUSD, l.PermissionMode)
