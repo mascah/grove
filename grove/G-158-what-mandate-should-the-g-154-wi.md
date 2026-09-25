@@ -2,9 +2,9 @@
 id: "G-158"
 type: question
 title: "What mandate should the G-154 without-row runs have?"
-status: open
+status: resolved
 created: "2026-09-25T19:36:20Z"
-updated: "2026-09-25T19:48:20Z"
+updated: "2026-09-25T20:14:11Z"
 blocks: ["G-154"]
 relates_to: ["G-118", "G-122", "G-141"]
 ---
@@ -52,3 +52,6 @@ then assign `/grove-work G-154` again on `worktree-G-154`.
 ## Next
 
 Waits for the owner.
+
+## Answer
+Use the G-122 settings
