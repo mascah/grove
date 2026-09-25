@@ -139,6 +139,47 @@ prerequisites, related records, and linked documents in full):
  scope_notice, source_bytes, max_bytes}
 ```
 
+## Dependencies
+
+`deps [WORK_ID...] [--json]` shows how work depends on other work, from one
+checkout's records, so the owner can choose what to do next or assign
+together without asking an agent to reconstruct the order. Only `depends_on`
+orders: `members`, `priority` and question `blocks` never do, and an absent
+`depends_on` means no declared prerequisite, not readiness.
+
+Without IDs it lists the unfinished work (proposed, active, review), one row
+each with `GROUP`, `LAYER`, `NEEDS` (its `depends_on`), `UNLOCKS` (the
+unfinished work that names it) and `DELIVERY` (below). Work in one group needs other work in it,
+directly or through anything else; a separate group is unrelated. A layer is
+one more than the deepest work of its group that it needs, so layer 0 needs
+no unfinished work. Equal layers have no declared order, which is not
+evidence that the work can proceed in parallel. The prerequisites of that
+work which are not unfinished (done, abandoned) are listed after it.
+
+With IDs it previews that selection: the IDs as given, their order as
+[`context`](#context) prints it, every transitive prerequisite outside the
+selection with the selected work that needs it, listed and never added, the
+open questions blocking any of them, and the pairs with no declared order.
+Unknown, duplicate and non-work IDs are refused as `context` refuses them.
+The preview adds no work, starts nothing and authorizes nothing.
+
+Each item's delivery is a fact, not its status alone: proposed and active
+work awaits implementation; a candidate in review or done says whether HEAD
+of this checkout and the target branch contain it, by Git ancestry, or that
+Git cannot read it here; done without a candidate says its delivery is
+unrecorded; abandoned work will not be delivered, and a note names the work
+that still needs it. Notes also report what the current view (see
+[Versions](#versions)) says about each listed record: an older version here,
+diverging current versions, other `depends_on` elsewhere (never merged into
+this checkout's), uncommitted changes here, a record that changed while it
+was read, and an incomplete inspection, which prints everything, says so on
+stderr and exits 1. `--json` prints `{checkout: {root, ref, head}, target,
+selected, order, items[]: {id, title, status, revision, candidate, outside,
+layer, group, needs, unlocks, needed_by, delivery}, questions[]: {id, title,
+blocks}, notes}`, with `selected` null for the overview. The command writes
+nothing. [G-161](../grove/G-161-dependency-view.md) owns it; the board's
+`g` shows the same interpretation ([Dependencies](board.md#dependencies)).
+
 ## Attempts
 
 Grove starts an agent only through `run` or the board's `R`, one assigned

@@ -170,6 +170,15 @@ document when it helps, and say in your return what had no supported home.
   "answer G-NNN", or "needs a plan covering X". A size or priority only when
   the person gave one or the evidence supports it.
 
+Set `depends_on` only for work that must be delivered before this work can
+proceed, and say in the body why it needs each one, so the reason stays with
+the edge in the dependent work's own record; there is no separate graph to
+edit. A preferred sequence, an importance, or a grouping is not a
+prerequisite: write it as that (in Next, in `priority`, or in a parent's
+`members`), never as an edge. `grove deps` shows the resulting structure of
+unfinished work, and `grove deps` with the IDs the person might assign
+together previews their order and the prerequisites outside them.
+
 **Questions** are for real, unresolved human choices. Create one when the
 choice blocks or shapes work and nobody present can make it now; set what it
 stops with `--set 'blocks=["G-…"]'`; put the options, evidence, your

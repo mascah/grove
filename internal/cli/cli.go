@@ -40,7 +40,8 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
 	"       grove [--project DIR] workspace --source SELECTOR [--json]\n" +
 	"       grove [--project DIR] context WORK_ID... [--json] [--interaction interactive|headless]\n" +
-	"                                     [--max-bytes N] [--include PATH]...\n\n" +
+	"                                     [--max-bytes N] [--include PATH]...\n" +
+	"       grove [--project DIR] deps [WORK_ID...] [--json]\n\n" +
 	"  (none)     Open the terminal board: work by its current state across every branch\n" +
 	"             and checkout (or one checkout's own), each card's differing versions, and\n" +
 	"             explicit selection of a version's existing workspace, printed like\n" +
@@ -147,7 +148,15 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             changed, or oversized source fails the command: nothing is truncated to\n" +
 	"             fit --max-bytes (default 262144). --interaction records whether a person\n" +
 	"             can answer (default interactive). Exit 0 means context was assembled, not\n" +
-	"             that work is ready or authorized. Reads only.\n\n" +
+	"             that work is ready or authorized. Reads only.\n" +
+	"  deps       Show how unfinished work in this checkout depends on other work: one row\n" +
+	"             each with its group, layer, prerequisites and the work it unlocks, then\n" +
+	"             the prerequisites that are not unfinished. With work IDs, preview that\n" +
+	"             selection: its order (as context gives it), every prerequisite outside it,\n" +
+	"             listed and never added, and the open questions blocking any of them. Each\n" +
+	"             candidate's delivery is Git ancestry into HEAD and the target; notes say\n" +
+	"             where other branches and checkouts hold other versions. Reads only; exit 1\n" +
+	"             if any source could not be inspected.\n\n" +
 	"--project DIR selects a directory containing grove.yaml.\n" +
 	"Without it, search upward from the current directory, stopping at Git boundaries.\n" +
 	"Project/file context is written to stderr; results are written to stdout.\n"
@@ -202,6 +211,8 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		return runWorkspace(p.Root, a, out, errOut)
 	case "context":
 		return runContext(p.Root, a, out, errOut)
+	case "deps":
+		return runDeps(p, a, out, errOut)
 	case "update", "approve", "feedback":
 		var res update.Result
 		var err error
@@ -553,8 +564,8 @@ func parseArgs(args []string) (a invocation, err error) {
 	if (a.convert.Type != "" || a.convert.Title != "") && a.command != "convert" {
 		return a, fmt.Errorf("--type and --title apply only to convert")
 	}
-	if a.json && a.command != "" && a.command != "show" && a.command != "brief" && a.command != "versions" && a.command != "workspace" && a.command != "context" && a.command != "attempt" {
-		return a, fmt.Errorf("--json applies only to the board, show, brief, versions, workspace, context, and attempt")
+	if a.json && a.command != "" && a.command != "show" && a.command != "brief" && a.command != "versions" && a.command != "workspace" && a.command != "context" && a.command != "deps" && a.command != "attempt" {
+		return a, fmt.Errorf("--json applies only to the board, show, brief, versions, workspace, context, deps, and attempt")
 	}
 	if (a.run.BudgetUSD != "" || a.run.PermissionMode != "" || a.run.Model != "" || a.run.Effort != "" || a.run.Until != "" || a.run.Branch != "" || a.run.Worktree != "") && a.command != "run" {
 		return a, fmt.Errorf("--budget, --permission-mode, --until, --model, --effort, --branch, and --worktree apply only to run")
@@ -629,6 +640,8 @@ func parseArgs(args []string) (a invocation, err error) {
 		if a.ids = positional[1:]; len(a.ids) == 0 {
 			err = fmt.Errorf("context requires at least one work ID")
 		}
+	case "deps":
+		a.ids = positional[1:]
 	case "convert":
 		if len(positional) != 2 {
 			err = fmt.Errorf("convert requires exactly one document path")

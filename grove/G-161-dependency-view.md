@@ -2,11 +2,13 @@
 id: "G-161"
 type: work
 title: "See work dependencies and preview a selected assignment"
-status: proposed
+status: review
 created: "2026-09-25T20:35:15Z"
-updated: "2026-09-25T20:38:13Z"
+updated: "2026-09-25T22:54:10Z"
 kind: feature
 relates_to: ["G-035", "G-042", "G-043", "G-023", "G-047", "G-054", "G-060", "G-162"]
+candidate: "83e7f3823f3444832b5c9866300e201f06691674"
+approved: "83e7f3823f3444832b5c9866300e201f06691674"
 ---
 
 ## Outcome
@@ -124,8 +126,104 @@ not a technical prerequisite between the two proposals.
 
 ## Next
 
-The owner can assign this independently through `$grove-work G-161` after the
-proposal is committed. Preparation should produce concrete terminal layouts
-and a small shared relationship/preview design, with owner judgment of
-readability. G-163 does not block this read-only outcome. No implementation
-has been assigned by this shaping session.
+**Handoff into review, 2026-09-25, headless `/grove-work G-161`.** The
+candidate is the commit holding this evidence, and `candidate` names it; the
+next commit sets only `status=review`. Awaiting the owner's judgment, including acceptance item 5.
+
+- **Branch and inputs.** Branch `worktree-G-161` in
+  `.claude/worktrees/worktree-G-161`, based on `main` `05892a2`. This
+  session resumed at `7e1acdb`, after [G-166](G-166-g-161-dependency-layout.md)
+  was resolved. It started from G-161 `sha256:ac898c03…` and plan
+  [G-165](G-165-g-161-dependency-view-plan.md) `sha256:f1062b6d…`. The plan
+  is reconciled with what was built: the Binding and Freshness bullets, step
+  4, and a "B as built" drawing.
+- **What was built.**
+  - The first session (`c19e945`..`c92d16f`, review
+    [G-168](G-168-g-161-deps-review.md)): `internal/deps`, `grove deps`, and
+    the shaping guide's step 5.
+  - This session (`476b5ac`, `ffaca01`, `867a9d8`): `g` on the board opens
+    the dependency view in layout B (`internal/tui/deps.go`, documented in
+    `docs/board.md#dependencies`). The list shows connected groups, then
+    unconnected work, with every layer indented. Each row carries its
+    status, `? question` and the card's tags (`⑂`, `uncommitted`,
+    `not on main`, running). The focused row's `← Needs` and `→ Unlocks`
+    trees mark done `✓` and abandoned `✗`, write a repeat as
+    `(shown above)`, keep blocking questions apart from work, and list each
+    diverging state's own edges. From 100 columns the trees stand beside the
+    list; Tab gives them focus to scroll, and below 100 columns shows one
+    pane.
+  - Keys: Space selects and `c` clears. `p` previews, bound to one checkout
+    (the board's, else the one Grove started in), with delivery read from
+    Git on demand in that checkout. Enter opens a record, and Esc returns
+    here. `h` shows every work, and `b` chooses a checkout and returns here.
+- **Decisions.**
+  - Layout B and no printed handoff are the owner's G-166 answer. It is
+    linked from the plan and needs no decision record, following G-117's
+    precedent.
+  - Divergent overview rows use the state the board places the card by, and
+    the trees show each state's edges. This replaced the plan's per-item
+    `Compare` after review.
+  - Each preview is recomputed on every re-read and names the records that
+    changed. With no handoff, nothing acts on a stale preview.
+- **Acceptance.**
+  1. Tests show a chain, a shared prerequisite, a convergence, unrelated
+     work and unlocks in `TestDepsListAndTree`, on the synthetic ten-item
+     backlog. The owner's reading is item 5's judgment.
+  2. Met. `TestDepsPreview` covers the marked order, the transitive order,
+     outside prerequisites "not added", and the questions and notes.
+  3. Met. The cases and where each shows:
+     - A review candidate off main: `not on main` and "candidate … not in
+       HEAD".
+     - Done without a candidate: its delivery is unrecorded.
+     - An abandoned prerequisite: `✗` and a note.
+     - Hidden prerequisites: counted in the heading.
+     - Uncommitted records: the tag, and a preview note.
+     - Divergent edges: `⑂` with each state's edges.
+     - An incomplete read: the banner and a preview note.
+     - A changed source: recomputed and named.
+  4. Met. Only `depends_on` orders. The legend says equal layers have no
+     declared order, and questions stay apart from work.
+  5. **Pending: the owner's judgment.** The plan's "B as built" drawing
+     shows 120 columns on the synthetic backlog. Run `go run ./cmd/grove` in
+     this checkout, press `g`, and resize to 80 and to 120. Press `h` for
+     the real 13-item group (seven layers) and `Tab` for the trees. Paging
+     the list and scrolling the trees show a larger case.
+  6. Met.
+     - The `dependencies` scenario in `terminal.py` drives board, graph,
+       focus, selection, preview, record detail, return, refresh, resize and
+       exit.
+     - `TestDepsPreview` checks that the board's order equals
+       `deps.Preview`'s.
+     - The list asks Git nothing, and the preview reads through
+       `Model.read`.
+  7. The shaping half was met in the first session. The view needs no
+     multi-item execution.
+- **Verification** at `867a9d8`:
+  - `gofmt -l .` printed nothing.
+  - `go vet ./...` was clean.
+  - `grove check` printed "OK: 158 records".
+  - `go test -count=1 -timeout 120s ./...` passed every package. `tui` took
+    15.4s, since `TestTerminal` runs all 12 `terminal.py` scenarios,
+    `dependencies` included.
+- **Reviews.**
+  - [G-168](G-168-g-161-deps-review.md) is the first gate.
+  - [G-175](G-175-g-161-deps-second-review-gate-on.md) is the board gate
+    and final combined candidate, examined at `ffaca01`. Its round 1 had one
+    high, four medium and three low findings plus a docs gap, fixed with
+    regressions in `ffaca01`; one low was documented. Its round 2 found
+    nothing consequential and two low findings. One was fixed in `867a9d8`,
+    self-checked with a regression. The other is the existing chooser `s`
+    trap.
+- **Limits.**
+  - `A`, then `o`, from a record opened here returns to the board, not to
+    the dependency view (one return slot).
+  - The chooser's `s` then Esc trap predates this work.
+  - The trees' scroll is clamped on the next key after a resize.
+  - `-race` was not run, since this is not a concurrency change beyond
+    one more read kind.
+- **Integrator's next action**, after the owner's judgment:
+  - In this checkout: `grove approve G-161 "VERDICT"`, or
+    `grove feedback G-161 "TEXT"`.
+  - In the target's checkout: `grove integrate G-161`.
+
+Verdict on candidate 83e7f38, 2026-09-25: approved

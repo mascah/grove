@@ -11,6 +11,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/mascah/grove/internal/deps"
 	"github.com/mascah/grove/internal/integrate"
 	"github.com/mascah/grove/internal/update"
 	"github.com/mascah/grove/internal/versions"
@@ -75,7 +76,7 @@ func Run(ctx context.Context, root string, input, screen *os.File) (*versions.Wo
 func Live() Backend {
 	b := Backend{
 		Inspect: versions.InspectContext, Resolve: versions.ResolveContext, History: versions.HistoryContext,
-		Changes: versions.ChangesContext, Diff: versions.DiffContext,
+		Changes: versions.ChangesContext, Diff: versions.DiffContext, Ancestry: deps.Ancestry,
 		Approve: func(_ context.Context, root, id, verdict string) ([]string, error) {
 			res, err := update.Approve(root, id, verdict, time.Now())
 			if err != nil {

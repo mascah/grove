@@ -271,6 +271,17 @@ func (m *Model) render() string {
 		rows, hints = m.attemptsBody(w, body), pick(w,
 			"↑/↓ attempts   Enter show it   "+answer+"x stop it   o open its record   r refresh   Esc back   q quit",
 			"↑↓  Enter show  "+key+"x stop  o record  Esc back  q quit")
+	case m.screen == depsScreen && m.previewing:
+		rows, hints = m.depsBody(w, body), pick(w, "↑/↓ PgUp/PgDn scroll   r re-read   Esc back to the list   q quit", "↑↓ scroll  r  Esc back  q quit")
+	case m.screen == depsScreen:
+		move, tab := "↑/↓ move", "Tab trees"
+		if m.depsTree {
+			move, tab = "↑/↓ PgUp/PgDn scroll the trees", "Tab list"
+		}
+		rows, hints = m.depsBody(w, body), pick(w,
+			fmt.Sprintf("%s  Space select  p preview (%d selected)  c clear  Enter open  h history  %s  b checkout  Esc board  q", move, len(m.depsPicked), tab),
+			fmt.Sprintf("↑↓  Space select  p preview (%d)  c  Enter open  h history  %s  Esc  q", len(m.depsPicked), tab),
+			fmt.Sprintf("↑↓  Space  p (%d)  Enter  h  %s  Esc  q", len(m.depsPicked), tab))
 	case m.screen == attemptScreen:
 		answer, key := "", ""
 		if v := m.attemptOf(m.runID); v != nil && m.waits(v) {
@@ -285,10 +296,10 @@ func (m *Model) render() string {
 			shelf = "deleted"
 		}
 		rows, hints = m.boardBody(w, body), pick(w,
-			"←/→ columns   ↑/↓ cards   Enter open   / search   a abandoned   A attempts   Tab "+shelf+"   b view or checkout   s sources   r refresh   q quit",
-			"←→↑↓ move  Enter open  / search  a abandoned  Tab "+shelf+"  b view or checkout  s  r  q quit",
-			"←→↑↓  Enter open  / search  a  Tab "+shelf+"  b  s  r  q quit",
-			"Enter open  / a Tab b s r  q quit")
+			"←/→ columns   ↑/↓ cards   Enter open   / search   g dependencies   a abandoned   A attempts   Tab "+shelf+"   b view or checkout   s sources   r refresh   q quit",
+			"←→↑↓ move  Enter open  / search  g dependencies  a abandoned  Tab "+shelf+"  b view or checkout  s  r  q quit",
+			"←→↑↓  Enter open  / search  g deps  a  Tab "+shelf+"  b  s  r  q quit",
+			"Enter open  / g a Tab b s r  q quit")
 	}
 	last := line(hints, w)
 	if m.prompt != nil {
@@ -817,6 +828,8 @@ func (m *Model) clampScroll() {
 		rows, n = len(m.resultRows(m.width)), m.height-3
 	case m.screen == attemptScreen:
 		rows, n = len(m.attemptRows(m.width)), m.height-3
+	case m.screen == depsScreen && m.previewing:
+		rows, n = len(m.previewRows(m.width)), m.height-3
 	case m.screen == versionsScreen:
 		w := m.width
 		if w >= wideWidth {

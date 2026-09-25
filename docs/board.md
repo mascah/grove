@@ -71,7 +71,10 @@ A record already on the path is returned to instead of opened again, so A,
 then B from A's sidebar, then A from B's is A alone, one Esc from the board. From
 16 rows, a row at the top of the header shows the path, such as `board ›
 G-108 › G-115`, losing its start when too long; a record `o` opened from an attempt
-has `attempts` before it, and Esc from it returns to the attempt.
+has `attempts` before it, and one opened from the dependencies
+`dependencies`, and Esc from it returns there. Only the latest such return
+is kept: `o` from an attempt reached from such a record returns Esc to the
+attempt, then the board.
 Enter on a timeline commit shows the record as it was at that commit, and
 Esc returns to now. Below 100 columns the detail shows one pane at a time and
 Tab cycles them. From 100 columns `w` hides the sidebar so the content takes
@@ -262,6 +265,43 @@ only `R` starts an agent, behind its prompts, and only `e` starts the
 owner's editor, on an open question (see [Answering a
 question](#answering-a-question)).
 
+## Dependencies
+
+`g` on the board lists the work it shows, unfinished by default, as
+[`grove deps`](commands.md#dependencies) interprets it: each connected group
+(work any of which needs another, directly or through anything), then the
+work connected to no other row, each row indented by its layer, with its
+status, the open questions blocking it (`? G-…`) and the card's tags
+(`⑂ 2 states`, `uncommitted`, `not on main`, a running attempt). In the
+current view each row is the current state the board places its card by,
+the earliest status among diverging ones; on a checkout's board, that
+checkout's records. The heading counts the done and abandoned prerequisites
+the list leaves out; they appear in the trees, and `h` lists every work,
+done and abandoned included.
+
+From 100 columns the focused row's trees stand beside the list: what it
+needs (`←`), down to work with no prerequisite, with done `✓` and abandoned
+`✗`; what it unlocks (`→`); the open questions blocking it, apart from
+work; and, for diverging work, each current state with its own
+prerequisites, never merged. A record met twice is written `(shown above)`.
+Tab gives the trees focus, so ↑/↓ and PgUp/PgDn scroll them, and gives it
+back to the list; below 100 columns only the pane with focus shows. Equal
+layers have no declared order, which is not evidence that work can proceed
+in parallel.
+
+Space selects or unselects the focused row, keeping the order marked, `c`
+clears the selection, and `p` previews it: bound to one checkout (the
+board's, or in the current view the one Grove started in), whose records
+alone order it, it shows the selection as marked, its order, every
+prerequisite outside it, never added, their delivery read from Git in that
+checkout at that moment, the open questions and `deps`' notes, including
+other versions of a record elsewhere. Work the checkout lacks is refused
+with the reason; `b` chooses another checkout and returns here. A re-read
+(`r`, or focus returning) computes the preview again and names the records
+that changed since. Enter on a row opens its record, and Esc returns to the
+list; Esc leaves the preview, then the list. Nothing here writes, launches
+or adds work.
+
 ## Search
 
 `/` on the board searches every record of the project in its current state,
@@ -309,9 +349,13 @@ render is cached per record content and width.
 | Tab | detail | Cycle the content, linked records, changes and timeline |
 | Tab | versions | Switch between versions and details |
 | Enter | anywhere with a cursor | Open the card, record, file diff, commit, attempt or fold; in versions, select that checkout |
-| PgUp/PgDn | detail, versions, search, one attempt, sources, result | Scroll |
+| PgUp/PgDn | detail, versions, search, dependencies, one attempt, sources, result | Scroll |
 | `/` | board | Search every record |
 | `a` | board | Show or hide Abandoned |
+| `g` | board | Dependencies of the work it shows |
+| Space, `c`, `p` | dependencies | Select or unselect the focused work; clear the selection; preview it |
+| `h` | dependencies | Show every work, or only unfinished work |
+| Tab | dependencies | Switch focus between the list and the focused trees |
 | `a`, `f`, `i` | detail of work in review | Approve, give feedback, integrate |
 | `R` | detail of proposed or active work | Launch an attempt |
 | `e` | detail of an open question; attempts list or one attempt waiting on a question | Answer it in your editor, then resolve and commit it on its branch |
@@ -321,7 +365,7 @@ render is cached per record content and width.
 | `d` | one attempt | Show or hide its details |
 | `v` | detail | Open the record's versions |
 | `w` | detail, from 100 columns | Hide or show the sidebar |
-| `b` | board | Choose the current view or one checkout's board |
+| `b` | board, dependencies | Choose the current view or one checkout's board |
 | `s` | everywhere | List every branch and checkout read, with diagnostics; reachable while a banner marks an incomplete result |
 | `r` | everywhere | Re-read |
 | Esc | everywhere | Go back; quits from the board |
