@@ -58,3 +58,13 @@ owner's.
 
 Captured 2026-09-24 from G-143; not assigned. Shape the choice of design
 with the owner before assigning.
+
+Checkpoint 2026-09-24, `/grove-work G-144 --until plan --interaction
+headless` on `worktree-G-144`, base `main` `670ca9c`, record revision
+`sha256:8276cf78a97f`: waiting on question
+[G-146](G-146-how-should-an-adopting-project-r.md), which blocks this
+record and holds the options, evidence and recommendation. No plan is
+written, since the design is the owner's choice; status stays `proposed`.
+No commands are owned. Once G-146 is resolved, rerun
+`/grove-work G-144 --until plan` on this branch to write the plan against
+the answer, or drop `--until plan` to go on to implement it.
