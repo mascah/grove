@@ -92,7 +92,7 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 			}
 		}
 	}
-	if !strings.Contains(errOut, "Next: grove check") {
+	if !strings.Contains(errOut, "Next: grove check, then commit what init wrote") {
 		t.Fatalf("init must say what the adopter's instructions may add: %q", errOut)
 	}
 	var checkOut, checkErr bytes.Buffer

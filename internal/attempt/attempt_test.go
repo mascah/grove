@@ -59,7 +59,8 @@ func write(t *testing.T, root, rel, content string) {
 	}
 }
 
-// fixture is a checkout on main with G-001 proposed, committed.
+// fixture is a checkout on main with G-001 proposed and the grove-work skill
+// init writes, committed, and no reviewer definition.
 func fixture(t *testing.T) string {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
@@ -76,6 +77,7 @@ func fixture(t *testing.T) string {
 	git(t, root, "init", "-q", "-b", "main") // identity comes from git()'s -c flags; the fakes that commit pass their own
 	write(t, root, "grove.yaml", config)
 	write(t, root, "grove/G-001-first.md", fmt.Sprintf(work, "proposed"))
+	write(t, root, SkillPath, "---\nname: grove-work\n---\n")
 	git(t, root, "add", "-A")
 	git(t, root, "commit", "-qm", "init")
 	return root
@@ -203,7 +205,7 @@ func TestRunToResult(t *testing.T) {
 	}
 	fake(t, initLine+"\necho '{\"type\":\"assistant\"}'\necho '{\"type\":\"weird\"}'\n"+resultLine("success", false))
 	l, facts := start(t, root, now)
-	if len(facts) != 1 || !strings.Contains(facts[0], "worktree-G-001 created at") {
+	if len(facts) != 2 || !strings.Contains(facts[0], "worktree-G-001 created at") || facts[1] != "warning: "+ReviewerPath+" is not in "+filepath.Join(root, ".claude", "worktrees", "worktree-G-001")+", so the attempt has no independent reviewer and work whose record requires one stays active; commit the files grove init wrote to give it one" {
 		t.Fatalf("facts %q", facts)
 	}
 	want := filepath.Join(root, ".claude", "worktrees", "worktree-G-001")
@@ -326,7 +328,7 @@ func TestCompetingStartAndReconnect(t *testing.T) {
 	}
 	// A next attempt reuses the branch's worktree and keeps what was left there.
 	l2, facts := start(t, root, now.Add(time.Minute))
-	if !l2.WorktreeReused || l2.Attempt == l.Attempt || len(facts) != 1 || !strings.Contains(facts[0], "reusing") {
+	if !l2.WorktreeReused || l2.Attempt == l.Attempt || len(facts) != 2 || !strings.Contains(facts[0], "reusing") {
 		t.Fatalf("%+v %q", l2, facts)
 	}
 	release(t, rel)
@@ -465,7 +467,7 @@ func TestInputsChanged(t *testing.T) {
 	if err := os.Mkdir(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	git(t, top, "mv", "grove.yaml", "grove", "sub/")
+	git(t, top, "mv", "grove.yaml", "grove", ".claude", "sub/")
 	definition := "---\nname: grove-reviewer\n---\n\nReview.\n"
 	write(t, root, ReviewerPath, definition)
 	git(t, top, "add", "-A")
@@ -590,6 +592,22 @@ func TestRefusals(t *testing.T) {
 	}
 	git(t, root, "worktree", "remove", "--force", wt)
 	git(t, root, "branch", "-qD", "worktree-G-001")
+	// An init nobody committed (G-150): the skill is on disk here but not in
+	// HEAD, so a new branch is refused before it exists, and an existing
+	// branch without it is refused in its checkout. Committed, the launch
+	// passes every check, as the owner case below shows.
+	git(t, root, "rm", "-q", "--cached", SkillPath)
+	git(t, root, "commit", "-qm", "the skill as init leaves it")
+	try(Request{BudgetUSD: "1", PermissionMode: "auto"}, SkillPath+" is not committed at HEAD")
+	if out := git(t, root, "branch", "--list", "worktree-G-001"); out != "" {
+		t.Fatalf("a refused new branch was made: %q", out)
+	}
+	git(t, root, "branch", "worktree-G-001")
+	try(Request{BudgetUSD: "1", PermissionMode: "auto"}, SkillPath+" is not in "+wt+" on worktree-G-001, so the attempt would not find the grove-work skill its prompt names; commit the files grove init wrote to worktree-G-001")
+	git(t, root, "worktree", "remove", "--force", wt)
+	git(t, root, "branch", "-qD", "worktree-G-001")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-qm", "commit what init wrote")
 	// A directory in the way that is not the branch's worktree.
 	write(t, wt, "stray.txt", "x")
 	try(Request{BudgetUSD: "1", PermissionMode: "auto"}, wt+" exists but is not a registered worktree of worktree-G-001")

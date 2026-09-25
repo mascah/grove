@@ -65,6 +65,10 @@ const stopGrace = 15 * time.Second
 // guide dispatches reviews through, relative to the project.
 const ReviewerPath = ".claude/agents/grove-reviewer.md"
 
+// SkillPath is where a checkout holds the grove-work skill the attempt's
+// prompt names, relative to the project; init writes it (G-150).
+const SkillPath = ".claude/skills/grove-work/SKILL.md"
+
 // Launch is what the launcher records before the owner starts.
 type Launch struct {
 	Attempt        string   `json:"attempt"`
@@ -400,9 +404,22 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if _, err := os.Stat(adir); err == nil {
 		return nil, fmt.Errorf("attempt %s already exists; try again in a second", attempt)
 	}
+	// The worktree holds only what is committed, so a skill init wrote and
+	// nobody committed is absent there. A new branch is checked in HEAD
+	// before it exists: kept at a HEAD without the skill, it would refuse
+	// every later launch too.
+	skill := filepath.Join(prefix, SkillPath)
+	if _, err := repo.Git(root, "rev-parse", "-q", "--verify", "refs/heads/"+branch); err != nil {
+		if _, err := repo.Git(root, "cat-file", "-e", "HEAD:"+filepath.ToSlash(skill)); err != nil {
+			return nil, fmt.Errorf("%s is not committed at HEAD %s, so the attempt's worktree would not hold the grove-work skill its prompt names; commit the files grove init wrote and launch again", skill, short(head))
+		}
+	}
 	base, reused, err := prepareWorktree(root, branch, worktree, head, report)
 	if err != nil {
 		return nil, err
+	}
+	if _, err := os.Stat(filepath.Join(worktree, skill)); err != nil {
+		return nil, fmt.Errorf("%s is not in %s on %s, so the attempt would not find the grove-work skill its prompt names; commit the files grove init wrote to %s and launch again", skill, worktree, branch, branch)
 	}
 	// The branch may hold what an earlier attempt persisted: a candidate in
 	// review awaiting the owner, or the question the headless guide writes
@@ -439,6 +456,8 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	reviewer := "none"
 	if def, err := os.ReadFile(filepath.Join(worktree, prefix, ReviewerPath)); err == nil {
 		reviewer = fmt.Sprintf("sha256:%x", sha256.Sum256(def))
+	} else {
+		report(fmt.Sprintf("warning: %s is not in %s, so the attempt has no independent reviewer and work whose record requires one stays active; commit the files grove init wrote to give it one", filepath.Join(prefix, ReviewerPath), worktree))
 	}
 	l := &Launch{
 		Attempt: attempt, Work: req.ID, Project: root, Target: p.Target,

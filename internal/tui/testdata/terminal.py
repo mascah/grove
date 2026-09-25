@@ -542,6 +542,11 @@ def attempt_lifecycle(root, wt, base):
     with open(os.path.join(root, "grove.yaml"), "w") as f:
         f.write("schema_version: 3\nrecords: grove\ntarget: main\n")
     git(root, "commit", "-qam", "target")
+    # The skill as init leaves it: written, not committed (G-150).
+    skill = os.path.join(root, ".claude", "skills", "grove-work", "SKILL.md")
+    os.makedirs(os.path.dirname(skill))
+    with open(skill, "w") as f:
+        f.write("---\nname: grove-work\n---\n")
     tools = os.path.join(base, "tools-attempt")
     os.makedirs(tools)
     starts, finish, question = os.path.join(tools, "starts"), os.path.join(tools, "finish"), os.path.join(tools, "question")
@@ -573,8 +578,21 @@ def attempt_lifecycle(root, wt, base):
     mark = s.expect("unknown option --frob", mark)
     s.send(b"\x7f" * len("--frob") + b"--budget 1 --permission-mode auto")
     mark = s.expect("$1, mode auto, to the handoff", mark)
+    # Uncommitted, the skill refuses the launch before the provider starts;
+    # committed, the same launch starts and warns that no reviewer is there.
     s.send(ENTER)
+    mark = s.expect("NOT DONE: .claude/skills/grove-work/SKILL.md is not committed at HEAD", mark)
+    mark = s.expect("The board has been re-read.", mark)
+    check(count() == 0 and not os.path.exists(os.path.join(root, ".claude", "worktrees")), "a refused launch started nothing")
+    git(root, "add", skill)
+    git(root, "commit", "-qm", "commit what init wrote")
+    s.send(ESC)
+    mark = s.expect("R launches one", mark)
+    s.send(b"R")
+    mark = s.expect("Launch G-001", mark)
+    s.send(b"--budget 1 --permission-mode auto" + ENTER)
     s.expect("Launch of an attempt of G-001", mark)
+    s.expect("warning: .claude/agents/grove-reviewer.md is not in", mark)
     s.expect("started; owner pid", mark)
     mark = s.expect("The board has been re-read.", mark)  # Esc waits for the re-read; both may be one frame
     s.send(ESC)

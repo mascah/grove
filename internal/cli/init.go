@@ -158,9 +158,10 @@ func runInit(cwd string, a invocation, out, errOut io.Writer) int {
 			return 1
 		}
 	}
-	fmt.Fprintln(errOut, "Next: grove check. The entrypoints run `grove` from PATH and let the agent name its branches;\n"+
-		"say otherwise in AGENTS.md or CLAUDE.md, which they defer to for how grove is invoked and how\n"+
-		"work and proposal branches are named.")
+	fmt.Fprintln(errOut, "Next: grove check, then commit what init wrote: an attempt's worktree holds only committed\n"+
+		"files, and grove run refuses one without the grove-work skill. The entrypoints run `grove`\n"+
+		"from PATH and let the agent name its branches; say otherwise in AGENTS.md or CLAUDE.md, which\n"+
+		"they defer to for how grove is invoked and how work and proposal branches are named.")
 	return 0
 }
 
