@@ -18,7 +18,22 @@ func Facts(v *View, visible func(string) string) []string {
 	line := func(format string, args ...any) { lines = append(lines, fmt.Sprintf(format, args...)) }
 	short := func(commit string) string { return commit[:min(len(commit), 12)] }
 	line("Attempt: %s (%s)", l.Attempt, v.Status)
-	line("Work: %s at %s, record %s", l.Work, visible(l.RecordPath), l.RecordRevision)
+	members := l.Members()
+	if len(members) == 1 {
+		line("Work: %s at %s, record %s", members[0].ID, visible(members[0].Path), members[0].Revision)
+	} else {
+		line("Selection: %s; order %s; digest %s", strings.Join(l.Selection.Selected, " "), strings.Join(l.Selection.Order, ", "), l.Selection.Digest)
+		for _, m := range members {
+			wait := "could start"
+			if m.Wait != "" {
+				wait = "waited: " + visible(m.Wait)
+			}
+			line("Member %s: %s at %s, record %s; at launch %s", m.ID, m.Status, visible(m.Path), m.Revision, wait)
+		}
+		for _, o := range l.Selection.Outside {
+			line("Outside %s: %s at launch; needed by %s; never added", o.ID, visible(o.Delivery), strings.Join(o.NeededBy, ", "))
+		}
+	}
 	if v.InputsChanged != "" {
 		line("Inputs changed: %s", visible(v.InputsChanged))
 	}
@@ -83,7 +98,11 @@ func Facts(v *View, visible func(string) string) []string {
 			dirty = "uncommitted or untracked changes"
 		}
 		line("Worktree after: HEAD %s, %s", short(r.Head), dirty)
-		if r.Record != nil {
+		if len(members) > 1 {
+			for _, m := range r.Members {
+				line("Member %s on the branch: %s", m.ID, visible(MemberStanding(l, m)))
+			}
+		} else if r.Record != nil {
 			uncommitted := ""
 			if r.RecordUncommitted {
 				uncommitted = ", uncommitted"
@@ -98,6 +117,39 @@ func Facts(v *View, visible func(string) string) []string {
 	}
 	line("Files: %s", visible(v.Dir))
 	return lines
+}
+
+// MemberStanding says where one selected work stood when the attempt ended,
+// from the worktree's record: awaiting judgment, active, not started, or
+// waiting, never done by the exit alone.
+func MemberStanding(l *Launch, m MemberState) string {
+	r := m.Record
+	if r == nil {
+		return "unreadable: " + m.Error
+	}
+	text := r.Status
+	switch {
+	case r.Status == "review" && r.Candidate != "":
+		text = "awaiting judgment: review, candidate " + r.Candidate[:min(len(r.Candidate), 12)]
+	case len(m.Questions) != 0:
+		text = r.Status + ", waiting on question " + strings.Join(m.Questions, ", ")
+	case r.Status == "active":
+		text = "active; its Next holds the checkpoint"
+	case r.Status == "proposed":
+		text = "not started"
+		for _, lm := range l.Members() {
+			if lm.ID == m.ID && lm.Wait != "" {
+				text += ": " + lm.Wait
+			}
+		}
+	}
+	if m.Uncommitted {
+		text += ", uncommitted"
+	}
+	if m.Error != "" {
+		text += "; problems: " + m.Error
+	}
+	return text
 }
 
 // Requested is what the launch asked of the provider beyond the fixed

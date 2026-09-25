@@ -33,8 +33,9 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID [--expect REVISION] (--set FIELD=VALUE | --unset FIELD)... [--commit]\n" +
 	"       grove [--project DIR] approve ID VERDICT | feedback ID TEXT | integrate ID [--cleanup]\n" +
-	"       grove [--project DIR] run ID [--budget USD] [--permission-mode MODE] [--until plan]\n" +
-	"                                     [--model MODEL] [--effort LEVEL] [--branch NAME] [--worktree DIR]\n" +
+	"       grove [--project DIR] run WORK_ID... [--dry-run | --expect DIGEST] [--budget USD]\n" +
+	"                                     [--permission-mode MODE] [--until plan] [--model MODEL]\n" +
+	"                                     [--effort LEVEL] [--branch NAME] [--worktree DIR]\n" +
 	"       grove [--project DIR] attempts [ID] | attempt ATTEMPT [--json] | stop ATTEMPT\n" +
 	"       grove [--project DIR] convert PATH --type TYPE --title TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] versions [ID] [--json]\n" +
@@ -95,30 +96,42 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             merge (fast-forward or merge commit; a conflict is aborted and refused),\n" +
 	"             done, and with --cleanup the worktree and branch removed, or kept with\n" +
 	"             Git's reason. Every refusal comes before the merge; nothing undoes one.\n" +
-	"  run        Start one bounded implementation attempt of a proposed or active work ID\n" +
-	"             as a Grove-owned `claude -p \"/grove-work ID --interaction headless\"` process\n" +
-	"             that outlives this terminal: in the branch's worktree (default worktree-ID\n" +
-	"             under .claude/worktrees/, created from this checkout's HEAD or reused), with\n" +
-	"             --max-budget-usd USD, --permission-mode MODE and --permission-prompts none, its\n" +
-	"             raw output in files under the Git common directory. --until plan ends the\n" +
-	"             attempt at a committed plan, leaving the status as found; --model and\n" +
-	"             --effort are passed to the provider. --budget and --permission-mode are\n" +
-	"             required unless grove.yaml's run: sets them; it may set --model and --effort\n" +
-	"             too, and a flag overrides it. What ran is recorded with the digest of the\n" +
-	"             worktree's grove-reviewer definition, or its absence, which is warned of.\n" +
-	"             Refused when the worktree would not hold the committed grove-work skill\n" +
-	"             (.claude/skills/grove-work/SKILL.md, which init writes), while an attempt\n" +
-	"             of ID runs or is orphaned, when ID is not proposed or active here or on its\n" +
-	"             branch (a candidate in review awaits judgment), while an open question blocks\n" +
-	"             ID in either place, when the record has uncommitted changes here, or when the\n" +
-	"             worktree path is something else. Prints one line per\n" +
-	"             fact and the attempt id. A result is facts, never acceptance: the record's own\n" +
-	"             status on the branch is the handoff.\n" +
-	"  attempts   List this repository's attempts, newest first, or those of one work ID:\n" +
+	"  run        Start one bounded implementation attempt of an explicit selection of\n" +
+	"             proposed or active work as one Grove-owned\n" +
+	"             `claude -p \"/grove-work ID... --interaction headless\"` process that outlives\n" +
+	"             this terminal, the IDs passed as given: in the branch's worktree (default\n" +
+	"             worktree- plus the IDs joined by - under .claude/worktrees/, created from this\n" +
+	"             checkout's HEAD or reused), with --max-budget-usd USD over the whole selection,\n" +
+	"             --permission-mode MODE and --permission-prompts none, its raw output in files\n" +
+	"             under the Git common directory. Members are implemented one at a time in\n" +
+	"             dependency order; nothing outside the selection is added, and the complete\n" +
+	"             members are handed off together on one shared candidate. --until plan ends the\n" +
+	"             attempt at committed plans, leaving statuses as found; --model and --effort are\n" +
+	"             passed to the provider. --budget and --permission-mode are required unless\n" +
+	"             grove.yaml's run: sets them; it may set --model and --effort too, and a flag\n" +
+	"             overrides it. --dry-run checks and prints the assignment without writing or\n" +
+	"             starting anything: order, each member's revision and whether it can start or\n" +
+	"             waits (an open question, a prerequisite outside the selection the base does not\n" +
+	"             hold, or a selected one that waits), the outside prerequisites, the base,\n" +
+	"             bounds, review boundary, continuation policy, and a digest; --expect DIGEST\n" +
+	"             refuses a launch whose assignment no longer has that digest. What ran is\n" +
+	"             recorded with the digest of the worktree's grove-reviewer definition, or its\n" +
+	"             absence, which is warned of. Refused when the worktree would not hold the\n" +
+	"             committed grove-work skill (.claude/skills/grove-work/SKILL.md, which init\n" +
+	"             writes), while an attempt whose selection shares a member runs or is orphaned,\n" +
+	"             when a member is not proposed or active here or on its branch (a candidate in\n" +
+	"             review awaits judgment), when no member can start, when a member record has\n" +
+	"             uncommitted changes here, or when the worktree path is something else. Prints\n" +
+	"             one line per fact and the attempt id. A result is facts, never acceptance: the\n" +
+	"             records' own statuses on the branch are the handoff.\n" +
+	"  attempts   List this repository's attempts, newest first, or those whose selection\n" +
+	"             includes one work ID:\n" +
 	"             running (its owner holds the lock), finished (a result was written), orphaned\n" +
 	"             (owner lost, provider alive) or interrupted (owner lost, nothing alive).\n" +
-	"  attempt    Print one attempt's launch, status, event counts, result and file paths, and\n" +
-	"             whether the record on the target changed since launch; --json prints the\n" +
+	"  attempt    Print one attempt's launch, status, event counts, result and file paths,\n" +
+	"             each member's state on the branch (awaiting judgment, active, not started, or\n" +
+	"             waiting and on what), and whether a member record on the target changed since\n" +
+	"             launch; --json prints the\n" +
 	"             whole view. Reads files only: nothing is started or resumed.\n" +
 	"  stop       End a running attempt through its owner (SIGINT ends the turn, SIGKILL after\n" +
 	"             15 s) or an orphaned one directly; the result is written and the worktree and\n" +
@@ -267,6 +280,14 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 			return 2
 		}
 		a.run.Root = p.Root
+		if a.dryRun {
+			l, err := attempt.Preview(a.run)
+			if err != nil {
+				report(errOut, err)
+				return 1
+			}
+			return writeResult(out, errOut, []byte(previewText(l)))
+		}
 		l, err := attempt.Start(a.run, time.Now(), func(fact string) { fmt.Fprintln(out, visible(fact)) })
 		if err != nil {
 			report(errOut, err)
@@ -371,7 +392,7 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 
 type invocation struct {
 	project, command, id, kind, title, slug, source string
-	help, json, cleanup                             bool
+	help, json, cleanup, dryRun                     bool
 	request                                         update.Request
 	convert                                         update.ConvertRequest
 	ids                                             []string // context
@@ -525,6 +546,13 @@ func parseArgs(args []string) (a invocation, err error) {
 			a.request.Commit = true
 			continue
 		}
+		if arg == "--dry-run" {
+			if a.dryRun {
+				return a, fmt.Errorf("--dry-run may only be supplied once")
+			}
+			a.dryRun = true
+			continue
+		}
 		if arg == "--cleanup" {
 			if a.cleanup {
 				return a, fmt.Errorf("--cleanup may only be supplied once")
@@ -576,8 +604,14 @@ func parseArgs(args []string) (a invocation, err error) {
 	if (a.options.Interaction != "" || a.options.MaxBytes != 0 || a.options.Include != nil) && a.command != "context" {
 		return a, fmt.Errorf("--interaction, --max-bytes, and --include apply only to context")
 	}
-	if (a.request.Expect != "" || a.request.Commit || len(fields) != 0) && a.command != "update" {
-		return a, fmt.Errorf("--expect, --set, --unset, and --commit apply only to update")
+	if a.request.Expect != "" && a.command != "update" && a.command != "run" {
+		return a, fmt.Errorf("--expect applies only to update and run")
+	}
+	if (a.request.Commit || len(fields) != 0) && a.command != "update" {
+		return a, fmt.Errorf("--set, --unset, and --commit apply only to update")
+	}
+	if a.dryRun && a.command != "run" {
+		return a, fmt.Errorf("--dry-run applies only to run")
 	}
 	if a.cleanup && a.command != "integrate" {
 		return a, fmt.Errorf("--cleanup applies only to integrate")
@@ -601,10 +635,15 @@ func parseArgs(args []string) (a invocation, err error) {
 			a.id = positional[1]
 		}
 	case "run":
-		if len(positional) != 2 {
-			err = fmt.Errorf("run requires exactly one work ID")
-		} else {
-			a.run.ID = positional[1]
+		switch {
+		case len(positional) < 2:
+			err = fmt.Errorf("run requires at least one work ID")
+		case a.request.Expect != "" && a.dryRun:
+			err = fmt.Errorf("--expect checks a launch against a --dry-run's digest; give one or the other")
+		case a.request.Expect != "" && !revisionPattern.MatchString(a.request.Expect):
+			err = fmt.Errorf("--expect must be the digest --dry-run printed: sha256: followed by 64 lowercase hexadecimal digits")
+		default:
+			a.run.IDs, a.run.Digest, a.request.Expect = positional[1:], a.request.Expect, ""
 		}
 	case "attempts":
 		if len(positional) > 2 {

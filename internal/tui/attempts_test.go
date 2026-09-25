@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -59,7 +60,7 @@ func (r *runs) add(b Backend) Backend {
 		if r.launchErr != nil {
 			return nil, r.launchErr
 		}
-		return []string{"worktree: created", "attempt: " + req.ID + ".20260923T010000Z started"}, nil
+		return []string{"worktree: created", "attempt: " + req.IDs[0] + ".20260923T010000Z started"}, nil
 	}
 	b.Stop = func(_ context.Context, root, id string) ([]string, error) {
 		r.mu.Lock()
@@ -167,8 +168,8 @@ func TestLaunchFromTheDetail(t *testing.T) {
 		t.Fatalf("Enter launches: %q", m.pending)
 	}
 	settle(m, cmd)
-	want := attempt.Request{Root: "/repo/.", ID: "W-002", Expect: fx.twoBranches().Groups[1].Versions[1].Revision, BudgetUSD: "2.5", PermissionMode: "auto", Until: "plan", Model: "opus", Effort: "xhigh"}
-	if len(r.launches) != 1 || r.launches[0] != want {
+	want := attempt.Request{Root: "/repo/.", IDs: []string{"W-002"}, Expect: fx.twoBranches().Groups[1].Versions[1].Revision, BudgetUSD: "2.5", PermissionMode: "auto", Until: "plan", Model: "opus", Effort: "xhigh"}
+	if len(r.launches) != 1 || !reflect.DeepEqual(r.launches[0], want) {
 		t.Fatalf("launched %+v, want %+v", r.launches, want)
 	}
 	if s := plain(m); m.screen != resultScreen || !strings.Contains(s, "Launch of an attempt of W-002") || !strings.Contains(s, "attempt: W-002.20260923T010000Z started") {

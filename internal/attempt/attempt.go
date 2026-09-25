@@ -40,6 +40,7 @@ import (
 	"time"
 
 	"github.com/mascah/grove"
+	"github.com/mascah/grove/internal/deps"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/repo"
 	"golang.org/x/sys/unix"
@@ -71,24 +72,28 @@ const SkillPath = ".claude/skills/grove-work/SKILL.md"
 
 // Launch is what the launcher records before the owner starts.
 type Launch struct {
-	Attempt        string   `json:"attempt"`
-	Work           string   `json:"work"`
-	Project        string   `json:"project"`         // the launching checkout's project root
-	Target         string   `json:"target"`          // grove.yaml's target branch, "" when none
-	RecordPath     string   `json:"record_path"`     // project-relative
-	RecordRevision string   `json:"record_revision"` // as HEAD held it at launch
-	Base           string   `json:"base"`            // the commit the worktree started from, or continues on
-	Branch         string   `json:"branch"`
-	Worktree       string   `json:"worktree"`         // absolute checkout the process runs in
-	Prefix         string   `json:"prefix"`           // the project's path inside the checkout, "" at its top
-	WorktreeReused bool     `json:"worktree_reused"`  // it existed before this attempt
-	Command        []string `json:"command"`          // the exact argv, command[0] the executable as resolved
-	Executable     string   `json:"executable"`       // command[0] as given (claude or GROVE_CLAUDE)
-	ClaudeVersion  string   `json:"claude_version"`   // `--version` at launch
-	GroveVersion   string   `json:"grove_version"`    // the launching grove's version line; the agent's grove is not recorded
-	Model          string   `json:"model,omitempty"`  // requested; the actual one is in the result's init
-	Effort         string   `json:"effort,omitempty"` // requested reasoning effort, passed as --effort
-	Until          string   `json:"until,omitempty"`  // the assignment's bound: "plan", or "" to run through
+	Attempt string `json:"attempt"`
+	Work    string `json:"work"` // the first ID as given, the attempt id's prefix
+	// Selection is every selected work, their order and waits at launch, and
+	// the digest; nil for an attempt from before selections, whose one work
+	// is Work at RecordPath and RecordRevision.
+	Selection      *Selection `json:"selection,omitempty"`
+	Project        string     `json:"project"`                   // the launching checkout's project root
+	Target         string     `json:"target"`                    // grove.yaml's target branch, "" when none
+	RecordPath     string     `json:"record_path,omitempty"`     // before selections: project-relative
+	RecordRevision string     `json:"record_revision,omitempty"` // before selections: as HEAD held it at launch
+	Base           string     `json:"base"`                      // the commit the worktree started from, or continues on
+	Branch         string     `json:"branch"`
+	Worktree       string     `json:"worktree"`         // absolute checkout the process runs in
+	Prefix         string     `json:"prefix"`           // the project's path inside the checkout, "" at its top
+	WorktreeReused bool       `json:"worktree_reused"`  // it existed before this attempt
+	Command        []string   `json:"command"`          // the exact argv, command[0] the executable as resolved
+	Executable     string     `json:"executable"`       // command[0] as given (claude or GROVE_CLAUDE)
+	ClaudeVersion  string     `json:"claude_version"`   // `--version` at launch
+	GroveVersion   string     `json:"grove_version"`    // the launching grove's version line; the agent's grove is not recorded
+	Model          string     `json:"model,omitempty"`  // requested; the actual one is in the result's init
+	Effort         string     `json:"effort,omitempty"` // requested reasoning effort, passed as --effort
+	Until          string     `json:"until,omitempty"`  // the assignment's bound: "plan", or "" to run through
 	// Reviewer is the sha256 of the worktree's grove-reviewer definition at
 	// launch, "none" when it had none, "" for an attempt before this field.
 	Reviewer string `json:"reviewer,omitempty"`
@@ -157,6 +162,19 @@ type Result struct {
 	RecordUncommitted bool   `json:"record_uncommitted,omitempty"`
 	Record            *State `json:"record"`
 	RecordError       string `json:"record_error,omitempty"`
+	// Members is every selected work as the worktree held it, in order;
+	// Record and its neighbours repeat the first ID's. Empty for an attempt
+	// from before selections.
+	Members []MemberState `json:"members,omitempty"`
+}
+
+// MemberState is one selected work as the worktree held it after the exit.
+type MemberState struct {
+	ID          string   `json:"id"`
+	Record      *State   `json:"record"` // nil when unreadable
+	Uncommitted bool     `json:"uncommitted,omitempty"`
+	Error       string   `json:"error,omitempty"`
+	Questions   []string `json:"questions,omitempty"` // open questions blocking it there: "G-… (title)"
 }
 
 // State is the work record as the worktree holds it.
@@ -192,7 +210,8 @@ type View struct {
 
 // Request is one launch.
 type Request struct {
-	Root, ID       string // the launching project root and the work
+	Root           string   // the launching project root
+	IDs            []string // the selected work, as given
 	BudgetUSD      string
 	PermissionMode string
 	Model          string
@@ -200,7 +219,8 @@ type Request struct {
 	Until          string // "plan" ends the attempt at its plan; "" runs through
 	Branch         string // default worktree-ID
 	Worktree       string // default <root>/.claude/worktrees/<branch>
-	Expect         string // the record revision the caller read in root; "" checks nothing
+	Expect         string // one work's record revision the caller read in root; "" checks nothing
+	Digest         string // the digest Preview gave; "" checks nothing
 }
 
 var idPattern = regexp.MustCompile(`^[A-Z]+-[0-9]+$`)
@@ -286,14 +306,27 @@ func Dir(root string) (string, error) {
 	return filepath.Join(common, "grove", "attempts"), nil
 }
 
-// Start launches one attempt of req.ID and returns what was launched. Every
-// refusal comes before anything is written, except that the checks on what
-// an existing branch holds run in its checkout: a branch without a worktree
-// gets one first, which a refusal then keeps. A failure to start the owner
-// is reported with the worktree kept.
-func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
-	if !idPattern.MatchString(req.ID) {
-		return nil, fmt.Errorf("%s is not a record ID", req.ID)
+// prepared is a launch checked before anything is written.
+type prepared struct {
+	launch       *Launch
+	head, skill  string
+	branchExists bool // the branch exists, with or without a worktree
+}
+
+// prepare checks req against the launching checkout and the branch the
+// attempt would run on, and returns the launch it would make, without
+// writing anything: Preview's whole work, and Start's first step.
+func prepare(req Request) (*prepared, error) {
+	if len(req.IDs) == 0 {
+		return nil, errors.New("run requires at least one work ID")
+	}
+	for _, id := range req.IDs {
+		if !idPattern.MatchString(id) {
+			return nil, fmt.Errorf("%s is not a record ID", id)
+		}
+	}
+	if req.Expect != "" && len(req.IDs) != 1 {
+		return nil, errors.New("a record revision to expect applies to one work; a selection is checked by its digest")
 	}
 	p, ds := project.Load(req.Root, req.Root)
 	if len(ds) != 0 {
@@ -315,37 +348,50 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if req.Until != "" && req.Until != "plan" {
 		return nil, fmt.Errorf("--until must be plan, not %q", req.Until)
 	}
+	// What is selected is checked before Git is asked anything.
+	byID := map[string]*project.Record{}
+	for _, r := range p.Records {
+		byID[r.ID] = r
+	}
+	if _, _, err := deps.Order(byID, req.IDs); err != nil {
+		return nil, err
+	}
 	root := p.Root
-	var r *project.Record
-	for _, c := range p.Records {
-		if c.ID == req.ID {
-			r = c
-		}
-	}
-	switch {
-	case r == nil:
-		return nil, fmt.Errorf("%s is not in this checkout", req.ID)
-	case r.Type != "work":
-		return nil, fmt.Errorf("%s is a %s, not work", req.ID, r.Type)
-	case r.Status != "proposed" && r.Status != "active":
-		return nil, fmt.Errorf("%s is %s; only proposed or active work runs", req.ID, r.Status)
-	}
-	if err := blocked(p, req.ID); err != nil {
-		return nil, err
-	}
-	if dirty, err := repo.Git(root, "status", "--porcelain", "--", r.Path); err != nil {
-		return nil, err
-	} else if strings.TrimSpace(dirty) != "" {
-		return nil, fmt.Errorf("%s has uncommitted changes in this checkout; commit them so the attempt sees them", r.Path)
-	}
-	if rev := project.Revision(r.Source); req.Expect != "" && rev != req.Expect {
-		return nil, fmt.Errorf("%s changed since it was read: %s is %s here, not %s; read it again before launching", req.ID, r.Path, rev, req.Expect)
-	}
 	head, err := repo.Git(root, "rev-parse", "HEAD")
 	if err != nil {
 		return nil, fmt.Errorf("this checkout's HEAD could not be read: %v", err)
 	}
 	head = strings.TrimSpace(head)
+	branch := req.Branch
+	if branch == "" {
+		branch = "worktree-" + strings.Join(req.IDs, "-")
+	}
+	worktree := req.Worktree
+	if worktree == "" {
+		worktree = filepath.Join(root, ".claude", "worktrees", branch)
+	} else if !filepath.IsAbs(worktree) {
+		worktree = filepath.Join(root, worktree)
+	}
+	worktree = filepath.Clean(worktree)
+	base, reused, exists, err := locate(root, branch, worktree, head)
+	if err != nil {
+		return nil, err
+	}
+	contains := containsIn(root, base)
+	s, err := selectionOf(p, req.IDs, contains)
+	if err != nil {
+		return nil, err
+	}
+	for _, m := range s.Members {
+		if dirty, err := repo.Git(root, "status", "--porcelain", "--", m.Path); err != nil {
+			return nil, err
+		} else if strings.TrimSpace(dirty) != "" {
+			return nil, fmt.Errorf("%s has uncommitted changes in this checkout; commit them so the attempt sees them", m.Path)
+		}
+	}
+	if m := s.Members[0]; req.Expect != "" && m.Revision != req.Expect {
+		return nil, fmt.Errorf("%s changed since it was read: %s is %s here, not %s; read it again before launching", m.ID, m.Path, m.Revision, req.Expect)
+	}
 	// Git names the prefix itself, so a root reached through a symlink
 	// compares as Git sees it.
 	prefix, err := repo.Git(root, "rev-parse", "--show-prefix")
@@ -353,6 +399,82 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		return nil, err
 	}
 	prefix = filepath.FromSlash(strings.TrimSuffix(strings.TrimSpace(prefix), "/"))
+	// The worktree holds only what is committed, so a skill init wrote and
+	// nobody committed is absent there. A new branch is checked in HEAD
+	// before it exists: kept at a HEAD without the skill, it would refuse
+	// every later launch too.
+	skill := filepath.Join(prefix, SkillPath)
+	if !exists {
+		if _, err := repo.Git(root, "cat-file", "-e", head+":"+filepath.ToSlash(skill)); err != nil {
+			return nil, fmt.Errorf("%s is not committed at HEAD %s, so the attempt's worktree would not hold the grove-work skill its prompt names; commit the files grove init wrote and launch again", skill, short(head))
+		}
+	}
+	// The branch may hold what an earlier attempt persisted: a candidate in
+	// review awaiting the owner, or the question the headless guide writes
+	// for a missing decision. Either is a wait, not a reason to spend again.
+	if reused {
+		if err := onBranch(s, filepath.Join(worktree, prefix), branch, worktree, contains); err != nil {
+			return nil, err
+		}
+	} else if exists {
+		s.Notes = append(s.Notes, "Branch "+branch+" exists without a worktree; the launch checks it out at "+short(base)+" and checks its records there before starting.")
+	}
+	if err := s.startable(); err != nil {
+		return nil, err
+	}
+	l := &Launch{
+		Work: s.Selected[0], Project: root, Target: p.Target, Selection: s,
+		Base: base, Branch: branch, Worktree: worktree, Prefix: prefix, WorktreeReused: reused,
+		Model: req.Model, Effort: req.Effort, Until: req.Until,
+		BudgetUSD: req.BudgetUSD, PermissionMode: req.PermissionMode,
+	}
+	s.Digest = digest(l)
+	if req.Digest != "" && req.Digest != s.Digest {
+		return nil, fmt.Errorf("the assignment changed since its preview: its digest is %s, not %s; what it would run now:\n%s\npreview it again (run --dry-run) before launching", s.Digest, req.Digest, strings.Join(Explain(l, func(v string) string { return v }), "\n"))
+	}
+	return &prepared{launch: l, head: head, skill: skill, branchExists: exists}, nil
+}
+
+// onBranch rereads the members as the attempt's checkout at dir holds them,
+// keeping the launching checkout's revisions: a member judged there, or
+// waiting there, is what the attempt would meet.
+func onBranch(s *Selection, dir, branch, worktree string, contains func(string) (bool, error)) error {
+	wp, wds := project.Load(dir, dir)
+	if wp == nil {
+		return fmt.Errorf("the project on %s at %s does not load: %s", branch, worktree, wds[0].String())
+	}
+	for _, c := range wp.Records {
+		if slices.ContainsFunc(s.Members, func(m Member) bool { return m.ID == c.ID }) && c.Status != "proposed" && c.Status != "active" {
+			return fmt.Errorf("%s is %s on %s at %s; judge that candidate (approve, feedback) before another attempt", c.ID, c.Status, branch, worktree)
+		}
+	}
+	w, err := selectionOf(wp, s.Selected, contains)
+	if err != nil {
+		return fmt.Errorf("%v (on %s at %s)", err, branch, worktree)
+	}
+	for i := range s.Members {
+		for _, o := range w.Members {
+			if o.ID == s.Members[i].ID {
+				s.Members[i].Status, s.Members[i].Wait = o.Status, o.Wait
+			}
+		}
+	}
+	s.Outside, s.Notes = w.Outside, w.Notes
+	return nil
+}
+
+// Start launches one attempt of the selection req.IDs and returns what was
+// launched. Every refusal comes before anything is written, except that the
+// checks on what an existing branch holds run in its checkout: a branch
+// without a worktree gets one first, which a refusal then keeps. A failure
+// to start the owner is reported with the worktree kept.
+func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
+	pre, err := prepare(req)
+	if err != nil {
+		return nil, err
+	}
+	l := pre.launch
+	root, branch, worktree, prefix := l.Project, l.Branch, l.Worktree, l.Prefix
 	dir, err := Dir(root)
 	if err != nil {
 		return nil, err
@@ -367,26 +489,21 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 		return nil, err
 	}
 	defer unlock()
-	views, err := List(root, req.ID)
+	views, err := List(root, "")
 	if err != nil {
 		return nil, err
 	}
+	// Overlapping selections cannot both own a record.
 	for _, v := range views {
-		if v.Status == Running || v.Status == Orphaned {
-			return nil, fmt.Errorf("attempt %s of %s is %s since %s; stop it or wait for its result before another attempt", v.Launch.Attempt, req.ID, v.Status, v.Launch.Started.UTC().Format(time.RFC3339))
+		if v.Status != Running && v.Status != Orphaned {
+			continue
+		}
+		for _, m := range l.Members() {
+			if v.Launch.Includes(m.ID) {
+				return nil, fmt.Errorf("attempt %s of %s is %s since %s; stop it or wait for its result before another attempt", v.Launch.Attempt, m.ID, v.Status, v.Launch.Started.UTC().Format(time.RFC3339))
+			}
 		}
 	}
-	branch := req.Branch
-	if branch == "" {
-		branch = "worktree-" + req.ID
-	}
-	worktree := req.Worktree
-	if worktree == "" {
-		worktree = filepath.Join(root, ".claude", "worktrees", branch)
-	} else if !filepath.IsAbs(worktree) {
-		worktree = filepath.Join(root, worktree)
-	}
-	worktree = filepath.Clean(worktree)
 	exe := os.Getenv(ClaudeEnv)
 	if exe == "" {
 		exe = "claude"
@@ -405,61 +522,49 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if err != nil {
 		return nil, err
 	}
-	attempt := req.ID + "." + now.UTC().Format("20060102T150405Z")
+	attempt := l.Work + "." + now.UTC().Format("20060102T150405Z")
 	adir := filepath.Join(dir, attempt)
 	if _, err := os.Stat(adir); err == nil {
 		return nil, fmt.Errorf("attempt %s already exists; try again in a second", attempt)
 	}
-	// The worktree holds only what is committed, so a skill init wrote and
-	// nobody committed is absent there. A new branch is checked in HEAD
-	// before it exists: kept at a HEAD without the skill, it would refuse
-	// every later launch too.
-	skill := filepath.Join(prefix, SkillPath)
-	if _, err := repo.Git(root, "rev-parse", "-q", "--verify", "refs/heads/"+branch); err != nil {
-		if _, err := repo.Git(root, "cat-file", "-e", head+":"+filepath.ToSlash(skill)); err != nil {
-			return nil, fmt.Errorf("%s is not committed at HEAD %s, so the attempt's worktree would not hold the grove-work skill its prompt names; commit the files grove init wrote and launch again", skill, short(head))
-		}
-	}
-	base, reused, err := prepareWorktree(root, branch, worktree, head, report)
+	base, reused, err := prepareWorktree(root, branch, worktree, pre.head, report)
 	if err != nil {
 		return nil, err
 	}
-	// The branch may hold what an earlier attempt persisted: a candidate in
-	// review awaiting the owner, or the question the headless guide writes
-	// for a missing decision. Either is a wait, not a reason to spend again.
-	if reused || base != head {
-		wp, wds := project.Load(filepath.Join(worktree, prefix), filepath.Join(worktree, prefix))
-		if wp == nil {
-			return nil, fmt.Errorf("the project on %s at %s does not load: %s", branch, worktree, wds[0].String())
+	if base != l.Base {
+		return nil, fmt.Errorf("%s moved from %s to %s during the launch; launch again", branch, short(l.Base), short(base))
+	}
+	// A branch checked out just now is read as the reused one was.
+	if pre.branchExists && !reused {
+		if err := onBranch(l.Selection, filepath.Join(worktree, prefix), branch, worktree, containsIn(root, base)); err != nil {
+			return nil, err
 		}
-		for _, c := range wp.Records {
-			if c.ID == req.ID && c.Status != "proposed" && c.Status != "active" {
-				return nil, fmt.Errorf("%s is %s on %s at %s; judge that candidate (approve, feedback) before another attempt", req.ID, c.Status, branch, worktree)
-			}
-		}
-		if err := blocked(wp, req.ID); err != nil {
+		if err := l.Selection.startable(); err != nil {
 			return nil, fmt.Errorf("%v (on %s at %s)", err, branch, worktree)
 		}
 	}
+	skill := pre.skill
 	// After the branch's own waits: a candidate in review is judged, not
 	// given another commit.
 	if _, err := os.Stat(filepath.Join(worktree, skill)); err != nil {
 		return nil, fmt.Errorf("%s is not in %s on %s, so the attempt would not find the grove-work skill its prompt names; commit the files grove init wrote to %s and launch again", skill, worktree, branch, branch)
 	}
-	prompt := "/grove-work " + req.ID
-	if req.Until != "" {
-		prompt += " --until " + req.Until
+	// The IDs go as given: the guide takes the caller's order and context
+	// orders them, as it did here.
+	prompt := "/grove-work " + strings.Join(l.Selection.Selected, " ")
+	if l.Until != "" {
+		prompt += " --until " + l.Until
 	}
 	command := []string{resolved, "-p", prompt + " --interaction headless",
 		"--output-format", "stream-json", "--verbose",
 		"--session-id", session,
-		"--max-budget-usd", req.BudgetUSD,
-		"--permission-mode", req.PermissionMode, "--permission-prompts", "none"}
-	if req.Model != "" {
-		command = append(command, "--model", req.Model)
+		"--max-budget-usd", l.BudgetUSD,
+		"--permission-mode", l.PermissionMode, "--permission-prompts", "none"}
+	if l.Model != "" {
+		command = append(command, "--model", l.Model)
 	}
-	if req.Effort != "" {
-		command = append(command, "--effort", req.Effort)
+	if l.Effort != "" {
+		command = append(command, "--effort", l.Effort)
 	}
 	var differs []string
 	installed := func(path string) string {
@@ -477,14 +582,9 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if reviewer == "none" {
 		report(fmt.Sprintf("warning: %s is not in %s, so the attempt has no independent reviewer and work whose record requires one stays active; commit the files grove init wrote to give it one", filepath.Join(prefix, ReviewerPath), worktree))
 	}
-	l := &Launch{
-		Attempt: attempt, Work: req.ID, Project: root, Target: p.Target,
-		RecordPath: r.Path, RecordRevision: project.Revision(r.Source),
-		Base: base, Branch: branch, Worktree: worktree, Prefix: prefix, WorktreeReused: reused,
-		Command: command, Executable: exe, ClaudeVersion: strings.TrimSpace(string(version)),
-		GroveVersion: grove.Identity().String(), Model: req.Model, Effort: req.Effort, Until: req.Until, Reviewer: reviewer, Skill: skillDigest, Differs: differs, BudgetUSD: req.BudgetUSD,
-		PermissionMode: req.PermissionMode, SessionID: session, Started: now.UTC(),
-	}
+	l.Attempt, l.WorktreeReused, l.Command, l.Executable, l.ClaudeVersion = attempt, reused, command, exe, strings.TrimSpace(string(version))
+	l.GroveVersion, l.Reviewer, l.Skill, l.Differs = grove.Identity().String(), reviewer, skillDigest, differs
+	l.SessionID, l.Started = session, now.UTC()
 	// The directory appears complete or not at all: a reader never sees an
 	// attempt without its attempt.json.
 	if err := os.Mkdir(adir+".tmp", 0o755); err != nil {
@@ -566,59 +666,63 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	return l, nil
 }
 
-// blocked is the open question that stops id, if any, as p holds it.
-func blocked(p *project.Project, id string) error {
-	for _, q := range p.Records {
-		if q.Type == "question" && q.Status == "open" && slices.Contains(q.Blocks, id) {
-			return fmt.Errorf("%s is blocked by open question %s (%s); resolve it before another attempt", id, q.ID, q.Title)
-		}
-	}
-	return nil
-}
-
-// prepareWorktree makes branch's checkout at worktree from head, or reuses
-// the registered one, reporting what it did. It returns the commit the
-// attempt starts from.
-func prepareWorktree(root, branch, worktree, head string, report func(string)) (base string, reused bool, err error) {
+// locate finds where branch's attempt would run without writing anything:
+// the registered checkout at worktree (reused), or the commit a new one
+// would start from, the branch's tip when it exists (exists) or head.
+func locate(root, branch, worktree, head string) (base string, reused, exists bool, err error) {
 	worktrees, err := repo.Worktrees(root)
 	if err != nil {
-		return "", false, err
+		return "", false, false, err
 	}
 	ref := "refs/heads/" + branch
 	for _, w := range worktrees {
 		same := samePath(w.Path, worktree)
 		switch {
 		case w.Branch == ref && same:
-			report(fmt.Sprintf("worktree: reusing %s on %s at %s", worktree, branch, short(w.Head)))
-			return w.Head, true, nil
+			return w.Head, true, true, nil
 		case w.Branch == ref:
-			return "", false, fmt.Errorf("branch %s is checked out at %s, not %s; pass --worktree %s to continue there", branch, w.Path, worktree, w.Path)
+			return "", false, false, fmt.Errorf("branch %s is checked out at %s, not %s; pass --worktree %s to continue there", branch, w.Path, worktree, w.Path)
 		case same:
-			return "", false, fmt.Errorf("%s is the worktree of %s, not %s", worktree, orDetached(w.Branch), branch)
+			return "", false, false, fmt.Errorf("%s is the worktree of %s, not %s", worktree, orDetached(w.Branch), branch)
 		}
 	}
 	if _, err := os.Lstat(worktree); err == nil {
-		return "", false, fmt.Errorf("%s exists but is not a registered worktree of %s; remove it or pass --worktree elsewhere", worktree, branch)
-	}
-	if err := os.MkdirAll(filepath.Dir(worktree), 0o755); err != nil {
-		return "", false, err
+		return "", false, false, fmt.Errorf("%s exists but is not a registered worktree of %s; remove it or pass --worktree elsewhere", worktree, branch)
 	}
 	if _, err := repo.Git(root, "rev-parse", "-q", "--verify", ref); err == nil {
 		tip, err := repo.Git(root, "rev-parse", ref)
 		if err != nil {
-			return "", false, err
+			return "", false, false, err
 		}
+		return strings.TrimSpace(tip), false, true, nil
+	}
+	return head, false, false, nil
+}
+
+// prepareWorktree makes branch's checkout at worktree from head, or reuses
+// the registered one, reporting what it did. It returns the commit the
+// attempt starts from.
+func prepareWorktree(root, branch, worktree, head string, report func(string)) (base string, reused bool, err error) {
+	base, reused, exists, err := locate(root, branch, worktree, head)
+	if err != nil || reused {
+		if reused {
+			report(fmt.Sprintf("worktree: reusing %s on %s at %s", worktree, branch, short(base)))
+		}
+		return base, reused, err
+	}
+	if err := os.MkdirAll(filepath.Dir(worktree), 0o755); err != nil {
+		return "", false, err
+	}
+	if exists {
 		if _, err := repo.Git(root, "worktree", "add", worktree, branch); err != nil {
 			return "", false, err
 		}
-		report(fmt.Sprintf("worktree: %s checked out at %s from existing branch %s at %s", branch, worktree, branch, short(tip)))
-		base = strings.TrimSpace(tip)
+		report(fmt.Sprintf("worktree: %s checked out at %s from existing branch %s at %s", branch, worktree, branch, short(base)))
 	} else {
 		if _, err := repo.Git(root, "worktree", "add", "-b", branch, worktree, head); err != nil {
 			return "", false, err
 		}
 		report(fmt.Sprintf("worktree: %s created at %s from %s", branch, worktree, short(head)))
-		base = head
 	}
 	// A worktree inside the checkout would otherwise show as untracked there.
 	if top, err := repo.GitPath(root, "--show-toplevel"); err == nil {
@@ -744,13 +848,14 @@ func reconcile(dir string, l *Launch, res *Result, logf func(string, ...any)) {
 	if dirty, err := repo.Git(l.Worktree, "status", "--porcelain"); err == nil { // untracked files included: partial work counts
 		res.Dirty = strings.TrimSpace(dirty) != ""
 	}
-	res.Record, res.RecordError = recordState(filepath.Join(l.Worktree, l.Prefix), l.Work)
-	if res.Record != nil {
-		// Unverified counts as uncommitted: readiness is never assumed.
-		out, err := repo.Git(filepath.Join(l.Worktree, l.Prefix), "status", "--porcelain", "--", res.Record.Path)
-		res.RecordUncommitted = err != nil || strings.TrimSpace(out) != ""
-		if err != nil {
-			logf("owner: record status: %v", err)
+	var ids []string
+	for _, m := range l.Members() {
+		ids = append(ids, m.ID)
+	}
+	res.Members = memberStates(filepath.Join(l.Worktree, l.Prefix), ids, logf)
+	for _, m := range res.Members {
+		if m.ID == l.Work {
+			res.Record, res.RecordError, res.RecordUncommitted = m.Record, m.Error, m.Uncommitted
 		}
 	}
 	if err := writeJSON(filepath.Join(dir, "result.json"), res); err != nil {
@@ -758,29 +863,48 @@ func reconcile(dir string, l *Launch, res *Result, logf func(string, ...any)) {
 	}
 }
 
-// recordState reads the work record as a checkout holds it, whether or not
-// the rest of the project validates there.
-func recordState(root, id string) (*State, string) {
+// memberStates reads each work record as a checkout holds it, whether or
+// not the rest of the project validates there, with the open questions that
+// block it there.
+func memberStates(root string, ids []string, logf func(string, ...any)) []MemberState {
+	out := make([]MemberState, len(ids))
 	p, ds := project.Load(root, root)
-	if p == nil {
-		return nil, ds[0].String()
-	}
-	for _, r := range p.Records {
-		if r.ID == id {
-			var problems []string
-			for _, d := range ds {
-				if d.Path == r.Path {
-					problems = append(problems, d.String())
-				}
+	for i, id := range ids {
+		out[i].ID = id
+		if p == nil {
+			out[i].Error = ds[0].String()
+			continue
+		}
+		j := slices.IndexFunc(p.Records, func(r *project.Record) bool { return r.ID == id })
+		if j < 0 {
+			out[i].Error = id + " is not in the worktree"
+			if len(ds) != 0 {
+				out[i].Error += "; " + ds[0].String()
 			}
-			return &State{Status: r.Status, Candidate: r.Candidate, Revision: project.Revision(r.Source), Path: r.Path}, strings.Join(problems, "; ")
+			continue
+		}
+		r := p.Records[j]
+		var problems []string
+		for _, d := range ds {
+			if d.Path == r.Path {
+				problems = append(problems, d.String())
+			}
+		}
+		out[i].Record = &State{Status: r.Status, Candidate: r.Candidate, Revision: project.Revision(r.Source), Path: r.Path}
+		out[i].Error = strings.Join(problems, "; ")
+		// Unverified counts as uncommitted: readiness is never assumed.
+		status, err := repo.Git(root, "status", "--porcelain", "--", r.Path)
+		out[i].Uncommitted = err != nil || strings.TrimSpace(status) != ""
+		if err != nil {
+			logf("owner: record status: %v", err)
+		}
+		for _, q := range p.Records {
+			if q.Type == "question" && q.Status == "open" && slices.Contains(q.Blocks, id) {
+				out[i].Questions = append(out[i].Questions, q.ID+" ("+q.Title+")")
+			}
 		}
 	}
-	msg := id + " is not in the worktree"
-	if len(ds) != 0 {
-		msg += "; " + ds[0].String()
-	}
-	return nil, msg
+	return out
 }
 
 // ReadEvents parses events.jsonl bounded: one line at a time, a line over
@@ -891,8 +1015,8 @@ func (ev *Events) note(line []byte) {
 	}
 }
 
-// List reads every attempt of root's repository, newest first, or those of
-// one work ID, without scanning their events: Show does that for one.
+// List reads every attempt of root's repository, newest first, or those
+// whose selection includes one work ID, without scanning their events: Show does that for one.
 func List(root, id string) ([]View, error) {
 	dir, err := Dir(root)
 	if err != nil {
@@ -914,7 +1038,7 @@ func ListDir(dir, id string) ([]View, error) {
 	var views []View
 	for _, e := range entries {
 		name := e.Name()
-		if !e.IsDir() || !attemptPattern.MatchString(name) || (id != "" && !strings.HasPrefix(name, id+".")) {
+		if !e.IsDir() || !attemptPattern.MatchString(name) {
 			continue
 		}
 		v, err := read(filepath.Join(dir, name), false)
@@ -923,6 +1047,9 @@ func ListDir(dir, id string) ([]View, error) {
 		}
 		if err != nil {
 			return nil, err
+		}
+		if id != "" && !v.Launch.Includes(id) {
+			continue
 		}
 		views = append(views, *v)
 	}
@@ -954,15 +1081,19 @@ func ShowContext(ctx context.Context, root, attempt string, events bool) (*View,
 		return nil, err
 	}
 	if v.Launch.Target != "" {
-		source, err := repo.GitContext(ctx, root, "show", "refs/heads/"+v.Launch.Target+":"+filepath.ToSlash(filepath.Join(v.Launch.Prefix, v.Launch.RecordPath)))
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
+		var changed []string
+		for _, m := range v.Launch.Members() {
+			source, err := repo.GitContext(ctx, root, "show", "refs/heads/"+v.Launch.Target+":"+filepath.ToSlash(filepath.Join(v.Launch.Prefix, m.Path)))
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			if err != nil {
+				changed = append(changed, fmt.Sprintf("%s is not readable on %s: %v", m.Path, v.Launch.Target, err))
+			} else if rev := project.Revision([]byte(source)); rev != m.Revision {
+				changed = append(changed, fmt.Sprintf("%s on %s is %s, launched from %s", m.Path, v.Launch.Target, rev, m.Revision))
+			}
 		}
-		if err != nil {
-			v.InputsChanged = fmt.Sprintf("%s is not readable on %s: %v", v.Launch.RecordPath, v.Launch.Target, err)
-		} else if rev := project.Revision([]byte(source)); rev != v.Launch.RecordRevision {
-			v.InputsChanged = fmt.Sprintf("%s on %s is %s, launched from %s", v.Launch.RecordPath, v.Launch.Target, rev, v.Launch.RecordRevision)
-		}
+		v.InputsChanged = strings.Join(changed, "; ")
 	}
 	return v, nil
 }

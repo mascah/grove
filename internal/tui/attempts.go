@@ -659,7 +659,7 @@ func (m *Model) launch() {
 		m.notice = g.ID + " is not in this checkout (" + m.root + "); open Grove in a checkout that holds it to launch"
 		return
 	}
-	req := attempt.Request{Root: m.root, ID: g.ID, Expect: here.Revision}
+	req := attempt.Request{Root: m.root, IDs: []string{g.ID}, Expect: here.Revision}
 	// Work whose current state the base does not hold continues on that
 	// state's branch. The base is the target, or without one this checkout;
 	// the same bytes on several branches are one state, which starts afresh.
