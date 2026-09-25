@@ -131,7 +131,19 @@ not a dependency: CLI selection can exercise this outcome independently.
 
 ## Next
 
-The owner answers G-163. Then refine this scope and prepare the execution,
-candidate/approval, budget, and partial-completion design before assignment
-through `$grove-work G-162`. G-161 can proceed while this question remains
-open. No batch, provider spend, merge, or implementation is authorized here.
+Checkpoint, 2026-09-25 (headless, `--until plan`): G-163 is resolved
+(option 1, shared implementation reviewed together). Plan
+[G-185](G-185-g-162-selected-work-plan.md) at
+`sha256:6584eb48aa591d5d16b0f399081434a9d883d6f840898a64cc3e62906cbb80ef`
+(commit `dbb2f0d`, branch `worktree-G-162` from `main` `fe97300`) prepares
+one attempt over an explicit selection, a shared candidate judged per member
+and integrated as a group, feedback reopening the group, the
+partial-completion and continuation policy, and launch preview and refusals.
+Status left proposed; nothing implemented. Launching the continuation after
+reading the plan approves that plan revision:
+
+    /grove-work G-162
+
+or `grove run G-162` from this branch's checkout. Its first step records the
+G-163 answer as a decision. The real-provider trial (acceptance 6) is an
+owner step with its own budget, not part of the attempt.
