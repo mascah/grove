@@ -37,13 +37,13 @@ Observed at `worktree-G-135` `f37be4e`:
   session that does find a copy elsewhere may read a version that does not
   match the binary.
 
-Proposed design, not selected: embed the record model in the binary and
-print it (`grove guide model`, spelling open), and have the guides name that
-command where they cite the model, so the copy matches the binary as the
-guides do. Alternatives: `grove init` writes a copy into the project, which
-can go stale; or the guides say the model is unavailable outside Grove's
-repository and rely on `grove check` and CLI refusals. Choosing one is the
-owner's.
+Selected design ([G-146](G-146-how-should-an-adopting-project-r.md),
+resolved 2026-09-24): embed `docs/record-model.md` in the binary, print it
+with `grove guide model`, have the three citations name that command, and
+first edit the model to hold no `G-` link and no path link into this
+repository, so it ships verbatim with no preamble. A `G-` ID is a live
+identifier in every adopting project, so the model cannot carry Grove's
+own. G-146 holds the alternatives, the reasons and what the edit covers.
 
 ## Acceptance
 
@@ -68,3 +68,7 @@ written, since the design is the owner's choice; status stays `proposed`.
 No commands are owned. Once G-146 is resolved, rerun
 `/grove-work G-144 --until plan` on this branch to write the plan against
 the answer, or drop `--until plan` to go on to implement it.
+
+Resolved 2026-09-24: G-146 selected option 1 with the model holding no
+`G-` links. Next: `/grove-work G-144 --until plan` on this branch, or drop
+`--until plan` to implement.
