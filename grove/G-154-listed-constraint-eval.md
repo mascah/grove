@@ -25,6 +25,12 @@ an index or a code graph. The first case is the one
 that would show the `context` listing, and G-108's Next lists it first
 among follow-on cases.
 
+Owner choices, 2026-09-25, after the records were shaped: this work runs
+before [G-153](G-153-search-and-code-links.md) starts, so its `without`
+row is the baseline G-153's preparation reads; and it runs on Claude only.
+The Codex row and `gpt-6-astra` are outside this work, whatever a later
+mandate says about model, runs, budget and permission mode.
+
 ## Constraints
 
 Observed at main `001b271`, 2026-09-25:
@@ -39,8 +45,10 @@ Observed at main `001b271`, 2026-09-25:
 - The G-108 pair costs about $3 for ten runs on Claude Opus 5.5 and is the
   regression check for a guide edit ([G-114](G-114-capture-and-reuse-terms-question.md)
   Evidence). The Codex row exists ([G-135](G-135-run-the-g-108-eval-pair-on-codex.md))
-  with plan-window caps. Model, repeat count, budget and permission mode are
-  the owner's explicit answer, never a default
+  with plan-window caps, and is not used here: the runner's `--harness`
+  defaults to `claude` and runs Codex only when a command names it, and
+  `gpt-6-astra` never runs unless the owner names it. Model, repeat count,
+  budget and permission mode are the owner's explicit answer, never a default
   ([G-118](G-118-what-mandate-should-the-g-108-pa.md),
   [G-141](G-141-never-run-gpt-6-astra-unless-the.md)); no paid run is ever
   part of `go test` or CI.
@@ -60,7 +68,7 @@ Observed at main `001b271`, 2026-09-25:
 
 **Proposed design.** Two cases on the existing fixture, each with a
 `without` row at the digest before G-153 and a `with` row after, the same
-run count on Claude, the Codex row only under its own mandate:
+run count, on Claude only:
 
 - `listed-constraint`: a `done` prerequisite work record, or a `current`
   plan, holds a constraint the topic must respect, and two records with
@@ -85,8 +93,9 @@ has no product to test; scoring the retrieval facts.
    rubric rows; `python3 evals/run.py selftest` covers each check and each
    retrieval fact they add; [evals/README.md](../evals/README.md) documents
    them and the two-digest comparison.
-2. Under an owner mandate naming model, runs, budget and permission mode,
-   each case runs on its `without` row, and on its `with` row once G-153's
+2. Under an owner mandate naming a Claude model, runs, budget and
+   permission mode, and never through the Codex harness, each case runs on
+   its `without` row, and on its `with` row once G-153's
    candidate is integrated, retaining per run what the README lists.
 3. A review record linked by `work` reports the pattern per case and row:
    whether the constraint was found and applied, whether the holding record
@@ -98,6 +107,8 @@ has no product to test; scoring the retrieval facts.
 
 ## Next
 
-The `without` row can be assigned now, with the cases built and one
-mandated run each; the `with` row waits for G-153 to be integrated. The
-owner supplies the mandate before any paid run.
+Assign the `without` row now: build both cases, then one mandated run each
+on Claude. The `with` row waits for G-153 to be integrated. The owner
+supplies the mandate before any paid run; it names a Claude model, and no
+attempt passes `--harness codex` or names `gpt-6-astra`. G-153 starts after
+the `without` row's review is read (owner decision, 2026-09-25).

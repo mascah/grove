@@ -165,10 +165,14 @@ lists need ranking to be readable.
 
 ## Next
 
-Assign. Needs a plan covering where the matcher lives so the board, the CLI
+Wait for [G-154](G-154-listed-constraint-eval.md)'s `without` row and read
+its review before assigning (owner decision, 2026-09-25): if agents already
+find and apply the listed constraint without search, preparation narrows
+this record to the board search and the review listing before the plan is
+fixed. Then assign. Needs a plan covering where the matcher lives so the board, the CLI
 and the review view share one (`links` and `resolve` are in
 `internal/handoff`, `hits` in `internal/tui`), the review sidebar's layout,
 and the exact guide sentences. [G-154](G-154-listed-constraint-eval.md)
-measures whether agents find and apply what the lookup lists, and its
-"without" row can run before this lands. Reconcile with G-151 at whichever
+measures whether agents find and apply what the lookup lists; its
+`without` row runs first, its `with` row after this lands. Reconcile with G-151 at whichever
 integrates second, since both edit the shipped guides.
