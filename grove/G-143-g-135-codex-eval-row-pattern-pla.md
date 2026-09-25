@@ -114,4 +114,5 @@ the owner names shows the same pattern with confined reads.
 record model", which a project that installed Grove has no copy of; Claude
 did without it, Codex searched the owner's disk for it. Printing it from
 the binary (as `grove guide` prints the guides) or naming where it lives
-is a product choice for the owner, not made here.
+is a product choice for the owner, not made here; captured as
+[G-144](G-144-give-adopting-projects-the-recor.md).
