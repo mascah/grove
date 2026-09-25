@@ -14,8 +14,8 @@ commands this document does not.
 compatibility before its first release: schemas 1 and 2, their type folders,
 typed `W-`/`Q-`/`D-`/`T-`/`P-`/`R-` IDs and per-type counters were deleted by
 the conversion to schema 3. A commit from before it is inspected with the CLI
-built from that commit; the current CLI reports such a branch in `versions` and the board as a
-source it cannot inspect.
+built from that commit; the current CLI reports such a branch in `versions`
+and the board as a source it cannot inspect.
 
 - **Discovery.** Every `.md` file beneath the record root, at any depth, is a
   record, except the configured brief. No folder names a type: the root and
@@ -375,9 +375,9 @@ if the project no longer validates. It requires Git and never overwrites.
 `source`. `update <id> [--expect REVISION] [--commit]` with `--set FIELD=VALUE` and
 `--unset FIELD` changes `title`, `status`, `relates_to`, work planning fields,
 `candidate` and `approved`, question `blocks`, plan and review `work`, or review `examined` by editing only those frontmatter entries plus `updated`,
-and prints `{id, path, revision, changed}`. A refused request, a stale
-revision or a result that would not validate leaves the record's bytes
-unchanged; once the file is replaced, a later failure (directory sync, final
+and prints `{id, path, revision, changed}`. Any failure before the file is
+replaced (a refused request, a stale revision, an invalid result, a preparation
+error) leaves the record's bytes unchanged; once the file is replaced, a later failure (directory sync, final
 validation, output) is reported as an applied update, never as nothing written.
 `--commit`, after a change, runs `git add` and
 `git commit` for the record's file alone with a generated message, adds
