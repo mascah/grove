@@ -3,6 +3,7 @@ package deps
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -142,7 +143,7 @@ func TestDeliverExplainsEachStatus(t *testing.T) {
 			return ref == "HEAD", nil
 		}
 		return true, nil
-	})
+	}, nil)
 	got := map[string]string{}
 	for _, it := range v.Items {
 		got[it.ID] = it.Delivery
@@ -163,7 +164,7 @@ func TestDeliverExplainsEachStatus(t *testing.T) {
 		t.Errorf("delivery\n got %v\nwant %v", got, want)
 	}
 	v, _ = Preview([]*project.Record{work("H", "done"), work("W", "proposed", "H")}, []string{"W"})
-	v.Deliver("", func(string, string) (bool, error) { t.Fatal("asked Git without a candidate"); return false, nil })
+	v.Deliver("", func(string, string) (bool, error) { t.Fatal("asked Git without a candidate"); return false, nil }, nil)
 	if d := v.Items[1].Delivery; !strings.HasPrefix(d, "done without a candidate: delivery unrecorded") {
 		t.Errorf("historical done: %q", d)
 	}
@@ -230,7 +231,7 @@ func TestOverviewEveryWorkAndMissingPrerequisites(t *testing.T) {
 	if last.ID != "S-99" || !last.Outside || last.Status != "" || !reflect.DeepEqual(last.NeededBy, []string{"S-20"}) {
 		t.Fatalf("missing prerequisite %+v", last)
 	}
-	v.Deliver("", func(string, string) (bool, error) { return false, nil })
+	v.Deliver("", func(string, string) (bool, error) { return false, nil }, nil)
 	if last = v.Items[len(v.Items)-1]; !strings.Contains(last.Delivery, "not among the records read") {
 		t.Errorf("delivery %q", last.Delivery)
 	}
@@ -244,5 +245,49 @@ func TestOverviewEveryWorkAndMissingPrerequisites(t *testing.T) {
 	}
 	if len(rows) != 12 || every.Items[0].ID != "S-01" || every.Items[0].Layer != 0 {
 		t.Errorf("every work %v", rows)
+	}
+}
+
+// A selection's candidates are merged in its order, skipping one already on
+// the target, and what follows the first conflict is named as not tried.
+func TestDeliverMergesInTheSelectionsOrder(t *testing.T) {
+	rs := []*project.Record{work("A", "review"), work("B", "review"), work("C", "review"), work("D", "review"), work("E", "proposed")}
+	for _, r := range rs[:4] {
+		r.Candidate = strings.Repeat(strings.ToLower(r.ID), 7)
+	}
+	v, err := Preview(rs, []string{"D", "C", "B", "A", "E"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var asked [][]string
+	v.Deliver("main", func(string, string) (bool, error) { return false, nil }, func(commits []string) ([]versions.Merge, error) {
+		asked = append(asked, commits)
+		var out []versions.Merge
+		for i, c := range commits {
+			m := versions.Merge{Target: "ttttttt", Commit: c, Outcome: "clean", Conflicts: []string{}}
+			switch {
+			case c == "ccccccc":
+				m.Outcome = "integrated"
+			case len(commits) > 1 && i == 1:
+				m.Outcome, m.Conflicts = "conflict", []string{"x.go", "y.go"}
+			}
+			out = append(out, m)
+			if m.Outcome == "conflict" {
+				break
+			}
+		}
+		return out, nil
+	})
+	if want := [][]string{{"ddddddd"}, {"ccccccc"}, {"bbbbbbb"}, {"aaaaaaa"}, {"ddddddd", "bbbbbbb", "aaaaaaa"}}; !reflect.DeepEqual(asked, want) {
+		t.Fatalf("asked %v", asked)
+	}
+	if d := v.Items[1].Delivery; d != "awaiting review; candidate ccccccc not in HEAD, not on main; integrated: main at ttttttt holds it" {
+		t.Errorf("C: %q", d)
+	}
+	if len(v.MergeOrder) != 2 || v.MergeOrder[1].ID != "B" {
+		t.Errorf("merge order %+v", v.MergeOrder)
+	}
+	if want := "Merged into main at ttttttt in this order, each onto the ones before, in objects only: D merges cleanly, B conflicts in x.go, y.go; the first conflict is B's, and A after it was not tried. Grove chose no order, and a clean order is not evidence that the changes work together."; !slices.Contains(v.Notes, want) {
+		t.Errorf("notes %q", v.Notes)
 	}
 }

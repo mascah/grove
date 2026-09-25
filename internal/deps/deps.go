@@ -37,6 +37,15 @@ type Item struct {
 	Unlocks   []string `json:"unlocks"`   // unfinished work whose depends_on names it
 	NeededBy  []string `json:"needed_by"` // outside: the rows that need it
 	Delivery  string   `json:"delivery"`  // what Deliver found; "" until it runs
+	// Merge is what merging a candidate in review into the target would do,
+	// when Deliver could predict it (G-177).
+	Merge *versions.Merge `json:"merge"`
+}
+
+// OrderedMerge is one step of merging a selection's candidates in its order.
+type OrderedMerge struct {
+	ID string `json:"id"`
+	versions.Merge
 }
 
 // Question is an open question blocking a row or an outside prerequisite.
@@ -53,6 +62,9 @@ type View struct {
 	Items     []Item     `json:"items"`    // the rows in order, then the outside prerequisites by ID
 	Questions []Question `json:"questions"`
 	Notes     []string   `json:"notes"`
+	// MergeOrder merges a selection's candidates in review into the target
+	// in Order, up to the first conflict, when there are two or more.
+	MergeOrder []OrderedMerge `json:"merge_order"`
 }
 
 var unfinished = []string{"proposed", "active", "review"}
@@ -247,8 +259,12 @@ func build(records []*project.Record, rows, selected []string) *View {
 // Deliver describes each item's delivery from its status and, for a
 // candidate, Git ancestry: whether HEAD of the checkout, the base, contains
 // it and, when target names a branch, whether the target does. contains
-// answers one such question; Ancestry is the real one.
-func (v *View) Deliver(target string, contains func(commit, ref string) (bool, error)) {
+// answers one such question; Ancestry is the real one. predict, when not nil,
+// merges candidates into the target in the order given, as
+// versions.PredictContext does: each candidate in review gets its own
+// prediction, and a selection with two or more not yet on the target is also
+// merged in its Order, which Grove states but never chooses.
+func (v *View) Deliver(target string, contains func(commit, ref string) (bool, error), predict func(commits []string) ([]versions.Merge, error)) {
 	for i := range v.Items {
 		it := &v.Items[i]
 		c := it.Candidate
@@ -276,6 +292,14 @@ func (v *View) Deliver(target string, contains func(commit, ref string) (bool, e
 			it.Delivery = "awaiting implementation"
 		case it.Status == "review": // which requires a candidate
 			it.Delivery = "awaiting review; " + where()
+			if target != "" && predict != nil {
+				if ms, err := predict([]string{c}); err != nil {
+					it.Delivery += "; the merge into " + target + " could not be predicted: " + err.Error()
+				} else {
+					it.Merge = &ms[0]
+					it.Delivery += "; " + it.Merge.Text(target)
+				}
+			}
 		case it.Status == "done" && c != "":
 			it.Delivery = where()
 		case it.Status == "done":
@@ -286,6 +310,40 @@ func (v *View) Deliver(target string, contains func(commit, ref string) (bool, e
 			it.Delivery = "not among the records read: nothing is known about its delivery"
 		}
 	}
+	v.mergeOrder(target, predict)
+}
+
+// mergeOrder merges the selection's candidates that are in review and not on
+// the target in Order, and notes where the first conflict lands.
+func (v *View) mergeOrder(target string, predict func([]string) ([]versions.Merge, error)) {
+	var ids, commits []string
+	for _, it := range v.Items {
+		if v.Selected != nil && !it.Outside && it.Merge != nil && it.Merge.Outcome != "integrated" {
+			ids, commits = append(ids, it.ID), append(commits, it.Candidate)
+		}
+	}
+	if len(commits) < 2 {
+		return
+	}
+	ms, err := predict(commits)
+	if err != nil {
+		v.Notes = append(v.Notes, fmt.Sprintf("Merging the candidates of %s into %s in this order could not be predicted: %v", strings.Join(ids, ", "), target, err))
+		return
+	}
+	var steps []string
+	for i, m := range ms {
+		v.MergeOrder = append(v.MergeOrder, OrderedMerge{ids[i], m})
+		steps = append(steps, ids[i]+" "+map[string]string{"integrated": "is already there", "fast-forward": "fast-forwards", "clean": "merges cleanly", "conflict": "conflicts " + m.Where()}[m.Outcome])
+	}
+	result := "no conflict"
+	if last := ms[len(ms)-1]; last.Outcome == "conflict" {
+		result = "the first conflict is " + ids[len(ms)-1] + "'s"
+		if n := len(ids) - len(ms); n != 0 {
+			result += fmt.Sprintf(", and %s after it %s not tried", strings.Join(ids[len(ms):], ", "), map[bool]string{true: "was", false: "were"}[n == 1])
+		}
+	}
+	v.Notes = append(v.Notes, fmt.Sprintf("Merged into %s at %s in this order, each onto the ones before, in objects only: %s; %s. Grove chose no order, and a clean order is not evidence that the changes work together.",
+		target, short(ms[0].Target), strings.Join(steps, ", "), result))
 }
 
 // Ancestry answers Deliver's question with git merge-base --is-ancestor in

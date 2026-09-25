@@ -23,7 +23,10 @@ branch; it may never have been merged, and it keeps that meaning.
 Since G-044, `grove integrate` performs it from the target's checkout: a
 plain merge of the one branch holding an approved candidate, aborted on
 conflict, then done written and committed there, with the branch and its
-worktree removed only on request and only where Git agrees.
+worktree removed only on request and only where Git agrees. Since G-177,
+a conflict is predicted with `git merge-tree` in objects only and refused
+before the merge starts, naming the files; the abort remains for what the
+prediction cannot see.
 
 ## Relationships
 

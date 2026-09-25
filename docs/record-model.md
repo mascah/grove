@@ -498,7 +498,10 @@ Candidate, review, approval and integration name the facts:
   refuses `done` in a checkout on any other branch. `integrate ID` does the
   integration: in a clean checkout of the target it finds the one branch
   holding an approved candidate of ID, merges it with a plain `git merge`
-  (a conflict is aborted and refused before anything changes), writes done
+  (a conflict, predicted with `git merge-tree` in objects only, is refused
+  before anything changes, naming the files and the next action; where Git
+  cannot predict it, before 2.38, the merge's own conflict is aborted and
+  refused instead), writes done
   there committed alone, and with `--cleanup` removes the branch's worktree
   and the branch only where Git agrees and the worktree holds no ignored
   files. The merge is of the commit the checks read, so a branch that moves

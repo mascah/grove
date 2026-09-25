@@ -421,7 +421,8 @@ disposition:
 - **Approval and integration:** `grove approve G-030 "VERDICT"` in the
   branch's clean checkout binds the verdict to the candidate, then `grove
   integrate G-030` in the target's clean checkout merges the branch (a plain
-  merge; a conflict is aborted and refused with the target unchanged),
+  merge; a conflict is refused with the target unchanged, predicted before
+  merging with the files and the next action named where Git can),
   writes `done` there and commits it alone, and with `--cleanup` removes the
   worktree and branch where Git agrees. It prints approval, merge, done and
   cleanup as separate facts. The board's detail of the record offers the

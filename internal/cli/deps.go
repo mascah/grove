@@ -51,7 +51,9 @@ func runDeps(p *project.Project, a invocation, out, errOut io.Writer) int {
 		}
 		v.Compare(res, here)
 	}
-	v.Deliver(target, deps.Ancestry(context.Background(), p.Root))
+	v.Deliver(target, deps.Ancestry(context.Background(), p.Root), func(commits []string) ([]versions.Merge, error) {
+		return versions.PredictContext(context.Background(), p.Root, "refs/heads/"+target, commits)
+	})
 	if code != 0 {
 		fmt.Fprintln(errOut, "grove: some sources could not be inspected; the result is incomplete")
 	}

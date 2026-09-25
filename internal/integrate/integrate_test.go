@@ -12,6 +12,7 @@ import (
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/repo"
 	"github.com/mascah/grove/internal/update"
+	"github.com/mascah/grove/internal/versions"
 )
 
 const (
@@ -192,13 +193,31 @@ func TestIntegrateRefusesConflictsBeforeAnythingChanges(t *testing.T) {
 	t.Parallel()
 	t.Run("a file conflict", func(t *testing.T) {
 		t.Parallel()
-		root, _, _ := fixture(t, true)
+		root, wt, candidate := fixture(t, true)
+		// Predicted clean, then the target moves before the integration.
+		if ms, err := versions.PredictContext(t.Context(), root, "main", []string{candidate}); err != nil || ms[0].Outcome != "fast-forward" {
+			t.Fatalf("before the move: %v %+v", err, ms)
+		}
 		write(t, root, "code.txt", "a different change\n")
 		git(t, root, "commit", "-qam", "fix: on main")
-		facts := refused(t, root, false, "merge of feature into main refused: CONFLICT (content): Merge conflict in code.txt; Automatic merge failed; fix conflicts and then commit the result.; main is unchanged at")
+		moved := git(t, root, "rev-parse", "--short=7", "HEAD")
+		refs := git(t, root, "for-each-ref")
+		facts := refused(t, root, false, "merge of feature into main refused: it conflicts with main at "+moved+" in code.txt; nothing was merged, main is unchanged at "+moved+
+			" and G-001 stays in review. Next: in "+wt+", git merge main, resolve the conflicts and commit, then hand that commit to review as the new candidate; or there, grove feedback G-001 'conflicts with main at "+moved+"; merge main and resolve' returns it to an implementer")
 		if len(facts) != 1 || !strings.HasPrefix(facts[0], "approval: ") {
 			t.Fatalf("facts %q", facts)
 		}
+		if git(t, root, "for-each-ref") != refs {
+			t.Fatal("a refused integration changed a ref")
+		}
+	})
+	t.Run("what prediction cannot see", func(t *testing.T) {
+		t.Parallel()
+		// The candidate adds the review record, which an untracked file in
+		// the target's checkout stands in the way of: the merge refuses it.
+		root, _, candidate := fixture(t, true)
+		write(t, root, "grove/G-005-review.md", git(t, root, "show", candidate+":grove/G-005-review.md")+"\nA local edit.\n")
+		refused(t, root, false, "merge of feature into main refused: error: The following untracked working tree files would be overwritten by merge")
 	})
 	t.Run("the record changed on the target", func(t *testing.T) {
 		t.Parallel()

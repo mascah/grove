@@ -70,6 +70,9 @@ type Backend struct {
 	// Ancestry answers whether a commit is in a ref in the checkout at root,
 	// for the dependency preview's delivery (G-161); nil leaves it unread.
 	Ancestry func(ctx context.Context, root string) func(commit, ref string) (bool, error)
+	// Predict merges commits into the target in order in the checkout at
+	// root, in objects only (G-177); nil predicts nothing.
+	Predict func(ctx context.Context, root, target string, commits []string) ([]versions.Merge, error)
 }
 
 type screen int
