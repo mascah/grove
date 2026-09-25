@@ -51,16 +51,18 @@ revision.
   file: `custom` (no marker: project-owned, not judged), `current`
   (byte-equal to this binary's template), `compatible` (marked, supported
   revision, other bytes: older or edited), `legacy` (marked, no revision
-  line; revision 1, compatible while the minimum is 1), `incompatible`
+  line; revision 1, unserved after the adjustment below), `incompatible`
   (revision unparseable or outside `MIN..CURRENT`). A file's absence is
   `missing`. Content inequality alone never makes a file incompatible.
 - **`grove init --check`.** Read-only: plans the entrypoints as `init`
   does, prints `VERDICT PATH (note)` per managed path, writes nothing, and
-  exits 1 when any path is `missing` or `incompatible`, 0 otherwise.
+  exits 1 when any path is `missing`, `incompatible`, `conflict` or (after
+  the adjustment) `legacy`, 0 otherwise.
   Custom files are listed and not judged.
 - **Runner.** `grove run` and the board's `R` (same `Start`) refuse before
   the attempt directory and the provider when the worktree's `grove-work`
-  skill or reviewer is `incompatible`, naming the path, the revision and the
+  skill or reviewer is marked with an unserved revision (`incompatible`,
+  and after the adjustment `legacy`), naming the path, the revision and the
   repair. A missing reviewer stays a warning (G-150).
 - **Repair path.** `grove init` (unchanged ownership rules) rewrites marked
   files and keeps unmarked ones, configuration, brief and records; the
@@ -86,8 +88,12 @@ Also from that review: the term G-186 names the concept apart from
 [Revision](G-062-revision.md); the usage placeholder is `N`; the docs say
 `run` checks against the launching `grove`, not the session's; and the
 adapters' data rule no longer suggests passing the bound to commands. The
-shaping guide needed no new sentence: its Inputs already said all the old
-shaping adapter did.
+shaping guide needed no new grammar sentence: its Inputs already said all
+the old shaping adapter did. After round 2, both guides' Inputs tell a
+session loaded through a revision-less managed skill to stop and name the
+repair, since `guide` cannot tell that load from a person's; a legacy
+reviewer loads no guide and stays reachable only through `init --check`
+and `run`.
 
 Rejected: comparing against a list of historical template digests (a
 growing table, and an edited file would still need a verdict); gating `guide` without the

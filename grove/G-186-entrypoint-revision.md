@@ -13,8 +13,9 @@ An integer naming what an entrypoint `grove init` writes (the `grove-work`
 and `grove-shape` skills, their Codex policies, the `grove-reviewer` agent
 definition) needs of the `grove` it calls: which guides it loads and how.
 Each such file states it as `grove entrypoint revision N` and passes it as
-`grove guide NAME --entrypoint N`; a binary serves a range of revisions,
-and `guide`, `init --check` and `run` refuse a marked file outside it. A
+`grove guide NAME --entrypoint N`. A binary serves a range of revisions:
+`guide` refuses an `--entrypoint` outside it, `init --check` reports a
+marked file outside it and exits 1, and `run` refuses to launch with one. A
 file with the managed marker and no revision line predates revisions and is
 revision 1, legacy.
 
