@@ -51,7 +51,11 @@ members.
   outcome, constraints, acceptance, and every other step are identical.
 - **A bound**, optional, between the IDs and the mode: `--until plan` ends
   the assignment at its plan, as [step 4](#4-prepare) says. Any other bound
-  is an error to report.
+  is an error to report. The bound is for this guide, not an argument to any
+  command.
+
+Anything else in an assignment is an error to report. These inputs are this
+guide's, and the entrypoint that loaded it defers to them.
 
 ## Authority
 

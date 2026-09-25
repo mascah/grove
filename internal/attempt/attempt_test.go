@@ -620,6 +620,24 @@ func TestRefusals(t *testing.T) {
 	git(t, root, "branch", "-qD", "worktree-G-001")
 	git(t, root, "add", "-A")
 	git(t, root, "commit", "-qm", "commit what init wrote")
+	// An entrypoint revision this grove does not serve (G-169): a newer skill
+	// in HEAD is refused before a new branch exists, and an older reviewer on
+	// an existing branch in its checkout, both before any attempt.
+	current := fmt.Sprintf("grove entrypoint revision %d", grove.EntrypointRevision)
+	write(t, root, SkillPath, strings.Replace(grove.Entrypoints()[SkillPath], current, "grove entrypoint revision 99", 1))
+	git(t, root, "commit", "-qam", "a newer grove's skill")
+	try(Request{BudgetUSD: "1", PermissionMode: "auto"}, fmt.Sprintf("%s in HEAD %s is entrypoint revision 99, which this grove does not serve (%d through %d)", SkillPath, git(t, root, "rev-parse", "--short=7", "HEAD"), grove.MinEntrypointRevision, grove.EntrypointRevision))
+	if out := git(t, root, "branch", "--list", "worktree-G-001"); out != "" {
+		t.Fatalf("a refused new branch was made: %q", out)
+	}
+	git(t, root, "revert", "--no-edit", "HEAD")
+	git(t, root, "worktree", "add", "-q", "-b", "worktree-G-001", wt)
+	write(t, wt, ReviewerPath, strings.Replace(grove.Entrypoints()[ReviewerPath], current, "grove entrypoint revision 0", 1))
+	git(t, wt, "add", "-A")
+	git(t, wt, "commit", "-qm", "an unserved reviewer")
+	try(Request{BudgetUSD: "1", PermissionMode: "auto"}, ReviewerPath+" in "+wt+" is entrypoint revision 0, which this grove does not serve")
+	git(t, root, "worktree", "remove", "--force", wt)
+	git(t, root, "branch", "-qD", "worktree-G-001")
 	// A directory in the way that is not the branch's worktree.
 	write(t, wt, "stray.txt", "x")
 	try(Request{BudgetUSD: "1", PermissionMode: "auto"}, wt+" exists but is not a registered worktree of worktree-G-001")

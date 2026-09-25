@@ -39,7 +39,7 @@ go run ./cmd/grove check
 | `context` | Assemble staged context for selected work | [Context](docs/commands.md#context) |
 | `deps` | Show how unfinished work depends on other work, or preview a selection's order | [Dependencies](docs/commands.md#dependencies) |
 | `init` | Set up Grove in a Git checkout | [Init](docs/commands.md#init) |
-| `guide`, `version` | Print a workflow guide or the record model; name this build | [Version and guide](docs/commands.md#version-and-guide) |
+| `guide`, `version` | Print a workflow or review guide or the record model; name this build | [Version and guide](docs/commands.md#version-and-guide) |
 
 ## The board
 
@@ -70,7 +70,9 @@ work, and `/grove-work G-001` carries it out (`$grove-shape` and `$grove-work`
 in Codex), or `grove run G-001 --budget USD --permission-mode MODE` starts it
 as a headless attempt ([Attempts](docs/commands.md#attempts)).
 [Init](docs/commands.md#init) says what `init` writes and how to point Codex
-at the right binary.
+at the right binary. To upgrade, install the new `grove`, then run
+`grove init --check`, `grove init` and commit what changed
+([Entrypoint revisions](docs/commands.md#entrypoint-revisions)).
 
 ## Where each subject lives
 

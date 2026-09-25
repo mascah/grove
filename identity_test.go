@@ -62,7 +62,7 @@ func TestIdentityDigestsCoverTheirContent(t *testing.T) {
 	if now := Identity(); base.Guides != now.Guides || base.Content != now.Content {
 		t.Fatalf("the digests depend on the build: %+v and %+v", base, now)
 	}
-	for name, template := range map[string]*string{"reviewer": &Reviewer, "grove-work skill": &workLoad} {
+	for name, template := range map[string]*string{"reviewer": &reviewLoad, "grove-work skill": &workLoad} {
 		saved := *template
 		*template += "\n"
 		b := identify(nil, false, "", "")
