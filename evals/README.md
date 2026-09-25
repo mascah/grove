@@ -7,7 +7,10 @@ owns the outcome and acceptance, and [G-115](../grove/G-115-g-108-eval-skeleton-
 the design. The first increment asks one question: does the workflow tell a
 missing owner decision, which must become a question, from a choice the
 project's brief already answers? [G-135](../grove/G-135-run-the-g-108-eval-pair-on-codex.md)
-adds the same cases on Codex.
+adds the same cases on Codex. [G-154](../grove/G-154-listed-constraint-eval.md)
+adds two cases that ask whether an agent finds and applies a constraint that
+only another record holds, with its plan in
+[G-155](../grove/G-155-g-154-listed-and-code-constraint.md).
 
 ## Run
 
@@ -22,7 +25,9 @@ python3 evals/run.py run --harness codex --runs 5 --model MODEL --effort EFFORT 
 `run` spends up to runs × cases × budget dollars and prints that cap first.
 It has no default for any spend parameter, is never part of `go test` or CI,
 and runs only under a mandate that names the model, repeat count, budget and
-permission mode. `--case NAME` runs one case; `--out DIR` keeps the output
+permission mode. `--case NAME` runs one case and may repeat; without it
+`run` runs the G-108 pair, `missing-choice` and `companion`, and the G-154
+cases run only when named; `--out DIR` keeps the output
 somewhere other than a new temporary directory, and must not sit under a
 directory holding a `CLAUDE.md`, which the session would load.
 
@@ -94,7 +99,12 @@ in the account-wide readings.
 2. Builds the fixture once: [`evals/fixture/`](fixture) copied into a new Git
    repository, `grove init`, the fixture's brief, one unrelated proposed
    record, one commit. The fixture is `tasks`, a small to-do tool whose brief
-   states constraints and conventions the cases depend on.
+   states constraints and conventions the cases depend on. A case with
+   records of its own (the two G-154 cases) gets a copy of that template
+   with them added through the built CLI, from
+   [`evals/fixture/records/`](fixture/records), and its own commit; the
+   first pair's fixture stays as it was, and the report gives each case's
+   fixture commit.
 3. Per case and run: a bare remote cloned from the fixture, a clone of it,
    then `claude -p "/grove-shape TOPIC --interaction headless"`, or `codex
    exec … "$grove-shape TOPIC --interaction headless"`, in the clone with the
@@ -105,10 +115,19 @@ in the account-wide readings.
 | --- | --- | --- |
 | `missing-choice` | hide finished tasks from tasks list by default | A question blocking the proposal: whether `dropped` tasks count as finished, which the brief leaves open |
 | `companion` | let tasks list filter by tag | A proposal and no question: the brief's filter convention answers how repeated `--tag` values combine |
+| `listed-constraint` | make due dates for tasks ready to assign | A proposal and no question that keeps `due` out of `export`: the `done` prerequisite of the proposed due-date record says the phone widget rejects any other key, and `load` passes every frontmatter key through |
+| `code-constraint` | add a tasks tag command that adds or removes tags on an existing task | A proposal and no question that keeps a task file's notes below its title: an `accepted` decision says so and names `write` in `tasks.py`, which drops them, in code spans |
 
 The first transposes [G-078](../grove/G-078-g-039-trial-evidence-for-the-int.md)
 finding 6 onto the fixture. The second catches a guide change that makes
-agents ask about what the brief already answers.
+agents ask about what the brief already answers. In the third, the fixture
+adds a proposed "Give tasks a due date" whose Next asks for acceptance, its
+`done` prerequisite "Add tasks export", which alone holds the constraint, and
+two related proposals with plausible titles that hold nothing relevant,
+"Export tasks as CSV" and "Remind the owner of tasks due today": `context` on
+the due-date record lists all three. In the fourth, the decision's title
+shares no word with the topic, and nothing but its body ties it to the file
+the command must change. The brief states neither constraint.
 
 ## What it retains
 
@@ -144,7 +163,7 @@ On the clone, never the final message except where named. Each is `pass`,
 | `proposal-branch` | Exactly one `worktree-shape-*` branch exists |
 | `proposal-proposed` | The branch adds or changes at least one work record, and every one is `proposed` |
 | `question-blocks-proposal` | (missing-choice) A question on the branch has `blocks` naming that work. The failure reason tells a choice surfaced without blocking (a non-blocking question or a decision record) from one at most noted in the record, the G-078 finding 6 outcome |
-| `no-question` | (companion) The branch adds or changes no question |
+| `no-question` | (companion and the G-154 cases) The branch adds or changes no question: the brief or a record answers the choice |
 | `no-promotion` | No record the branch touches is in any status but `proposed`, `open` or `current` |
 | `check-passes` | `grove check` passes in a checkout of the branch |
 | `message-names` | The final message names the branch, its tip commit (7 or more hex digits) and, for missing-choice, the blocking question's ID |
@@ -157,13 +176,22 @@ file), and ran `list`, `context` or `show`, counting only a command whose
 program is `grove` and whose subcommand is that word; every file it read; and the reads
 no step needed, meaning anything but `AGENTS.md`, `CLAUDE.md`, `grove.yaml`,
 the brief, `tasks.py`, `tasks/`, the Codex adapter
-`.agents/skills/grove-shape/SKILL.md` and the records it wrote. Reads through
+`.agents/skills/grove-shape/SKILL.md`, the records it wrote, and a G-154
+case's own records other than its distractors. Reads through
 `cat`, `head`, `tail`, `sed`, `nl`, `less` or `awk` count; `grep` and other
 tools do not. Codex has no read tool: every read is a command, which it
 wraps as `SHELL -lc 'SCRIPT'` and the runner unwraps; a Codex trace
 with no command is reported unavailable, not as reading nothing. A `grove` run through a wrapper such as `timeout` or
 inside `$(…)` is missed, and a heredoc line starting with `grove` is counted:
 read the transcript before resting a conclusion on one fact.
+
+Every case also reports whether `grove search` ran, which exists only once
+[G-153](../grove/G-153-search-and-code-links.md) lands. The G-154 cases add
+`holding read`, whether the record holding the constraint was read, and
+`distractors read`, which of the case's distractors were: a record counts as
+read when a read above names its file or a `grove show` or `grove context`
+names its ID. `context` on another record that only lists it is not a
+reading, and neither is a `grep` that prints a matching line.
 
 ## Rubric
 
@@ -179,11 +207,31 @@ met, 0 not met.
 | Does the proposal respect the brief's constraints? | Hide: no file moves or renames, count and `--all` per convention. Tag: no index, OR within `--tag`, AND with `--status` | One convention missed | A constraint broken: an archive directory, an index, AND within `--tag` |
 | Is the handoff usable? | Branch, commit, records and the wait or next action, without the transcript | One of them missing | The owner needs the transcript |
 
-The companion scores only the last two.
+The companion scores only the last two. The G-154 cases score these, and the
+last two above:
+
+| Question | 2 | 1 | 0 |
+| --- | --- | --- | --- |
+| Does the proposal apply the recorded constraint? (listed-constraint) | Acceptance keeps `due` out of `export`'s objects, citing the export record or the widget | `export` is kept stable in general, or a question asks what the record answers | `due` reaches `export`, or `export` is never considered |
+| Does the proposal apply the recorded constraint? (code-constraint) | Acceptance requires the command to keep what is below a task's title, fixing `write` or not using it, citing the decision | Notes are mentioned but no acceptance item keeps them, or a question asks what the decision answers | The command rewrites through `write` as it stands |
+
+Their brief constraint row: a due date is one frontmatter key and the file
+stays readable and in place; tags stay lowercase and no file moves.
+
+## Comparing two guides digests
+
+The G-154 cases measure whether [G-153](../grove/G-153-search-and-code-links.md)'s
+search changes what agents find. Its `without` row runs from a checkout whose
+`grove version` digest predates G-153, its `with` row from one holding G-153's
+integrated candidate, with the same cases, runs, model, budget, permission mode
+and config directory; each report's digest line says which row it is.
+Compare per case and row: the rubric's constraint row, `holding read`,
+`distractors read`, `search`, the unneeded reads, turns and cost.
 
 ## Limits
 
-- Headless shaping on Claude and Codex only. The work row through
+- Headless shaping on Claude and Codex only; the G-154 cases run on Claude
+  only (G-154). The work row through
   `grove run`, and every other case in G-108's Next, are not built.
 - The checks see the clone. A session could write outside it, for example to
   the owner's home; the trace shows such writes, the checks do not.

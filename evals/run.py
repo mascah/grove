@@ -20,10 +20,25 @@ FIXTURE = os.path.join(ROOT, "evals", "fixture")
 GIT_LOCATION = ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE")
 IDENTITY = ["-c", "user.name=Grove Eval", "-c", "user.email=eval@example.invalid", "-c", "commit.gpgsign=false"]
 TIMEOUT = 1800  # seconds per run; failure detection only, the budget is the real bound
+PAIR = ("presumes choice", "planted question", "brief constraint", "handoff")
+KNOWN = ("constraint applied", "brief constraint", "handoff")
+# records: (key, type, title, fields) added to the case's copy of the fixture, body from evals/fixture/records/KEY.md,
+# a list field naming other keys; holding is the record whose constraint the proposal must apply (G-154).
 CASES = {
-    "missing-choice": {"topic": "hide finished tasks from tasks list by default", "question": True},
-    "companion": {"topic": "let tasks list filter by tag", "question": False},
+    "missing-choice": {"topic": "hide finished tasks from tasks list by default", "question": True, "rubric": PAIR},
+    "companion": {"topic": "let tasks list filter by tag", "question": False, "rubric": PAIR},
+    "listed-constraint": {"topic": "make due dates for tasks ready to assign", "question": False, "rubric": KNOWN,
+                          "records": (("export", "work", "Add tasks export", {"status": "done"}),
+                                      ("csv", "work", "Export tasks as CSV", {}),
+                                      ("remind", "work", "Remind the owner of tasks due today", {}),
+                                      ("due", "work", "Give tasks a due date", {"depends_on": ["export"], "relates_to": ["csv", "remind"]})),
+                          "holding": "export", "distractors": ("csv", "remind")},
+    "code-constraint": {"topic": "add a tasks tag command that adds or removes tags on an existing task", "question": False, "rubric": KNOWN,
+                        "records": (("notes", "decision", "Keep the owner's notes in task files", {"status": "accepted"}),),
+                        "holding": "notes", "distractors": ()},
 }
+# The G-108 pair is the regression rerun for a guide edit; the G-154 cases run only when --case names them.
+DEFAULT = ("missing-choice", "companion")
 # Files some step of the shaping guide needs for these topics; any other read is listed as unneeded.
 NEEDED = {"AGENTS.md", "CLAUDE.md", "grove.yaml", "grove/brief.md", "tasks.py", ".agents/skills/grove-shape/SKILL.md"}
 # ponytail: the largest five-hour plan use one G-135 run took (gpt-6-astra, G-143); every run is assumed to take at least this, measure per model if it binds
@@ -125,8 +140,18 @@ def system_skills(home):
     return ", ".join(sorted(e for e in os.listdir(d) if not e.startswith("."))) if os.path.isdir(d) else "none yet"
 
 
-def build(work):
-    """Build the CLI from this checkout and the fixture from evals/fixture; return (grove, template, version)."""
+def fill(project, path, key):
+    """Give a record grove new wrote the body evals/fixture/records/KEY.md, keeping its frontmatter."""
+    with open(os.path.join(project, path), "r+") as f:
+        head = f.read().split("\n---\n", 1)[0]
+        f.seek(0), f.truncate()
+        f.write(head + "\n---\n\n" + open(os.path.join(FIXTURE, "records", key + ".md")).read())
+
+
+def build(work, cases):
+    """Build the CLI from this checkout and the fixture from evals/fixture; return (grove, version, fixtures), where
+    fixtures maps each case to its template, the template's commit and its own records' IDs and paths. A case with
+    records gets a copy of the shared template, so the pair's fixture stays as G-122 ran it."""
     grove = os.path.join(work, "bin", "grove")
     sh("go", "build", "-o", grove, "./cmd/grove", cwd=ROOT)
     template = os.path.join(work, "fixture")
@@ -134,15 +159,34 @@ def build(work):
     git(template, "init", "-q", "-b", "main")
     sh(grove, "--project", template, "init")
     shutil.copy(os.path.join(FIXTURE, "brief.md"), os.path.join(template, "grove", "brief.md"))
-    path = sh(grove, "--project", template, "new", "work", "Sync tasks between two machines").stdout.strip()
-    with open(os.path.join(template, path), "r+") as f:
-        head = f.read().split("\n---\n", 1)[0]
-        f.seek(0), f.truncate()
-        f.write(head + "\n---\n\n" + open(os.path.join(FIXTURE, "records", "sync.md")).read())
+    fill(template, sh(grove, "--project", template, "new", "work", "Sync tasks between two machines").stdout.strip(), "sync")
     sh(grove, "--project", template, "check")
     git(template, "add", "-A")
     git(template, "commit", "-q", "-m", "Fixture: the tasks tool and its Grove project")
-    return grove, template, sh(grove, "version").stdout.strip()
+    base = git(template, "rev-parse", "HEAD")
+    fixtures = {}
+    for name in cases:
+        case = CASES[name]
+        if not case.get("records"):
+            fixtures[name] = {"path": template, "commit": base, "records": {}}
+            continue
+        path = os.path.join(work, "fixture-" + name)
+        shutil.copytree(template, path, symlinks=True)  # with .git, so the ID counter continues after the shared records
+        recs = {}
+        for key, kind, title, _ in case["records"]:
+            rel = sh(grove, "--project", path, "new", kind, title).stdout.strip()
+            fill(path, rel, key)
+            recs[key] = {"id": os.path.basename(rel)[:5], "path": rel}
+        for key, _, _, fields in case["records"]:
+            sets = [a for k, v in fields.items() for a in ("--set", f"{k}={json.dumps([recs[x]['id'] for x in v])}" if isinstance(v, list) else f"{k}={v}")]
+            sets += ["--set", f"candidate={base}"] if fields.get("status") == "done" else []  # done needs a candidate HEAD holds
+            if sets:
+                sh(grove, "--project", path, "update", recs[key]["id"], *sets)
+        sh(grove, "--project", path, "check")
+        git(path, "add", "-A")
+        git(path, "commit", "-q", "-m", f"Fixture: the {name} case's records")
+        fixtures[name] = {"path": path, "commit": git(path, "rev-parse", "HEAD"), "records": recs}
+    return grove, sh(grove, "version").stdout.strip(), fixtures
 
 
 def snapshot(clone, remote):
@@ -271,11 +315,11 @@ def calls(transcript, harness):
     return commands, files
 
 
-def retrieval(transcript, harness, clone, created):
+def retrieval(transcript, harness, clone, created, case=None, fixture=None):
     """Facts from the trace's tool calls: what the session used and read. Reported, never scored."""
     commands, files = calls(transcript, harness)
     if harness == "codex" and not commands:  # every Codex read is a command: none means the trace's shape was not recognized, or nothing ran
-        return dict.fromkeys(("guide", "brief", "list", "context_or_show", "files_read", "unneeded"), None) | {
+        return dict.fromkeys(("guide", "brief", "list", "context_or_show", "search", "files_read", "unneeded"), None) | {
             "commands": [], "reason": "unavailable: the trace has no completed command_execution item"}
     for cmd in commands:
         for part in re.split(r"&&|\|\||;|\|", cmd):
@@ -290,7 +334,7 @@ def retrieval(transcript, harness, clone, created):
         full = os.path.realpath(os.path.join(clone, f))
         p = os.path.relpath(full, clone)
         rel.append(full if p.startswith("..") else re.sub(r"^\.claude/worktrees/[^/]+/", "", p))
-    used = set()  # grove subcommands actually invoked, not words that merely follow "grove" in a command
+    used, invoked = set(), []  # grove subcommands actually invoked, not words that merely follow "grove" in a command
     for cmd in commands:
         for part in re.split(r"&&|\|\||;|\||\n", cmd.replace("\\\n", " ")):
             try:
@@ -305,23 +349,33 @@ def retrieval(transcript, harness, clone, created):
             while words and (words[0] in ("--project", "--json") or words[0].startswith("--project=")):
                 words = words[2:] if words[0] == "--project" else words[1:]
             used.update(words[:1])
-    return {
+            invoked.append(words)
+    recs, case = (fixture or {}).get("records", {}), case or {}
+    distractors = case.get("distractors", ())
+    needed = NEEDED | {r["path"] for k, r in recs.items() if k not in distractors}
+    # A record is read when its file is, or when show or context names its ID; a context listing it is not a reading.
+    read = lambda r: r["path"] in rel or any(w[0] in ("show", "context") and r["id"] in w[1:] for w in invoked if w)
+    facts = {
         "guide": "guide" in used,
         "brief": "brief" in used or "grove/brief.md" in rel,
         "list": "list" in used,
         "context_or_show": bool(used & {"context", "show"}),
+        "search": "search" in used,
         "files_read": sorted(set(rel)),
-        "unneeded": sorted({p for p in rel if p not in NEEDED and not p.startswith("tasks/") and p not in created}),
+        "unneeded": sorted({p for p in rel if p not in needed and not p.startswith("tasks/") and p not in created}),
         "commands": commands,
     }
+    if case.get("holding"):
+        facts |= {"holding_read": read(recs[case["holding"]]), "distractors_read": [recs[d]["id"] for d in distractors if read(recs[d])]}
+    return facts
 
 
-def one(args, grove, template, work, case_name, n, meta):
+def one(args, grove, fixture, work, case_name, n, meta):
     case = CASES[case_name]
     rdir = os.path.join(work, f"{case_name}-{n}")
     os.makedirs(rdir)
     remote, clone = os.path.join(rdir, "remote.git"), os.path.join(rdir, "p")
-    git(rdir, "clone", "-q", "--bare", template, remote)
+    git(rdir, "clone", "-q", "--bare", fixture["path"], remote)
     git(rdir, "clone", "-q", remote, clone)
     git(clone, "config", "user.name", "Grove Eval")
     git(clone, "config", "user.email", "eval@example.invalid")
@@ -358,14 +412,14 @@ def one(args, grove, template, work, case_name, n, meta):
     run = {
         "case": case_name, "run": n, "topic": case["topic"], "command": command,
         "exit": proc.returncode, "timed_out": timed_out, "wall_seconds": round(time.time() - started, 1),
-        **{k: meta[k] for k in (args.harness, GROVE, "base commit", "fixture commit")}, "model_requested": args.model,
+        **{k: meta[k] for k in (args.harness, GROVE, "base commit")}, "fixture commit": fixture["commit"], "model_requested": args.model,
         **(codex_facts(transcript, rdir, args) if codex else claude_facts(transcript)),
     }
     try:  # the session has spent by now: a failure reading its effects must not lose what it cost
         after = state(clone, remote, grove, rdir, before["main"])
         json.dump(dict(after, before=before), open(os.path.join(rdir, "state.json"), "w"), indent=1)
         run["checks"] = checks(case, before, after, run["message"])
-        run["retrieval"] = retrieval(transcript, args.harness, clone, {p for b in after["proposals"].values() for p in b["touched"]})
+        run["retrieval"] = retrieval(transcript, args.harness, clone, {p for b in after["proposals"].values() for p in b["touched"]}, case, fixture)
     except Exception as err:
         run.update(error=str(err), checks={"runner": f"fail: {err}"})
     json.dump(run, open(os.path.join(rdir, "run.json"), "w"), indent=1)
@@ -434,11 +488,13 @@ def report(path, meta, runs, unrun):
         if not rs:
             continue
         keys = list(dict.fromkeys(k for r in rs for k in r["checks"]))
-        lines += [f"## {name}: {CASES[name]['topic']}", "", "| run | harness | " + " | ".join(keys) + " | model reported | cost | tokens | turns | seconds | guide | brief | list | context/show | unneeded reads |",
-                  "|" + " --- |" * (len(keys) + 12)]
+        lines += [f"## {name}: {CASES[name]['topic']}", "", "| run | harness | " + " | ".join(keys) + " | model reported | cost | tokens | turns | seconds | guide | brief | list | context/show | search | holding read | distractors read | unneeded reads |",
+                  "|" + " --- |" * (len(keys) + 15)]
         for r in rs:
             f = r.get("retrieval") or {}
-            f = f if f.get("unneeded") is not None else dict.fromkeys(("guide", "brief", "list", "context_or_show"), f.get("reason", "-")) | {"unneeded": []}
+            f = f if f.get("unneeded") is not None else dict.fromkeys(("guide", "brief", "list", "context_or_show", "search"), f.get("reason", "-")) | {"unneeded": []}
+            held = f.get("holding_read", "-")
+            distracted = ", ".join(f["distractors_read"]) or "none" if CASES[name].get("distractors") and "distractors_read" in f else "-"
             cost = "not reported" if r.get("cost_reason") else r.get("cost_usd")
             tokens = ", ".join(f"{k.removesuffix('_tokens')} {v}" for k, v in r["tokens"].items()) if r.get("tokens") else "-"
             tokens += f"; plan {r['plan_used']} points" if r.get("plan_used") is not None else ""
@@ -446,11 +502,12 @@ def report(path, meta, runs, unrun):
             turns = f"{r.get('turns')} ({r['tool_calls']} tool calls)" if "tool_calls" in r else r.get("turns")
             seconds = r["duration_ms"] / 1000 if r.get("duration_ms") else r.get("wall_seconds") or 0
             lines.append(f"| {r['run']} | {harness(r)} | " + " | ".join(mark(r["checks"].get(k)) for k in keys)
-                         + f" | {model} | {cost} | {tokens} | {turns} | {seconds:.0f} | {f['guide']} | {f['brief']} | {f['list']} | {f['context_or_show']} | {', '.join(f['unneeded']) or '-'} |")
+                         + f" | {model} | {cost} | {tokens} | {turns} | {seconds:.0f} | {f['guide']} | {f['brief']} | {f['list']} | {f['context_or_show']} | {f.get('search', '-')} | {held} | {distracted} | {', '.join(f['unneeded']) or '-'} |")
         lines += ["", "Failures:", ""]
         lines += [f"- run {r['run']} {k}: {v}" for r in rs for k, v in r["checks"].items() if v != "pass"] or ["- none"]
-        lines += ["", "Rubric (evals/README.md), scorer `owner` or `judge`:", "", "| run | scorer | presumes choice | planted question | brief constraint | handoff | notes |", "| --- | --- | --- | --- | --- | --- | --- |"]
-        lines += [f"| {r['run']} |  |  |  |  |  |  |" for r in rs]
+        rubric = CASES[name]["rubric"]
+        lines += ["", "Rubric (evals/README.md), scorer `owner` or `judge`:", "", "| run | scorer | " + " | ".join(rubric) + " | notes |", "|" + " --- |" * (len(rubric) + 3)]
+        lines += [f"| {r['run']} |" + "  |" * (len(rubric) + 2) for r in rs]
         lines.append("")
     open(path, "w").write("\n".join(lines))
 
@@ -520,7 +577,7 @@ def run_on(args, found, recorded=None):
     codex = args.harness == "codex"
     if found:
         raise SystemExit(f"--config-dir {args.config_dir} is not clean: {', '.join(found)}")
-    cases = args.case or list(CASES)
+    cases = args.case or list(DEFAULT)
     work = os.path.abspath(args.out) if args.out else tempfile.mkdtemp(prefix="grove-evals-")
     os.makedirs(work, exist_ok=True)
     meta = {"started": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "output": work, "harness": args.harness,
@@ -543,7 +600,7 @@ def run_on(args, found, recorded=None):
     else:
         args.claude = exe
         version = sh(exe, "--version", environ=dict(env(), CLAUDE_CONFIG_DIR=args.config_dir)).stdout.strip()
-    grove, template, grove_version = build(work)
+    grove, grove_version, fixtures = build(work, cases)
     if codex:
         home = codex_env(args.config_dir, grove)
         shell = pwd.getpwuid(os.getuid()).pw_shell
@@ -557,7 +614,7 @@ def run_on(args, found, recorded=None):
                      "credential variables set": ", ".join(k for k in ("CODEX_API_KEY", "OPENAI_API_KEY") if home.get(k)) or "none",
                      "login shell": f"{shell} -lc resolves grove to the built binary, with the runner's PATH", "config dir system skills": system_skills(args.config_dir)})
     meta.update({args.harness: version, GROVE: grove_version, "base commit": git(ROOT, "rev-parse", "HEAD") + (" with uncommitted changes" if git(ROOT, "status", "--porcelain") else ""),
-                 "fixture commit": git(template, "rev-parse", "HEAD")})
+                 **{f"fixture commit ({name})": f["commit"] for name, f in fixtures.items()}})
     print(f"output {work}; " + (f"at most {meta['cap (seconds)']} seconds of Codex time, stopping before the five-hour plan use would reach {args.max_plan_percent}%" if codex
                                  else f"spending at most ${meta['cap (USD)']}"), file=sys.stderr)
     runs = []
@@ -575,7 +632,7 @@ def run_on(args, found, recorded=None):
             break
         print(f"{name} {n}/{args.runs}", file=sys.stderr)
         try:
-            runs.append(one(args, grove, template, work, name, n, meta))
+            runs.append(one(args, grove, fixtures[name], work, name, n, meta))
         except Exception as err:  # a runner failure on one run is reported, and the rest still run
             r = {"case": name, "run": n, "error": str(err), "checks": {"runner": f"fail: {err}"}}
             os.makedirs(os.path.join(work, f"{name}-{n}"), exist_ok=True)
@@ -605,6 +662,9 @@ def fake(harness, argv):
     prompt = argv[-1] if codex else argv[argv.index("-p") + 1]
     topic = prompt.removeprefix("$grove-shape " if codex else "/grove-shape ").removesuffix(" --interaction headless")
     missing, mode = topic == CASES["missing-choice"]["topic"], os.environ["GROVE_EVAL_FAKE"]
+    case = next(c for c in CASES.values() if c["topic"] == topic)
+    titles = {frontmatter(open(p).read()).get("title"): p for p in glob.glob(os.path.join("grove", "*.md"))}
+    recs = {key: {"path": titles[title], "id": os.path.basename(titles[title])[:5]} for key, _, title, _ in case.get("records", ())}
     emit = lambda ev: print(json.dumps(ev), flush=True)
     if codex:  # Codex wraps every command in the user's shell and reads files through commands
         thread = f"fake-{os.getpid()}"
@@ -634,6 +694,10 @@ def fake(harness, argv):
         tool("Bash", command="grove list && cat tasks.py")
         # an unneeded read outside the clone; Codex's goes through a command, so the file must exist
         tool("Read", file_path=os.path.abspath(__file__) if codex else os.path.expanduser("~/.claude/CLAUDE.md"))
+        if case.get("holding") and mode != "bad":  # bad never finds the constraint
+            tool("Bash", command=f"grove show {recs[case['holding']]['id']} && grove search tasks.py")
+        for key in case.get("distractors", ())[:1]:  # one distractor read, the other left alone
+            tool("Bash", command=f"cat {recs[key]['path']}")
     branch = "worktree-shape-" + ("hide-finished" if missing else "tag-filter")
     wt = os.path.abspath(os.path.join(".claude", "worktrees", branch))
     git(".", "worktree", "add", "-q", "-b", branch, wt, "main")
@@ -690,6 +754,7 @@ def selftest():
     os.makedirs(os.path.join(home, "skills", ".system", "openai-docs"))
     os.makedirs(os.path.join(home, "memories"))
     open(os.path.join(home, "config.toml"), "w").write('[tui]\nscreen_reader_detection_done = true\n\n[projects."/tmp/x"]\ntrust_level = "trusted"\n')
+    expected |= {(mode, name): expected[(mode, "companion")] for mode in ("good", "bad", "surfaced", "worse") for name in ("listed-constraint", "code-constraint")}
     reasons = {"bad": "fail: no question or decision", "surfaced": "fail: surfaced, not blocking"}
     for harness in ("claude", "codex"):
         for mode in ("good", "bad", "surfaced", "worse"):
@@ -697,7 +762,7 @@ def selftest():
             args = argparse.Namespace(harness=harness, runs=1, budget=None if harness == "codex" else "0.01", model="fake-model", effort="high" if harness == "codex" else None,
                                       permission_mode=("approve-for-me" if mode in ("good", "bad") else "workspace-write") if harness == "codex" else "fake", max_seconds=60 if harness == "codex" else None,
                                       max_plan_percent=100 if harness == "codex" else None,
-                                      config_dir=home if harness == "codex" else config, case=[], out=os.path.join(tmp, "out-" + harness, mode), claude=shims["claude"], codex=shims["codex"])
+                                      config_dir=home if harness == "codex" else config, case=list(CASES), out=os.path.join(tmp, "out-" + harness, mode), claude=shims["claude"], codex=shims["codex"])
             for r in run(args):
                 failed = {k for k, v in r["checks"].items() if v != "pass"}
                 assert failed == expected[(mode, r["case"])], (harness, mode, r["case"], r["checks"])
@@ -707,14 +772,25 @@ def selftest():
                     assert r["model_reported"] == "fake-model" and r["effort_reported"] == "high" and r["permission_mode_reported"]["approval_policy"] == ("on-request" if mode in ("good", "bad") else "never"), r
                     assert r["cost_usd"] is None and r["cost_reason"] and r["tokens"]["output_tokens"] == 10 and not r["is_error"] and r["turns"] == 1, r
                     assert os.path.exists(os.path.join(tmp, "out-" + harness, mode, f"{r['case']}-1", "rollout.jsonl")) and r["plan_used"] == 5, r
-                f = r["retrieval"]
+                f, case = r["retrieval"], CASES[r["case"]]
+                assert ("holding_read" in f) == ("distractors_read" in f) == bool(case.get("holding")), f
                 if mode == "worse":
-                    assert not (f["guide"] or f["brief"] or f["list"] or f["context_or_show"]), f
+                    assert not (f["guide"] or f["brief"] or f["list"] or f["context_or_show"] or f["search"] or f.get("holding_read") or f.get("distractors_read")), f
                     continue
-                assert f["guide"] and f["brief"] and f["list"] and not f["context_or_show"], f
+                found = bool(case.get("holding")) and mode != "bad"
+                assert f["guide"] and f["brief"] and f["list"] and f["context_or_show"] == found and f["search"] == found and f.get("holding_read", False) == found, f
+                distractor = [os.path.basename(p)[:5] for p in f["files_read"] if "export-tasks-as-csv" in p]
+                assert f.get("distractors_read") == (distractor if case.get("holding") else None) and len(distractor) == (r["case"] == "listed-constraint"), f
                 outside = "evals/run.py" if harness == "codex" else ".claude/CLAUDE.md"
-                assert "tasks.py" in f["files_read"] and "grove/brief.md" in f["files_read"] and len(f["unneeded"]) == 1 and f["unneeded"][0].endswith(outside), f
+                assert "tasks.py" in f["files_read"] and "grove/brief.md" in f["files_read"] and len(f["unneeded"]) == 1 + len(distractor) and f["unneeded"][0].endswith(outside), f
     assert open(os.path.join(tmp, "out-claude", "good", "report.md")).read().count("- config dir synced skills: pdf") == 1
+    out = os.path.join(tmp, "out-claude", "good")  # the pair's fixture keeps only the shared record; each new case has its own
+    assert [os.path.basename(p)[:5] for p in glob.glob(os.path.join(out, "missing-choice-1", "p", "grove", "G-*.md"))] == ["G-001"]
+    recs = {r["fields"]["title"]: r["fields"] for r in records(os.path.join(out, "listed-constraint-1", "p"), "main").values()}
+    export, due = recs["Add tasks export"], recs["Give tasks a due date"]
+    assert export["status"] == "done" and export["candidate"] and due["depends_on"] == [export["id"]] and len(due["relates_to"]) == 2, recs
+    assert records(os.path.join(out, "code-constraint-1", "p"), "main")  and "| constraint applied | brief constraint | handoff | notes |" in open(os.path.join(out, "report.md")).read()
+    assert len({json.load(open(os.path.join(out, c + "-1", "run.json")))["fixture commit"] for c in CASES}) == 3, "the pair shares one fixture commit"
     text = open(os.path.join(tmp, "out-codex", "good", "report.md")).read()
     assert "- config dir system skills: openai-docs" in text and "| fake-model/high | not reported | input 100, cached_input 60, output 10; plan 5 points | 1 (" in text, text
     assert "- login: Logged in" in text and "resolves grove to the built binary" in text, text
@@ -807,7 +883,7 @@ def main():
     p.add_argument("--max-seconds", type=int, help="Codex only, required: each run is killed at this cap")
     p.add_argument("--max-plan-percent", type=int, help="Codex only, required: no run starts once the five-hour plan use, plus the largest run's, would reach it")
     p.add_argument("--config-dir", required=True, help="CLAUDE_CONFIG_DIR or CODEX_HOME for every run; must hold no customization")
-    p.add_argument("--case", action="append", default=[], help=f"one of {', '.join(CASES)}; default all")
+    p.add_argument("--case", action="append", default=[], help=f"one of {', '.join(CASES)}; default {', '.join(DEFAULT)}")
     p.add_argument("--out", help="output directory; default a new temporary one")
     p.add_argument("--claude", default="claude", help="the Claude executable")
     p.add_argument("--codex", default="codex", help="the Codex executable")
