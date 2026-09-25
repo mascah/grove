@@ -1,4 +1,4 @@
-# The local evidence contract from AGENTS.md and lefthook.yml, run on GitHub
+# The local evidence contract from CLAUDE.md and lefthook.yml, run on GitHub
 # as a signal: no ruleset requires these checks (G-081).
 name: CI
 

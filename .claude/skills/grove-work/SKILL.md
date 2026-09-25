@@ -16,9 +16,9 @@ command. With no mode, the session is interactive; a headless
 caller must say so. Any other bound or mode value, or text that is none of
 these, is an error to report.
 
-Read `AGENTS.md` (if it is not already among your instructions) and
+Read `CLAUDE.md` (if it is not already among your instructions) and
 `docs/work-execution.md`, then follow `docs/work-execution.md` for those IDs
-and that mode. `AGENTS.md` is this
+and that mode. `CLAUDE.md` is this
 repository's development policy, including how the Grove CLI is invoked here.
 The guide is the whole workflow, including what to read and when: it starts
 from the selected records and reads plans, prerequisites, questions, and other

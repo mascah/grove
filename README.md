@@ -84,10 +84,12 @@ at the right binary.
 | How well the guides steer an agent, measured (behavioral evaluations) | [evals/README.md](evals/README.md); [G-108](grove/G-108-workflow-evals.md) owns the outcome |
 | Why Grove exists and its selected direction | [The brief](grove/brief.md) |
 | Progress and the next action on any work | That work's record: `grove list`, or `/` on the board |
-| Developing Grove, and its constraints | [AGENTS.md](AGENTS.md) |
+| Developing Grove, and its constraints | [CLAUDE.md](CLAUDE.md) |
 | An old typed ID such as `W-001` | [G-069](grove/G-069-migration-map.md) |
 
 ## Develop Grove
 
-[AGENTS.md](AGENTS.md) holds the development and verification policy, the
-repository's hooks, CI and tooling.
+[CLAUDE.md](CLAUDE.md) holds the development and verification policy, the
+repository's hooks, CI and tooling, and keeps developing Grove apart from
+using Grove to track this repository's own work. `AGENTS.md` is a symlink to
+it, so Codex reads the same file.
