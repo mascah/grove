@@ -4,8 +4,9 @@ type: work
 title: "Prepare Grove for external distribution"
 status: proposed
 created: "2026-09-23T16:05:09Z"
-updated: "2026-09-23T16:08:03Z"
+updated: "2026-09-25T19:08:16Z"
 relates_to: ["G-040", "G-081", "G-107", "G-108", "G-109"]
+depends_on: ["G-150", "G-151"]
 ---
 
 ## Outcome
@@ -62,6 +63,15 @@ This proposal prepares distribution artifacts and publication/configuration chan
 for review. It does not authorize publishing, changing live GitHub settings or
 installing into sibling projects. No broad launch, hosted service, automatic
 self-update or expansion to unsupported execution providers is selected.
+
+Owner intent, review conversation 2026-09-25: Grove is used in other
+projects as an installed CLI without this repository present. That review
+found the binary nearly self-contained, fixed the last path links on `main`
+(`001b271`), and shaped two prerequisites of this work's acceptance 2 and
+4: [G-150](G-150-launch-attempts-only-where-the-w.md) (`run` and `R` depend
+silently on `init`'s files being committed) and
+[G-151](G-151-strip-grove-repository-pointers.md) (the shipped documents
+still name Grove's own records and unshipped documents).
 
 ## Acceptance
 
