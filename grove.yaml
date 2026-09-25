@@ -2,3 +2,6 @@ schema_version: 3
 records: grove
 brief: grove/brief.md
 target: main
+run:
+  budget: 50
+  permission_mode: auto
