@@ -4,11 +4,12 @@ type: work
 title: "Search record bodies and list the records that describe the code a change touches"
 status: review
 created: "2026-09-25T19:15:12Z"
-updated: "2026-09-25T20:59:21Z"
+updated: "2026-09-25T21:11:30Z"
 relates_to: ["G-042", "G-065", "G-108", "G-114", "G-146", "G-151", "G-152", "G-154"]
 kind: feature
 size: medium
 candidate: "a6c2fa4168eb559bde9c8263dcbe4761df011ce2"
+approved: "a6c2fa4168eb559bde9c8263dcbe4761df011ce2"
 ---
 
 ## Outcome
@@ -283,3 +284,5 @@ grove integrate G-153 --cleanup
 G-154's `with` row compares nothing new after this (Scope at preparation);
 reshaping `grove search` and the guide sentences as their own work is the
 owner's choice.
+
+Verdict on candidate a6c2fa4, 2026-09-25: fine with deferring the grove search command for now
