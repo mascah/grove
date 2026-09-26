@@ -4,10 +4,11 @@ type: work
 title: "Execute an explicitly selected set of work with bounded progress and review"
 status: review
 created: "2026-09-25T20:35:28Z"
-updated: "2026-09-26T00:03:07Z"
+updated: "2026-09-26T00:31:58Z"
 kind: feature
 relates_to: ["G-045", "G-046", "G-044", "G-101", "G-054", "G-056", "G-057", "G-059", "G-060", "G-161", "G-188"]
 candidate: "2fb756b66f1f72c96be38db1d287fc1b12997e5d"
+approved: "2fb756b66f1f72c96be38db1d287fc1b12997e5d"
 ---
 
 ## Outcome
@@ -234,3 +235,5 @@ in a disposable project, with a `grove` built from the integrated main:
     grove --project "$t" run ID1 ID2 ID3 --budget 5 --permission-mode auto --expect DIGEST
     grove --project "$t" attempts    # later, after the terminal is gone:
     grove --project "$t" attempt ATTEMPT
+
+Verdict on candidate 2fb756b, 2026-09-26: approved
