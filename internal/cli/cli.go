@@ -123,7 +123,7 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"  sweep      Act on every candidate in review under the standing policy: grove.yaml's\n" +
 	"             policy:, committed, in the target's checkout. A conflict gets one resolution\n" +
 	"             attempt, as resolve starts, once per target commit and within the policy's\n" +
-	"             budget; a clean candidate whose current review ends \"Open findings: none\",\n" +
+	"             budget; a clean candidate whose current reviews all end \"Open findings: none\",\n" +
 	"             with no never path and within max_lines, is merged with the target in a\n" +
 	"             temporary worktree, verified there with the policy's commands, then approved\n" +
 	"             and, with integrate: true, integrated, each attributed to the policy's\n" +

@@ -91,7 +91,13 @@ func Resolve(req Request, shown *versions.Merge, now time.Time, report func(stri
 			}
 		}
 	}
-	d := Defaulted(req, checkout.Run)
+	// A delegated resolution launches with the policy's own checkout's
+	// defaults, never those of the candidate under judgment.
+	defaults := checkout.Run
+	if req.Policy != "" {
+		defaults = p.Run
+	}
+	d := Defaulted(req, defaults)
 	if d.BudgetUSD == "" || d.PermissionMode == "" {
 		return nil, ErrUnsupplied
 	}
@@ -133,7 +139,7 @@ func Resolve(req Request, shown *versions.Merge, now time.Time, report func(stri
 	for _, o := range fb.Reopened {
 		report(fmt.Sprintf("reopened: %s shared the candidate and is active again, commit %s", o.ID, short(o.Commit)))
 	}
-	run := req
+	run := d // the defaults chosen above, not the branch checkout's again
 	run.Root, run.IDs, run.Branch, run.Worktree = dir, ids, branch, checkout.Worktree
 	l, err := Start(run, now, report)
 	if err != nil {

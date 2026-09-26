@@ -399,13 +399,16 @@ reason; `--dry-run` stops there and writes nothing:
 - **resolve**, for a conflict, when `resolve` is present, the record holds
   no earlier resolution feedback naming the same target commit, and the
   policy's `budget` still covers the attempt's. The attempt is `resolve`'s,
-  and its feedback begins `delegated under policy grove.yaml sha256:…,
+  with the permission mode, model and effort of the target's `run:`, never
+  the candidate branch's (without a permission mode there it waits), and
+  its feedback begins `delegated under policy grove.yaml sha256:…,
   budget N USD`;
 - **approve**, or **integrate** with `integrate: true`, for a clean merge
   that meets the policy.
 
-To approve, it merges the branch's tip into the target commit it predicted
-against, in a temporary worktree outside every checkout, and runs each
+To approve, it predicts the merge again, since an earlier act of the same
+sweep may have moved the target, and merges the branch's tip into that
+target commit in a temporary worktree outside every checkout, and runs each
 `verify` command there with `sh -c` in the project's directory; the first
 failure leaves the target and the record unchanged and prints the command's
 last output. Once they pass, it approves in the branch's checkout with the

@@ -94,7 +94,7 @@ func Plan(root string) (*Sweep, error) {
 	}
 	s := &Sweep{Root: p.Root, Target: p.Target, Policy: p.Policy, Attribution: "policy grove.yaml " + project.Revision(p.Config), prefix: res.Prefix, records: p.RecordDir}
 	found := map[string][]*versions.Version{}
-	var ids []string
+	var ids []string // in the groups' order, by ID
 	for _, g := range res.Groups {
 		for i := range g.Versions {
 			v := &g.Versions[i]
@@ -106,7 +106,6 @@ func Plan(root string) (*Sweep, error) {
 			}
 		}
 	}
-	slices.Sort(ids)
 	spent := 0.0
 	for _, id := range ids {
 		it := s.plan(res, p, found[id], &spent)
@@ -204,6 +203,10 @@ func (s *Sweep) planResolve(it Item, r *project.Record, p *project.Project, spen
 		it.Why = conflict + "; no budget: set policy.resolve.budget or run.budget"
 		return it
 	}
+	if p.Run.PermissionMode == "" {
+		it.Why = conflict + "; no permission mode: set run.permission_mode beside the policy"
+		return it
+	}
 	cost, _ := strconv.ParseFloat(it.budget, 64)
 	limit, _ := strconv.ParseFloat(s.Policy.BudgetUSD, 64)
 	if *spent+cost > limit {
@@ -211,7 +214,7 @@ func (s *Sweep) planResolve(it Item, r *project.Record, p *project.Project, spen
 		return it
 	}
 	*spent += cost
-	it.Act, it.Why = Resolve, fmt.Sprintf("%s; one resolution attempt, budget %s USD", conflict, it.budget)
+	it.Act, it.Why = Resolve, fmt.Sprintf("%s; one resolution attempt, budget %s USD, permission mode %s", conflict, it.budget, p.Run.PermissionMode)
 	return it
 }
 
@@ -250,14 +253,25 @@ func (s *Sweep) planApprove(it Item, r *project.Record, records []*project.Recor
 	return it
 }
 
-// review finds a current review of the work whose closing line says no
-// finding is open, and that examined the candidate or an earlier commit from
-// which only records changed.
+// review finds the current reviews of the work that cover the candidate:
+// they examined it, or an earlier commit from which only records changed.
+// Every one must close with ClosingLine, so a later review's open finding
+// is never outvoted; the newest is the one the verdict names.
 func (s *Sweep) review(r *project.Record, records []*project.Record) (*project.Record, string) {
-	why := fmt.Sprintf("no current review of candidate %s ends with %q", short(r.Candidate), ClosingLine)
+	var found *project.Record
 	for _, o := range slices.Backward(records) {
 		if o.Type != "review" || o.Status != "current" || !slices.Contains(o.Work, r.ID) || o.Examined == "" {
 			continue
+		}
+		if !update.SameCommit(o.Examined, r.Candidate) {
+			changed, err := repo.Git(s.Root, "diff", "--name-only", "-z", "--no-relative", o.Examined, r.Candidate)
+			if err != nil {
+				return nil, fmt.Sprintf("review %s examined %s, which could not be compared with the candidate: %v", o.ID, short(o.Examined), err)
+			}
+			records := path.Join(s.prefix, s.records)
+			if slices.ContainsFunc(split(changed), func(f string) bool { return !strings.HasPrefix(f, records+"/") }) {
+				continue // it reviewed earlier code
+			}
 		}
 		closing := ""
 		for l := range strings.SplitSeq(string(o.Source), "\n") {
@@ -266,24 +280,14 @@ func (s *Sweep) review(r *project.Record, records []*project.Record) (*project.R
 			}
 		}
 		if closing != ClosingLine {
-			why = fmt.Sprintf("review %s does not end with %q", o.ID, ClosingLine)
-			continue
+			return nil, fmt.Sprintf("review %s of candidate %s does not end with %q", o.ID, short(r.Candidate), ClosingLine)
 		}
-		if update.SameCommit(o.Examined, r.Candidate) {
-			return o, ""
-		}
-		changed, err := repo.Git(s.Root, "diff", "--name-only", "-z", "--no-relative", o.Examined, r.Candidate)
-		if err != nil {
-			why = fmt.Sprintf("review %s examined %s, which could not be compared with the candidate: %v", o.ID, short(o.Examined), err)
-			continue
-		}
-		records := path.Join(s.prefix, s.records)
-		if !slices.ContainsFunc(split(changed), func(f string) bool { return !strings.HasPrefix(f, records+"/") }) {
-			return o, ""
-		}
-		why = fmt.Sprintf("review %s examined %s, and more than records changed before candidate %s", o.ID, short(o.Examined), short(r.Candidate))
+		found = cmp.Or(found, o)
 	}
-	return nil, why
+	if found == nil {
+		return nil, fmt.Sprintf("no current review covers candidate %s", short(r.Candidate))
+	}
+	return found, ""
 }
 
 // scope counts the lines the candidate changes against its merge base with
@@ -356,6 +360,21 @@ func (s *Sweep) approve(it Item, now time.Time, say func(string, ...any)) {
 			say("waits: the checkout of %s has uncommitted changes, so it could not be integrated; nothing was verified or approved", s.Target)
 			return
 		}
+	}
+	// An earlier act of this sweep may have moved the target: the merge is
+	// predicted again, and verified against the target as it is now.
+	ms, err := versions.PredictContext(context.Background(), s.Root, "refs/heads/"+s.Target, []string{it.tip})
+	if err != nil {
+		say("waits: its merge into %s could not be predicted: %v", s.Target, err)
+		return
+	}
+	switch it.merge = ms[0]; it.merge.Outcome {
+	case "integrated":
+		say("skipped: %s", it.merge.Text(s.Target))
+		return
+	case "conflict":
+		say("waits: %s since the sweep planned it; the next sweep may resolve it", it.merge.Text(s.Target))
+		return
 	}
 	if err := s.verify(it); err != nil {
 		say("waits: verification of the merge with %s at %s failed: %v; nothing was approved and %s is unchanged", s.Target, short(it.merge.Target), err, s.Target)

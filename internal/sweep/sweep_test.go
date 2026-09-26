@@ -188,7 +188,7 @@ func TestSweepWaitsOutsideThePolicy(t *testing.T) {
 		"a never path":    {map[string]string{"secret/key": "x\n"}, ClosingLine, "changes secret/key, which never matches (secret/**)"},
 		"the policy":      {map[string]string{"grove.yaml": strings.Replace(policy, "%s", "'true'", 1) + "# more\n"}, ClosingLine, "changes grove.yaml, which never matches (grove.yaml)"},
 		"too many lines":  {map[string]string{"code.txt": strings.Repeat("line\n", 30)}, ClosingLine, "lines, over the policy's 30"},
-		"an open finding": {map[string]string{"code.txt": "the change\n"}, "Open findings: 1", `review G-005 does not end with "Open findings: none"`},
+		"an open finding": {map[string]string{"code.txt": "the change\n"}, "Open findings: 1", `review G-005 of candidate `},
 		"a binary":        {map[string]string{"blob": "\x00\x01"}, ClosingLine, "changes the binary file blob"},
 		"no closing line": {map[string]string{"code.txt": "the change\n"}, "", `does not end with "Open findings: none"`},
 	} {
@@ -239,7 +239,10 @@ func TestSweepResolvesAConflictOncePerTargetCommit(t *testing.T) {
 	if testing.Short() {
 		t.Skip("waits on a fake provider's attempt")
 	}
-	root, wt := fixture(t, strings.Replace(policy, "%s", "'true'", 1), map[string]string{"code.txt": "branch\n"}, ClosingLine)
+	// The candidate's own grove.yaml asks for another permission mode, which
+	// a delegated attempt never takes.
+	config := strings.Replace(policy, "%s", "'true'", 1)
+	root, wt := fixture(t, config, map[string]string{"code.txt": "branch\n", "grove.yaml": strings.Replace(config, "acceptEdits", "bypassPermissions", 1)}, ClosingLine)
 	write(t, root, "code.txt", "main\n")
 	git(t, root, "commit", "-qam", "main moves")
 	fake := filepath.Join(t.TempDir(), "claude")
@@ -264,6 +267,9 @@ func TestSweepResolvesAConflictOncePerTargetCommit(t *testing.T) {
 		views, err := attempt.List(root, "G-001")
 		if err != nil {
 			t.Fatal(err)
+		}
+		if len(views) == 1 && views[0].Launch.PermissionMode != "acceptEdits" {
+			t.Fatalf("the attempt took permission mode %q from the candidate", views[0].Launch.PermissionMode)
 		}
 		if len(views) == 1 && views[0].Status == attempt.Finished {
 			break
@@ -295,5 +301,56 @@ func TestSweepKeepsResolutionsInsideTheBudget(t *testing.T) {
 	}
 	if len(s.Items) != 1 || s.Items[0].Act != Wait || !strings.Contains(s.Items[0].Why, "a 6 USD attempt would pass the policy's 5 USD for one sweep") {
 		t.Fatalf("plan %+v", s.Items)
+	}
+	// Without a permission mode beside the policy, resolve would refuse it,
+	// so the plan says it waits.
+	write(t, root, "grove.yaml", strings.Replace(config, "run:\n  permission_mode: acceptEdits\n", "", 1))
+	git(t, root, "commit", "-qam", "no mode")
+	if s, err = Plan(root); err != nil || len(s.Items) != 1 || s.Items[0].Act != Wait || !strings.Contains(s.Items[0].Why, "no permission mode") {
+		t.Fatalf("plan %+v, %v", s.Items, err)
+	}
+}
+
+// Every current review covering the candidate must close with no open
+// finding: an older clean one does not outvote a newer one that found
+// something.
+func TestSweepHeedsEveryReviewOfTheCandidate(t *testing.T) {
+	t.Parallel()
+	r := &project.Record{ID: "G-001", Candidate: "abcdef1234"}
+	rev := func(id, closing string) *project.Record {
+		return &project.Record{ID: id, Type: "review", Status: "current", Work: []string{"G-001"}, Examined: "abcdef1234", Source: []byte("Findings.\n\n" + closing + "\n")}
+	}
+	s := &Sweep{}
+	if got, why := s.review(r, []*project.Record{rev("G-005", ClosingLine), rev("G-007", "Open findings: 1")}); got != nil || !strings.Contains(why, "review G-007 of candidate abcdef1 does not end with") {
+		t.Fatalf("got %v, %q", got, why)
+	}
+	if got, _ := s.review(r, []*project.Record{rev("G-005", ClosingLine), rev("G-007", ClosingLine)}); got == nil || got.ID != "G-007" {
+		t.Fatalf("got %v, want the newest", got)
+	}
+}
+
+// Integrating the first of two candidates moves the target; the second is
+// predicted and verified again against the moved target before its
+// approval, and integrated too.
+func TestSweepIntegratesSeveralCandidatesInOneSweep(t *testing.T) {
+	t.Parallel()
+	root, _ := fixture(t, strings.Replace(policy, "%s", "'true'", 1), map[string]string{"code.txt": "the change\n"}, ClosingLine)
+	wt := filepath.Join(root, ".claude", "worktrees", "worktree-G-002")
+	git(t, root, "worktree", "add", "-q", "-b", "worktree-G-002", wt)
+	write(t, wt, "grove/G-002-second.md", strings.Replace(strings.Replace(work, "G-001", "G-002", 1), "%s", "active", 1))
+	write(t, wt, "other.txt", "more\n")
+	git(t, wt, "add", "-A")
+	git(t, wt, "commit", "-qm", "feat: another")
+	examined := git(t, wt, "rev-parse", "HEAD")
+	write(t, wt, "grove/G-006-review.md", strings.NewReplacer("G-005", "G-006", "G-001", "G-002").Replace(strings.Replace(strings.Replace(review, "%s", examined, 1), "%s", ClosingLine, 1)))
+	git(t, wt, "add", "-A")
+	git(t, wt, "commit", "-qm", "docs: review")
+	if _, err := update.Apply(wt, update.Request{ID: "G-002", Set: []update.Field{{Name: "status", Value: "review"}, {Name: "candidate", Value: git(t, wt, "rev-parse", "HEAD")}}, Commit: true}, now, nil); err != nil {
+		t.Fatal(err)
+	}
+	_, facts := sweep(t, root)
+	joined := strings.Join(facts, "\n")
+	if strings.Count(joined, ": done: ") != 2 || strings.Contains(joined, "waits") {
+		t.Fatalf("facts:\n%s", joined)
 	}
 }
