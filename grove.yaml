@@ -7,3 +7,22 @@ run:
   permission_mode: auto
   model: opus
   effort: high
+policy:                 # standing delegation (G-182); absent means nothing automatic
+  budget: 30            # dollars, aggregate for every automatic act in one sweep
+  resolve:
+    budget: 10          # one attempt per candidate per target movement; run: defaults otherwise
+  approve:
+    verify:             # must pass on the merged result, in a temporary worktree
+      - go test -count=1 -timeout 120s ./...
+      - go vet ./...
+      - go run ./cmd/grove check
+    max_lines: 300      # added plus removed, the record's own file excluded
+    never:              # a change to any of these always waits for the owner
+      - grove.yaml
+      - .github/**
+      - .claude/**
+      - .agents/**
+      - go.mod
+      - go.sum
+      - lefthook.yml
+  integrate: true       # merge and write done after a delegated approval
