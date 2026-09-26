@@ -33,6 +33,7 @@ go run ./cmd/grove check
 | `new`, `update` | Create a record with the next shared ID; change its frontmatter | [Record model](docs/record-model.md#identity-and-dates) |
 | `convert` | Make a record from a Markdown document outside the record root | [Record model](docs/record-model.md#identity-and-placement-apart-from-classification) |
 | `approve`, `feedback`, `integrate` | Judge a candidate in review; merge an approved one and mark it done | [Work lifecycle](docs/record-model.md#work-lifecycle) |
+| `resolve` | Give a candidate that conflicts with the target to one attempt that merges the target and resolves it | [Resolving a conflict](docs/commands.md#resolving-a-conflict) |
 | `run`, `attempts`, `attempt`, `stop` | Start one headless agent attempt of a work item that outlives the terminal; list, inspect and stop attempts | [Attempts](docs/commands.md#attempts) |
 | `versions` | Show each record's versions across branches and worktrees, current or older | [Versions](docs/commands.md#versions) |
 | `workspace` | Print the checkout holding a selected version | [Workspace](docs/commands.md#workspace) |

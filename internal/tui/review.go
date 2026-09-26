@@ -20,7 +20,9 @@ import (
 // The review view (G-044): a work record in review shows the facts a judgment
 // needs, its changed files and their diffs on demand, and three explicit
 // actions, each confirmed, run through the same functions the CLI offers in
-// the checkout the facts name. Nothing else the board does writes.
+// the checkout the facts name, and for a conflict with the target a fourth,
+// m, which records feedback and launches one attempt (G-178). Nothing else
+// the board does writes.
 
 type changesRead struct {
 	c   *versions.Changes

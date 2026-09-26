@@ -4,11 +4,12 @@
 // checkouts holding each, the focused one's history of commits, and explicit
 // selection of one existing workspace. It reads through Backend, and writes
 // only through Backend's three actions on a record in review (G-044), each
-// behind a prompt: approve, feedback, and integrate, and through Answer
-// behind its prompt after the owner's editor has an open question (G-125);
-// it starts and stops processes only through Backend's Launch and Stop of an
-// attempt (G-046), each behind a prompt too, and Edit, which suspends it for
-// that editor.
+// behind a prompt: approve, feedback, and integrate, through Conflict's
+// feedback before its attempt (G-178), and through Answer behind its prompt
+// after the owner's editor has an open question (G-125); it starts and stops
+// processes only through Backend's Launch, Conflict and Stop of an attempt
+// (G-046), each behind a prompt too, and Edit, which suspends it for that
+// editor.
 package tui
 
 import (

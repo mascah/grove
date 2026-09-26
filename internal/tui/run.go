@@ -23,9 +23,10 @@ import (
 // selects a workspace or leaves. A nil workspace with a nil error is ordinary
 // cancellation; context.Canceled is an interrupt. The terminal is restored and
 // every read collected before Run returns, so the caller may then write its
-// result. Nothing is written to a file except by the three review actions and
-// the resolve of an answered question, each confirmed at a prompt, and by the
-// owner's editor with the Answer heading it is handed.
+// result. Nothing is written to a file except by the three review actions,
+// the feedback before a resolution attempt, and the resolve of an answered
+// question, each confirmed at a prompt, and by the owner's editor with the
+// Answer heading it is handed.
 func Run(ctx context.Context, root string, input, screen *os.File) (*versions.Workspace, error) {
 	// The framework reads these from the process environment, not from the
 	// environment a program is given, and each one makes it write a log file.
