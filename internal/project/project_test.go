@@ -3,6 +3,7 @@ package project
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -532,5 +533,47 @@ func TestReviewLifecycleAndCandidate(t *testing.T) {
 				t.Fatalf("approved not read: %+v", p.Records[0])
 			}
 		})
+	}
+}
+
+func TestPolicy(t *testing.T) {
+	t.Parallel()
+	full := "policy:\n  budget: 30\n  resolve:\n    budget: 10\n  approve:\n    verify: [go test ./..., go vet ./...]\n    max_lines: 300\n    never: [grove.yaml, .github/**, \"*.sum\"]\n  integrate: true\n"
+	for _, tc := range []struct {
+		name, config string
+		policy       *Policy
+		want         string
+	}{
+		{"none", "", nil, ""},
+		{"full", full, &Policy{BudgetUSD: "30", Resolve: true, ResolveBudgetUSD: "10", Approve: true, Verify: []string{"go test ./...", "go vet ./..."}, MaxLines: 300, Never: []string{"grove.yaml", ".github/**", "*.sum"}, Integrate: true}, ""},
+		{"resolve only", "policy: {budget: 5, resolve: {}}\n", &Policy{BudgetUSD: "5", Resolve: true}, ""},
+		{"empty", "policy: {}\n", &Policy{}, ""},
+		{"resolve without a budget", "policy: {resolve: {}}\n", nil, "policy.budget: required with resolve"},
+		{"approve without verify", "policy: {approve: {max_lines: 3}}\n", nil, "policy.approve.verify: required"},
+		{"a zero bound", "policy: {approve: {verify: [x], max_lines: 0}}\n", nil, "policy.approve.max_lines: expected a positive"},
+		{"a bad pattern", "policy: {approve: {verify: [x], never: [\"a/**/b\"]}}\n", nil, "policy.approve.never: bad pattern a/**/b"},
+		{"an escaping pattern", "policy: {approve: {verify: [x], never: [../x]}}\n", nil, "policy.approve.never: bad pattern"},
+		{"integrate alone", "policy: {integrate: true}\n", nil, "policy.integrate: needs approve"},
+		{"integrate as a word", "policy: {approve: {verify: [x]}, integrate: yes}\n", nil, "policy.integrate: expected true or false"},
+		{"an unknown key", "policy: {merge: true}\n", nil, "policy.merge: unknown key"},
+		{"an unknown nested key", "policy: {budget: 1, resolve: {model: x}}\n", nil, "policy.resolve.model: unknown key"},
+		{"not a mapping", "policy: true\n", nil, "policy: expected a mapping"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			p, ds := Load(briefFixture(t, tc.config), "")
+			if got := diagnostics(ds); tc.want == "" && got != "" || !strings.Contains(got, tc.want) {
+				t.Fatalf("wanted %q; got %s", tc.want, got)
+			}
+			if tc.want == "" && !reflect.DeepEqual(p.Policy, tc.policy) {
+				t.Fatalf("Policy = %+v, want %+v", p.Policy, tc.policy)
+			}
+		})
+	}
+	p := &Policy{Never: []string{"grove.yaml", ".github/**", "*.sum"}}
+	for file, want := range map[string]string{"grove.yaml": "grove.yaml", ".github/w/x.yml": ".github/**", "go.sum": "*.sum", "a/go.sum": "", ".github": "", "x/grove.yaml": ""} {
+		if got, _ := p.Matches(file); got != want {
+			t.Errorf("Matches(%q) = %q, want %q", file, got, want)
+		}
 	}
 }

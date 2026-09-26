@@ -23,6 +23,7 @@ type Project struct {
 	Brief     string // configured brief, relative to Root with forward slashes; "" when none
 	Target    string // configured integration target branch; "" when none
 	Run       RunDefaults
+	Policy    *Policy // nil: no standing policy, nothing automatic
 	Records   []*Record
 }
 
@@ -68,11 +69,11 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 		return p, []Diagnostic{{Path: "grove.yaml", Message: err.Error()}}
 	}
 	p.Config = source
-	config, recordDir, brief, target, run := parseConfig(source, func(dir string) error { return checkRecordRoot(fsys, dir) })
+	config, recordDir, brief, target, run, policy := parseConfig(source, func(dir string) error { return checkRecordRoot(fsys, dir) })
 	if len(config.errors) != 0 {
 		return p, sortedDiagnostics(config.errors)
 	}
-	p.RecordDir, p.Brief, p.Target, p.Run = recordDir, brief, target, run
+	p.RecordDir, p.Brief, p.Target, p.Run, p.Policy = recordDir, brief, target, run, policy
 	recordRoot := path.Clean(filepath.ToSlash(recordDir))
 	var ds []Diagnostic
 	err = fs.WalkDir(fsys, recordRoot, func(relative string, entry fs.DirEntry, walkErr error) error {
@@ -124,7 +125,7 @@ func LoadFS(fsys fs.FS) (*Project, []Diagnostic) {
 // clean brief path it names, with the diagnostics LoadFS would give short of
 // whether the folder exists on disk.
 func ParseConfig(source []byte) (recordDir, brief string, ds []Diagnostic) {
-	config, recordDir, brief, _, _ := parseConfig(source, nil)
+	config, recordDir, brief, _, _, _ := parseConfig(source, nil)
 	return recordDir, brief, sortedDiagnostics(config.errors)
 }
 
@@ -132,7 +133,7 @@ func ParseConfig(source []byte) (recordDir, brief string, ds []Diagnostic) {
 // inspects the record folder in the order LoadFS always has. The target is
 // only compared with branch names, never passed to Git, so only likely
 // mistakes are refused: surrounding spaces and a full ref name.
-func parseConfig(source []byte, checkRoot func(string) error) (config *metadata, recordDir, brief, target string, run RunDefaults) {
+func parseConfig(source []byte, checkRoot func(string) error) (config *metadata, recordDir, brief, target string, run RunDefaults, policy *Policy) {
 	config = parseMapping("grove.yaml", source, 0)
 	version, ok := config.integerField("schema_version", true)
 	if ok && version != 3 {
@@ -140,11 +141,12 @@ func parseConfig(source []byte, checkRoot func(string) error) (config *metadata,
 	}
 	recordDir = config.stringField("records", true)
 	for key := range config.fields {
-		if key != "schema_version" && key != "records" && key != "brief" && key != "target" && key != "run" {
+		if key != "schema_version" && key != "records" && key != "brief" && key != "target" && key != "run" && key != "policy" {
 			config.problem(key, "unknown configuration key")
 		}
 	}
 	run = config.runField()
+	policy = config.policyField()
 	brief = config.stringField("brief", false)
 	target = config.stringField("target", false)
 	if target != "" && (strings.TrimSpace(target) != target || strings.HasPrefix(target, "refs/")) {
@@ -160,7 +162,7 @@ func parseConfig(source []byte, checkRoot func(string) error) (config *metadata,
 		}
 	}
 	if len(config.errors) != 0 {
-		return config, recordDir, "", "", RunDefaults{}
+		return config, recordDir, "", "", RunDefaults{}, nil
 	}
 	if brief != "" {
 		clean := path.Clean(filepath.ToSlash(brief))
@@ -169,7 +171,7 @@ func parseConfig(source []byte, checkRoot func(string) error) (config *metadata,
 		}
 		brief = clean
 	}
-	return config, recordDir, brief, target, run
+	return config, recordDir, brief, target, run, policy
 }
 
 // runField reads the run: mapping, whose keys are named as run's flags. Each
