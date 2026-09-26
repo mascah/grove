@@ -4,9 +4,10 @@ type: work
 title: "Keep installed harness entrypoints compatible with Grove upgrades"
 status: review
 created: "2026-09-25T21:04:46Z"
-updated: "2026-09-25T23:29:18Z"
+updated: "2026-09-26T00:28:02Z"
 relates_to: ["G-101", "G-150", "G-152", "G-040", "G-110", "G-170", "G-186"]
 candidate: "f2ba8d0f8a13c3de41a6bc119790ba2e5aeb1d04"
+approved: "f2ba8d0f8a13c3de41a6bc119790ba2e5aeb1d04"
 ---
 
 ## Outcome
@@ -216,3 +217,5 @@ Integration, as given:
 go run ./cmd/grove approve G-169 "VERDICT"   # in this worktree
 go run ./cmd/grove integrate G-169           # in the main checkout
 ```
+
+Verdict on candidate f2ba8d0, 2026-09-26: approved with the requirement to run grove init in existing projects
