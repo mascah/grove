@@ -4,11 +4,12 @@ type: work
 title: "Resolve, approve and integrate candidates under an explicit owner policy"
 status: review
 created: "2026-09-25T21:39:28Z"
-updated: "2026-09-26T04:56:27Z"
+updated: "2026-09-26T04:58:36Z"
 kind: feature
 depends_on: ["G-177", "G-178"]
 relates_to: ["G-044", "G-058", "G-059", "G-060", "G-101", "G-134", "G-140", "G-142", "G-162", "G-163", "G-179", "G-182", "G-197"]
 candidate: "2251569c061a951ad7ba5d09da8c5d242a678e8d"
+approved: "2251569c061a951ad7ba5d09da8c5d242a678e8d"
 ---
 
 ## Outcome
@@ -268,3 +269,5 @@ demo: add the proposed `policy:` above to a disposable project's
 sweep`, in its target checkout. This repository's `grove.yaml` carries the
 proposed policy from `2251569`, so the first `grove sweep` on main after
 integration acts under it; the real-provider trial is still open.
+
+Verdict on candidate 2251569, 2026-09-26: approved
