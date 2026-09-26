@@ -60,3 +60,8 @@ a record.
 
 Say plainly when you found nothing consequential. Do not soften a finding,
 and do not report a preference as a defect.
+
+End with one line, exactly `Open findings: none` when no finding of any
+weight, knowledge findings included, remains open on the commit you
+examined, and otherwise `Open findings: N` with their number. A standing
+policy that delegates approval reads that line from the review record.

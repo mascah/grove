@@ -410,8 +410,10 @@ documentation that owns any contract the work changed, and the repository's
 direction document when the work changed the direction it records; progress
 and next actions stay in the record. Record review evidence where the
 repository keeps it: a review record with its `work` and the `examined`
-commit where the schema has them, otherwise prose and links. A review record
-holds evidence; it is not approval, and there is no run schema.
+commit where the schema has them, otherwise prose and links, ending with
+the last round's closing line (`Open findings: none`, or their number) as
+the reviewer gave it. A review record holds evidence; it is not approval,
+and there is no run schema.
 
 An implementation session never writes `done`. When the evidence meets the
 acceptance and the review the record or plan requires has happened, hand the
@@ -500,6 +502,14 @@ disposition:
   candidate=COMMIT --commit` on the target.
 - **Rejection:** `status=abandoned`, with the decision and its reasons in the
   record or a decision record it links.
+- **Under a standing policy:** where the configuration holds a `policy:`,
+  `grove sweep` in the target's checkout (`--dry-run` first shows what
+  would happen to each candidate and why) starts one resolution attempt for
+  a conflict and approves, then integrates, a candidate that meets the
+  policy's conditions after its merged result passed the policy's
+  verification, each attributed to the policy's revision. Integration under
+  a policy names the merge to revert. Everything else waits for these
+  dispositions, as the record model's `policy:` says.
 
 A candidate several records share is judged per record and integrated as
 their group. `approve` binds each record's own verdict, and the group's

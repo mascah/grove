@@ -86,7 +86,8 @@ with the fields its type has.
 ## Judging a candidate
 
 Work in `review` is a candidate to judge, and its detail is the handoff: the
-header adds a Review block (the candidate, whether it is approved, whether
+header adds a Review block (the candidate, whether it is approved and
+whether under the policy (`approved under policy`, see `grove sweep`), whether
 only the record changed since it or the tip is a new candidate, what
 merging it into the target would do, as `deps` says it, with the target
 commit that was read and a note when the board read the target at another

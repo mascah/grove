@@ -377,6 +377,49 @@ on the branch, which the headless guide sets, is the handoff, and a process
 exit or a `result` event proves nothing about it. `GROVE_CLAUDE` names
 another executable, for fakes.
 
+## Sweep
+
+`sweep` acts on every candidate in review under the owner's standing
+policy, the `policy:` mapping the [record model](record-model.md) describes
+([G-180](../grove/G-180-policy-driven-integration.md), under decision
+[G-182](../grove/G-182-standing-policy-delegation.md)). It runs in the
+target's checkout, whose committed `grove.yaml` holds the policy, and every
+act is attributed to that file's revision, as `policy grove.yaml
+sha256:…`. Without a policy it is refused: nothing is automatic. Grove runs
+no sweep by itself; the owner or a scheduler such as cron runs one, and a
+wait that has not changed does not retry.
+
+For each candidate, in ID order, it decides one act and prints it with the
+reason; `--dry-run` stops there and writes nothing:
+
+- **skip**, when the target already holds the branch's tip;
+- **wait**, for the owner, when the candidate is shared, on several
+  branches or without a checkout, already approved, blocked by an open
+  question, has an attempt running, or fails a condition of the policy;
+- **resolve**, for a conflict, when `resolve` is present, the record holds
+  no earlier resolution feedback naming the same target commit, and the
+  policy's `budget` still covers the attempt's. The attempt is `resolve`'s,
+  and its feedback begins `delegated under policy grove.yaml sha256:…,
+  budget N USD`;
+- **approve**, or **integrate** with `integrate: true`, for a clean merge
+  that meets the policy.
+
+To approve, it merges the branch's tip into the target commit it predicted
+against, in a temporary worktree outside every checkout, and runs each
+`verify` command there with `sh -c` in the project's directory; the first
+failure leaves the target and the record unchanged and prints the command's
+last output. Once they pass, it approves in the branch's checkout with the
+verdict `delegated under policy grove.yaml sha256:…: review ID examined X
+with no open finding; merged with TARGET at T, verification passed
+(COMMANDS); attempt A produced it for N USD` (or that no Grove attempt is
+recorded as producing it), then integrates as `integrate` does, refused
+before merging if the target moved from the verified commit. The done
+update appends `Integrated under policy … as merge M on TARGET (was B); to
+reverse it: git revert -m 1 M` (or the range a fast-forward moved). An
+integration refused after a delegated approval leaves the record approved,
+waiting for the owner's `integrate`. The board's Review block reads
+`approved under policy` for such a verdict.
+
 ## Init
 
 `init` runs at the top of a Git checkout (or `--project /absolute/path`). It

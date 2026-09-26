@@ -236,8 +236,49 @@ launch's mandate. `init` does not write `run:`, so a project without it
 requires `--budget` and `--permission-mode` on every launch. A launch reads
 only its own checkout's `grove.yaml`, so branches need not agree.
 
+Optional `policy:` is the owner's standing delegation to `grove sweep`: what
+may happen to a candidate in review with no per-candidate human act. Absent,
+the default, nothing is automatic. For example:
+
+```yaml
+policy:
+  budget: 30            # dollars, every resolution attempt in one sweep
+  resolve:
+    budget: 10          # one attempt; run: budget otherwise
+  approve:
+    verify:             # must pass on the merged result
+      - go test ./...
+    max_lines: 300      # added plus removed, the record's own file excluded
+    never:              # a change to any of these waits for the owner
+      - grove.yaml
+      - .github/**
+  integrate: true       # merge and write done after a delegated approval
+```
+
+`resolve`, present (`{}` takes the `run:` budget), lets a sweep start one
+resolution attempt for a candidate that conflicts with the target, at most
+once per target commit, and needs `budget`, which bounds the sum of a
+sweep's attempts. `approve` lets it approve a candidate that merges cleanly
+and meets the conditions below; `verify`, one shell command per item, is
+required, and `max_lines` and `never` are optional. A `never` pattern is
+project-relative, in `path.Match` syntax, or `DIR/**` for everything under
+`DIR`. `integrate: true` needs `approve`. Any other key, or a malformed
+value, is a diagnostic named `policy.KEY` that stops every command, so a
+policy never half applies.
+
+A candidate the policy approves must also, whatever the policy says: be
+in review with a candidate no one else shares, unapproved; have no open
+question blocking it; have nothing after the candidate on its branch but
+its record; have a `current` review naming it whose last line starting
+`Open findings:` is `Open findings: none`, and that examined the candidate
+or an earlier commit from which only records changed; change nothing
+outside the project, no `never` path and no binary file, within
+`max_lines`; and merge cleanly into the target, where the merged result,
+in a temporary worktree, passes every `verify` command. Everything else
+waits for the owner, with the reason `sweep` prints.
+
 `schema_version` versions the configuration and record schema together. Require
-both keys, with `brief`, `target` and `run` optional; accept exactly 3 and refuse a missing or
+both keys, with `brief`, `target`, `run` and `policy` optional; accept exactly 3 and refuse a missing or
 other version without guessing, migrating, or rewriting files. The number is
 this CLI's, unrelated to any other tool's schema numbering or configuration.
 
@@ -490,7 +531,11 @@ Candidate, review, approval and integration name the facts:
   rejects an `approved` that differs from `candidate`, and `approve` refuses
   a tip that changed any file but the group's records after the candidate.
   Approval stays per record, so each member of a group is judged against
-  its own acceptance. Feedback
+  its own acceptance. A delegate may give it: a verdict beginning
+  `delegated under policy grove.yaml REVISION`, which `grove sweep` writes
+  under the configuration's `policy:`, is the owner's standing instruction
+  applied, names the review and verification it relied on, and is told
+  apart from the owner's own wherever the record is shown. Feedback
   that asks for more implementation, `feedback ID TEXT` in the same checkout,
   sets `active`, unsets `approved`, keeps `candidate` so earlier reviews
   still compare to it, and appends `Feedback on candidate X, DATE: TEXT`;
