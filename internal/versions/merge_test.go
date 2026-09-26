@@ -3,7 +3,10 @@ package versions
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/mascah/grove/internal/repo"
 )
 
 // TestPredictMerges covers each outcome, alone and in a stated order, and
@@ -109,5 +112,52 @@ func TestPredictMerges(t *testing.T) {
 	cancel()
 	if _, err := PredictContext(cancelled, root, "main", []string{right}); err != context.Canceled {
 		t.Fatalf("cancelled: %v", err)
+	}
+}
+
+// TestResolution finds the latest target commit merged into a candidate's
+// branch, the files whose merged content is neither side's, and the
+// candidate the record named before, and ignores a merge of another branch.
+func TestResolution(t *testing.T) {
+	t.Parallel()
+	root := repoFixture(t)
+	ctx := context.Background()
+	const path = "grove/work/G-001-first.md"
+	write(t, root, "shared.txt", "one\n")
+	commit(t, root, "shared")
+	wt := addWorktree(t, root, "work", "main", "-b", "work")
+	write(t, wt, "shared.txt", "work\n")
+	previous := commit(t, wt, "work")
+	write(t, wt, path, strings.Replace(record("G-001", "work", "active", "Body.\n"), "status: active\n", "status: active\ncandidate: \""+previous+"\"\n", 1))
+	commit(t, wt, "feedback")
+	changes := func(candidate string) *Changes {
+		t.Helper()
+		c, err := ChangesContext(ctx, root, "main", candidate, candidate, path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return c
+	}
+	if c := changes(previous); c.Resolution != nil {
+		t.Fatalf("no merge yet: %+v", c.Resolution)
+	}
+	write(t, root, "shared.txt", "main\n")
+	write(t, root, "main.txt", "main\n")
+	target := commit(t, root, "main moves")
+	repo.Command(ctx, wt, "merge", "-q", "main").Run() // conflicts in shared.txt
+	write(t, wt, "shared.txt", "both\n")
+	merge := commit(t, wt, "resolved")
+	want := &Resolution{Merge: merge, Target: target, Previous: previous, Files: []string{"shared.txt"}}
+	if c := changes(merge); !reflect.DeepEqual(c.Resolution, want) {
+		t.Fatalf("resolution %+v, want %+v", c.Resolution, want)
+	}
+	// Only the latest merge is read, and one of another branch is no
+	// target's.
+	side := addWorktree(t, root, "side", previous, "-b", "side")
+	write(t, side, "side.txt", "side\n")
+	commit(t, side, "side")
+	git(t, wt, "merge", "-q", "--no-edit", "side")
+	if c := changes(git(t, wt, "rev-parse", "HEAD")); c.Resolution != nil {
+		t.Fatalf("a merge of side: %+v", c.Resolution)
 	}
 }

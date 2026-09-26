@@ -129,8 +129,8 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 		if where == "" {
 			where = "a checkout of " + name
 		}
-		return fmt.Errorf("merge of %s into %s refused: it %s; nothing was merged, %s is unchanged at %s and %s stays in review. Next: in %s, git merge %s, resolve the conflicts and commit, then hand that commit to review as the new candidate; or there, grove feedback %s 'conflicts with %s at %s; merge %s and resolve' returns it to an implementer",
-			name, p.Target, conflict, p.Target, short(before), req.ID, where, p.Target, req.ID, p.Target, short(before), p.Target)
+		return fmt.Errorf("merge of %s into %s refused: it %s; nothing was merged, %s is unchanged at %s and %s stays in review. Next: grove resolve %s records that as feedback and starts one attempt to merge %s at %s, resolve and hand off a new candidate; or by hand, in %s, git merge %s, resolve the conflicts and commit, then hand that commit to review as the new candidate",
+			name, p.Target, conflict, p.Target, short(before), req.ID, req.ID, p.Target, short(before), where, p.Target)
 	}
 	// The commit the checks above read is what is merged, not the name: the
 	// branch may move meanwhile, and a tag of the same name would win the

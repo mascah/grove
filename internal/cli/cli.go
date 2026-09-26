@@ -33,6 +33,8 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID [--expect REVISION] (--set FIELD=VALUE | --unset FIELD)... [--commit]\n" +
 	"       grove [--project DIR] approve ID VERDICT | feedback ID TEXT | integrate ID [--cleanup]\n" +
+	"       grove [--project DIR] resolve ID [--budget USD] [--permission-mode MODE] [--model MODEL]\n" +
+	"                                     [--effort LEVEL]\n" +
 	"       grove [--project DIR] run WORK_ID... [--dry-run | --expect DIGEST] [--budget USD]\n" +
 	"                                     [--permission-mode MODE] [--until plan] [--model MODEL]\n" +
 	"                                     [--effort LEVEL] [--branch NAME] [--worktree DIR]\n" +
@@ -109,6 +111,13 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             merge (fast-forward or merge commit; a conflict is aborted and refused),\n" +
 	"             done, and with --cleanup the worktree and branch removed, or kept with\n" +
 	"             Git's reason. Every refusal comes before the merge; nothing undoes one.\n" +
+	"  resolve    For a work record in review whose candidate conflicts with the target, from\n" +
+	"             any checkout: record feedback naming the target commit and the conflicting\n" +
+	"             files, committed in the branch's checkout, and start one attempt there, as run\n" +
+	"             would, to merge that commit, resolve those files, verify, and hand off the\n" +
+	"             merge as a new candidate. The records sharing the candidate go with it. Refused,\n" +
+	"             with nothing written, without a target or a conflict, or while an attempt of\n" +
+	"             the work runs; the launch flags and their run: defaults are run's.\n" +
 	"  run        Start one bounded implementation attempt of an explicit selection of\n" +
 	"             proposed or active work as one Grove-owned\n" +
 	"             `claude -p \"/grove-work ID... --interaction headless\"` process that outlives\n" +
@@ -335,6 +344,16 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 				fmt.Fprintln(out, fact)
 			}
 		}
+		fmt.Fprintf(out, "inspect: grove attempt %s; stop: grove stop %s\n", l.Attempt, l.Attempt)
+		return 0
+	case "resolve":
+		a.run.Root, a.run.IDs = p.Root, []string{a.id}
+		l, err := attempt.Resolve(a.run, nil, time.Now(), func(fact string) { fmt.Fprintln(out, visible(fact)) })
+		if err != nil {
+			report(errOut, err)
+			return 1
+		}
+		fmt.Fprintf(out, "attempt: %s started on %s; owner pid %d, budget %s USD, permission mode %s\n", l.Attempt, visible(l.Branch), l.Owner, l.BudgetUSD, visible(l.PermissionMode))
 		fmt.Fprintf(out, "inspect: grove attempt %s; stop: grove stop %s\n", l.Attempt, l.Attempt)
 		return 0
 	case "attempts":
@@ -641,8 +660,11 @@ func parseArgs(args []string) (a invocation, err error) {
 	if a.json && a.command != "" && a.command != "show" && a.command != "brief" && a.command != "versions" && a.command != "workspace" && a.command != "context" && a.command != "deps" && a.command != "attempt" {
 		return a, fmt.Errorf("--json applies only to the board, show, brief, versions, workspace, context, deps, and attempt")
 	}
-	if (a.run.BudgetUSD != "" || a.run.PermissionMode != "" || a.run.Model != "" || a.run.Effort != "" || a.run.Until != "" || a.run.Branch != "" || a.run.Worktree != "") && a.command != "run" {
-		return a, fmt.Errorf("--budget, --permission-mode, --until, --model, --effort, --branch, and --worktree apply only to run")
+	if (a.run.BudgetUSD != "" || a.run.PermissionMode != "" || a.run.Model != "" || a.run.Effort != "") && a.command != "run" && a.command != "resolve" {
+		return a, fmt.Errorf("--budget, --permission-mode, --model, and --effort apply only to run and resolve")
+	}
+	if (a.run.Until != "" || a.run.Branch != "" || a.run.Worktree != "") && a.command != "run" {
+		return a, fmt.Errorf("--until, --branch, and --worktree apply only to run")
 	}
 	if a.statuses != nil && a.command != "list" {
 		return a, fmt.Errorf("--status applies only to list")
@@ -683,7 +705,7 @@ func parseArgs(args []string) (a invocation, err error) {
 		} else {
 			a.id = positional[1]
 		}
-	case "show", "integrate":
+	case "show", "integrate", "resolve":
 		if len(positional) != 2 {
 			err = fmt.Errorf("%s requires exactly one record ID", a.command)
 		} else {
