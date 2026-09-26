@@ -14,6 +14,7 @@ import (
 	"github.com/mascah/grove/internal/attempt"
 	"github.com/mascah/grove/internal/handoff"
 	"github.com/mascah/grove/internal/project"
+	"github.com/mascah/grove/internal/update"
 	"github.com/mascah/grove/internal/versions"
 )
 
@@ -305,7 +306,9 @@ func (m *Model) targetTip() string {
 func (m *Model) reviewRows(g *versions.Group, v *versions.Version) []string {
 	r := v.Record
 	parts := []string{"Review: candidate " + short7(r.Candidate)}
-	if r.Approved != "" {
+	if r.Approved != "" && update.Delegated(r) {
+		parts = append(parts, "approved under policy")
+	} else if r.Approved != "" {
 		parts = append(parts, "approved")
 	} else {
 		parts = append(parts, "not yet approved")

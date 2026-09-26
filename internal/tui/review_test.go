@@ -519,3 +519,20 @@ func TestReviewNamesTheResolution(t *testing.T) {
 		t.Fatalf("only the resolved file is marked:\n%s", s)
 	}
 }
+
+// A verdict given under the standing policy is told apart from the owner's
+// in the Review block (G-180).
+func TestReviewNamesADelegatedApproval(t *testing.T) {
+	t.Parallel()
+	f := reviewFixture(newFixture(), true)
+	for _, g := range f.res.Groups {
+		for _, v := range g.Versions {
+			if v.Record.ID == "W-001" && v.Record.Approved != "" {
+				v.Record.Source = append(v.Record.Source, "\nVerdict on candidate abcdef1, 2026-09-25: delegated under policy grove.yaml sha256:x: review W-006.\n"...)
+			}
+		}
+	}
+	if s := plain(openReview(t, f, 200, 36)); !strings.Contains(s, "Review: candidate abcdef1 · approved under policy ·") {
+		t.Fatalf("review detail:\n%s", s)
+	}
+}
