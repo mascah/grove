@@ -104,11 +104,166 @@ has no notion of a previous candidate or of which content is a resolution.
 5. The work guide, the command documentation and the board documentation
    own the changed contract.
 
+## Evidence
+
+Implemented headless on `worktree-G-178` from main `e812672` (G-177
+integrated). It started from this record at `sha256:83ec768e…` and plan
+[G-191](G-191-plan-for-g-178-candidate-resolution.md), committed at
+`38c765c`. Code runs through `7cb7cea`; the candidate adds only this
+evidence and the review record.
+
+**The operation.** `grove resolve ID` from any checkout, or the board's `m`,
+runs one function for both, `attempt.Resolve` (`internal/attempt/resolve.go`),
+so [G-180](G-180-policy-driven-integration.md) calls the same mandate and
+refusals.
+
+- It finds the one branch holding the record in review and that branch's
+  checkout. It predicts the merge with G-177's `PredictContext` and refuses
+  anything but a conflict.
+- It records feedback there through `update.Feedback`. The text comes from
+  `Mandate`: the target commit in full, the conflicting files, and "merge
+  that commit, never a rebase or a later tip; resolve those files; verify;
+  hand off the merge; change nothing else; stop at an unsettled choice".
+- It then calls `Start` once, on that branch in that checkout, with the
+  launch defaults. The group sharing the candidate
+  ([G-188](G-188-selected-work-shared-candidate.md)) reopens and runs
+  together, the given ID first.
+- The assignment stays `/grove-work IDS --interaction headless`. The mandate
+  travels in the record, where the work guide reads feedback.
+- The name is `resolve`, following G-182's "resolution attempt". The term
+  [G-192](G-192-resolution.md) (proposed) defines it apart from a question
+  being resolved.
+
+**Acceptance 1.** One action starts exactly one attempt, with the mandate
+visible in the record and in the board's line. Refused, with nothing
+written:
+
+- no target;
+- no conflict (the fact's own text is given);
+- not in review, or in review on several branches;
+- no checkout of the branch;
+- a running or orphaned attempt of any member;
+- no budget or mode;
+- every member waiting once active;
+- a missing or incompatible skill or reviewer;
+- a missing or failing provider;
+- from the board, a candidate or target commit that changed since the fact
+  was shown.
+
+`TestResolveRefusals` and `TestResolveAGroup` check that nothing was
+written and no attempt started. A second `resolve` finds the work active
+and is refused. A launch that still fails after the feedback says the
+feedback stands and gives the `grove run … --branch … --worktree …` that
+launches it. `integrate`'s conflict refusal now names `grove resolve ID`.
+
+**Acceptance 2.** The work guide's step 5 gains "A target that moved":
+
+- merge the named commit, never a rebase, so the earlier candidate and every
+  review's `examined` stay ancestors;
+- resolve only those files;
+- verify, and hand off with Evidence naming each conflict and how it was
+  settled;
+- a choice the record does not settle is a missing human decision;
+- scope the review with `git show --remerge-diff MERGE`.
+
+`TestResolveCleanly`: the new candidate's ancestors include the previous
+candidate and the merged target commit. `TestResolveNeedsAChoice`: a clean
+provider exit with nothing committed leaves the work active, with its
+candidate.
+
+**Acceptance 3.** `versions.Changes.Resolution` is read on demand with the
+other changes, never in the board load:
+
+- the latest first-parent merge whose second parent the target holds;
+- the target commit it merged;
+- the candidate the record named before it, read at the merge's first
+  parent;
+- each file that merging the parents again conflicts on, with the side it
+  kept when it kept one.
+
+The Review block prints this as a row, for example "Resolution: merge M of
+main at T into candidate P, whose reviews stay comparable · resolved: a.go,
+b.go (took main's side, dropping the branch's change)", and the Changes list
+marks those files. `TestResolution` covers a combined resolution, a side
+taken, a file Git merged by itself (not listed), a project under a prefix,
+a rename/rename, and a merge of another branch or of unrelated history
+(none).
+
+**Acceptance 4.** Fake-provider tests in `resolve_test.go`:
+
+- `TestResolveCleanly`: a clean resolution;
+- `TestResolveNeedsAChoice`: a resolution that needs a choice;
+- `TestResolveWhileTheTargetMoves`: main moves during the attempt; the
+  attempt merges the commit its feedback names, and the prediction then
+  names the moved main;
+- `TestResolveStopped`: Stop during the attempt leaves the work active with
+  its candidate.
+
+An end-to-end `grove resolve` with the built binary and a fake provider, on
+a disposable repository, printed the feedback, the reused worktree and the
+attempt, and a second `resolve` was refused. No real-provider trial was run;
+the record bounds it separately.
+
+**Acceptance 5.** These now describe the contract:
+
+- `docs/work-execution.md` (the procedure, and `resolve` among the judging
+  dispositions);
+- `docs/commands.md` ("Resolving a conflict");
+- `docs/board.md` (`m`, the resolution row, the key table);
+- `docs/record-model.md` (the lifecycle);
+- `grove --help` and `README.md`.
+
+**A fix to G-177 found on the way.** `git merge-tree --name-only` names files
+relative to the current directory, so for a project under a prefix G-177's
+conflicts were not from the repository's top, as `Merge` documents.
+`resolveCommits` now reads the prefix in its one `rev-parse`, and `predict`
+joins it, for every caller.
+
+**Verification at `7cb7cea`:**
+
+- `gofmt -l .`: empty.
+- `go vet ./...`: clean.
+- `go run ./cmd/grove check`: OK, 186 records.
+- `go test -count=1 -timeout 120s ./...`: all ok.
+- `python3 internal/tui/testdata/terminal.py BINARY`: all 12 ok.
+
+Package times: the machine was loaded (load average 6 to 15) during the
+final runs. Under the same load, `internal/versions -short` took 13.9s on
+main and 15.1s here. When the machine was idle earlier, it took 4.3s against
+4.4s and `internal/attempt -short` about 2.3s. No new test builds, sleeps or
+waits on a shim without a `-short` skip.
+
+**Review:** [G-193](G-193-review-of-g-178-candidate-resolution.md), three
+rounds by fresh `grove-reviewer` agents. Two consequential findings, the
+side-taking gap and the prefix paths, were fixed and re-reviewed. Round 3
+found nothing consequential.
+
+**Limits for the owner:**
+
+- A user's `diff.relative=true` leaves resolved files unlabelled under a
+  prefix, never mislabelled. The fix is `--no-relative`, which the older
+  `numstat` and `Others` diffs lack too.
+- No suite test covers a branch whose history began apart and then merged
+  the target; a reviewer verified that case.
+- A prediction failure on the merge's parents, such as Git before 2.38,
+  drops the resolution row without a reason.
+- Only the latest merge is read, so a later merge of another branch hides
+  the resolution.
+- `Resolve` takes no policy attribution, which G-182 requires of G-180's
+  automatic acts; G-180 adds it.
+- `grove resolve` on the CLI checks the fact it computes itself. Only the
+  board passes a shown fact.
+
 ## Next
 
-Assignable after G-177 or alongside it: `integrate`'s refusal already
-supplies the conflicting files, so the operation works before prediction
-exists. G-179 is answered ([G-182](G-182-standing-policy-delegation.md)):
-the attempt this record starts by hand is the one G-180's policy starts
-automatically, so keep its mandate and refusals in one place for both. No
-implementation has been assigned by this shaping session.
+In review. The owner judges the candidate on `worktree-G-178`:
+
+```sh
+grove approve G-178 "VERDICT"   # in /Users/mascah/GitHub/mascah/grove/.claude/worktrees/worktree-G-178
+grove integrate G-178           # then in the main checkout
+```
+
+Or give feedback with `grove feedback G-178 "TEXT"` in the worktree. To
+demo: on a candidate in review that conflicts with main, open its card on
+the board, press `m`, then Enter; or run `grove resolve ID`. G-180 builds
+on `attempt.Resolve`.
