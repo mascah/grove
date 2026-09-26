@@ -57,7 +57,7 @@ type actMsg struct {
 // prompt is the open question on the last row: text to type for a verdict or
 // feedback, or y/n for the merge and its cleanup.
 type prompt struct {
-	kind             string // approve, feedback, integrate, cleanup, launch, stop, resolve
+	kind             string // approve, feedback, integrate, cleanup, launch, stop, resolve, conflict
 	text             string
 	id, root, branch string   // the record, the checkout the action runs in, the branch judged
 	target, wt       string   // integrate: the target and the branch's checkout, if any
@@ -67,6 +67,7 @@ type prompt struct {
 	run              project.RunDefaults // launch: grove.yaml's defaults in this checkout
 	attempt          string              // stop: the attempt
 	expect           string              // resolve: the question's revision after the editor
+	fact             *versions.Merge     // conflict: the prediction shown, which Conflict checks again
 }
 
 // outcome is what an action returned, shown on the result screen until Esc.
@@ -330,6 +331,9 @@ func (m *Model) reviewRows(g *versions.Group, v *versions.Version) []string {
 		parts = append(parts, "the merge into "+m.res.Target+" could not be predicted: "+read.c.Unpredicted)
 	}
 	rows := []string{strings.Join(parts, " · ")}
+	if read, held := m.changes[m.changesKey(v)]; held && read.c != nil && read.c.Resolution != nil {
+		rows = append(rows, resolutionText(read.c.Resolution, m.res.Target))
+	}
 	var where []string
 	if root, branch, why := m.judgeRoot(g, v); why != "" {
 		where = append(where, "a approve and f feedback: "+why)
@@ -342,6 +346,9 @@ func (m *Model) reviewRows(g *versions.Group, v *versions.Version) []string {
 		} else {
 			where = append(where, "i integrate runs into "+m.res.Target+" in "+root)
 		}
+	}
+	if m.conflicted(v) != nil && m.backend.Conflict != nil {
+		where = append(where, "m resolves the conflict: feedback and one attempt on its branch")
 	}
 	return append(rows, strings.Join(where, " · "))
 }
@@ -390,7 +397,11 @@ func (m *Model) changesSection(v *versions.Version, w int, heading func(string),
 				counts = fmt.Sprintf("+%d −%d", f.Added, f.Removed)
 			}
 			item(ansi.Truncate(safe(f.Path), max(w-2-ansi.StringWidth(counts)-2, 8), "…") + "  " + counts)
-			plain("    " + m.describedBy(f.Path))
+			described := m.describedBy(f.Path)
+			if r := read.c.Resolution; r != nil && slices.Contains(r.Files, f.Path) {
+				described += " · resolved in merge " + short7(r.Merge)
+			}
+			plain("    " + described)
 		}
 		if len(read.c.After) != 0 {
 			plain("  after the candidate: " + strings.Join(read.c.After, ", "))
@@ -544,6 +555,71 @@ func (m *Model) action(k string) {
 	}
 }
 
+// conflicted is the shown candidate's conflict with the target, when its
+// changes are read and predict one.
+func (m *Model) conflicted(v *versions.Version) *versions.Merge {
+	if v == nil || v.Record == nil || v.Record.Status != "review" {
+		return nil
+	}
+	if read, held := m.changes[m.changesKey(v)]; held && read.c != nil && read.c.Merge != nil && read.c.Merge.Outcome == "conflict" {
+		return read.c.Merge
+	}
+	return nil
+}
+
+// resolveConflict opens the resolve line for a candidate in review that
+// conflicts with the target (G-178), or says why not: it records the
+// feedback in the branch's checkout and launches one attempt there, with
+// the defaults that checkout's grove.yaml sets.
+func (m *Model) resolveConflict() {
+	g := m.group()
+	v := m.shown(g)
+	if !m.reviewable() || m.backend.Conflict == nil {
+		if v != nil && v.Record != nil {
+			m.notice = g.ID + " is not in review: there is no candidate to resolve"
+		}
+		return
+	}
+	read, held := m.changes[m.changesKey(v)]
+	fact := m.conflicted(v)
+	switch {
+	case !held || read.c == nil:
+		m.notice = "the candidate's changes are not read yet; m waits for them"
+		return
+	case fact == nil && read.c.Merge != nil:
+		m.notice = "candidate " + short7(v.Record.Candidate) + " " + read.c.Merge.Text(m.res.Target) + ": nothing to resolve"
+		return
+	case fact == nil:
+		m.notice = "no conflict with the target is predicted, so there is nothing to resolve"
+		return
+	}
+	lv, branch, why := m.checkoutOf(g, v, "judging")
+	if why != "" {
+		m.notice = why
+		return
+	}
+	for _, a := range m.attemptsOf(g.ID) {
+		if live(&a) {
+			m.notice = fmt.Sprintf("attempt %s of %s is %s; A shows it, x stops it", a.Launch.Attempt, g.ID, a.Status)
+			return
+		}
+	}
+	req := attempt.Request{Root: m.root, IDs: []string{g.ID}}
+	m.prompt = &prompt{kind: "conflict", id: g.ID, root: m.root, branch: branch, target: m.res.Target, wt: lv.Source.Worktree, req: &req, run: lv.Source.Run, fact: fact}
+}
+
+// resolutionText is the Review block's row for a target merge on the branch.
+func resolutionText(r *versions.Resolution, target string) string {
+	text := "Resolution: merge " + short7(r.Merge) + " of " + target + " at " + short7(r.Target)
+	if r.Previous != "" {
+		text += " into candidate " + short7(r.Previous) + ", whose reviews stay comparable"
+	}
+	if len(r.Files) == 0 {
+		return text + " · no file differs from both sides"
+	}
+	return text + " · resolved: " + strings.Join(r.Files, ", ")
+}
+
 // promptKey handles every key while a prompt is open: text goes into it,
 // Enter and y/n answer it, Esc cancels it.
 func (m *Model) promptKey(msg tea.KeyPressMsg) tea.Cmd {
@@ -611,11 +687,11 @@ func (m *Model) promptKey(msg tea.KeyPressMsg) tea.Cmd {
 // key never cancels its Git commands.
 func (m *Model) act(p *prompt) tea.Cmd {
 	m.prompt = nil
-	kind, root, id, text, cleanup, req, about, expect := p.kind, p.root, p.id, strings.TrimSpace(p.text), p.cleanup, p.req, p.id, p.expect
+	kind, root, id, text, cleanup, req, about, expect, fact := p.kind, p.root, p.id, strings.TrimSpace(p.text), p.cleanup, p.req, p.id, p.expect, p.fact
 	switch {
 	case kind == "cleanup":
 		kind = "integrate"
-	case req != nil:
+	case req != nil && kind != "conflict":
 		kind = "launch"
 	case kind == "stop":
 		about = p.attempt
@@ -627,6 +703,8 @@ func (m *Model) act(p *prompt) tea.Cmd {
 		switch kind {
 		case "launch":
 			facts, err = m.backend.Launch(ctx, *req)
+		case "conflict":
+			facts, err = m.backend.Conflict(ctx, *req, fact)
 		case "stop":
 			facts, err = m.backend.Stop(ctx, root, about)
 		case "approve":
@@ -647,7 +725,8 @@ func (m *Model) act(p *prompt) tea.Cmd {
 // acting names the running action for the banner.
 func actingText(kind string) string {
 	return map[string]string{"approve": "Approving…", "feedback": "Recording the feedback…", "integrate": "Integrating…",
-		"launch": "Launching the attempt…", "stop": "Stopping the attempt…", "resolve": "Resolving and committing…"}[kind]
+		"launch": "Launching the attempt…", "stop": "Stopping the attempt…", "resolve": "Resolving and committing…",
+		"conflict": "Recording the feedback and launching the attempt…"}[kind]
 }
 
 // promptRow is the last row while a prompt is open.
@@ -670,6 +749,9 @@ func (m *Model) promptRow(w int) string {
 		req, _ := p.resolved() // a line that does not parse yet shows what it has so far
 		// What is typed comes first: truncation drops the help at the end.
 		text = fmt.Sprintf("Launch %s %s▏ · %s, %s · Enter launches; flags such as --until plan or --effort xhigh change it; Esc cancels", p.id, p.text, launchText(req), p.where())
+	case "conflict":
+		req, _ := p.resolved()
+		text = fmt.Sprintf("Resolve %s %s▏ · it %s: Enter records that as feedback and launches one attempt to merge it, resolve, verify and hand off, %s, %s; Esc cancels", p.id, p.text, p.fact.Text(p.target), launchText(req), p.where())
 	case "stop":
 		text = fmt.Sprintf("Stop attempt %s of %s? Its partial work stays. y/n", p.attempt, p.id)
 	case "resolve":

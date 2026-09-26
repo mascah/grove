@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/versions"
 )
 
@@ -443,5 +444,78 @@ func TestReviewNamesTheGroupSharingACandidate(t *testing.T) {
 	press(m, "i")
 	if s := plain(m); !strings.Contains(s, "Merge branch feature into main and mark W-001 and W-003 done? y/n") || strings.Contains(s, "W-004 done") {
 		t.Fatalf("i names the group:\n%s", s)
+	}
+}
+
+// m on a candidate that conflicts with the target opens the resolve line,
+// over the branch checkout's run: defaults, and runs Conflict with the fact
+// the board showed (G-178); without a conflict it says there is nothing to
+// resolve.
+func TestReviewResolveAConflictFromTheBoard(t *testing.T) {
+	t.Parallel()
+	fx := newFixture()
+	f := reviewFixture(fx, true)
+	fx.feat.Run = project.RunDefaults{BudgetUSD: "7", PermissionMode: "auto"}
+	m := openReview(t, f, 200, 36)
+	if s := plain(m); !strings.Contains(s, "m resolves the conflict: feedback and one attempt on its branch") || !strings.Contains(s, "m resolve") {
+		t.Fatalf("the Review block and hints offer m:\n%s", s)
+	}
+	press(m, "m")
+	s := plain(m)
+	if m.prompt == nil || !strings.Contains(s, "Resolve W-001 ▏ · it conflicts with main at aaaaaaa in internal/x.go: Enter records that as feedback and launches one attempt") || !strings.Contains(s, "$7, mode auto, to the handoff") {
+		t.Fatalf("m opens the resolve line:\n%s", s)
+	}
+	typeText(m, "--until plan")
+	press(m, "enter")
+	if m.prompt == nil || !strings.Contains(plain(m), "--until does not apply") {
+		t.Fatalf("a bound is refused on the line:\n%s", plain(m))
+	}
+	for range "--until plan" {
+		press(m, "backspace")
+	}
+	typeText(m, "--effort xhigh")
+	deliverAll(m, press(m, "enter"))
+	if s := plain(m); m.screen != resultScreen || !strings.Contains(s, "Resolution attempt of W-001") || !strings.Contains(s, "attempt: started") {
+		t.Fatalf("the outcome:\n%s", s)
+	}
+	if strings.Join(f.acts, ";") != "conflict /repo/. W-001 abcdef1 aaaaaaa budget=7 mode=auto effort=xhigh" {
+		t.Fatalf("acts %v", f.acts)
+	}
+
+	// A clean merge has nothing to resolve, and m is not offered.
+	f = reviewFixture(newFixture(), false)
+	f.changes = func(target, candidate, tip, path string) (*versions.Changes, error) {
+		return &versions.Changes{Base: "base000", Merge: &versions.Merge{Target: strings.Repeat("a", 40), Commit: candidate, Outcome: "clean", Conflicts: []string{}}}, nil
+	}
+	m = openReview(t, f, 200, 36)
+	if strings.Contains(plain(m), "m resolve") {
+		t.Fatalf("m is offered without a conflict:\n%s", plain(m))
+	}
+	press(m, "m")
+	if m.prompt != nil || !strings.Contains(plain(m), "merges cleanly into main at aaaaaaa, which moved since the branch left it: nothing to resolve") {
+		t.Fatalf("m without a conflict:\n%s", plain(m))
+	}
+}
+
+// A candidate whose branch merged the target names the merge, what it
+// merged, the candidate before it, and the files it resolved.
+func TestReviewNamesTheResolution(t *testing.T) {
+	t.Parallel()
+	f := reviewFixture(newFixture(), false)
+	f.changes = func(target, candidate, tip, path string) (*versions.Changes, error) {
+		return &versions.Changes{Base: "base000",
+			Merge:      &versions.Merge{Target: strings.Repeat("a", 40), Commit: candidate, Outcome: "fast-forward", Conflicts: []string{}},
+			Files:      []versions.Change{{Path: "internal/x.go", Added: 12, Removed: 3}, {Path: "bin.dat", Added: -1, Removed: -1}},
+			Resolution: &versions.Resolution{Merge: "abcdef1", Target: strings.Repeat("a", 40), Previous: "9876543", Files: []string{"internal/x.go"}}}, nil
+	}
+	m := openReview(t, f, 200, 40)
+	s := plain(m)
+	for _, want := range []string{"Resolution: merge abcdef1 of main at aaaaaaa into candidate 9876543, whose reviews stay comparable · resolved: internal/x.go", "resolved in merge abcdef1"} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("lacks %q:\n%s", want, s)
+		}
+	}
+	if strings.Count(s, "resolved in merge") != 1 {
+		t.Fatalf("only the resolved file is marked:\n%s", s)
 	}
 }

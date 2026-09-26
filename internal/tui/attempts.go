@@ -719,6 +719,8 @@ func (m *Model) launch() {
 // where says where a launch will run, for its prompt.
 func (p *prompt) where() string {
 	switch {
+	case p.kind == "conflict":
+		return "on branch " + p.branch + " in " + p.wt
 	case p.req.Worktree != "":
 		return "on branch " + p.req.Branch + " in " + p.req.Worktree
 	case p.req.Branch != "":
@@ -738,6 +740,8 @@ func (p *prompt) resolved() (attempt.Request, error) {
 		var ok bool
 		if strings.HasPrefix(args[i], "--branch") || strings.HasPrefix(args[i], "--worktree") {
 			err = errors.New("the board chooses where an attempt runs; grove run takes --branch and --worktree")
+		} else if p.kind == "conflict" && strings.HasPrefix(args[i], "--until") {
+			err = errors.New("a resolution runs through to the handoff; --until does not apply")
 		} else if ok, err = attempt.Flag(args, &i, &req); err == nil && !ok {
 			err = errors.New("unknown option " + args[i])
 		}

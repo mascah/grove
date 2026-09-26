@@ -57,6 +57,10 @@ type Backend struct {
 	Attempt  func(ctx context.Context, root, id string) (*attempt.View, attempt.Activity, error)
 	Launch   func(ctx context.Context, req attempt.Request) ([]string, error)
 	Stop     func(ctx context.Context, root, id string) ([]string, error)
+	// Conflict records feedback on a candidate that conflicts with the target
+	// and launches one attempt to resolve it (G-178), refusing if shown is no
+	// longer the fact; nil leaves m out.
+	Conflict func(ctx context.Context, req attempt.Request, shown *versions.Merge) ([]string, error)
 	// Tips maps each local branch to its tip. It is read beside the attempts
 	// only while one runs, so a moved branch re-reads the board (G-124); nil
 	// leaves that out.
@@ -523,7 +527,8 @@ func (m *Model) update(msg tea.Msg) tea.Cmd {
 		}
 		m.pending, m.acting, m.cancel = "", "", nil
 		title := map[string]string{"approve": "Approved " + msg.about, "feedback": "Feedback recorded on " + msg.about, "integrate": "Integration of " + msg.about,
-			"launch": "Launch of an attempt of " + msg.about, "stop": "Stop of attempt " + msg.about, "resolve": "Answer to " + msg.about}[msg.kind]
+			"launch": "Launch of an attempt of " + msg.about, "stop": "Stop of attempt " + msg.about, "resolve": "Answer to " + msg.about,
+			"conflict": "Resolution attempt of " + msg.about}[msg.kind]
 		m.result = &outcome{title: title, facts: msg.facts}
 		if msg.kind == "feedback" && msg.err == nil && m.backend.Launch != nil {
 			m.result.facts = append(m.result.facts, "or: R on "+msg.about+" launches a bounded attempt on its branch")

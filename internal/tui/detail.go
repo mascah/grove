@@ -169,6 +169,8 @@ func (m *Model) detailKey(k string) tea.Cmd {
 		m.openAttempts(work)
 	case "R":
 		m.launch()
+	case "m":
+		m.resolveConflict()
 	case "e":
 		return m.answer()
 	}

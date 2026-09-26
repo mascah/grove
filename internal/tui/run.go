@@ -12,6 +12,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/mascah/grove/internal/attempt"
 	"github.com/mascah/grove/internal/deps"
 	"github.com/mascah/grove/internal/integrate"
 	"github.com/mascah/grove/internal/update"
@@ -107,6 +108,14 @@ func Live() Backend {
 		},
 	}
 	liveAttempts(&b)
+	b.Conflict = func(_ context.Context, req attempt.Request, shown *versions.Merge) ([]string, error) {
+		var facts []string
+		l, err := attempt.Resolve(req, shown, time.Now(), func(f string) { facts = append(facts, f) })
+		if err != nil {
+			return facts, err
+		}
+		return append(facts, launched(l)...), nil
+	}
 	return b
 }
 
