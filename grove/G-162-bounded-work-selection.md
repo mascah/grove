@@ -8,6 +8,7 @@ updated: "2026-09-26T00:35:48Z"
 kind: feature
 relates_to: ["G-045", "G-046", "G-044", "G-101", "G-054", "G-056", "G-057", "G-059", "G-060", "G-161", "G-188"]
 candidate: "81fa4f874aa9ce137b16debd3d9016405340df2e"
+approved: "81fa4f874aa9ce137b16debd3d9016405340df2e"
 ---
 
 ## Outcome
@@ -236,3 +237,5 @@ in a disposable project, with a `grove` built from the integrated main:
     grove --project "$t" attempt ATTEMPT
 
 Verdict on candidate 2fb756b, 2026-09-26: approved
+
+Verdict on candidate 81fa4f8, 2026-09-26: approved: merge of main (G-169) at 81fa4f8 over approved 2fb756b; conflicts in attempt.go, cli.go and commands.md resolved by keeping both G-169's entrypoint-revision refusal (moved into prepare) and G-162's selection; vet, gofmt, check and the full test suite pass
