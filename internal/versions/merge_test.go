@@ -147,17 +147,41 @@ func TestResolution(t *testing.T) {
 	repo.Command(ctx, wt, "merge", "-q", "main").Run() // conflicts in shared.txt
 	write(t, wt, "shared.txt", "both\n")
 	merge := commit(t, wt, "resolved")
-	want := &Resolution{Merge: merge, Target: target, Previous: previous, Files: []string{"shared.txt"}}
+	want := &Resolution{Merge: merge, Target: target, Previous: previous, Files: []Resolved{{"shared.txt", ""}}}
 	if c := changes(merge); !reflect.DeepEqual(c.Resolution, want) {
 		t.Fatalf("resolution %+v, want %+v", c.Resolution, want)
 	}
-	// Only the latest merge is read, and one of another branch is no
-	// target's.
+	// A conflict settled by taking the target's side is named as such, and a
+	// file Git merged by itself, each side changing its own line, is not one.
+	write(t, root, "lines.txt", "a\nb\nc\nd\ne\n")
+	commit(t, root, "lines")
+	git(t, wt, "merge", "-q", "--no-edit", "main")
+	write(t, wt, "shared.txt", "work again\n")
+	write(t, wt, "lines.txt", "A\nb\nc\nd\ne\n")
+	commit(t, wt, "more work")
+	write(t, root, "shared.txt", "main again\n")
+	write(t, root, "lines.txt", "a\nb\nc\nd\nE\n")
+	target = commit(t, root, "main again")
+	repo.Command(ctx, wt, "merge", "-q", "main").Run()
+	git(t, wt, "checkout", "--theirs", "shared.txt")
+	merge = commit(t, wt, "took main's")
+	if c := changes(merge); c.Resolution == nil || c.Resolution.Target != target || !reflect.DeepEqual(c.Resolution.Files, []Resolved{{"shared.txt", "target"}}) {
+		t.Fatalf("taking a side: %+v", c.Resolution)
+	}
+	// Only the latest merge is read: one of another branch, or of unrelated
+	// history, is no target's.
 	side := addWorktree(t, root, "side", previous, "-b", "side")
 	write(t, side, "side.txt", "side\n")
 	commit(t, side, "side")
 	git(t, wt, "merge", "-q", "--no-edit", "side")
 	if c := changes(git(t, wt, "rev-parse", "HEAD")); c.Resolution != nil {
 		t.Fatalf("a merge of side: %+v", c.Resolution)
+	}
+	orphan := addWorktree(t, root, "orphan", "", "--orphan", "-b", "orphan")
+	write(t, orphan, "alone.txt", "alone\n")
+	commit(t, orphan, "alone")
+	git(t, wt, "merge", "-q", "--no-edit", "--allow-unrelated-histories", "orphan")
+	if c := changes(git(t, wt, "rev-parse", "HEAD")); c.Resolution != nil {
+		t.Fatalf("a merge of unrelated history: %+v", c.Resolution)
 	}
 }

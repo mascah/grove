@@ -300,9 +300,10 @@ into the branch, not a later tip of the target and never a rebase, so that
 the previous candidate and every review's `examined` stay ancestors of the
 new tip. Resolve only the conflicting files, keeping both sides' intent. Run
 the full verification and commit the merge, then hand it off as step 8
-says. Evidence names the previous candidate, the merged target commit, and
-the files whose merged content is neither side's
-(`git diff-tree -r --cc --name-only MERGE`). Change nothing else. A
+says. Evidence names the previous candidate and the merged target commit.
+It also names each file the merge conflicted on and how it was settled; a
+file settled by taking one side drops the other side's change, so say so.
+Change nothing else. A
 resolution that needs a choice the record does not settle is a
 [missing human decision](#when-a-human-decision-is-missing), and it stops
 the unit before it commits the merge. Scope the review to the resolution:

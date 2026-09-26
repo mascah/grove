@@ -2,7 +2,9 @@ package versions
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
@@ -38,10 +40,18 @@ type Changes struct {
 // branch (G-178): what a resolution attempt hands off, so that the owner
 // judges the resolution rather than the whole change again.
 type Resolution struct {
-	Merge    string   `json:"merge"`    // the merge commit, on the branch's first-parent line
-	Target   string   `json:"target"`   // the target commit it merged, its second parent
-	Previous string   `json:"previous"` // the candidate the record named before the merge, "" when unread
-	Files    []string `json:"files"`    // files whose merged content is neither side's, from the repository's top
+	Merge    string     `json:"merge"`    // the merge commit, on the branch's first-parent line
+	Target   string     `json:"target"`   // the target commit it merged, its second parent
+	Previous string     `json:"previous"` // the candidate the record named before the merge, "" when unread
+	Files    []Resolved `json:"files"`    // the files merging the parents conflicts on, from the repository's top
+}
+
+// Resolved is one conflicting file and how the merge left it: Kept is
+// "target" or "branch" when its content is that side's, which drops the
+// other side's change, and "" when it is neither.
+type Resolved struct {
+	Path string `json:"path"`
+	Kept string `json:"kept"`
 }
 
 // ChangesContext reads a candidate's changes in root's repository, on demand,
@@ -95,7 +105,9 @@ func ChangesContext(ctx context.Context, root, target, candidate, tip string, re
 // resolution reads the latest merge on candidate's first-parent line that
 // the target at does not hold, and reports it when the target holds its
 // second parent: a target commit merged into the branch. A later merge of
-// another branch hides it. Previous is the candidate the first
+// another branch hides it. Its files are those merging its parents again,
+// in objects only, conflicts on, so a file Git merged by itself is not one
+// and a conflict settled by taking one side is. Previous is the candidate the first
 // record path named at the merge's first parent, since feedback keeps it.
 func resolution(ctx context.Context, root, at, candidate string, recordPaths []string) (*Resolution, error) {
 	out, err := repo.GitContext(ctx, root, "rev-list", "--first-parent", "--merges", "--parents", "-n", "1", candidate, "^"+at)
@@ -106,17 +118,52 @@ func resolution(ctx context.Context, root, at, candidate string, recordPaths []s
 	if len(commits) < 3 {
 		return nil, nil
 	}
-	// The target holds the second parent exactly when it is their merge base.
-	if base, err := repo.GitContext(ctx, root, "merge-base", commits[2], at); err != nil || strings.TrimSpace(base) != commits[2] {
+	// Exit 1 is Git's no, for unrelated history too.
+	cmd := repo.Command(ctx, root, "merge-base", "--is-ancestor", commits[2], at)
+	cmd.WaitDelay = repo.WaitDelay(ctx)
+	if err := cmd.Run(); ctx.Err() != nil {
+		return nil, ctx.Err()
+	} else if exit := (*exec.ExitError)(nil); errors.As(err, &exit) && exit.ExitCode() == 1 {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("git merge-base: %v", err)
+	}
+	r := &Resolution{Merge: commits[0], Target: commits[2], Files: []Resolved{}}
+	// No base is neither parent, so predict performs the merge.
+	m, _, err := predict(ctx, root, commits[1], "", commits[2])
+	if err != nil {
 		return nil, err
 	}
-	r := &Resolution{Merge: commits[0], Target: commits[2], Files: []string{}}
-	if out, err = repo.GitContext(ctx, root, "diff-tree", "-r", "--cc", "--name-only", "--no-commit-id", "-z", r.Merge); err != nil {
-		return nil, err
-	}
-	for _, f := range strings.Split(out, "\x00") {
-		if f != "" {
-			r.Files = append(r.Files, f)
+	if len(m.Conflicts) != 0 {
+		differs := func(side string) (map[string]bool, error) {
+			args := []string{"diff", "--name-only", "-z", side, r.Merge, "--"}
+			for _, f := range m.Conflicts {
+				args = append(args, ":(literal)"+f)
+			}
+			out, err := repo.GitContext(ctx, root, args...)
+			set := map[string]bool{}
+			for _, f := range strings.Split(out, "\x00") {
+				set[f] = f != ""
+			}
+			return set, err
+		}
+		fromBranch, err := differs(commits[1])
+		if err != nil {
+			return nil, err
+		}
+		fromTarget, err := differs(commits[2])
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range m.Conflicts {
+			kept := ""
+			switch {
+			case !fromTarget[f]:
+				kept = "target"
+			case !fromBranch[f]:
+				kept = "branch"
+			}
+			r.Files = append(r.Files, Resolved{f, kept})
 		}
 	}
 	if len(recordPaths) != 0 {

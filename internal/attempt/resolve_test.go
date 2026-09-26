@@ -99,30 +99,26 @@ func TestResolveRefusals(t *testing.T) {
 	}
 
 	// An attempt of the work that may be running.
-	dir, err := Dir(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	adir := filepath.Join(dir, "G-001.20260922T170000Z")
-	if err := os.MkdirAll(adir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := writeJSON(filepath.Join(adir, "attempt.json"), &Launch{Attempt: "G-001.20260922T170000Z", Work: "G-001"}); err != nil {
-		t.Fatal(err)
-	}
-	lock, err := os.OpenFile(filepath.Join(adir, "owner.lock"), os.O_CREATE|os.O_RDWR, 0o644)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX); err != nil {
-		t.Fatal(err)
-	}
+	done := running(t, root, "G-001")
 	if _, _, err := resolve(root, nil, now); err == nil || !strings.Contains(err.Error(), "is running; stop it or wait") {
 		t.Fatalf("a running attempt: %v", err)
 	}
-	lock.Close()
-	os.RemoveAll(adir)
+	done()
 	unchanged(t)
+
+	// What the attempt would wait on once the work is active: an open
+	// question on the branch that blocks it.
+	write(t, wt, "grove/G-002-q.md", question)
+	git(t, wt, "add", "-A")
+	git(t, wt, "commit", "-qm", "a question")
+	before = git(t, root, "rev-parse", "worktree-G-001")
+	if _, _, err := resolve(root, nil, now); err == nil || !strings.Contains(err.Error(), "G-001 blocked by open question G-002") {
+		t.Fatalf("a blocking question: %v", err)
+	}
+	unchanged(t)
+	git(t, wt, "rm", "-q", "grove/G-002-q.md")
+	git(t, wt, "commit", "-qm", "no question")
+	before = git(t, root, "rev-parse", "worktree-G-001")
 
 	// Resolved by hand: the candidate merges cleanly, so there is nothing to do.
 	git(t, root, "revert", "--no-edit", "HEAD")
@@ -139,6 +135,60 @@ func TestResolveRefusals(t *testing.T) {
 	unchanged(t)
 }
 
+// running makes an attempt of work that reads as running, until the
+// returned function releases it.
+func running(t *testing.T, root, work string) func() {
+	t.Helper()
+	dir, err := Dir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	adir := filepath.Join(dir, work+".20260922T170000Z")
+	if err := os.MkdirAll(adir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeJSON(filepath.Join(adir, "attempt.json"), &Launch{Attempt: work + ".20260922T170000Z", Work: work}); err != nil {
+		t.Fatal(err)
+	}
+	lock, err := os.OpenFile(filepath.Join(adir, "owner.lock"), os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX); err != nil {
+		t.Fatal(err)
+	}
+	return func() { lock.Close(); os.RemoveAll(adir) }
+}
+
+// A candidate shared by a group (G-188) is resolved for the group: the
+// feedback reopens every member and the attempt selects them all, the given
+// ID first, and any member's running attempt refuses it.
+func TestResolveAGroup(t *testing.T) {
+	root, wt, candidate, _ := conflicted(t)
+	write(t, wt, "grove/G-003-third.md", strings.NewReplacer("G-001", "G-003", "First", "Third").Replace(recordOn(t, root, "worktree-G-001")))
+	git(t, wt, "add", "-A")
+	git(t, wt, "commit", "-qm", "the group")
+	fake(t, initLine+"\n"+resultLine("success", false))
+	done := running(t, root, "G-003")
+	if _, err := Resolve(Request{Root: root, IDs: []string{"G-003"}, BudgetUSD: "1", PermissionMode: "x"}, nil, now, func(string) {}); err == nil || !strings.Contains(err.Error(), "attempt G-003.20260922T170000Z of G-003 is running") {
+		t.Fatalf("a member's running attempt: %v", err)
+	}
+	done()
+	skipShort(t)
+	l, err := Resolve(Request{Root: root, IDs: []string{"G-003"}, BudgetUSD: "1", PermissionMode: "x"}, nil, now, func(string) {})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(l.Selection.Selected, " "); got != "G-003 G-001" {
+		t.Fatalf("selected %q", got)
+	}
+	g1, g3 := recordOn(t, root, l.Base), git(t, root, "show", l.Base+":grove/G-003-third.md")
+	if !strings.Contains(g3, "Feedback on candidate "+candidate[:7]) || !strings.Contains(g1, "Reopened with G-003's feedback on candidate "+candidate[:7]) || !strings.Contains(g1, "status: active") {
+		t.Fatalf("the group reopens:\n%s\n%s", g3, g1)
+	}
+	await(t, root, l.Attempt, Finished)
+}
+
 func TestResolveCleanly(t *testing.T) {
 	skipShort(t)
 	root, wt, candidate, tip := conflicted(t)
@@ -148,7 +198,7 @@ func TestResolveCleanly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(facts) < 2 || !strings.HasPrefix(facts[0], "feedback: G-001 is active again on branch worktree-G-001") || !strings.Contains(facts[0], "resolve shared.txt") {
+	if len(facts) < 2 || !strings.HasPrefix(facts[0], "feedback: G-001 is active again on branch worktree-G-001") || !strings.Contains(facts[0], "resolve the conflict in shared.txt") {
 		t.Fatalf("facts %q", facts)
 	}
 	if l.Branch != "worktree-G-001" || !samePath(l.Worktree, wt) || !l.WorktreeReused || strings.Join(l.Selection.Selected, " ") != "G-001" {
@@ -180,7 +230,7 @@ func TestResolveCleanly(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r := c.Resolution; r == nil || r.Merge != next || r.Target != tip || r.Previous != candidate || strings.Join(r.Files, ",") != "shared.txt" {
+	if r := c.Resolution; r == nil || r.Merge != next || r.Target != tip || r.Previous != candidate || len(r.Files) != 1 || r.Files[0] != (versions.Resolved{Path: "shared.txt"}) {
 		t.Fatalf("resolution %+v", c.Resolution)
 	}
 	// In review again, with an attempt no longer running: a second resolve

@@ -131,10 +131,14 @@ branch:
 - the merge commit;
 - the target commit it merged;
 - the candidate the record named before it, whose reviews stay comparable;
-- the files whose merged content is neither side's, each also marked
-  `resolved in merge M` in the Changes list.
+- the files that merging its two parents again, in objects only, conflicts
+  on. A file whose result is one side's content says which side it took,
+  since that drops the other side's change. A file Git merged by itself is
+  not listed. Those the candidate still changes against the target are
+  marked `resolved in merge M` in the Changes list.
 
-Only the latest merge is read, and a later merge of another branch hides it.
+Only the latest merge is read, and a later merge of another branch or of
+unrelated history hides it.
 
 ## Attempts
 

@@ -1,12 +1,9 @@
 package attempt
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -24,8 +21,9 @@ import (
 // launch defaults. req names one work and any launch flags; where it runs is
 // Resolve's choice. shown, when not nil, is the fact the caller showed, and a
 // candidate or target commit that differs from it now is refused. Every
-// refusal comes before the feedback is written; a launch that fails after it
-// says the feedback stands and how to launch.
+// refusal Start would make is asked before the feedback is written too; a
+// launch that still fails after it says the feedback stands and how to
+// launch.
 func Resolve(req Request, shown *versions.Merge, now time.Time, report func(string)) (*Launch, error) {
 	switch {
 	case len(req.IDs) != 1:
@@ -96,15 +94,37 @@ func Resolve(req Request, shown *versions.Merge, now time.Time, report func(stri
 	if d := Defaulted(req, checkout.Run); d.BudgetUSD == "" || d.PermissionMode == "" {
 		return nil, ErrUnsupplied
 	}
-	if _, err := exec.LookPath(cmp.Or(os.Getenv(ClaudeEnv), "claude")); err != nil {
-		return nil, fmt.Errorf("the provider executable is not available: %v", err)
+	// What Start would refuse once the feedback reopened the group is asked
+	// now, of the branch's checkout with those records active: a wait, the
+	// entrypoints, the provider.
+	wp, wds := project.Load(dir, dir)
+	if len(wds) != 0 {
+		return nil, fmt.Errorf("the project on %s at %s is not valid: %s", branch, checkout.Worktree, wds[0].String())
+	}
+	for _, o := range wp.Records {
+		if slices.Contains(ids, o.ID) {
+			o.Status = "active"
+		}
+	}
+	s, err := selectionOf(wp, ids, "", containsIn(dir, checkout.Commit))
+	if err != nil {
+		return nil, err
+	}
+	if err := s.startable(); err != nil {
+		return nil, err
+	}
+	if err := entrypoints(checkout.Worktree, filepath.FromSlash(res.Prefix), branch); err != nil {
+		return nil, err
+	}
+	if _, _, _, err := provider(); err != nil {
+		return nil, err
 	}
 
 	fb, err := update.Feedback(dir, id, Mandate(&m, p.Target), now)
 	if err != nil {
 		return nil, err
 	}
-	report(fmt.Sprintf("feedback: %s is active again on branch %s, commit %s, to merge %s at %s and resolve %s", id, branch, short(fb.Commit), p.Target, short(m.Target), strings.Join(m.Conflicts, ", ")))
+	report(fmt.Sprintf("feedback: %s is active again on branch %s, commit %s, to merge %s at %s and resolve the conflict %s", id, branch, short(fb.Commit), p.Target, short(m.Target), m.Where()))
 	for _, o := range fb.Reopened {
 		report(fmt.Sprintf("reopened: %s shared the candidate and is active again, commit %s", o.ID, short(o.Commit)))
 	}

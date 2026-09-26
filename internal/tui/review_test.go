@@ -506,11 +506,11 @@ func TestReviewNamesTheResolution(t *testing.T) {
 		return &versions.Changes{Base: "base000",
 			Merge:      &versions.Merge{Target: strings.Repeat("a", 40), Commit: candidate, Outcome: "fast-forward", Conflicts: []string{}},
 			Files:      []versions.Change{{Path: "internal/x.go", Added: 12, Removed: 3}, {Path: "bin.dat", Added: -1, Removed: -1}},
-			Resolution: &versions.Resolution{Merge: "abcdef1", Target: strings.Repeat("a", 40), Previous: "9876543", Files: []string{"internal/x.go"}}}, nil
+			Resolution: &versions.Resolution{Merge: "abcdef1", Target: strings.Repeat("a", 40), Previous: "9876543", Files: []versions.Resolved{{Path: "internal/x.go"}, {Path: "gone.go", Kept: "target"}}}}, nil
 	}
 	m := openReview(t, f, 200, 40)
 	s := plain(m)
-	for _, want := range []string{"Resolution: merge abcdef1 of main at aaaaaaa into candidate 9876543, whose reviews stay comparable · resolved: internal/x.go", "resolved in merge abcdef1"} {
+	for _, want := range []string{"Resolution: merge abcdef1 of main at aaaaaaa into candidate 9876543, whose reviews stay comparable · resolved: internal/x.go, gone.go (took main's side, dropping the branch's change)", "resolved in merge abcdef1"} {
 		if !strings.Contains(s, want) {
 			t.Fatalf("lacks %q:\n%s", want, s)
 		}

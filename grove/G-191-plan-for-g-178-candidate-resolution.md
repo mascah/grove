@@ -37,7 +37,9 @@ in order, and every refusal comes before anything is written:
 4. The group sharing the candidate (G-188) is the selection, the given ID
    first. No member may have a running or orphaned attempt. The launch
    defaults (`Defaulted` with the branch's `run:`) must supply a budget and
-   a mode, and the provider executable must resolve.
+   a mode. After review round 1, what `Start` would refuse is asked here,
+   before the feedback, of the branch's checkout with the group active: a
+   wait, the entrypoints, and the provider and its `--version`.
 5. `update.Feedback` in the branch's checkout, with `Mandate(fact,
    target, candidate)` as its text. The text names the target commit in
    full and the conflicting files. It says to merge that commit rather
@@ -71,8 +73,11 @@ target, previous, files}`:
 - `merge` is the latest first-parent merge on the candidate not on the
   target (`rev-list --first-parent --merges --parents -n1 CAND ^TARGET`)
   whose second parent the target contains.
-- `files` is `diff-tree -r --cc --name-only` of that merge: content that
-  differs from both sides.
+- `files` is the conflicts that merging the merge's two parents again
+  (`merge-tree`, in objects only) reports. Each file also says whether the
+  result is one side's content. Adjusted after review round 1: `diff-tree
+  --cc` missed a conflict settled by taking one side, which drops the other
+  side's change. It also listed files that Git had merged by itself.
 - `previous` is the `candidate` the record held at the merge's first
   parent, since feedback keeps it.
 
@@ -86,15 +91,15 @@ resolution row), `docs/work-execution.md`, and `grove --help`.
 
 ## Steps
 
-- [ ] `attempt.Resolve` and `Mandate`, with refusal tests.
-- [ ] Fake-provider lifecycle tests: a clean resolution, one that needs a
+- [x] `attempt.Resolve` and `Mandate`, with refusal tests.
+- [x] Fake-provider lifecycle tests: a clean resolution, one that needs a
       choice, a target that moves during the attempt, and a Stop.
-- [ ] `grove resolve` in the CLI and in the usage text; `integrate`'s
+- [x] `grove resolve` in the CLI and in the usage text; `integrate`'s
       refusal names it.
-- [ ] `versions.Changes.Resolution`, with a test on a real repository.
-- [ ] The board: the `m` prompt through the launch line, the resolution
+- [x] `versions.Changes.Resolution`, with a test on a real repository.
+- [x] The board: the `m` prompt through the launch line, the resolution
       row, and the resolved-file marks, with tests.
-- [ ] The guide, `commands.md` and `board.md`; then verification,
+- [x] The guide, `commands.md` and `board.md`; then verification,
       independent review and the handoff.
 
 Out of scope, as the record says: automatic triggering (G-180), and any

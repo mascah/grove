@@ -310,7 +310,7 @@ func Dir(root string) (string, error) {
 // prepared is a launch checked before anything is written.
 type prepared struct {
 	launch       *Launch
-	head, skill  string
+	head         string
 	branchExists bool // the branch exists, with or without a worktree
 }
 
@@ -442,7 +442,7 @@ func prepare(req Request) (*prepared, error) {
 	if req.Digest != "" && req.Digest != s.Digest {
 		return nil, fmt.Errorf("the assignment changed since its preview: its digest is %s, not %s; what it would run now:\n%s\npreview it again (run --dry-run) before launching", s.Digest, req.Digest, strings.Join(Explain(l, func(v string) string { return v }), "\n"))
 	}
-	return &prepared{launch: l, head: head, skill: skill, branchExists: exists}, nil
+	return &prepared{launch: l, head: head, branchExists: exists}, nil
 }
 
 // onBranch rereads the members as the attempt's checkout at dir holds them,
@@ -537,19 +537,9 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 			}
 		}
 	}
-	exe := os.Getenv(ClaudeEnv)
-	if exe == "" {
-		exe = "claude"
-	}
-	resolved, err := exec.LookPath(exe)
+	exe, resolved, version, err := provider()
 	if err != nil {
-		return nil, fmt.Errorf("the provider executable is not available: %v", err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	version, err := exec.CommandContext(ctx, resolved, "--version").Output()
-	if err != nil {
-		return nil, fmt.Errorf("%s --version failed: %v", exe, err)
+		return nil, err
 	}
 	session, err := uuid()
 	if err != nil {
@@ -576,11 +566,10 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 			return nil, fmt.Errorf("%v (on %s at %s)", err, branch, worktree)
 		}
 	}
-	skill := pre.skill
 	// After the branch's own waits: a candidate in review is judged, not
 	// given another commit.
-	if _, err := os.Stat(filepath.Join(worktree, skill)); err != nil {
-		return nil, fmt.Errorf("%s is not in %s on %s, so the attempt would not find the grove-work skill its prompt names; commit the files grove init wrote to %s and launch again", skill, worktree, branch, branch)
+	if err := entrypoints(worktree, prefix, branch); err != nil {
+		return nil, err
 	}
 	// The IDs go as given: the guide takes the caller's order and context
 	// orders them, as it did here.
@@ -599,13 +588,6 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if l.Effort != "" {
 		command = append(command, "--effort", l.Effort)
 	}
-	for _, path := range []string{SkillPath, ReviewerPath} {
-		if content, err := os.ReadFile(filepath.Join(worktree, prefix, path)); err == nil {
-			if err := incompatible(prefix, path, worktree, string(content)); err != nil {
-				return nil, err
-			}
-		}
-	}
 	var differs []string
 	installed := func(path string) string {
 		def, err := os.ReadFile(filepath.Join(worktree, prefix, path))
@@ -622,7 +604,7 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if reviewer == "none" {
 		report(fmt.Sprintf("warning: %s is not in %s, so the attempt has no independent reviewer and work whose record requires one stays active; commit the files grove init wrote to give it one", filepath.Join(prefix, ReviewerPath), worktree))
 	}
-	l.Attempt, l.WorktreeReused, l.Command, l.Executable, l.ClaudeVersion = attempt, reused, command, exe, strings.TrimSpace(string(version))
+	l.Attempt, l.WorktreeReused, l.Command, l.Executable, l.ClaudeVersion = attempt, reused, command, exe, version
 	l.GroveVersion, l.Reviewer, l.Skill, l.Differs = grove.Identity().String(), reviewer, skillDigest, differs
 	l.SessionID, l.Started = session, now.UTC()
 	// The directory appears complete or not at all: a reader never sees an
@@ -737,6 +719,39 @@ func locate(root, branch, worktree, head string) (base string, reused, exists bo
 		return strings.TrimSpace(tip), false, true, nil
 	}
 	return head, false, false, nil
+}
+
+// provider resolves the provider executable and asks its version.
+func provider() (exe, resolved, version string, err error) {
+	exe = cmp.Or(os.Getenv(ClaudeEnv), "claude")
+	if resolved, err = exec.LookPath(exe); err != nil {
+		return "", "", "", fmt.Errorf("the provider executable is not available: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, resolved, "--version").Output()
+	if err != nil {
+		return "", "", "", fmt.Errorf("%s --version failed: %v", exe, err)
+	}
+	return exe, resolved, strings.TrimSpace(string(out)), nil
+}
+
+// entrypoints refuses a worktree without the grove-work skill the prompt
+// names, or whose skill or reviewer is marked with a revision this grove
+// does not serve.
+func entrypoints(worktree, prefix, branch string) error {
+	skill := filepath.Join(prefix, SkillPath)
+	if _, err := os.Stat(filepath.Join(worktree, skill)); err != nil {
+		return fmt.Errorf("%s is not in %s on %s, so the attempt would not find the grove-work skill its prompt names; commit the files grove init wrote to %s and launch again", skill, worktree, branch, branch)
+	}
+	for _, path := range []string{SkillPath, ReviewerPath} {
+		if content, err := os.ReadFile(filepath.Join(worktree, prefix, path)); err == nil {
+			if err := incompatible(prefix, path, worktree, string(content)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // incompatible refuses a marked entrypoint whose revision this grove does

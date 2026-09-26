@@ -400,7 +400,7 @@ func (m *Model) changesSection(v *versions.Version, w int, heading func(string),
 			}
 			item(ansi.Truncate(safe(f.Path), max(w-2-ansi.StringWidth(counts)-2, 8), "…") + "  " + counts)
 			described := m.describedBy(f.Path)
-			if r := read.c.Resolution; r != nil && slices.Contains(r.Files, f.Path) {
+			if r := read.c.Resolution; r != nil && slices.ContainsFunc(r.Files, func(x versions.Resolved) bool { return x.Path == f.Path }) {
 				described += " · resolved in merge " + short7(r.Merge)
 			}
 			plain("    " + described)
@@ -617,9 +617,20 @@ func resolutionText(r *versions.Resolution, target string) string {
 		text += " into candidate " + short7(r.Previous) + ", whose reviews stay comparable"
 	}
 	if len(r.Files) == 0 {
-		return text + " · no file differs from both sides"
+		return text + " · it merged without a conflict"
 	}
-	return text + " · resolved: " + strings.Join(r.Files, ", ")
+	var files []string
+	for _, f := range r.Files {
+		switch f.Kept {
+		case "target":
+			files = append(files, f.Path+" (took "+target+"'s side, dropping the branch's change)")
+		case "branch":
+			files = append(files, f.Path+" (kept the branch's side, dropping "+target+"'s change)")
+		default:
+			files = append(files, f.Path)
+		}
+	}
+	return text + " · resolved: " + strings.Join(files, ", ")
 }
 
 // promptKey handles every key while a prompt is open: text goes into it,
