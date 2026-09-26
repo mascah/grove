@@ -147,8 +147,9 @@ candidate adds only this evidence and the review record.
   proposed policy above. `resolve` needs `budget`; `approve` needs a
   non-empty `verify`; `integrate: true` needs `approve`; `never` takes
   `path.Match` patterns or `DIR/**`. Every problem is a `check` diagnostic
-  named `policy.KEY`. No policy was written into this repository's
-  `grove.yaml`: that is the owner's act.
+  named `policy.KEY`. At the owner's request the proposed policy above was
+  then written into this repository's `grove.yaml` (`2251569`), before the
+  real-provider trial.
 - `grove sweep [--dry-run]` (`internal/sweep`), in the target's checkout
   with `grove.yaml` committed, so every act names the revision it ran
   under (`policy grove.yaml sha256:…`). Refused without a policy. For each
@@ -264,5 +265,6 @@ grove integrate G-180           # then in the main checkout
 Or give feedback with `grove feedback G-180 "TEXT"` in the worktree. To
 demo: add the proposed `policy:` above to a disposable project's
 `grove.yaml`, commit it, and run `grove sweep --dry-run`, then `grove
-sweep`, in its target checkout. Writing a policy into this repository's
-`grove.yaml`, and the real-provider trial before it, are the owner's acts.
+sweep`, in its target checkout. This repository's `grove.yaml` carries the
+proposed policy from `2251569`, so the first `grove sweep` on main after
+integration acts under it; the real-provider trial is still open.
