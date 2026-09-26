@@ -2,9 +2,9 @@
 id: "G-162"
 type: work
 title: "Execute an explicitly selected set of work with bounded progress and review"
-status: review
+status: done
 created: "2026-09-25T20:35:28Z"
-updated: "2026-09-26T00:35:48Z"
+updated: "2026-09-26T00:35:57Z"
 kind: feature
 relates_to: ["G-045", "G-046", "G-044", "G-101", "G-054", "G-056", "G-057", "G-059", "G-060", "G-161", "G-188"]
 candidate: "81fa4f874aa9ce137b16debd3d9016405340df2e"
