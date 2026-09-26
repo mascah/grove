@@ -409,6 +409,15 @@ func prepare(req Request) (*prepared, error) {
 		if _, err := repo.Git(root, "cat-file", "-e", head+":"+filepath.ToSlash(skill)); err != nil {
 			return nil, fmt.Errorf("%s is not committed at HEAD %s, so the attempt's worktree would not hold the grove-work skill its prompt names; commit the files grove init wrote and launch again", skill, short(head))
 		}
+		for _, path := range []string{SkillPath, ReviewerPath} {
+			content, err := repo.Git(root, "cat-file", "blob", head+":"+filepath.ToSlash(filepath.Join(prefix, path)))
+			if err != nil {
+				continue // the reviewer's absence is warned of at launch
+			}
+			if err := incompatible(prefix, path, "HEAD "+short(head), content); err != nil {
+				return nil, err
+			}
+		}
 	}
 	// The branch may hold what an earlier attempt persisted: a candidate in
 	// review awaiting the owner, or the question the headless guide writes
@@ -590,6 +599,13 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	if l.Effort != "" {
 		command = append(command, "--effort", l.Effort)
 	}
+	for _, path := range []string{SkillPath, ReviewerPath} {
+		if content, err := os.ReadFile(filepath.Join(worktree, prefix, path)); err == nil {
+			if err := incompatible(prefix, path, worktree, string(content)); err != nil {
+				return nil, err
+			}
+		}
+	}
 	var differs []string
 	installed := func(path string) string {
 		def, err := os.ReadFile(filepath.Join(worktree, prefix, path))
@@ -721,6 +737,19 @@ func locate(root, branch, worktree, head string) (base string, reused, exists bo
 		return strings.TrimSpace(tip), false, true, nil
 	}
 	return head, false, false, nil
+}
+
+// incompatible refuses a marked entrypoint whose revision this grove does
+// not serve: it would stop, or contradict the guide, after the spend has
+// begun (G-169). A custom one is the project's own and is not judged.
+func incompatible(prefix, path, where, content string) error {
+	if verdict, revision := grove.Diagnose(path, content); verdict != "custom" && !grove.SupportsEntrypoint(revision) {
+		if verdict == "legacy" {
+			revision = "1 (no revision line)"
+		}
+		return fmt.Errorf("%s in %s is entrypoint revision %s, and this grove serves %s; run grove init with this grove, commit what it wrote, and launch again", filepath.Join(prefix, path), where, revision, grove.ServedEntrypoints())
+	}
+	return nil
 }
 
 // prepareWorktree makes branch's checkout at worktree from head, or reuses

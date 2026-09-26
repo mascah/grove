@@ -70,11 +70,14 @@ applies whatever that record's status; a rule naming none is this file's own.
   checks before acting on a selected version (G-017, G-011).
 - Escape a rendered body before glamour and filter it to glamour's own
   styles after; keep both layers (G-043).
-- A document the binary ships (`grove guide work|shape|model`, the reviewer
-  definition) links only within itself or to `https://`, names another
-  shipped document by its command, never by path, never links a record or
-  names one beyond its own example IDs, and never names Grove's repository
-  or the predecessor (G-146, G-151).
+- A document the binary ships (`grove guide work|shape|review|model`) links
+  only within itself or to `https://`, names another shipped document by its
+  command, never by path, never links a record or names one beyond its own
+  example IDs, and never names Grove's repository or the predecessor (G-146,
+  G-151). The entrypoints `init` generates follow
+  the same rule, stay thin, and load their guide with their entrypoint
+  revision; a change to what they need of the binary is a new revision
+  (G-169).
 
 ### Changes and verification
 
@@ -133,9 +136,9 @@ applies whatever that record's status; a rule naming none is this file's own.
   shaping never assigns, implements or merges. Execute assigned IDs with
   `/grove-work G-030` or `$grove-work G-030`; `grove run G-030` (board `R`)
   runs the same headless as a Grove-owned attempt that outlives the terminal.
-- The adapters in `.claude/skills/` and `.agents/skills/` load this file and
-  this checkout's guide files, not the binary's copies, and carry no init
-  marker on purpose.
+- The adapters in `.claude/skills/`, `.agents/skills/` and
+  `.claude/agents/` load this file and this checkout's guide files, not the
+  binary's copies, and carry no init marker on purpose.
 - `grove context IDs` reads the selected records in full and lists the rest;
   a listing is not a reading, and `context` writes nothing and authorizes
   nothing. The guides say what to read at each step.
