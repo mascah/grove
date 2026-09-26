@@ -1,2 +1,4 @@
+# Managed by grove init: rerunning init rewrites this file; remove this line to own it.
+# grove entrypoint revision 2
 policy:
   allow_implicit_invocation: false
