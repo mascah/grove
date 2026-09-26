@@ -242,7 +242,11 @@ func (s *Sweep) planApprove(it Item, r *project.Record, records []*project.Recor
 	if s.Policy.Integrate {
 		it.Act, then = Integrate, "approve and integrate"
 	}
-	it.Why = fmt.Sprintf("%s; review %s has no open finding; %d changed lines, no never path; verify with %d commands on the merged result, then %s", merge, review.ID, lines, len(s.Policy.Verify), then)
+	commands := "commands"
+	if len(s.Policy.Verify) == 1 {
+		commands = "command"
+	}
+	it.Why = fmt.Sprintf("%s; review %s has no open finding; %d changed lines, no never path; verify with %d %s on the merged result, then %s", merge, review.ID, lines, len(s.Policy.Verify), commands, then)
 	return it
 }
 
