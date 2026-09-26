@@ -339,8 +339,12 @@ func prepare(req Request) (*prepared, error) {
 		return nil, fmt.Errorf("the project is not valid; fix it before running:\n%s", strings.Join(lines, "\n"))
 	}
 	// What the launch runs with is recorded as resolved: a default from
-	// grove.yaml and a flag look the same in attempt.json.
-	req = Defaulted(req, p.Run)
+	// grove.yaml and a flag look the same in attempt.json. A delegated
+	// resolution was defaulted from the policy's checkout already, and this
+	// checkout's run: is the candidate's own, which never chooses for it.
+	if req.Policy == "" {
+		req = Defaulted(req, p.Run)
+	}
 	if req.BudgetUSD == "" || req.PermissionMode == "" {
 		return nil, ErrUnsupplied
 	}

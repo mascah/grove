@@ -242,7 +242,7 @@ func TestSweepResolvesAConflictOncePerTargetCommit(t *testing.T) {
 	// The candidate's own grove.yaml asks for another permission mode, which
 	// a delegated attempt never takes.
 	config := strings.Replace(policy, "%s", "'true'", 1)
-	root, wt := fixture(t, config, map[string]string{"code.txt": "branch\n", "grove.yaml": strings.Replace(config, "acceptEdits", "bypassPermissions", 1)}, ClosingLine)
+	root, wt := fixture(t, config, map[string]string{"code.txt": "branch\n", "grove.yaml": strings.Replace(config, "acceptEdits", "bypassPermissions\n  model: branch-model\n  effort: max", 1)}, ClosingLine)
 	write(t, root, "code.txt", "main\n")
 	git(t, root, "commit", "-qam", "main moves")
 	fake := filepath.Join(t.TempDir(), "claude")
@@ -268,8 +268,10 @@ func TestSweepResolvesAConflictOncePerTargetCommit(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(views) == 1 && views[0].Launch.PermissionMode != "acceptEdits" {
-			t.Fatalf("the attempt took permission mode %q from the candidate", views[0].Launch.PermissionMode)
+		if len(views) == 1 {
+			if l := views[0].Launch; l.PermissionMode != "acceptEdits" || l.Model != "" || l.Effort != "" {
+				t.Fatalf("the attempt took mode %q, model %q, effort %q from the candidate", l.PermissionMode, l.Model, l.Effort)
+			}
 		}
 		if len(views) == 1 && views[0].Status == attempt.Finished {
 			break

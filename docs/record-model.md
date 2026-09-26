@@ -260,8 +260,8 @@ resolution attempt for a candidate that conflicts with the target, at most
 once per target commit, and needs `budget`, which bounds the sum of a
 sweep's attempts. The attempt takes its permission mode, model and effort
 from the `run:` beside the policy, never from the candidate's branch, and
-waits without a permission mode there. `approve` lets it approve a candidate that merges cleanly
-and meets the conditions below; `verify`, one shell command per item, is
+waits without a permission mode there. `approve` lets it approve a
+candidate that merges cleanly and meets the conditions below; `verify`, one shell command per item, is
 required, and `max_lines` and `never` are optional. A `never` pattern is
 project-relative, in `path.Match` syntax, or `DIR/**` for everything under
 `DIR`. `integrate: true` needs `approve`. Any other key, or a malformed
@@ -274,9 +274,8 @@ question blocking it; have nothing after the candidate on its branch but
 its record; have at least one `current` review naming it that examined
 the candidate or an earlier commit from which only records changed, every
 such review's last line starting `Open findings:` being `Open findings:
-none`; change nothing
-outside the project, no `never` path and no binary file, within
-`max_lines`; and merge cleanly into the target, where the merged result,
+none`; change nothing outside the project, no `never` path and no binary
+file, within `max_lines`; and merge cleanly into the target, where the merged result,
 in a temporary worktree, passes every `verify` command. Everything else
 waits for the owner, with the reason `sweep` prints.
 
@@ -521,8 +520,8 @@ Candidate, review, approval and integration name the facts:
   commit are one **group**, and nothing else defines it. The commit that
   hands them off sets `review` and the candidate on all of them and changes
   only their records. A group of one is the ordinary case.
-- **Review** means a candidate awaits judgment: the owner's, or where a
-  standing `policy:` covers it, the policy's, applied by `grove sweep`. The record's Evidence
+- **Review** means a candidate awaits human judgment: the owner's own, or
+  given in advance as a standing `policy:` that `grove sweep` applies. The record's Evidence
   and Next carry the handoff the work guide describes, so a new session can
   judge it without the originating chat. A failed or interrupted attempt does
   not enter Review: it stays `active` with a checkpoint.
