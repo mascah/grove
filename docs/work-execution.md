@@ -307,7 +307,8 @@ Change nothing else. A
 resolution that needs a choice the record does not settle is a
 [missing human decision](#when-a-human-decision-is-missing), and it stops
 the unit before it commits the merge. Scope the review to the resolution:
-give the reviewer the merge commit, `git show --cc MERGE`, the previous
+give the reviewer the merge commit, `git show --remerge-diff MERGE` (which
+shows how each conflict was settled, a side taken included), the previous
 candidate and its reviews. If the target has moved again by the handoff,
 say so; the owner decides what happens next.
 

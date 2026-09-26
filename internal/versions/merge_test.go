@@ -2,6 +2,8 @@ package versions
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -167,6 +169,31 @@ func TestResolution(t *testing.T) {
 	merge = commit(t, wt, "took main's")
 	if c := changes(merge); c.Resolution == nil || c.Resolution.Target != target || !reflect.DeepEqual(c.Resolution.Files, []Resolved{{"shared.txt", "target"}}) {
 		t.Fatalf("taking a side: %+v", c.Resolution)
+	}
+	// Read from a project under a prefix, the paths are still the top's.
+	if c, err := ChangesContext(ctx, filepath.Join(root, "grove"), "main", merge, merge); err != nil || c.Resolution == nil || !reflect.DeepEqual(c.Resolution.Files, []Resolved{{"shared.txt", "target"}}) {
+		t.Fatalf("under a prefix: %+v %v", c.Resolution, err)
+	}
+	// Renamed apart on each side, the branch's name kept: the target's name
+	// is gone, which is the branch's side, whatever diff.renames says.
+	write(t, root, "old.txt", "one\ntwo\nthree\nfour\n")
+	commit(t, root, "old")
+	git(t, wt, "merge", "-q", "--no-edit", "main")
+	git(t, wt, "mv", "old.txt", "ours.txt")
+	commit(t, wt, "ours")
+	git(t, root, "mv", "old.txt", "theirs.txt")
+	commit(t, root, "theirs")
+	repo.Command(ctx, wt, "merge", "-q", "main").Run()
+	git(t, wt, "rm", "-q", "--cached", "--ignore-unmatch", "old.txt", "theirs.txt")
+	os.Remove(filepath.Join(wt, "theirs.txt"))
+	git(t, wt, "add", "ours.txt")
+	merge = commit(t, wt, "kept ours")
+	got := map[string]string{}
+	for _, f := range changes(merge).Resolution.Files {
+		got[f.Path] = f.Kept
+	}
+	if got["theirs.txt"] != "branch" || got["ours.txt"] != "branch" || got["old.txt"] != "" {
+		t.Fatalf("renamed apart: %v", got)
 	}
 	// Only the latest merge is read: one of another branch, or of unrelated
 	// history, is no target's.

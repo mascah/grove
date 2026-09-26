@@ -77,7 +77,12 @@ target, previous, files}`:
   (`merge-tree`, in objects only) reports. Each file also says whether the
   result is one side's content. Adjusted after review round 1: `diff-tree
   --cc` missed a conflict settled by taking one side, which drops the other
-  side's change. It also listed files that Git had merged by itself.
+  side's change. It also listed files that Git had merged by itself. Round 2 fixed three more cases. `merge-tree` names files relative to the
+  current directory, so `predict` now joins the prefix that
+  `resolveCommits` reads in its `rev-parse`; this also fixes G-177's
+  prediction for a project under a prefix. The side check ignores
+  `diff.renames`. A branch whose history began apart from the target
+  names no resolution and does not fail.
 - `previous` is the `candidate` the record held at the merge's first
   parent, since feedback keeps it.
 

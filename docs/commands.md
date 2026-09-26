@@ -361,7 +361,8 @@ Every refusal comes before the feedback is written:
 
 The board's `m` passes the prediction it showed, so a candidate or target
 commit that changed since it is refused too. If the attempt still fails to
-start after the feedback, as when another launch takes the work meanwhile, the error says the feedback stands and gives the
+start after the feedback, as when another launch takes the work meanwhile,
+the error says the feedback stands and gives the
 `grove run … --branch … --worktree …` that launches it. A second `resolve`
 finds the work active and is refused. One operation is one attempt; nothing
 retries, and a target that moves during it shows in the next prediction. The

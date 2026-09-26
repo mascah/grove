@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path"
 	"strings"
 
 	"github.com/mascah/grove/internal/repo"
@@ -53,7 +54,7 @@ func (m *Merge) Where() string {
 // reads becomes an unreferenced commit object, which Git's garbage collection
 // removes. One commit is the plain question: does it merge into the target?
 func PredictContext(ctx context.Context, root, target string, commits []string) ([]Merge, error) {
-	resolved, err := resolveCommits(ctx, root, append([]string{target}, commits...)...)
+	prefix, resolved, err := resolveCommits(ctx, root, append([]string{target}, commits...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +66,7 @@ func PredictContext(ctx context.Context, root, target string, commits []string) 
 		if err != nil {
 			return nil, err
 		}
-		m, tree, err := predict(ctx, root, ours, strings.TrimSpace(base), c)
+		m, tree, err := predict(ctx, root, prefix, ours, strings.TrimSpace(base), c)
 		if err != nil {
 			return nil, err
 		}
@@ -91,30 +92,34 @@ func PredictContext(ctx context.Context, root, target string, commits []string) 
 }
 
 // resolveCommits resolves names, which may abbreviate, to full commits in
-// one process, so that ancestry compares commits by their full names.
-func resolveCommits(ctx context.Context, root string, names ...string) ([]string, error) {
-	args := []string{"rev-parse"} // which, without --verify, would echo --end-of-options
+// one process, so that ancestry compares commits by their full names, and
+// reads root's prefix in the repository with them.
+func resolveCommits(ctx context.Context, root string, names ...string) (prefix string, commits []string, err error) {
+	args := []string{"rev-parse", "--show-prefix"} // which, without --verify, would echo --end-of-options
 	for _, n := range names {
 		if strings.HasPrefix(n, "-") {
-			return nil, fmt.Errorf("%q is not a commit", n)
+			return "", nil, fmt.Errorf("%q is not a commit", n)
 		}
 		args = append(args, n+"^{commit}")
 	}
 	out, err := repo.GitContext(ctx, root, args...)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
-	commits := strings.Fields(out)
-	if len(commits) != len(names) {
-		return nil, fmt.Errorf("git rev-parse: expected %d commits, read %d", len(names), len(commits))
+	// ponytail: a prefix holding a newline misreads; such directories are not supported here.
+	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
+	if len(lines) != len(names)+1 {
+		return "", nil, fmt.Errorf("git rev-parse: expected %d commits, read %d", len(names), len(lines)-1)
 	}
-	return commits, nil
+	return lines[0], lines[1:], nil
 }
 
 // predict classifies merging commit into ours, whose merge base is base: an
 // ancestry answer needs no merge, and otherwise git merge-tree performs it in
-// objects only. tree is the merged tree of a clean merge.
-func predict(ctx context.Context, root, ours, base, commit string) (m Merge, tree string, err error) {
+// objects only. tree is the merged tree of a clean merge. merge-tree names
+// files from root, whose prefix in the repository turns them into paths
+// from its top.
+func predict(ctx context.Context, root, prefix, ours, base, commit string) (m Merge, tree string, err error) {
 	m = Merge{Commit: commit, Conflicts: []string{}}
 	switch base {
 	case commit:
@@ -144,7 +149,7 @@ func predict(ctx context.Context, root, ours, base, commit string) (m Merge, tre
 		m.Outcome = "conflict"
 		for _, f := range fields[1:] {
 			if f != "" {
-				m.Conflicts = append(m.Conflicts, f)
+				m.Conflicts = append(m.Conflicts, path.Join(prefix, f))
 			}
 		}
 		return m, "", nil

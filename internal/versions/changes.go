@@ -64,7 +64,7 @@ type Resolved struct {
 func ChangesContext(ctx context.Context, root, target, candidate, tip string, recordPaths ...string) (*Changes, error) {
 	c := &Changes{}
 	if target != "" {
-		resolved, err := resolveCommits(ctx, root, "refs/heads/"+target, candidate)
+		prefix, resolved, err := resolveCommits(ctx, root, "refs/heads/"+target, candidate)
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +75,7 @@ func ChangesContext(ctx context.Context, root, target, candidate, tip string, re
 		}
 		c.Base = strings.TrimSpace(base)
 		c.OnTarget = c.Base == full
-		if m, _, err := predict(ctx, root, at, c.Base, full); ctx.Err() != nil {
+		if m, _, err := predict(ctx, root, prefix, at, c.Base, full); ctx.Err() != nil {
 			return nil, ctx.Err()
 		} else if err != nil {
 			c.Unpredicted = err.Error()
@@ -90,7 +90,7 @@ func ChangesContext(ctx context.Context, root, target, candidate, tip string, re
 		if c.Files, err = numstat(out); err != nil {
 			return nil, err
 		}
-		if c.Resolution, err = resolution(ctx, root, at, full, recordPaths); err != nil {
+		if c.Resolution, err = resolution(ctx, root, prefix, at, full, recordPaths); err != nil {
 			return nil, err
 		}
 	}
@@ -109,7 +109,7 @@ func ChangesContext(ctx context.Context, root, target, candidate, tip string, re
 // in objects only, conflicts on, so a file Git merged by itself is not one
 // and a conflict settled by taking one side is. Previous is the candidate the first
 // record path named at the merge's first parent, since feedback keeps it.
-func resolution(ctx context.Context, root, at, candidate string, recordPaths []string) (*Resolution, error) {
+func resolution(ctx context.Context, root, prefix, at, candidate string, recordPaths []string) (*Resolution, error) {
 	out, err := repo.GitContext(ctx, root, "rev-list", "--first-parent", "--merges", "--parents", "-n", "1", candidate, "^"+at)
 	if err != nil {
 		return nil, err
@@ -129,16 +129,22 @@ func resolution(ctx context.Context, root, at, candidate string, recordPaths []s
 		return nil, fmt.Errorf("git merge-base: %v", err)
 	}
 	r := &Resolution{Merge: commits[0], Target: commits[2], Files: []Resolved{}}
-	// No base is neither parent, so predict performs the merge.
-	m, _, err := predict(ctx, root, commits[1], "", commits[2])
-	if err != nil {
-		return nil, err
+	// No base is neither parent, so predict performs the merge. Git refuses
+	// to merge unrelated parents again, as a branch that began apart and
+	// merged the target leaves them: then there is no resolution to name.
+	m, _, err := predict(ctx, root, prefix, commits[1], "", commits[2])
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	} else if err != nil {
+		return nil, nil
 	}
 	if len(m.Conflicts) != 0 {
 		differs := func(side string) (map[string]bool, error) {
-			args := []string{"diff", "--name-only", "-z", side, r.Merge, "--"}
+			// Paths from the top, whatever the project's prefix, and a
+			// rename is its two paths, whatever the user's diff.renames.
+			args := []string{"diff", "--no-renames", "--name-only", "-z", side, r.Merge, "--"}
 			for _, f := range m.Conflicts {
-				args = append(args, ":(literal)"+f)
+				args = append(args, ":(top,literal)"+f)
 			}
 			out, err := repo.GitContext(ctx, root, args...)
 			set := map[string]bool{}
@@ -158,19 +164,15 @@ func resolution(ctx context.Context, root, at, candidate string, recordPaths []s
 		for _, f := range m.Conflicts {
 			kept := ""
 			switch {
-			case !fromTarget[f]:
+			case !fromTarget[f] && fromBranch[f]:
 				kept = "target"
-			case !fromBranch[f]:
+			case !fromBranch[f] && fromTarget[f]:
 				kept = "branch"
 			}
 			r.Files = append(r.Files, Resolved{f, kept})
 		}
 	}
 	if len(recordPaths) != 0 {
-		_, _, prefix, err := repo.IdentifyContext(ctx, root)
-		if err != nil {
-			return nil, err
-		}
 		// A record the parent does not hold, or cannot parse, names none.
 		if source, err := repo.GitContext(ctx, root, "cat-file", "blob", commits[1]+":"+path.Join(prefix, recordPaths[0])); err == nil {
 			if rec, _ := project.ParseRecord(recordPaths[0], []byte(source)); rec != nil && !strings.HasPrefix(candidate, rec.Candidate) {
