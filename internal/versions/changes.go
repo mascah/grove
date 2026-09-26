@@ -2,11 +2,14 @@ package versions
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os/exec"
 	"path"
 	"strconv"
 	"strings"
 
+	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/repo"
 )
 
@@ -30,6 +33,25 @@ type Changes struct {
 	Unpredicted string
 	Files       []Change
 	After       []string
+	Resolution  *Resolution // nil when the branch merged no target commit since the target
+}
+
+// Resolution is the latest merge of a target commit into the candidate's
+// branch (G-178): what a resolution attempt hands off, so that the owner
+// judges the resolution rather than the whole change again.
+type Resolution struct {
+	Merge    string     `json:"merge"`    // the merge commit, on the branch's first-parent line
+	Target   string     `json:"target"`   // the target commit it merged, its second parent
+	Previous string     `json:"previous"` // the candidate the record named before the merge, "" when unread
+	Files    []Resolved `json:"files"`    // the files merging the parents conflicts on, from the repository's top
+}
+
+// Resolved is one conflicting file and how the merge left it: Kept is
+// "target" or "branch" when its content is that side's, which drops the
+// other side's change, and "" when it is neither.
+type Resolved struct {
+	Path string `json:"path"`
+	Kept string `json:"kept"`
 }
 
 // ChangesContext reads a candidate's changes in root's repository, on demand,
@@ -42,7 +64,7 @@ type Changes struct {
 func ChangesContext(ctx context.Context, root, target, candidate, tip string, recordPaths ...string) (*Changes, error) {
 	c := &Changes{}
 	if target != "" {
-		resolved, err := resolveCommits(ctx, root, "refs/heads/"+target, candidate)
+		prefix, resolved, err := resolveCommits(ctx, root, "refs/heads/"+target, candidate)
 		if err != nil {
 			return nil, err
 		}
@@ -53,7 +75,7 @@ func ChangesContext(ctx context.Context, root, target, candidate, tip string, re
 		}
 		c.Base = strings.TrimSpace(base)
 		c.OnTarget = c.Base == full
-		if m, _, err := predict(ctx, root, at, c.Base, full); ctx.Err() != nil {
+		if m, _, err := predict(ctx, root, prefix, at, c.Base, full); ctx.Err() != nil {
 			return nil, ctx.Err()
 		} else if err != nil {
 			c.Unpredicted = err.Error()
@@ -68,6 +90,9 @@ func ChangesContext(ctx context.Context, root, target, candidate, tip string, re
 		if c.Files, err = numstat(out); err != nil {
 			return nil, err
 		}
+		if c.Resolution, err = resolution(ctx, root, prefix, at, full, recordPaths); err != nil {
+			return nil, err
+		}
 	}
 	after, err := Others(ctx, root, candidate, tip, recordPaths...)
 	if err != nil {
@@ -75,6 +100,87 @@ func ChangesContext(ctx context.Context, root, target, candidate, tip string, re
 	}
 	c.After = after
 	return c, nil
+}
+
+// resolution reads the latest merge on candidate's first-parent line that
+// the target at does not hold, and reports it when the target holds its
+// second parent: a target commit merged into the branch. A later merge of
+// another branch hides it. Its files are those merging its parents again,
+// in objects only, conflicts on, so a file Git merged by itself is not one
+// and a conflict settled by taking one side is. Previous is the candidate the first
+// record path named at the merge's first parent, since feedback keeps it.
+func resolution(ctx context.Context, root, prefix, at, candidate string, recordPaths []string) (*Resolution, error) {
+	out, err := repo.GitContext(ctx, root, "rev-list", "--first-parent", "--merges", "--parents", "-n", "1", candidate, "^"+at)
+	if err != nil {
+		return nil, err
+	}
+	commits := strings.Fields(out)
+	if len(commits) < 3 {
+		return nil, nil
+	}
+	// Exit 1 is Git's no, for unrelated history too.
+	cmd := repo.Command(ctx, root, "merge-base", "--is-ancestor", commits[2], at)
+	cmd.WaitDelay = repo.WaitDelay(ctx)
+	if err := cmd.Run(); ctx.Err() != nil {
+		return nil, ctx.Err()
+	} else if exit := (*exec.ExitError)(nil); errors.As(err, &exit) && exit.ExitCode() == 1 {
+		return nil, nil
+	} else if err != nil {
+		return nil, fmt.Errorf("git merge-base: %v", err)
+	}
+	r := &Resolution{Merge: commits[0], Target: commits[2], Files: []Resolved{}}
+	// No base is neither parent, so predict performs the merge. Git refuses
+	// to merge unrelated parents again, as a branch that began apart and
+	// merged the target leaves them: then there is no resolution to name.
+	m, _, err := predict(ctx, root, prefix, commits[1], "", commits[2])
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	} else if err != nil {
+		return nil, nil
+	}
+	if len(m.Conflicts) != 0 {
+		differs := func(side string) (map[string]bool, error) {
+			// Paths from the top, whatever the project's prefix, and a
+			// rename is its two paths, whatever the user's diff.renames.
+			args := []string{"diff", "--no-renames", "--name-only", "-z", side, r.Merge, "--"}
+			for _, f := range m.Conflicts {
+				args = append(args, ":(top,literal)"+f)
+			}
+			out, err := repo.GitContext(ctx, root, args...)
+			set := map[string]bool{}
+			for _, f := range strings.Split(out, "\x00") {
+				set[f] = f != ""
+			}
+			return set, err
+		}
+		fromBranch, err := differs(commits[1])
+		if err != nil {
+			return nil, err
+		}
+		fromTarget, err := differs(commits[2])
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range m.Conflicts {
+			kept := ""
+			switch {
+			case !fromTarget[f] && fromBranch[f]:
+				kept = "target"
+			case !fromBranch[f] && fromTarget[f]:
+				kept = "branch"
+			}
+			r.Files = append(r.Files, Resolved{f, kept})
+		}
+	}
+	if len(recordPaths) != 0 {
+		// A record the parent does not hold, or cannot parse, names none.
+		if source, err := repo.GitContext(ctx, root, "cat-file", "blob", commits[1]+":"+path.Join(prefix, recordPaths[0])); err == nil {
+			if rec, _ := project.ParseRecord(recordPaths[0], []byte(source)); rec != nil && !strings.HasPrefix(candidate, rec.Candidate) {
+				r.Previous = rec.Candidate
+			}
+		}
+	}
+	return r, nil
 }
 
 // Others lists the files other than the records' that differ between two

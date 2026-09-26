@@ -497,7 +497,11 @@ Candidate, review, approval and integration name the facts:
   nothing earlier is removed. It reopens the whole group: every other member
   in review is set `active` the same way, with `Reopened with ID's feedback
   on candidate X, DATE` appended instead, each committed alone, since the
-  next candidate replaces the shared one.
+  next candidate replaces the shared one. `resolve ID` is that feedback,
+  generated, for a candidate that conflicts with the target. It names the
+  target commit and the files, and one attempt follows it on the branch, as
+  `grove --help` says. The resolution
+  is a merge, so the earlier candidate stays an ancestor of the new one.
 - **Done** means the candidate was accepted and merged into the target, for
   research and design deliverables too, since those are files. `update` writes
   `done`, or changes a done record's candidate, only when the candidate is an

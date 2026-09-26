@@ -90,7 +90,8 @@ header adds a Review block (the candidate, whether it is approved, whether
 only the record changed since it or the tip is a new candidate, what
 merging it into the target would do, as `deps` says it, with the target
 commit that was read and a note when the board read the target at another
-commit, or that it could not be predicted, and which checkout each action
+commit, or that it could not be predicted, a resolution row when the branch
+has merged a target commit since the target, and which checkout each action
 runs in), the content opens
 at its `## Evidence`, and the sidebar lists the candidate's changed files
 against the target with their added and removed line counts. Under each
@@ -116,6 +117,28 @@ named where an action covers them: `f` returns them to `active` too, `i`
 merges them as one group and marks each done, refused until each is
 approved, and their record files do not count as changes since the
 candidate.
+
+When the candidate conflicts with the target, `m` opens a line like `R`'s
+([G-178](../grove/G-178-candidate-target-update.md)). It names the conflict
+and the launch, over the branch checkout's `run:` defaults with any flags
+typed over them except `--until`. Enter runs
+[`resolve`](commands.md#resolving-a-conflict) with the prediction shown:
+feedback naming the target commit and the files, then one attempt on the
+branch. A candidate that merges cleanly has nothing to resolve, and `m` says
+so. The resolution row names the latest merge of a target commit on the
+branch:
+
+- the merge commit;
+- the target commit it merged;
+- the candidate the record named before it, whose reviews stay comparable;
+- the files that merging its two parents again, in objects only, conflicts
+  on. A file whose result is one side's content says which side it took,
+  since that drops the other side's change. A file Git merged by itself is
+  not listed. Those the candidate still changes against the target are
+  marked `resolved in merge M` in the Changes list.
+
+Only the latest merge is read, and a later merge of another branch or of
+unrelated history hides it.
 
 ## Attempts
 
@@ -278,7 +301,7 @@ missing or ambiguous, the record was deleted there) stays on screen with its
 reason until `r` refreshes, after which a version must be selected again. The
 details pane there begins with the focused version's history. Selecting never
 creates a worktree, edits a record, or starts an editor, shell, or agent;
-only `R` starts an agent, behind its prompts, and only `e` starts the
+only `R` and `m` start an agent, behind their prompts, and only `e` starts the
 owner's editor, on an open question (see [Answering a
 question](#answering-a-question)).
 
@@ -376,6 +399,7 @@ render is cached per record content and width.
 | `h` | dependencies | Show every work, or only unfinished work |
 | Tab | dependencies | Switch focus between the list and the focused trees |
 | `a`, `f`, `i` | detail of work in review | Approve, give feedback, integrate |
+| `m` | detail of work in review that conflicts with the target | Resolve: feedback and one attempt to merge the target |
 | `R` | detail of proposed or active work | Launch an attempt |
 | `e` | detail of an open question; attempts list or one attempt waiting on a question | Answer it in your editor, then resolve and commit it on its branch |
 | `A` | board or any detail | List attempts: of that work, or every attempt |

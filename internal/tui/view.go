@@ -226,6 +226,9 @@ func (m *Model) render() string {
 		}
 		if m.reviewable() {
 			judge, keys = "a approve   f feedback   i integrate   ", "a  f  i  "
+			if m.backend.Conflict != nil && m.conflicted(m.shown(m.group())) != nil {
+				judge, keys = judge+"m resolve   ", keys+"m  "
+			}
 		}
 		rows, hints = m.detailBody(w, body), pick(w,
 			"↑/↓ PgUp/PgDn scroll or move   Tab pane   Enter open   "+run+"A attempts   "+judge+side+"v versions   s   r   Esc back   q quit",

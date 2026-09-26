@@ -293,6 +293,25 @@ evidence path, and what should wake a successor. Never start a replacement
 writer while an earlier one may still write. This is discipline for one
 session, not durable supervision.
 
+**A target that moved.** When the record's latest feedback says its
+candidate conflicts with the target at a named commit, as `grove resolve`
+writes it, that feedback is the whole assignment. Merge the named commit
+into the branch, not a later tip of the target and never a rebase, so that
+the previous candidate and every review's `examined` stay ancestors of the
+new tip. Resolve only the conflicting files, keeping both sides' intent. Run
+the full verification and commit the merge, then hand it off as step 8
+says. Evidence names the previous candidate and the merged target commit.
+It also names each file the merge conflicted on and how it was settled; a
+file settled by taking one side drops the other side's change, so say so.
+Change nothing else. A
+resolution that needs a choice the record does not settle is a
+[missing human decision](#when-a-human-decision-is-missing), and it stops
+the unit before it commits the merge. Scope the review to the resolution:
+give the reviewer the merge commit, `git show --remerge-diff MERGE` (which
+shows how each conflict was settled, a side taken included), the previous
+candidate and its reviews. If the target has moved again by the handoff,
+say so; the owner decides what happens next.
+
 Headless, no command outlives the session. A headless session has no next
 turn: its turn's end is the session's end, and a job left running in the
 background is abandoned, whatever the harness says about notifying it. Run a
@@ -460,6 +479,14 @@ disposition:
   `status=active`, keeps the candidate and drops any approval, and prints
   where to continue. Earlier evidence and reviews stay; the next attempt
   produces a new candidate.
+- **A conflict with the target:** `grove resolve G-030` from any checkout
+  (the board's `m`) records feedback naming the target commit and the
+  conflicting files in the branch's checkout. It then starts one attempt
+  there to merge that commit, resolve, verify and hand off, as
+  [a target that moved](#5-implement-through-evidence) says. Refused, with
+  nothing written, when there is no conflict or an attempt of the work
+  runs. The owner then judges the resolution: the merge, the previous
+  candidate and the files it resolved.
 - **Approval and integration:** `grove approve G-030 "VERDICT"` in the
   branch's clean checkout binds the verdict to the candidate, then `grove
   integrate G-030` in the target's clean checkout merges the branch (a plain

@@ -14,6 +14,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/charmbracelet/x/ansi"
 
+	"github.com/mascah/grove/internal/attempt"
 	"github.com/mascah/grove/internal/project"
 	"github.com/mascah/grove/internal/versions"
 )
@@ -175,6 +176,10 @@ func (f *fake) backend() Backend {
 		b.Integrate = func(_ context.Context, root, id string, cleanup bool) ([]string, error) {
 			log(&f.acts, fmt.Sprintf("integrate %s %s cleanup=%v", root, id, cleanup))
 			return []string{"approval: found", "merge: fast-forward"}, f.fail
+		}
+		b.Conflict = func(_ context.Context, req attempt.Request, shown *versions.Merge) ([]string, error) {
+			log(&f.acts, fmt.Sprintf("conflict %s %s %s %s budget=%s mode=%s effort=%s", req.Root, strings.Join(req.IDs, ","), shown.Commit, shown.Target[:7], req.BudgetUSD, req.PermissionMode, req.Effort))
+			return []string{"feedback: " + req.IDs[0] + " is active again", "attempt: started"}, f.fail
 		}
 	}
 	return b

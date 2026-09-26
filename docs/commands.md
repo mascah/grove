@@ -9,7 +9,8 @@ codes belong to the record model: its
 [conversion](record-model.md#identity-and-placement-apart-from-classification)
 and [brief](record-model.md#knowledge-records-and-the-brief) sections. `approve`,
 `feedback` and `integrate` belong to its
-[work lifecycle](record-model.md#work-lifecycle). [The board](board.md) has
+[work lifecycle](record-model.md#work-lifecycle); `resolve` is under
+[attempts](#resolving-a-conflict). [The board](board.md) has
 its own document. Each command's acceptance, evidence and limits belong to
 the work record that delivered it.
 
@@ -326,6 +327,47 @@ Liveness is the owner's file lock, never a pid: `running` while it is held,
 the provider's process group lives, `interrupted` when nothing is left and no
 result was written (a machine restart reads so; no reboot recovery is
 selected).
+
+### Resolving a conflict
+
+`resolve ID` runs from any checkout, for work in review whose candidate
+conflicts with the target
+([G-178](../grove/G-178-candidate-target-update.md)). It predicts the merge
+as [`deps`](#dependencies) does, against the target's current tip. It
+records feedback in the branch's checkout, as `feedback` would, with
+generated text naming the target commit and the conflicting files. That
+text is the attempt's whole mandate: merge that commit, never a rebase or a
+later tip; resolve those files; rerun the verification; and hand off the
+merge as the new candidate, or stop at a choice the record does not settle.
+It then starts one attempt, as `run` would, on the candidate's branch in
+that checkout. The records sharing the candidate reopen and run with it.
+The assignment the agent receives is the ordinary
+`/grove-work ID --interaction headless`: the mandate travels in the record,
+where the work guide reads feedback.
+
+Every refusal comes before the feedback is written:
+
+- the target is not named;
+- no branch, or several, hold the record in review;
+- no checkout is on that branch;
+- the candidate merges without a conflict;
+- an attempt of any member is running or orphaned;
+- no budget or permission mode is supplied;
+- every member would wait once active, as `run` refuses it: an open
+  question blocks it, or it needs a prerequisite the branch does not hold;
+- the branch's checkout lacks the grove-work skill, or holds a skill or
+  reviewer marked with an entrypoint revision this `grove` does not serve;
+- the provider executable is missing or its `--version` fails.
+
+The board's `m` passes the prediction it showed, so a candidate or target
+commit that changed since it is refused too. If the attempt still fails to
+start after the feedback, as when another launch takes the work meanwhile,
+the error says the feedback stands and gives the
+`grove run … --branch … --worktree …` that launches it. A second `resolve`
+finds the work active and is refused. One operation is one attempt; nothing
+retries, and a target that moves during it shows in the next prediction. The
+[board](board.md#judging-a-candidate) names the resolution in the Review
+block.
 
 `stop ATTEMPT` sends SIGINT through the owner so the provider ends its turn,
 SIGKILL to its process group after 15 s, and writes the result; an orphaned
