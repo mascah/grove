@@ -2,11 +2,12 @@
 id: "G-178"
 type: work
 title: "Update a conflicting candidate to the moved target through one bounded attempt"
-status: active
+status: review
 created: "2026-09-25T21:39:27Z"
-updated: "2026-09-26T01:39:22Z"
+updated: "2026-09-26T02:41:07Z"
 kind: feature
 relates_to: ["G-044", "G-045", "G-046", "G-057", "G-058", "G-059", "G-060", "G-101", "G-134", "G-140", "G-177", "G-179", "G-180", "G-182", "G-192"]
+candidate: "4e9b1b26a7b699659ec8d697a67fc8e21121aed3"
 ---
 
 ## Outcome
