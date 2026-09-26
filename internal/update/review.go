@@ -196,3 +196,18 @@ func clean(root string, r *project.Record) error {
 }
 
 func short(commit string) string { return commit[:min(len(commit), 7)] }
+
+// Delegated reports whether the latest verdict on r's candidate was given
+// under a standing policy (G-182) rather than by the owner: the sweep writes
+// its verdicts beginning "delegated under policy".
+func Delegated(r *project.Record) bool {
+	prefix := "Verdict on candidate " + short(r.Candidate) + ", "
+	delegated := false
+	for l := range strings.SplitSeq(string(r.Source), "\n") {
+		if strings.HasPrefix(l, prefix) {
+			_, verdict, _ := strings.Cut(l, ": ")
+			delegated = strings.HasPrefix(verdict, "delegated under policy ")
+		}
+	}
+	return delegated
+}

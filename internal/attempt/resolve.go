@@ -91,7 +91,8 @@ func Resolve(req Request, shown *versions.Merge, now time.Time, report func(stri
 			}
 		}
 	}
-	if d := Defaulted(req, checkout.Run); d.BudgetUSD == "" || d.PermissionMode == "" {
+	d := Defaulted(req, checkout.Run)
+	if d.BudgetUSD == "" || d.PermissionMode == "" {
 		return nil, ErrUnsupplied
 	}
 	// What Start would refuse once the feedback reopened the group is asked
@@ -120,7 +121,11 @@ func Resolve(req Request, shown *versions.Merge, now time.Time, report func(stri
 		return nil, err
 	}
 
-	fb, err := update.Feedback(dir, id, Mandate(&m, p.Target), now)
+	text := Mandate(&m, p.Target)
+	if req.Policy != "" {
+		text = fmt.Sprintf("delegated under %s, budget %s USD: %s", req.Policy, d.BudgetUSD, text)
+	}
+	fb, err := update.Feedback(dir, id, text, now)
 	if err != nil {
 		return nil, err
 	}

@@ -22,6 +22,7 @@ import (
 	"github.com/mascah/grove/internal/handoff"
 	"github.com/mascah/grove/internal/integrate"
 	"github.com/mascah/grove/internal/project"
+	"github.com/mascah/grove/internal/sweep"
 	"github.com/mascah/grove/internal/update"
 	"github.com/mascah/grove/internal/versions"
 )
@@ -35,6 +36,7 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] approve ID VERDICT | feedback ID TEXT | integrate ID [--cleanup]\n" +
 	"       grove [--project DIR] resolve ID [--budget USD] [--permission-mode MODE] [--model MODEL]\n" +
 	"                                     [--effort LEVEL]\n" +
+	"       grove [--project DIR] sweep [--dry-run]\n" +
 	"       grove [--project DIR] run WORK_ID... [--dry-run | --expect DIGEST] [--budget USD]\n" +
 	"                                     [--permission-mode MODE] [--until plan] [--model MODEL]\n" +
 	"                                     [--effort LEVEL] [--branch NAME] [--worktree DIR]\n" +
@@ -118,6 +120,16 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             merge as a new candidate. The records sharing the candidate go with it. Refused,\n" +
 	"             with nothing written, without a target or a conflict, or while an attempt of\n" +
 	"             the work runs; the launch flags and their run: defaults are run's.\n" +
+	"  sweep      Act on every candidate in review under the standing policy: grove.yaml's\n" +
+	"             policy:, committed, in the target's checkout. A conflict gets one resolution\n" +
+	"             attempt, as resolve starts, once per target commit and within the policy's\n" +
+	"             budget; a clean candidate whose current review ends \"Open findings: none\",\n" +
+	"             with no never path and within max_lines, is merged with the target in a\n" +
+	"             temporary worktree, verified there with the policy's commands, then approved\n" +
+	"             and, with integrate: true, integrated, each attributed to the policy's\n" +
+	"             revision. Anything else waits for the owner, with the reason. Prints one line\n" +
+	"             per candidate and per act; --dry-run prints what would happen to each and\n" +
+	"             why, and writes nothing. Refused without a policy: nothing is automatic.\n" +
 	"  run        Start one bounded implementation attempt of an explicit selection of\n" +
 	"             proposed or active work as one Grove-owned\n" +
 	"             `claude -p \"/grove-work ID... --interaction headless\"` process that outlives\n" +
@@ -355,6 +367,23 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 		}
 		fmt.Fprintf(out, "attempt: %s started on %s; owner pid %d, budget %s USD, permission mode %s\n", l.Attempt, visible(l.Branch), l.Owner, l.BudgetUSD, visible(l.PermissionMode))
 		fmt.Fprintf(out, "inspect: grove attempt %s; stop: grove stop %s\n", l.Attempt, l.Attempt)
+		return 0
+	case "sweep":
+		s, err := sweep.Plan(p.Root)
+		if err != nil {
+			report(errOut, err)
+			return 1
+		}
+		if len(s.Items) == 0 {
+			fmt.Fprintln(out, "no candidate is in review")
+		}
+		if a.dryRun {
+			for _, it := range s.Items {
+				fmt.Fprintf(out, "%s on %s: %s: %s\n", it.ID, visible(it.Branch), it.Act, visible(it.Why))
+			}
+			return 0
+		}
+		s.Run(time.Now(), func(fact string) { fmt.Fprintln(out, visible(fact)) })
 		return 0
 	case "attempts":
 		views, err := attempt.List(p.Root, a.id)
@@ -681,8 +710,8 @@ func parseArgs(args []string) (a invocation, err error) {
 	if (a.request.Commit || len(fields) != 0) && a.command != "update" {
 		return a, fmt.Errorf("--set, --unset, and --commit apply only to update")
 	}
-	if a.dryRun && a.command != "run" {
-		return a, fmt.Errorf("--dry-run applies only to run")
+	if a.dryRun && a.command != "run" && a.command != "sweep" {
+		return a, fmt.Errorf("--dry-run applies only to run and sweep")
 	}
 	if a.cleanup && a.command != "integrate" {
 		return a, fmt.Errorf("--cleanup applies only to integrate")
@@ -695,7 +724,7 @@ func parseArgs(args []string) (a invocation, err error) {
 	}
 	switch a.command {
 	case "":
-	case "list", "check", "brief", "init", "version":
+	case "list", "check", "brief", "init", "version", "sweep":
 		if len(positional) != 1 {
 			err = fmt.Errorf("%s takes no positional arguments", a.command)
 		}

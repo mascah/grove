@@ -360,3 +360,27 @@ func TestIntegrateReportsADoneWriteThatFailedAfterTheMerge(t *testing.T) {
 		t.Fatal("cleanup must not run after a failed done write")
 	}
 }
+
+func TestIntegrateUnderAPolicy(t *testing.T) {
+	t.Parallel()
+	root, _, _ := fixture(t, true)
+	before := git(t, root, "rev-parse", "HEAD")
+	write(t, root, "notes.txt", "elsewhere\n")
+	git(t, root, "add", "-A")
+	git(t, root, "commit", "-qm", "docs: notes")
+	moved := git(t, root, "rev-parse", "HEAD")
+	req := Request{Root: root, ID: "G-001", Expect: before, Policy: "policy grove.yaml sha256:x"}
+	err := Run(req, now, func(string) {})
+	if err == nil || !strings.Contains(err.Error(), "main moved from "+before[:7]+", where the merge was verified, to "+moved[:7]) || git(t, root, "rev-parse", "HEAD") != moved {
+		t.Fatalf("a moved target: %v", err)
+	}
+	req.Expect = moved
+	if err := Run(req, now, func(string) {}); err != nil {
+		t.Fatal(err)
+	}
+	merge := git(t, root, "rev-parse", "HEAD~1")
+	want := "Integrated under policy grove.yaml sha256:x as merge " + merge + " on main (was " + moved + "); to reverse it: git revert -m 1 " + merge
+	if r := record(t, root); r.Status != "done" || !strings.Contains(string(r.Source), want) {
+		t.Fatalf("record on main:\n%s", r.Source)
+	}
+}

@@ -29,6 +29,12 @@ import (
 type Request struct {
 	Root, ID, Cwd string
 	Cleanup       bool
+	// Expect, when set, is the target commit a delegated integration verified
+	// the merge against: a target at any other commit is refused unmerged.
+	Expect string
+	// Policy, when set, attributes the integration to a standing policy
+	// (G-182): each done update appends it with the merge and its revert.
+	Policy string
 }
 
 // Run integrates the work, reporting each fact to report as it holds. The
@@ -119,6 +125,9 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 	if err != nil {
 		return err
 	}
+	if req.Expect != "" && before != req.Expect {
+		return fmt.Errorf("%s moved from %s, where the merge was verified, to %s; nothing was merged and %s stays in review", p.Target, short(req.Expect), short(before), req.ID)
+	}
 	// A conflict is refused before the merge starts (G-177): merge-tree
 	// performs it in objects only, against the commit that would be merged
 	// into, and names the files. A prediction that fails, as on a Git
@@ -160,8 +169,19 @@ func Run(req Request, now time.Time, report func(fact string)) error {
 		report(fmt.Sprintf("merge: merge commit %s on %s (was %s)", short(after), p.Target, short(before)))
 	}
 
+	note := ""
+	if req.Policy != "" {
+		switch {
+		case after == before:
+			note = fmt.Sprintf("Integrated under %s into %s at %s, which already held it; nothing was merged.", req.Policy, p.Target, short(before))
+		case after == from.Commit:
+			note = fmt.Sprintf("Integrated under %s by fast-forwarding %s from %s to %s; to reverse it: git revert %s..%s", req.Policy, p.Target, before, after, before, after)
+		default:
+			note = fmt.Sprintf("Integrated under %s as merge %s on %s (was %s); to reverse it: git revert -m 1 %s", req.Policy, after, p.Target, before, after)
+		}
+	}
 	for i, m := range group {
-		done, err := update.Apply(root, update.Request{ID: m.ID, Set: []update.Field{{Name: "status", Value: "done"}}, Commit: true}, now, nil)
+		done, err := update.Apply(root, update.Request{ID: m.ID, Set: []update.Field{{Name: "status", Value: "done"}}, Append: note, Commit: true}, now, nil)
 		if err != nil {
 			rest := ""
 			if i+1 < len(group) {

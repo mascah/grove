@@ -222,6 +222,7 @@ type Request struct {
 	Worktree       string // default <root>/.claude/worktrees/<branch>
 	Expect         string // one work's record revision the caller read in root; "" checks nothing
 	Digest         string // the digest Preview gave; "" checks nothing
+	Policy         string // Resolve's attribution to a standing policy (G-182); "" is the owner's own act
 }
 
 var idPattern = regexp.MustCompile(`^[A-Z]+-[0-9]+$`)
