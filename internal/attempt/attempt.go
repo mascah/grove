@@ -414,10 +414,31 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	// nobody committed is absent there. A new branch is checked in HEAD
 	// before it exists: kept at a HEAD without the skill, it would refuse
 	// every later launch too.
+	// A marked entrypoint whose revision this grove does not serve would
+	// stop, or contradict the guide, after the spend has begun (G-169). A
+	// custom one is the project's own and is not judged.
+	incompatible := func(path, where, content string) error {
+		if verdict, revision := grove.Diagnose(path, content); verdict != "custom" && !grove.SupportsEntrypoint(revision) {
+			if verdict == "legacy" {
+				revision = "1 (no revision line)"
+			}
+			return fmt.Errorf("%s in %s is entrypoint revision %s, and this grove serves %s; run grove init with this grove, commit what it wrote, and launch again", filepath.Join(prefix, path), where, revision, grove.ServedEntrypoints())
+		}
+		return nil
+	}
 	skill := filepath.Join(prefix, SkillPath)
 	if _, err := repo.Git(root, "rev-parse", "-q", "--verify", "refs/heads/"+branch); err != nil {
 		if _, err := repo.Git(root, "cat-file", "-e", head+":"+filepath.ToSlash(skill)); err != nil {
 			return nil, fmt.Errorf("%s is not committed at HEAD %s, so the attempt's worktree would not hold the grove-work skill its prompt names; commit the files grove init wrote and launch again", skill, short(head))
+		}
+		for _, path := range []string{SkillPath, ReviewerPath} {
+			content, err := repo.Git(root, "cat-file", "blob", head+":"+filepath.ToSlash(filepath.Join(prefix, path)))
+			if err != nil {
+				continue // the reviewer's absence is warned of below
+			}
+			if err := incompatible(path, "HEAD "+short(head), content); err != nil {
+				return nil, err
+			}
 		}
 	}
 	base, reused, err := prepareWorktree(root, branch, worktree, head, report)
@@ -460,6 +481,13 @@ func Start(req Request, now time.Time, report func(string)) (*Launch, error) {
 	}
 	if req.Effort != "" {
 		command = append(command, "--effort", req.Effort)
+	}
+	for _, path := range []string{SkillPath, ReviewerPath} {
+		if content, err := os.ReadFile(filepath.Join(worktree, prefix, path)); err == nil {
+			if err := incompatible(path, worktree, string(content)); err != nil {
+				return nil, err
+			}
+		}
 	}
 	var differs []string
 	installed := func(path string) string {

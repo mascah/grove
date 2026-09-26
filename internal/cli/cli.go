@@ -28,8 +28,8 @@ import (
 
 const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"       grove [--project DIR] list [--status VALUE]... | show ID [--json] | brief [--json] | check\n" +
-	"       grove [--project DIR] init\n" +
-	"       grove guide work|shape|model | version\n" +
+	"       grove [--project DIR] init [--check]\n" +
+	"       grove guide work|shape|review|model [--entrypoint N] | version\n" +
 	"       grove [--project DIR] new TYPE TITLE [--slug SLUG]\n" +
 	"       grove [--project DIR] update ID [--expect REVISION] (--set FIELD=VALUE | --unset FIELD)... [--commit]\n" +
 	"       grove [--project DIR] approve ID VERDICT | feedback ID TEXT | integrate ID [--cleanup]\n" +
@@ -61,11 +61,17 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             work guide reviews through. Existing files are kept; a file init wrote before\n" +
 	"             (marked as managed) is updated when its template changed. Prints one line\n" +
 	"             per path; on any conflict nothing is written and the reasons are printed.\n" +
-	"  guide      Print the work or shaping guide, or the record model they cite, that\n" +
-	"             this binary carries; the generated entrypoints read the guides from here,\n" +
-	"             so the workflow version is the binary's.\n" +
-	"  version    Print this binary's module version, its VCS revision when stamped, and\n" +
-	"             a digest of the guides and record model it carries.\n" +
+	"             --check writes nothing and prints each entrypoint as current, compatible,\n" +
+	"             legacy (no entrypoint revision), incompatible (a revision this binary does\n" +
+	"             not serve), missing, custom (unmarked, not judged) or conflict; exit 1 if\n" +
+	"             any is legacy, incompatible, missing or a conflict.\n" +
+	"  guide      Print the work, shaping or review guide, or the record model they cite,\n" +
+	"             that this binary carries; the generated entrypoints read the guides from\n" +
+	"             here, so the workflow version is the binary's. --entrypoint N is how an\n" +
+	"             entrypoint of revision N asks; a revision this binary does not serve is\n" +
+	"             refused.\n" +
+	"  version    Print this binary's version and commit, and digests of the guides and\n" +
+	"             record model and of all the content it ships.\n" +
 	"  new        Create a work, question, decision, term, plan, review, or page record with\n" +
 	"             the next shared ID, flat in the record root; a page is general knowledge\n" +
 	"             with a title and no status.\n" +
@@ -107,13 +113,15 @@ const usage = "Usage: grove [--project DIR] [--json]\n" +
 	"             too, and a flag overrides it. What ran is recorded with the digest of the\n" +
 	"             worktree's grove-reviewer definition, or its absence, which is warned of.\n" +
 	"             Refused when the worktree would not hold the committed grove-work skill\n" +
-	"             (.claude/skills/grove-work/SKILL.md, which init writes), while an attempt\n" +
-	"             of ID runs or is orphaned, when ID is not proposed or active here or on its\n" +
-	"             branch (a candidate in review awaits judgment), while an open question blocks\n" +
-	"             ID in either place, when the record has uncommitted changes here, or when the\n" +
-	"             worktree path is something else. Prints one line per\n" +
-	"             fact and the attempt id. A result is facts, never acceptance: the record's own\n" +
-	"             status on the branch is the handoff.\n" +
+	"             (.claude/skills/grove-work/SKILL.md, which init writes), when that skill\n" +
+	"             or the reviewer is marked with an entrypoint revision this binary does not\n" +
+	"             serve (or none), while an attempt of ID runs or is orphaned, when ID is not\n" +
+	"             proposed or active here or on its branch (a candidate in review awaits\n" +
+	"             judgment), while an open question blocks ID in either place, when the\n" +
+	"             record has uncommitted changes here, or when the worktree path is\n" +
+	"             something else. Prints one line per fact and the attempt id. A result is\n" +
+	"             facts, never acceptance: the record's own status on the branch is the\n" +
+	"             handoff.\n" +
 	"  attempts   List this repository's attempts, newest first, or those of one work ID:\n" +
 	"             running (its owner holds the lock), finished (a result was written), orphaned\n" +
 	"             (owner lost, provider alive) or interrupted (owner lost, nothing alive).\n" +
@@ -178,6 +186,12 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 	case "version":
 		return writeResult(out, errOut, []byte(grove.Identity().String()+"\n"))
 	case "guide":
+		if a.entrypoint != "" && !grove.SupportsEntrypoint(a.entrypoint) {
+			report(errOut, fmt.Errorf("the entrypoint that asked for this guide is revision %s, and this grove serves %s; nothing was printed.\n"+
+				"Rerun `grove init` with this grove to rewrite the entrypoints it manages (`grove init --check` lists them),\n"+
+				"commit them, and start a new session; or run the grove that wrote them.", visible(a.entrypoint), grove.ServedEntrypoints()))
+			return 1
+		}
 		source, err := fs.ReadFile(grove.Guides, grove.GuideFiles[a.id])
 		if err != nil {
 			panic(err) // the name was validated and every file is embedded
@@ -371,7 +385,8 @@ func Run(args []string, cwd string, out, errOut io.Writer) int {
 
 type invocation struct {
 	project, command, id, kind, title, slug, source string
-	help, json, cleanup                             bool
+	entrypoint                                      string // guide
+	help, json, cleanup, check                      bool
 	request                                         update.Request
 	convert                                         update.ConvertRequest
 	ids                                             []string // context
@@ -432,6 +447,7 @@ func parseArgs(args []string) (a invocation, err error) {
 		{"--title", "title", once(&a.convert.Title)},
 		{"--source", "selector", once(&a.source)},
 		{"--expect", "revision", once(&a.request.Expect)},
+		{"--entrypoint", "revision", once(&a.entrypoint)},
 		{"--interaction", "mode", func(value string) error {
 			if value != "interactive" && value != "headless" {
 				return errors.New("must be interactive or headless")
@@ -525,6 +541,13 @@ func parseArgs(args []string) (a invocation, err error) {
 			a.request.Commit = true
 			continue
 		}
+		if arg == "--check" {
+			if a.check {
+				return a, fmt.Errorf("--check may only be supplied once")
+			}
+			a.check = true
+			continue
+		}
 		if arg == "--cleanup" {
 			if a.cleanup {
 				return a, fmt.Errorf("--cleanup may only be supplied once")
@@ -582,6 +605,12 @@ func parseArgs(args []string) (a invocation, err error) {
 	if a.cleanup && a.command != "integrate" {
 		return a, fmt.Errorf("--cleanup applies only to integrate")
 	}
+	if a.check && a.command != "init" {
+		return a, fmt.Errorf("--check applies only to init")
+	}
+	if a.entrypoint != "" && a.command != "guide" {
+		return a, fmt.Errorf("--entrypoint applies only to guide")
+	}
 	switch a.command {
 	case "":
 	case "list", "check", "brief", "init", "version":
@@ -590,7 +619,7 @@ func parseArgs(args []string) (a invocation, err error) {
 		}
 	case "guide":
 		if len(positional) != 2 || grove.GuideFiles[positional[1]] == "" {
-			err = fmt.Errorf("guide requires one argument, work, shape or model")
+			err = fmt.Errorf("guide requires one argument, work, shape, review or model")
 		} else {
 			a.id = positional[1]
 		}

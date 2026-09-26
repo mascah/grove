@@ -253,8 +253,13 @@ Next.
 committed, so `run` refuses a worktree without `.claude/skills/grove-work/SKILL.md`,
 the skill the prompt names, which `init` writes and you commit
 ([G-150](../grove/G-150-launch-attempts-only-where-the-w.md)); a new branch
-is checked in HEAD before it is created. An open question that blocks the
-work is the wait the headless guide persists, so rerunning with nothing
+is checked in HEAD before it is created. It likewise refuses a worktree
+whose marked `grove-work` skill or reviewer definition carries an
+[entrypoint revision](#entrypoint-revisions) the launching `grove` does not
+serve, legacy included, which would stop or contradict the guide after the
+spend began
+([G-169](../grove/G-169-harness-upgrade-compatibility.md)). An open
+question that blocks the work is the wait the headless guide persists, so rerunning with nothing
 changed refuses the same way. Every refusal comes before a write, except
 that what an existing branch holds is checked in its checkout, so a branch
 that had no worktree keeps the one `run` made.
@@ -291,9 +296,9 @@ root, a placeholder brief that states no intent, the `grove-work` and
 `grove-shape` entrypoints for Claude Code (`.claude/skills/`) and Codex
 (`.agents/skills/`), and Claude Code's `grove-reviewer` agent definition
 (`.claude/agents/grove-reviewer.md`), each marked as managed. The reviewer is
-read-only, inherits the session's model at `high` effort, and carries the
-standard review brief the work guide's step 6 dispatches; its text is Grove's
-own `.claude/agents/grove-reviewer.md`, embedded in the binary. Codex has no
+read-only, inherits the session's model at `high` effort, and loads the
+review guide the work guide's step 6 dispatches (`grove guide review`), as
+the skills load theirs. Codex has no
 equivalent, so a Codex session reports its missing independent reviewer as
 step 6 says. It prints one line per path:
 `created`; `kept` for an existing `grove.yaml`, whose own `records` and
@@ -308,8 +313,58 @@ invoked, and `init` ends with a note on stderr naming what they should say if
 the entrypoints' defaults are not wanted: how `grove` is invoked, and how
 work and proposal branches are named, and to commit what it wrote: an
 attempt's worktree holds only committed files, and `run` refuses one without
-the `grove-work` skill. Upgrading is building again, rerunning `init` and
-committing what it updated.
+the `grove-work` skill.
+
+### Entrypoint revisions
+
+The files `init` writes are thin: the work, shaping and review instructions,
+including what an assignment or a shaping request may hold, are the guides
+the binary prints, so installing another `grove` changes what a fresh
+session follows without rewriting them. What an entrypoint needs of the
+binary is its *entrypoint revision*, an integer apart from the release
+version and the record schema, written in each managed file as
+`grove entrypoint revision N` and passed as
+`grove guide NAME --entrypoint N`. From revision 2 an entrypoint holds
+nothing the guides evolve (the assignment grammar and the review brief are
+the guides'), so a guide change never needs a new revision; one changes only
+when an entrypoint needs something an older `grove` lacks, or a newer one
+stops serving what an older entrypoint asks. This `grove` writes and serves
+revision 2. What `init` wrote before revisions existed, marked files with no
+revision line, is revision 1, `legacy`: each generation kept its own
+assignment grammar and review brief (the earliest rejects `--until plan`,
+and has no reviewer), and nothing in the file says which, so it is not
+served. Refresh it with `init`.
+
+`guide --entrypoint N` refuses a revision it does not serve, printing
+nothing and saying how to repair it, and a `grove` from before revisions
+refuses the option; either way the entrypoint stops at its first command,
+before any work. A plain `guide` always prints, since a person reads it the
+same way, and a legacy skill loads its guide that way; so the work and
+shaping guides' Inputs tell a session loaded through a managed skill with no
+revision line to stop and name the repair. A legacy reviewer loads no guide
+and is reached only through `init --check` and `run`.
+
+`init --check` diagnoses each managed path and writes nothing, one line
+each: `current` (this `grove`'s template), `compatible` (a served revision
+in other text, older or edited), `legacy` (no revision line), `incompatible`
+(a stated revision this `grove` does not serve, newer or older, or not a
+number), `missing`, `custom` (no marker: yours, listed and never judged), or
+`conflict` (not a file `init` could replace). It exits 1 when any path is
+legacy, incompatible, missing or a conflict. Different text alone never
+makes a file incompatible.
+
+Upgrading is installing the new `grove`, then in the target's checkout
+`init --check`, `init`, and committing what it updated; `init` rewrites only
+marked files and keeps unmarked ones, the configuration, the brief and the
+records. A linked worktree holds its own branch's copy, which `init` in
+another checkout never touches: run `init` in that worktree and commit it
+there, or merge the target after the refresh is committed. A session that
+already loaded an entrypoint or a guide keeps what it read, so start a new
+session (or reload skills) after refreshing. `run` checks the worktree it
+launches in against the launching `grove`, and refuses an unserved revision
+before any spend; the `grove` the session itself runs (`PATH` or the
+project's instructions) is not checked, so where it differs, the session's
+first `guide` is what stops it.
 
 Check which `grove` answers before `init`: the predecessor also has an
 `init`, which would write its own scaffolding instead. Codex runs each
@@ -343,10 +398,10 @@ grove VERSION (COMMIT[, vcs OTHER][, modified]) guides sha256:GUIDES content sha
   and takes that checkout's pseudo-version, commit and cleanliness instead
   (observed with go 1.26.2 and 1.26.8), which a stamp then shows as `vcs OTHER`; the
   `content` digest still names the worktree's own files.
-- `guides` digests the work and shaping guides and the record model, which
-  `guide` prints. `content` digests the workflow the binary ships into a
-  session or a project: those three, the reviewer definition and the other
-  harness entrypoints `init` writes. It leaves out the `grove.yaml` and
+- `guides` digests the work, shaping and review guides and the record model,
+  which `guide` prints. `content` digests the workflow the binary ships into
+  a session or a project: those four and the harness entrypoints `init`
+  writes, the reviewer definition among them. It leaves out the `grove.yaml` and
   placeholder brief `init` creates once and never rewrites. Neither digest
   describes a project's installed files, which may be custom or from another
   release; an attempt records those itself ([Attempts](#attempts)).
@@ -378,9 +433,12 @@ nor `modified`; any difference means one was built from other inputs.
 `go install …@COMMIT` resolves only a pushed commit, and rebuilding an
 installed binary is manual.
 
-`guide work` and `guide shape` print the [work](work-execution.md) and
-[shaping](work-shaping.md) guides the binary carries, so the workflow version
-is the executable version and no copy is edited elsewhere. `guide model`
+`guide work`, `guide shape` and `guide review` print the
+[work](work-execution.md), [shaping](work-shaping.md) and
+[review](work-review.md) guides the binary carries, so the workflow version
+is the executable version and no copy is edited elsewhere. `--entrypoint N`
+is how an entrypoint `init` wrote asks for one
+([Entrypoint revisions](#entrypoint-revisions)). `guide model`
 prints the [record model](record-model.md) the guides cite, the contract that
 binary validates, so a session in any project reads it without Grove's
 repository. Since it ships into projects whose own `G-` IDs are live, it links

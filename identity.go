@@ -23,8 +23,8 @@ type Build struct {
 	Commit   string // the stamped commit, else vcs.revision
 	VCS      string // vcs.revision where it differs from the stamped commit
 	Modified bool   // vcs.modified: Go's checkout had uncommitted changes
-	Guides   string // sha256 over the work and shaping guides and the record model
-	Content  string // sha256 over the guides, the reviewer and init's other entrypoint templates
+	Guides   string // sha256 over the work, shaping and review guides and the record model
+	Content  string // sha256 over the guides and the entrypoint templates init writes
 }
 
 // Identity is this executable's Build, the one account of it that version
@@ -53,8 +53,8 @@ func identify(info *debug.BuildInfo, ok bool, stampedVersion, stampedCommit stri
 	}
 	guides := sha256.New()
 	content := sha256.New()
-	shipped := Entrypoints() // the reviewer among them
-	for _, name := range []string{"work", "shape", "model"} {
+	shipped := Entrypoints()
+	for _, name := range []string{"work", "shape", "review", "model"} {
 		source, err := fs.ReadFile(Guides, GuideFiles[name])
 		if err != nil {
 			panic(err) // every file is embedded

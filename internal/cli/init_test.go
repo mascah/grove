@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -61,17 +62,12 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, needle := range []string{"disable-model-invocation: true", grove.ManagedMarker, "Assignment: $ARGUMENTS", "grove guide work", "stop and say so"} {
+	for _, needle := range []string{"disable-model-invocation: true", grove.ManagedMarker, "Assignment: $ARGUMENTS", "grove guide work --entrypoint 2", "grove entrypoint revision 2", "stop and say"} {
 		if !strings.Contains(string(adapter), needle) {
 			t.Fatalf("the Claude adapter lacks %q:\n%s", needle, adapter)
 		}
 	}
 	portable := map[string]string{".claude/skills/grove-work/SKILL.md": string(adapter)}
-	// The reviewer is written verbatim from this repository's own copy, which
-	// must carry the marker or init would keep what it just wrote as the user's.
-	if !strings.Contains(grove.Reviewer, grove.ManagedMarker) || !strings.Contains(grove.Reviewer, "name: grove-reviewer\n") {
-		t.Fatal("the embedded reviewer definition must be named grove-reviewer and carry the managed marker")
-	}
 	for _, relative := range []string{".claude/agents/grove-reviewer.md", ".claude/skills/grove-shape/SKILL.md", ".agents/skills/grove-work/SKILL.md", ".agents/skills/grove-shape/SKILL.md", ".agents/skills/grove-work/agents/openai.yaml"} {
 		source, err := os.ReadFile(filepath.Join(root, relative))
 		if err != nil {
@@ -79,7 +75,7 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 		}
 		portable[relative] = string(source)
 	}
-	for _, name := range []string{"work", "shape", "model"} {
+	for _, name := range []string{"work", "shape", "review", "model"} {
 		var guide, guideErr bytes.Buffer
 		if code := Run([]string{"guide", name}, t.TempDir(), &guide, &guideErr); code != 0 {
 			t.Fatal(guideErr.String())
@@ -87,7 +83,7 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 		portable["guide "+name] = guide.String()
 	}
 	for name, text := range portable {
-		for _, forbidden := range []string{"go run", "docs/work-execution.md", "docs/work-shaping.md", "../grove/", "../.claude/", "../.agents/", ".claude/worktrees", "worktree-G-", "AGENTS.md` here"} {
+		for _, forbidden := range []string{"go run", "docs/work-execution.md", "docs/work-shaping.md", "docs/work-review.md", "../grove/", "../.claude/", "../.agents/", ".claude/worktrees", "worktree-G-", "AGENTS.md` here"} {
 			if strings.Contains(text, forbidden) {
 				t.Fatalf("%s must not depend on Grove's own repository, but mentions %q", name, forbidden)
 			}
@@ -108,7 +104,7 @@ func TestInitCreatesAProjectAndRerunsWithoutTouchingUserFiles(t *testing.T) {
 	// The user develops the brief and edits one managed file without giving
 	// up the marker; another they take over; the rest stay as written.
 	write(t, root, "grove/brief.md", "# Real brief\n\nWritten by a person.\n")
-	edited := strings.Replace(string(adapter), "stop and say so", "stop", 1)
+	edited := strings.Replace(string(adapter), "stop and say", "stop", 1)
 	write(t, root, ".claude/skills/grove-work/SKILL.md", edited)
 	write(t, root, ".agents/skills/grove-work/SKILL.md", "my own instructions\n")
 	before := hashes(t, root)
@@ -247,6 +243,9 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 		{[]string{"guide", "work"}, "# Executing assigned Grove work\n"},
 		{[]string{"guide", "shape"}, "# Shaping Grove work\n"},
 		{[]string{"guide", "model"}, "# Record model\n"},
+		{[]string{"guide", "review"}, "# Reviewing Grove work\n"},
+		{[]string{"guide", "work", "--entrypoint", "2"}, "# Executing assigned Grove work\n"},
+		{[]string{"guide", "shape", "--entrypoint=2"}, "# Shaping Grove work\n"},
 		{[]string{"version"}, "grove "}, // ends with the content digests, checked below
 	} {
 		var out, errOut bytes.Buffer
@@ -261,8 +260,8 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 	// The shipped documents reach projects that have no docs folder and live
 	// G- IDs of their own, so none links outside itself, names a G- ID beyond
 	// its own examples, or points at Grove's repository or the predecessor.
-	shipped := map[string]string{"reviewer": grove.Reviewer}
-	examples := map[string][]string{"work": {"G-030", "G-031"}, "shape": {"G-037"}, "model": {"G-001", "G-003", "G-1000"}}
+	shipped := map[string]string{}
+	examples := map[string][]string{"work": {"G-030", "G-031"}, "shape": {"G-037"}, "review": nil, "model": {"G-001", "G-003", "G-1000"}}
 	for name := range examples {
 		var out, errOut bytes.Buffer
 		Run([]string{"guide", name}, t.TempDir(), &out, &errOut)
@@ -291,6 +290,132 @@ func TestGuideAndVersionNeedNoProject(t *testing.T) {
 		var out, errOut bytes.Buffer
 		if code := Run(args, t.TempDir(), &out, &errOut); code != 2 || out.Len() != 0 {
 			t.Fatalf("%v: code=%d stdout=%q", args, code, out.String())
+		}
+	}
+}
+
+// revisionOne is what init wrote before entrypoint revisions, read from
+// testdata/entrypoints-revision-1.txtar, which the binary of that commit
+// generated: an actual old install, not this binary's templates edited.
+func revisionOne(t *testing.T) map[string]string {
+	t.Helper()
+	source, err := os.ReadFile(filepath.Join("testdata", "entrypoints-revision-1.txtar"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	files := map[string]string{}
+	parts := regexp.MustCompile(`(?m)^-- (\S+) --\n`).Split(string(source), -1)
+	names := regexp.MustCompile(`(?m)^-- (\S+) --\n`).FindAllStringSubmatch(string(source), -1)
+	for i, name := range names {
+		files[name[1]] = parts[i+1]
+	}
+	if len(files) != len(grove.Entrypoints()) {
+		t.Fatalf("the fixture holds %d files, init manages %d", len(files), len(grove.Entrypoints()))
+	}
+	return files
+}
+
+func runInitCheck(t *testing.T, root string) (int, string, string) {
+	t.Helper()
+	var out, errOut bytes.Buffer
+	code := Run([]string{"--project", root, "init", "--check"}, t.TempDir(), &out, &errOut)
+	return code, out.String(), errOut.String()
+}
+
+// An install from before entrypoint revisions is diagnosed without a write as
+// legacy, which this binary does not serve, refreshed by init with the
+// project's own file kept, and then current; a newer, older-than-served or
+// missing entrypoint fails the check, and other text at a served revision
+// does not.
+func TestInitCheckDiagnosesAnOldInstallAndInitRefreshesIt(t *testing.T) {
+	t.Parallel()
+	root := emptyRepo(t)
+	old := revisionOne(t)
+	for relative, text := range old {
+		write(t, root, relative, text)
+	}
+	custom := ".agents/skills/grove-shape/SKILL.md"
+	write(t, root, custom, "our own shaping skill\n")
+	before := hashes(t, root)
+	code, out, errOut := runInitCheck(t, root)
+	legacy := " (no revision line: written before entrypoint revisions, so this grove cannot tell what it expects; init rewrites it)\n"
+	want := "custom " + custom + " (no init marker: the project's own, not judged; delete it to get the managed version)\n" +
+		"legacy .agents/skills/grove-shape/agents/openai.yaml" + legacy +
+		"legacy .agents/skills/grove-work/SKILL.md" + legacy +
+		"legacy .agents/skills/grove-work/agents/openai.yaml" + legacy +
+		"legacy .claude/agents/grove-reviewer.md" + legacy +
+		"legacy .claude/skills/grove-shape/SKILL.md" + legacy +
+		"legacy .claude/skills/grove-work/SKILL.md" + legacy
+	if code != 1 || out != want || !strings.Contains(errOut, "grove: 6 entrypoints are missing or unusable with this grove; nothing was written.") {
+		t.Fatalf("check of an old install: %d\n%s%s", code, out, errOut)
+	}
+	if !reflect.DeepEqual(hashes(t, root), before) {
+		t.Fatal("init --check wrote")
+	}
+
+	code, out, errOut = runInitAt(t, root)
+	if code != 0 || strings.Count(out, "\nupdated ") != 6 || !strings.Contains(out, "\nkept "+custom+" (not managed") {
+		t.Fatalf("refresh: %d\n%s%s", code, out, errOut)
+	}
+	if text, _ := os.ReadFile(filepath.Join(root, custom)); string(text) != "our own shaping skill\n" {
+		t.Fatalf("init rewrote the project's own file: %q", text)
+	}
+	_, out, _ = runInitCheck(t, root)
+	if strings.Count(out, "current ") != 6 || strings.Count(out, fmt.Sprintf(" (revision %d)\n", grove.EntrypointRevision)) != 6 {
+		t.Fatalf("after refresh:\n%s", out)
+	}
+	before = hashes(t, root)
+	if _, out, _ = runInitAt(t, root); strings.Count(out, "\nunchanged ") != 6 || !reflect.DeepEqual(hashes(t, root), before) {
+		t.Fatalf("a second refresh must change nothing:\n%s", out)
+	}
+
+	// Other text at a served revision is compatible; content alone never
+	// makes a file incompatible.
+	work := ".claude/skills/grove-work/SKILL.md"
+	current := fmt.Sprintf("grove entrypoint revision %d", grove.EntrypointRevision)
+	write(t, root, work, strings.Replace(grove.Entrypoints()[work], "Assignment:", "Work:", 1))
+	if code, out, _ := runInitCheck(t, root); code != 0 || !strings.Contains(out, fmt.Sprintf("compatible %s (revision %d, which this grove serves, in other text; init rewrites it)\n", work, grove.EntrypointRevision)) {
+		t.Fatalf("%d\n%s", code, out)
+	}
+	for _, revision := range []string{"99", "0", "two"} {
+		write(t, root, work, strings.Replace(grove.Entrypoints()[work], current, "grove entrypoint revision "+revision, 1))
+		code, out, errOut := runInitCheck(t, root)
+		if code != 1 || !strings.Contains(out, fmt.Sprintf("incompatible %s (revision %s; this grove serves %s; init rewrites it)\n", work, revision, grove.ServedEntrypoints())) || !strings.Contains(errOut, "grove: 1 entrypoints are missing or unusable with this grove; nothing was written.") {
+			t.Fatalf("revision %s: %d\n%s%s", revision, code, out, errOut)
+		}
+	}
+	if err := os.Remove(filepath.Join(root, ".claude/agents/grove-reviewer.md")); err != nil {
+		t.Fatal(err)
+	}
+	if code, out, _ := runInitCheck(t, root); code != 1 || !strings.Contains(out, "missing .claude/agents/grove-reviewer.md (init writes it)\n") {
+		t.Fatalf("%d\n%s", code, out)
+	}
+}
+
+// Each generated entrypoint states its revision and asks for its guide with
+// it; guide serves exactly the revisions this binary names and refuses the
+// rest with the repair, where an entrypoint stops.
+func TestGuideServesEntrypointRevisions(t *testing.T) {
+	t.Parallel()
+	current := fmt.Sprintf("grove entrypoint revision %d", grove.EntrypointRevision)
+	for relative, text := range grove.Entrypoints() {
+		if verdict, _ := grove.Diagnose(relative, text); !strings.Contains(text, current) || verdict != "current" {
+			t.Errorf("%s: %s, or no revision line", relative, verdict)
+		}
+		if strings.HasSuffix(relative, ".md") && !regexp.MustCompile(fmt.Sprintf("`grove guide (work|shape|review) --entrypoint %d`", grove.EntrypointRevision)).MatchString(text) {
+			t.Errorf("%s does not load its guide with its revision", relative)
+		}
+	}
+	for _, revision := range []string{"0", "1", "3", "99", "02", "two"} {
+		var out, errOut bytes.Buffer
+		if code := Run([]string{"guide", "work", "--entrypoint", revision}, t.TempDir(), &out, &errOut); code != 1 || out.Len() != 0 || !strings.Contains(errOut.String(), "is revision "+revision+", and this grove serves "+grove.ServedEntrypoints()+"; nothing was printed.\nRerun `grove init`") {
+			t.Fatalf("%s: %d %q %q", revision, code, out.String(), errOut.String())
+		}
+	}
+	for _, args := range [][]string{{"guide", "work", "--entrypoint"}, {"version", "--entrypoint", "2"}, {"check", "--check"}, {"init", "--check", "--check"}} {
+		var out, errOut bytes.Buffer
+		if code := Run(args, t.TempDir(), &out, &errOut); code != 2 {
+			t.Fatalf("%v: %d %q", args, code, errOut.String())
 		}
 	}
 }

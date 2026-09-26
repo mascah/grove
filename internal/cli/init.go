@@ -65,6 +65,9 @@ func runInit(cwd string, a invocation, out, errOut io.Writer) int {
 		report(errOut, fmt.Errorf("init needs the top of a Git checkout, and %s is below it, at %s; a nested grove.yaml would end discovery there", visible(root), visible(strings.TrimSuffix(prefix, "/"))))
 		return 1
 	}
+	if a.check {
+		return checkInit(root, out, errOut)
+	}
 	steps, conflicts := planInit(root)
 	if len(conflicts) != 0 {
 		for _, c := range conflicts {
@@ -201,4 +204,56 @@ func planInit(root string) (steps []initStep, conflicts []string) {
 
 func sortedKeys(m map[string]string) []string {
 	return slices.Sorted(maps.Keys(m))
+}
+
+// checkInit diagnoses each entrypoint init manages against this binary and
+// writes nothing. It exits 1 when one is missing, of a revision this binary
+// does not serve (legacy or incompatible), or not a file init could replace.
+func checkInit(root string, out, errOut io.Writer) int {
+	files := grove.Entrypoints()
+	failed := 0
+	for _, relative := range sortedKeys(files) {
+		var verdict, note string
+		full := filepath.Join(root, filepath.FromSlash(relative))
+		info, err := os.Lstat(full)
+		var have []byte
+		if err == nil && info.Mode().IsRegular() {
+			have, err = os.ReadFile(full)
+		}
+		switch {
+		case errors.Is(err, fs.ErrNotExist):
+			verdict, note = "missing", " (init writes it)"
+		case err != nil:
+			verdict, note = "conflict", ": "+err.Error()
+		case !info.Mode().IsRegular():
+			verdict, note = "conflict", ": is not a regular file, which init refuses to replace"
+		default:
+			var revision string
+			verdict, revision = grove.Diagnose(relative, string(have))
+			switch verdict {
+			case "custom":
+				note = " (no init marker: the project's own, not judged; delete it to get the managed version)"
+			case "current":
+				note = " (revision " + revision + ")"
+			case "legacy":
+				note = " (no revision line: written before entrypoint revisions, so this grove cannot tell what it expects; init rewrites it)"
+			case "compatible":
+				note = " (revision " + revision + ", which this grove serves, in other text; init rewrites it)"
+			case "incompatible":
+				note = " (revision " + revision + "; this grove serves " + grove.ServedEntrypoints() + "; init rewrites it)"
+			}
+		}
+		if verdict == "missing" || verdict == "legacy" || verdict == "incompatible" || verdict == "conflict" {
+			failed++
+		}
+		if _, err := fmt.Fprintf(out, "%s %s%s\n", verdict, visible(relative), visible(note)); err != nil {
+			return 1
+		}
+	}
+	if failed != 0 {
+		fmt.Fprintf(errOut, "grove: %d entrypoints are missing or unusable with this grove; nothing was written.\n"+
+			"Run grove init, commit what it wrote, and start new sessions; a worktree holds its own branch's copy.\n", failed)
+		return 1
+	}
+	return 0
 }
