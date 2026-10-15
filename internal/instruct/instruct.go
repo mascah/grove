@@ -31,11 +31,15 @@ func embedded(name string) string {
 // and the guide for writing it. Path is relative to the document root.
 type Kind struct{ Kind, Path, Template, Guide string }
 
-// Workflow is one workflow: its guide and the kinds of document it writes.
+// Workflow is one workflow: its skill, its guide and the kinds of document
+// it writes.
 type Workflow struct {
-	Name, Guide string
-	Writes      []string
+	Name, Skill, Args, Guide string
+	Writes                   []string
 }
+
+// Workflows returns the schema's workflows, in order.
+func Workflows() []Workflow { return schema.Workflows }
 
 // schema is the embedded document set and workflows, schema.yaml.
 var schema struct {
@@ -61,12 +65,13 @@ func kind(name string) Kind {
 
 // Project is what a session is told about the repository.
 type Project struct {
-	Root    string          // document root, such as "grove"
-	Target  string          // target branch, such as "main"
-	Commit  string          // the target's commit
-	Agreed  *doc.Collection // the documents at Commit
-	Exe     string          // the Grove binary, to run its commands
-	Context string          // grove.yaml's context
+	Root    string              // document root, such as "grove"
+	Target  string              // target branch, such as "main"
+	Commit  string              // the target's commit
+	Agreed  *doc.Collection     // the documents at Commit
+	Exe     string              // the Grove binary, to run its commands
+	Context string              // grove.yaml's context
+	Rules   map[string][]string // grove.yaml's rules, by kind of document
 }
 
 // Instructions is everything one workflow's instructions say, built before
@@ -83,7 +88,10 @@ type Instructions struct {
 
 // Document is one kind of document to write, with its path and template
 // filled in.
-type Document struct{ Kind, Path, Guide, Template string }
+type Document struct {
+	Kind, Path, Guide, Template string
+	Rules                       []string // the project's own, from grove.yaml
+}
 
 // File is one document included in full; Path is from the repository root.
 type File struct{ Path, Content string }
@@ -96,7 +104,7 @@ func build(p Project, name, task string, fill *strings.Replacer) Instructions {
 	for _, kn := range w.Writes {
 		k := kind(kn)
 		in.Documents = append(in.Documents, Document{Kind: k.Kind, Path: p.Root + "/" + fill.Replace(k.Path),
-			Guide: embedded(k.Guide), Template: fill.Replace(embedded(k.Template))})
+			Guide: embedded(k.Guide), Template: fill.Replace(embedded(k.Template)), Rules: p.Rules[k.Kind]})
 	}
 	return in
 }
@@ -164,6 +172,13 @@ func (in Instructions) Markdown() string {
 	}
 	for _, d := range in.Documents {
 		fmt.Fprintf(&b, "### %s: `%s`\n\n%s\n", d.Kind, d.Path, d.Guide)
+		if len(d.Rules) > 0 {
+			b.WriteString("The project's own rules for this document:\n\n")
+			for _, r := range d.Rules {
+				fmt.Fprintf(&b, "- %s\n", r)
+			}
+			b.WriteString("\n")
+		}
 		include(&b, d.Path, d.Template)
 	}
 	in.index(&b)

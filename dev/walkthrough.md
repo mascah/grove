@@ -114,6 +114,13 @@ Agent inference, not the owner's decisions (rule 25).
   `agents: [claude, codex]`, `context`, and `rules` keyed by `proposal`,
   `change-spec`, `tasks`, `implementation` and `spec`.
 - `init` never overwrites `grove.yaml` and always rewrites the skills.
+  Its second run says "Kept grove.yaml and wrote the Grove skills for claude
+  and codex; nothing is committed." A field left out of `grove.yaml` takes
+  its default; an agent other than `claude` or `codex` stops `init`.
+- A skill runs the binary by the absolute path `init` was run from. Claude
+  Code's skills pass the user's words as `$ARGUMENTS`; Codex has no such
+  substitution, so its skills name them `<args>` and say what that stands
+  for.
 - `review` takes no argument and compares the current branch with the target.
 - `instructions propose` tells a change ID (`YYMMDD-xxxxx`) from a
   description by its form.

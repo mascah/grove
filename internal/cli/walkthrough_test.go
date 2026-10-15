@@ -63,14 +63,42 @@ func read(t *testing.T, path string) string {
 
 func TestInit(t *testing.T) {
 	dir := fixture(t)
-	out := grove(t, "init")
-	if !strings.Contains(out, "nothing is committed") {
-		t.Errorf("init said %q", out)
+	if got, want := grove(t, "init"), "Wrote grove.yaml and the Grove skills for claude and codex; nothing is committed.\n"; got != want {
+		t.Errorf("init said %q, want %q", got, want)
 	}
-	if !strings.Contains(read(t, filepath.Join(dir, "grove.yaml")), "target: main") {
-		t.Error("grove.yaml does not name the target")
+	for _, h := range []string{".claude", ".agents"} {
+		for _, w := range []string{"explore", "propose", "implement"} {
+			if skill := read(t, filepath.Join(dir, h, "skills", "grove-"+w, "SKILL.md")); !strings.Contains(skill, "name: grove-"+w+"\n") || !strings.Contains(skill, " instructions "+w) {
+				t.Errorf("%s skill grove-%s:\n%s", h, w, skill)
+			}
+		}
+	}
+	if skill := read(t, filepath.Join(dir, ".agents/skills/grove-propose/SKILL.md")); !strings.Contains(skill, ` instructions propose "<args>"`+"`") {
+		t.Errorf("codex propose skill:\n%s", skill)
+	}
+	yaml := strings.Replace(read(t, filepath.Join(dir, "grove.yaml")), `context: ""`, "context: Python 3 standard library only.", 1)
+	yaml = strings.Replace(yaml, "rules: {}", "rules:\n  proposal:\n    - Name the owner for every decision.", 1)
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(yaml), 0o644)
+	os.WriteFile(filepath.Join(dir, ".claude/skills/grove-explore/SKILL.md"), []byte("edited"), 0o644)
+	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove skills for claude and codex; nothing is committed.\n"; got != want {
+		t.Errorf("init again said %q, want %q", got, want)
+	}
+	if read(t, filepath.Join(dir, "grove.yaml")) != yaml || read(t, filepath.Join(dir, ".claude/skills/grove-explore/SKILL.md")) == "edited" {
+		t.Error("init again did not keep grove.yaml and rewrite the skills")
 	}
 	commitAll(t, dir, "Set up Grove")
+	out := grove(t, "instructions", "propose")
+	for _, s := range []string{"## Project context\n\nPython 3 standard library only.\n", "The project's own rules for this document:\n\n- Name the owner for every decision.\n"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("propose instructions lack %q", s)
+		}
+	}
+
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte("agents: [cursor]\n"), 0o644)
+	var stdout, stderr strings.Builder
+	if code := run([]string{"init"}, &stdout, &stderr); code != 1 || stderr.String() != "grove-next2: grove.yaml lists agent \"cursor\"; Grove knows claude and codex\n" {
+		t.Errorf("an unknown agent: status %d, %q", code, stderr.String())
+	}
 }
 
 func TestCheck(t *testing.T) {
@@ -128,11 +156,10 @@ func approve(t *testing.T, dir string) (changeID string) {
 }
 
 func TestExplore(t *testing.T) {
-	dir := setUp(t)
-	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte("root: grove\ntarget: main\ncontext: Python 3 standard library only.\n"), 0o644)
+	setUp(t)
 	out := grove(t, "instructions", "explore")
 	for _, s := range []string{"# Grove instructions: explore", "Interview before you conclude anything",
-		"## Project context\n\nPython 3 standard library only.\n", "Maintained specs (agreed behavior):\n- None.", "### spec: `grove/specs/<capability>/spec.md`"} {
+		"Maintained specs (agreed behavior):\n- None.", "### spec: `grove/specs/<capability>/spec.md`"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("explore instructions lack %q", s)
 		}

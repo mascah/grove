@@ -1,7 +1,9 @@
 # The document set and the workflows (CONSTITUTION.md rule 10): a plain list.
 # A path is relative to the document root; <change> is the change's folder
-# name and <capability> a capability's ID. It holds no dependencies between
-# steps and no status.
+# name and <capability> a capability's ID. A workflow's skill is the
+# description of the skill init writes for it, and args what that skill
+# passes to `instructions <workflow>`, <args> being what the user typed after
+# the skill's name. It holds no dependencies between steps and no status.
 documents:
   - kind: spec
     path: specs/<capability>/spec.md
@@ -25,11 +27,16 @@ documents:
     guide: guides/implementation.md
 workflows:
   - name: explore
+    skill: Explore an idea with the owner before proposing a change, in an interview that writes nothing unless asked.
     guide: guides/explore.md
     writes: [spec]
   - name: propose
+    skill: Propose a change from this conversation or from a description, or revise a drafted change given its ID.
+    args: '"<args>"'
     guide: guides/propose.md
     writes: [proposal, change-spec, tasks]
   - name: implement
+    skill: Implement an approved change given its ID, recording progress in its implementation.md.
+    args: <args>
     guide: guides/implement.md
     writes: [implementation, spec]
