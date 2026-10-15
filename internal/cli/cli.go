@@ -17,6 +17,8 @@ const usage = `usage: grove-next2 <command>
   explore <id> [--resume]    a new conversation in that workspace, or the last one
   workspaces                 list the workspaces
   instructions propose <id>  print the propose instructions for that exploration
+  instructions implement <change-id>
+                             print the implement instructions for an approved change
   review <change-id>         show what merging that change's workspace would approve
   changes                    list the approved changes
   check                      report problems in this working tree's Grove documents
@@ -38,6 +40,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = reopen(stdout, args[1], true)
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "propose":
 		err = instructionsPropose(stdout, args[2])
+	case len(args) == 3 && args[0] == "instructions" && args[1] == "implement":
+		err = instructionsImplement(stdout, args[2])
 	case len(args) == 2 && args[0] == "review":
 		err = review(stdout, args[1])
 	case len(args) == 1 && args[0] == "changes":

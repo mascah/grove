@@ -8,6 +8,7 @@ import (
 	"embed"
 	"fmt"
 	"maps"
+	"path"
 	"slices"
 	"strings"
 
@@ -100,6 +101,32 @@ func Propose(p Project, exploration *doc.Document, c Change) string {
 		for _, path := range slices.Sorted(maps.Keys(c.Files)) {
 			include(&b, p.Root+"/"+path, c.Files[path])
 		}
+	}
+	return b.String()
+}
+
+// Implement returns the instructions for implementing change c, which the
+// target holds; c.Files are read from there.
+func Implement(p Project, c *doc.Change, files map[string]string) string {
+	var b strings.Builder
+	b.WriteString("# Grove instructions: implement\n\n")
+	fmt.Fprintf(&b, "You are implementing approved change %s, %q, as %s@%s holds it, in your own working tree. Run Grove as `%s`.\n\n%s\n",
+		c.Proposal.Meta.ID, c.Proposal.Meta.Title, p.Target, short(p.Commit), p.Exe, meanings)
+	fmt.Fprintf(&b, "## How to implement\n\n%s\n", embedded("guides/implement.md"))
+	dir := p.Root + "/" + c.Dir
+	b.WriteString("## Templates\n\n")
+	include(&b, dir+"/implementation.md", strings.NewReplacer("{{title}}", c.Proposal.Meta.Title, "{{change}}", c.Proposal.Meta.ID).Replace(Template("implementation.md")))
+	for _, name := range c.Files {
+		capability, ok := strings.CutPrefix(path.Dir(name), c.Dir+"/specs/")
+		if ok && !slices.ContainsFunc(p.Agreed.Specs, func(d *doc.Document) bool { return d.Meta.ID == capability }) {
+			include(&b, p.Root+"/specs/"+capability+"/spec.md", Spec(capability, "<title>"))
+		}
+	}
+	p.index(&b)
+	p.brief(&b)
+	b.WriteString("## The change\n\n")
+	for _, name := range c.Files {
+		include(&b, p.Root+"/"+name, files[name])
 	}
 	return b.String()
 }

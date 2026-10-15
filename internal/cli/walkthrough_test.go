@@ -255,3 +255,30 @@ func TestCommitAndMerge(t *testing.T) {
 		t.Errorf("changes printed %q, want %q", got, want)
 	}
 }
+
+func TestImplementInstructions(t *testing.T) {
+	dir := fixture(t)
+	grove(t, "init")
+	if !strings.Contains(read(t, filepath.Join(dir, ".claude/skills/grove-implement/SKILL.md")), " instructions implement $ARGUMENTS`") {
+		t.Error("the skill does not run instructions implement")
+	}
+	commitAll(t, dir, "Set up Grove")
+	harness(t, "")
+	grove(t, "explore", "Allow editing older records")
+	ws := onlyWorkspace(t, dir)
+	cid := propose(t, ws, filepath.Base(ws)[:12])
+	commitAll(t, ws, "Propose")
+	t.Chdir(dir)
+
+	var stdout, stderr strings.Builder
+	if code := run([]string{"instructions", "implement", cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove-next2: main holds no approved change "+cid+"\n" {
+		t.Errorf("before the merge: status %d, %q", code, stderr.String())
+	}
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "grove/"+filepath.Base(ws))
+	out := grove(t, "instructions", "implement", cid)
+	for _, s := range []string{"Reconcile the specs", "/implementation.md\">", "<file path=\"grove/specs/record-editing/spec.md\">\n---\nid: record-editing", "### Requirement: Edit older records"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("implement instructions lack %q", s)
+		}
+	}
+}
