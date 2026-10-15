@@ -97,3 +97,13 @@ func Format(meta Meta, body string) string {
 	out, _ := yaml.Marshal(meta) // a struct of strings always marshals
 	return "---\n" + string(out) + "---\n" + body
 }
+
+// Body returns src without its frontmatter block.
+func Body(src string) string {
+	meta, problem := splitFrontmatter(src)
+	if problem != "" {
+		return src
+	}
+	_, rest, _ := strings.Cut(src, "\n")
+	return strings.TrimPrefix(rest[len(meta):], "---")
+}

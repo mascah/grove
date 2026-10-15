@@ -282,3 +282,41 @@ func TestImplementInstructions(t *testing.T) {
 		}
 	}
 }
+
+func TestSeeTheResult(t *testing.T) {
+	dir := fixture(t)
+	grove(t, "init")
+	commitAll(t, dir, "Set up Grove")
+	harness(t, "")
+	grove(t, "explore", "Allow editing older records")
+	ws := onlyWorkspace(t, dir)
+	cid := propose(t, ws, filepath.Base(ws)[:12])
+	commitAll(t, ws, "Propose")
+	t.Chdir(dir)
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "grove/"+filepath.Base(ws))
+	// The implementer reconciles the change spec into a new maintained spec.
+	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
+	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte(instruct.Spec("record-editing", "Record editing")), 0o644)
+	commitAll(t, dir, "Implement")
+
+	if got, want := grove(t, "specs"), "record-editing  Record editing  grove/specs/record-editing/spec.md\n"; got != want {
+		t.Errorf("specs printed %q, want %q", got, want)
+	}
+	if got := grove(t, "changes"); !strings.HasPrefix(got, cid+"  ") || !strings.HasSuffix(got, "  approved\n") {
+		t.Errorf("changes printed %q", got)
+	}
+	_, args := harness(t, "")
+	grove(t, "explore", "Editing a missing record crashes")
+	prompt := args()
+	for _, s := range []string{
+		"Maintained specs (agreed behavior):\n- record-editing \"Record editing\": `grove/specs/record-editing/spec.md`",
+		"Approved changes (future work; implementation is not established):\n- " + cid + " \"Allow editing older records\": `grove/changes/" + cid + "-",
+	} {
+		if !strings.Contains(prompt, s) {
+			t.Errorf("fresh explore instructions lack %q", s)
+		}
+	}
+	if len(prompt) >= 12<<10 {
+		t.Errorf("explore instructions are %d bytes, want under 12 KiB", len(prompt))
+	}
+}

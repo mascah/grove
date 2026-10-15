@@ -10,7 +10,9 @@ import (
 	"github.com/mascah/grove-next2/internal/doc"
 )
 
-const usage = `usage: grove-next2 <command>
+const usage = `usage: grove-next2 [command]
+
+With no command, open the reader on the maintained specs and approved changes.
 
   init                       set up Grove in this repository
   explore "<description>"    explore in a new workspace
@@ -20,6 +22,7 @@ const usage = `usage: grove-next2 <command>
   instructions implement <change-id>
                              print the implement instructions for an approved change
   review <change-id>         show what merging that change's workspace would approve
+  specs                      list the maintained specs
   changes                    list the approved changes
   check                      report problems in this working tree's Grove documents
 `
@@ -30,6 +33,10 @@ func Main(args []string) int { return run(args, os.Stdout, os.Stderr) }
 func run(args []string, stdout, stderr io.Writer) int {
 	var err error
 	switch {
+	case len(args) == 0:
+		err = reader()
+	case len(args) == 1 && args[0] == "specs":
+		err = listSpecs(stdout)
 	case len(args) == 1 && args[0] == "init":
 		err = initProject(stdout)
 	case len(args) == 2 && args[0] == "explore" && doc.ValidID(args[1]):
