@@ -105,6 +105,16 @@ Owner, asked whether to add each:
 
 - Does the reader showing `implementation.md` count as reading it under rule
   3? Owner: "No, but im not certain." Until settled, the reader shows it.
+- May a baseline (step 3) hold the rule the change then implements? In both
+  Claude Code runs of 2026-10-15 the session read "older records keep their
+  category when it is unchanged" as intended today, wrote it into the
+  baseline with the code as a known discrepancy, and the change spec then
+  added no requirement; steps 4 and 7 expect an ADDED requirement. In the
+  second run `/grove-propose` asked, and moving the rule into the change gave
+  the ADDED path. Codex asked during explore whether the rule was intended
+  today or new. The explore guide says a baseline holds "the rules that hold
+  before the change being explored, not that change"; whether a bug fix's
+  rule is that change is not settled.
 
 ## Assumptions to confirm
 
