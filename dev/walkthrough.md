@@ -84,8 +84,11 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
   `apply: [Commit after each task, naming its task ID.]` under `rules`
   in `grove.yaml`, `/grove-apply` commits T-01 with its ID in the
   message.
-- **Drop a change** (concepts, "The loop"). `grove archive <change-id>` on an
-  approved change nobody will build moves it without touching the specs.
+- **Drop a change** (concepts, "The loop"). `/grove-archive <change-id>` on
+  an approved change nobody will build asks why, writes `Status: dropped`
+  and the reason in `implementation.md`, and moves it without touching the
+  specs. Before that, `grove archive <change-id>` says
+  > T-01 is not done in implementation.md; archive a change when every task is done or the file says Status: dropped
 
 ## Decided
 

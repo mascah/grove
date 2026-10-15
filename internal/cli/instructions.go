@@ -5,7 +5,10 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/mascah/grove-next2/internal/doc"
@@ -82,6 +85,9 @@ func archive(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
+	if t := unfinished(os.DirFS(root), c); t != "" {
+		return fmt.Errorf("%s is not done in implementation.md; archive a change when every task is done or the file says Status: dropped", t)
+	}
 	to := "changes/archive/" + filepath.Base(c.Dir)
 	if err := os.MkdirAll(filepath.Join(root, "changes", "archive"), 0o755); err != nil {
 		return err
@@ -91,6 +97,34 @@ func archive(stdout io.Writer, id string) error {
 	}
 	fmt.Fprintf(stdout, "Archived %s to %s/%s/; nothing is committed.\n", id, p.Root, to)
 	return nil
+}
+
+var taskHeading = regexp.MustCompile(`^#+ (T-\d+)\b`)
+
+// unfinished returns the first task in change c's tasks.md that its
+// implementation.md does not mark done, or "" when every task is done or
+// the change is dropped (rule 3).
+func unfinished(fsys fs.FS, c *doc.Change) string {
+	tasks, _ := fs.ReadFile(fsys, path.Join(c.Dir, "tasks.md"))
+	impl, _ := fs.ReadFile(fsys, path.Join(c.Dir, "implementation.md"))
+	status, task := map[string]string{}, ""
+	for _, l := range strings.Split(string(impl), "\n") {
+		if m := taskHeading.FindStringSubmatch(l); m != nil {
+			task = m[1]
+		}
+		if s, ok := strings.CutPrefix(l, "Status: "); ok {
+			if s = strings.TrimSpace(s); s == "dropped" {
+				return ""
+			}
+			status[task] = strings.TrimSpace(s)
+		}
+	}
+	for _, l := range strings.Split(string(tasks), "\n") {
+		if m := taskHeading.FindStringSubmatch(l); m != nil && status[m[1]] != "done" {
+			return m[1]
+		}
+	}
+	return ""
 }
 
 // instructionsApply prints the apply instructions for change id as the

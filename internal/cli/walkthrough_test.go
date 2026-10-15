@@ -239,11 +239,24 @@ func TestApplyInstructions(t *testing.T) {
 	}
 }
 
+func TestDropChange(t *testing.T) {
+	dir := setUp(t)
+	cid := approve(t, dir)
+	folder := "grove/changes/" + cid + "-allow-editing-older-records"
+	os.WriteFile(filepath.Join(dir, folder, "implementation.md"), []byte("# Implementation\n\nStatus: dropped\n\nOwner: \"not needed\".\n"), 0o644)
+	grove(t, "archive", cid)
+}
+
 func TestArchive(t *testing.T) {
 	dir := setUp(t)
 	cid := approve(t, dir)
 	git(t, dir, "switch", "-q", "-c", "older-edits-impl")
 	folder := "grove/changes/" + cid + "-allow-editing-older-records"
+	os.WriteFile(filepath.Join(dir, folder, "implementation.md"), []byte("## T-01\n\nStatus: in progress\n"), 0o644)
+	var stdout, stderr strings.Builder
+	if code := run([]string{"archive", cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove: T-01 is not done in implementation.md; archive a change when every task is done or the file says Status: dropped\n" {
+		t.Errorf("archiving an unfinished change: status %d, %q", code, stderr.String())
+	}
 	os.WriteFile(filepath.Join(dir, folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
 
 	// The session reconciles the change spec into a new maintained spec,

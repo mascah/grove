@@ -6,9 +6,12 @@ specs and the archived change land in the target in one merge.
 
 - Read the change's `implementation.md`, below. When every task in `tasks.md`
   is done there, the change is finished: go on to section 2.
-- Otherwise ask the owner whether the change is dropped. A dropped change is
-  archived without touching the specs: go to section 3. Do not archive an
-  unfinished change the owner has not dropped.
+- Otherwise ask the owner whether the change is dropped. For a dropped
+  change, write `Status: dropped` under the title of `implementation.md`,
+  creating it from the template below if there is none, with the owner's
+  reason in their words. It is archived without touching the specs: go to
+  section 3. Grove's `archive` refuses a change that is neither finished nor
+  dropped.
 
 ### 2. Reconcile the specs
 

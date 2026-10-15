@@ -55,7 +55,7 @@ progress goes in `implementation.md`.
    archive together.
 
 A change you decide not to build is archived too, without touching the
-specs.
+specs; its `implementation.md` says `Status: dropped` and why.
 
 ## Two halves
 

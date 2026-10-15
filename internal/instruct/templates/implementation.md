@@ -1,7 +1,8 @@
 # Implementation: {{title}}
 
 <!-- Progress on change {{change}}, written by whoever implements it. It is not
-part of what was approved and does not amend it. -->
+part of what was approved and does not amend it. If the owner drops the change,
+write "Status: dropped" here with their reason. -->
 
 ## Tasks
 
