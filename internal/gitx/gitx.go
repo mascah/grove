@@ -41,10 +41,3 @@ func ResolveBranch(dir, name string) (string, error) {
 	out, err := Run(dir, "rev-parse", "--verify", "--end-of-options", "refs/heads/"+name+"^{commit}")
 	return strings.TrimSpace(out), err
 }
-
-// Uncommitted counts the changed and untracked files in the worktree that
-// holds dir.
-func Uncommitted(dir string) (int, error) {
-	out, err := Run(dir, "status", "--porcelain", "-z", "--no-renames", "--untracked-files=all")
-	return strings.Count(out, "\x00"), err
-}

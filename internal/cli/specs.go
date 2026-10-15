@@ -39,7 +39,7 @@ func reader() error {
 	if err != nil {
 		return err
 	}
-	fsys, err := gitx.TreeFS(p.Main, ip.Commit, p.Root)
+	fsys, err := gitx.TreeFS(p.Top, ip.Commit, p.Root)
 	if err != nil {
 		return err
 	}

@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/mascah/grove-next2/internal/gitx"
-	"github.com/mascah/grove-next2/internal/instruct"
 )
 
 const config = `# Grove: where documents live and which branch holds what is agreed.
@@ -35,9 +34,6 @@ func initProject(stdout io.Writer) error {
 	if err := create(filepath.Join(top, "grove.yaml"), config); err != nil {
 		return err
 	}
-	if err := create(filepath.Join(top, "grove", "brief.md"), instruct.Template("brief.md")); err != nil {
-		return err
-	}
 	exe, err := os.Executable()
 	if err != nil {
 		return err
@@ -45,18 +41,7 @@ func initProject(stdout io.Writer) error {
 	if err := create(filepath.Join(top, ".claude", "skills", "grove-implement", "SKILL.md"), fmt.Sprintf(skill, exe)); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(filepath.Join(top, ".gitignore"), os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0o644)
-	if err != nil {
-		return err
-	}
-	if _, err := f.WriteString(".grove/\n"); err != nil {
-		f.Close()
-		return err
-	}
-	if err := f.Close(); err != nil {
-		return err
-	}
-	fmt.Fprintln(stdout, "Wrote grove.yaml, grove/brief.md, .claude/skills/grove-implement/SKILL.md and a .gitignore entry for .grove/; nothing is committed.")
+	fmt.Fprintln(stdout, "Wrote grove.yaml and .claude/skills/grove-implement/SKILL.md; nothing is committed.")
 	return nil
 }
 

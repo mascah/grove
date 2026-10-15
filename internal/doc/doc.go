@@ -1,8 +1,7 @@
 // Package doc reads Grove's documents: Markdown files with a small YAML
 // frontmatter block, through an fs.FS rooted at the document root.
 //
-// Under the root are brief.md, maintained specs (specs/<id>/spec.md),
-// explorations (explorations/<id>-<slug>.md) and changes
+// Under the root are maintained specs (specs/<id>/spec.md) and changes
 // (changes/<id>-<slug>/, identified by their proposal.md). Problems inside a
 // document are Diagnostics, never errors, so one broken document does not
 // hide the others.
@@ -38,7 +37,6 @@ type Meta struct {
 	ID          string `yaml:"id"`
 	Title       string `yaml:"title"`
 	Created     string `yaml:"created,omitempty"`
-	Exploration string `yaml:"exploration,omitempty"`
 	Description string `yaml:"description,omitempty"`
 }
 
@@ -59,31 +57,22 @@ type Change struct {
 
 // Collection is everything under one document root.
 type Collection struct {
-	Brief        string // brief.md, or "" when there is none
-	Specs        []*Document
-	Explorations []*Document
-	Changes      []*Change
+	Specs   []*Document
+	Changes []*Change
 }
 
 // Required fields of each kind, in written order; description is optional
 // everywhere.
 var (
-	specFields        = []string{"id", "title"}
-	explorationFields = []string{"id", "title", "created"}
-	changeFields      = []string{"id", "title", "created", "exploration"}
+	specFields   = []string{"id", "title"}
+	changeFields = []string{"id", "title", "created"}
 )
 
 // Load reads the collection under fsys.
 func Load(fsys fs.FS) (*Collection, error) {
 	c := &Collection{}
-	if b, err := fs.ReadFile(fsys, "brief.md"); err == nil {
-		c.Brief = string(b)
-	}
 	var err error
 	if c.Specs, err = load(fsys, "specs/*/spec.md", specFields); err != nil {
-		return nil, err
-	}
-	if c.Explorations, err = load(fsys, "explorations/*.md", explorationFields); err != nil {
 		return nil, err
 	}
 	proposals, err := load(fsys, "changes/*/proposal.md", changeFields)
@@ -136,7 +125,7 @@ func (c *Collection) Change(id string) *Change {
 // the easily confused i, l, o and u.
 const idAlphabet = "0123456789abcdefghjkmnpqrstvwxyz"
 
-// NewID returns a fresh exploration or change ID: the UTC date of now as
+// NewID returns a fresh change ID: the UTC date of now as
 // YYMMDD, a hyphen, and five random base32 characters, such as 261014-k3m9q.
 func NewID(now time.Time) string {
 	var raw [4]byte
@@ -151,5 +140,5 @@ func NewID(now time.Time) string {
 
 var idPattern = regexp.MustCompile(`^[0-9]{6}-[0-9a-hjkmnp-tv-z]{5}$`)
 
-// ValidID reports whether s is an exploration or change ID.
+// ValidID reports whether s is a change ID.
 func ValidID(s string) bool { return idPattern.MatchString(s) }

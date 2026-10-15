@@ -24,7 +24,7 @@ func check(stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	docs := append(append([]*doc.Document{}, c.Specs...), c.Explorations...)
+	docs := append([]*doc.Document{}, c.Specs...)
 	for _, ch := range c.Changes {
 		docs = append(docs, ch.Proposal)
 	}

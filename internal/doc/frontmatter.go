@@ -61,7 +61,7 @@ func Parse(path string, src []byte, required []string) *Document {
 		}
 	}
 	d.Meta = Meta{ID: values["id"], Title: values["title"], Created: values["created"],
-		Exploration: values["exploration"], Description: values["description"]}
+		Description: values["description"]}
 	return d
 }
 

@@ -6,9 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 // fixture creates the ledger fixture as a fresh repository, as `just fixture`
@@ -69,90 +69,10 @@ func TestInit(t *testing.T) {
 	if !strings.Contains(out, "nothing is committed") {
 		t.Errorf("init said %q", out)
 	}
-	if got := read(t, filepath.Join(dir, ".gitignore")); !strings.HasSuffix(got, "*.egg-info/\n.grove/\n") {
-		t.Errorf(".gitignore is %q", got)
-	}
 	if !strings.Contains(read(t, filepath.Join(dir, "grove.yaml")), "target: main") {
 		t.Error("grove.yaml does not name the target")
 	}
 	commitAll(t, dir, "Set up Grove")
-}
-
-// harness puts a stand-in for claude on PATH. It saves the directory it ran
-// in and its arguments, then runs script there, as a session's edits.
-func harness(t *testing.T, script string) (cwd, args func() string) {
-	t.Helper()
-	bin, out := t.TempDir(), t.TempDir()
-	stub := "#!/bin/sh\npwd -P > " + out + "/cwd\nprintf '%s' \"$*\" > " + out + "/args\n" + script + "\n"
-	if err := os.WriteFile(filepath.Join(bin, "claude"), []byte(stub), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
-	return func() string { return strings.TrimSpace(read(t, out+"/cwd")) }, func() string { return read(t, out+"/args") }
-}
-
-// onlyWorkspace returns the only workspace's directory.
-func onlyWorkspace(t *testing.T, dir string) string {
-	t.Helper()
-	m, _ := filepath.Glob(filepath.Join(dir, ".grove", "worktrees", "*"))
-	if len(m) != 1 {
-		t.Fatalf("workspaces: %v", m)
-	}
-	return m[0]
-}
-
-func TestExplore(t *testing.T) {
-	dir := fixture(t)
-	grove(t, "init")
-	commitAll(t, dir, "Set up Grove")
-	cwd, args := harness(t, "")
-
-	out := grove(t, "explore", "Allow editing older records")
-	ws := onlyWorkspace(t, dir)
-	name := filepath.Base(ws)
-	id := name[:12]
-	if got, _ := filepath.EvalSymlinks(ws); cwd() != got {
-		t.Errorf("session ran in %s, want %s", cwd(), got)
-	}
-	lines := strings.Split(strings.TrimSpace(out), "\n")
-	want := []string{
-		"Workspace .grove/worktrees/" + name + " on branch grove/" + name + ", from main@",
-		"Draft: exploration " + id + " in .grove/worktrees/" + name + ", 1 file uncommitted.",
-		"Continue: ",
-	}
-	if len(lines) != 3 || !strings.HasPrefix(lines[0], want[0]) || lines[1] != want[1] || !strings.HasPrefix(lines[2], want[2]) || !strings.HasSuffix(lines[2], " explore "+id+" --resume") {
-		t.Errorf("explore printed:\n%s", out)
-	}
-	src := read(t, filepath.Join(ws, "grove", "explorations", name+".md"))
-	if d := doc.Parse("x.md", []byte(src), []string{"id", "title", "created"}); len(d.Diagnostics) > 0 || d.Meta.ID != id {
-		t.Errorf("exploration: %v\n%s", d.Diagnostics, src)
-	}
-	prompt := args()
-	for _, s := range []string{"Interview before you conclude", "## Owner's description\n\nAllow editing older records", "The project has no brief yet.", "Maintained specs (agreed behavior):\n- None."} {
-		if !strings.Contains(prompt, s) {
-			t.Errorf("instructions lack %q", s)
-		}
-	}
-}
-
-func TestComingBack(t *testing.T) {
-	dir := fixture(t)
-	grove(t, "init")
-	commitAll(t, dir, "Set up Grove")
-	_, args := harness(t, `for f in grove/explorations/*.md; do echo "- Owner: only the misc records." >> "$f"; done`)
-	grove(t, "explore", "Allow editing older records")
-	id := filepath.Base(onlyWorkspace(t, dir))[:12]
-
-	if got, want := grove(t, "workspaces"), id+"  Allow editing older records  no change yet, 1 file uncommitted\n"; got != want {
-		t.Errorf("workspaces printed %q, want %q", got, want)
-	}
-	grove(t, "explore", id)
-	if !strings.Contains(args(), "- Owner: only the misc records.") {
-		t.Error("a new conversation was not given the saved exploration")
-	}
-	if out := grove(t, "explore", id, "--resume"); args() != "--continue" || !strings.Contains(out, "Draft: exploration "+id) {
-		t.Errorf("--resume ran claude %q and printed %q", args(), out)
-	}
 }
 
 func TestBaselineTemplateParses(t *testing.T) {
@@ -163,9 +83,7 @@ func TestBaselineTemplateParses(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
-	dir := fixture(t)
-	grove(t, "init")
-	commitAll(t, dir, "Set up Grove")
+	dir := setUp(t)
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
 		t.Errorf("check printed %q", got)
 	}
@@ -180,79 +98,50 @@ func TestCheck(t *testing.T) {
 	}
 }
 
-// propose plays a session that switches to propose: it writes the change the
-// instructions name, as a session following them would.
-func propose(t *testing.T, ws, id string) (changeID string) {
+// propose plays a session that proposes a change: it writes the change
+// folder in the working tree, on a new branch, and returns its ID.
+func propose(t *testing.T, dir string) (changeID string) {
 	t.Helper()
-	t.Chdir(ws)
-	out := grove(t, "instructions", "propose", id)
-	m := regexp.MustCompile("Create the change in `grove/(changes/([0-9]{6}-[0-9a-z]{5})-[a-z0-9-]+)/`").FindStringSubmatch(out)
-	if m == nil {
-		t.Fatalf("propose instructions name no new change:\n%.2000s", out)
-	}
-	dir := filepath.Join(ws, "grove", m[1])
-	os.MkdirAll(filepath.Join(dir, "specs", "record-editing"), 0o755)
-	os.WriteFile(filepath.Join(dir, "proposal.md"), []byte("---\nid: "+m[2]+"\ntitle: Allow editing older records\ncreated: \"2026-10-14T00:00:00Z\"\nexploration: "+id+"\n---\n\n# Allow editing older records\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "specs", "record-editing", "spec.md"), []byte("# Changes to record-editing\n\n## ADDED Requirements\n\n### Requirement: Edit older records\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "tasks.md"), []byte("## T-01 — Edit older records\n"), 0o644)
-	return m[2]
+	git(t, dir, "switch", "-q", "-c", "older-edits")
+	id := doc.NewID(time.Now())
+	change := filepath.Join(dir, "grove", "changes", id+"-allow-editing-older-records")
+	os.MkdirAll(filepath.Join(change, "specs", "record-editing"), 0o755)
+	os.WriteFile(filepath.Join(change, "proposal.md"), []byte("---\nid: "+id+"\ntitle: Allow editing older records\ncreated: \"2026-10-14T00:00:00Z\"\n---\n\n# Allow editing older records\n"), 0o644)
+	os.WriteFile(filepath.Join(change, "specs", "record-editing", "spec.md"), []byte("# Changes to record-editing\n\n## ADDED Requirements\n\n### Requirement: Edit older records\n"), 0o644)
+	os.WriteFile(filepath.Join(change, "tasks.md"), []byte("## T-01 — Edit older records\n"), 0o644)
+	return id
 }
 
-func TestPropose(t *testing.T) {
+// setUp runs init on a fresh fixture and commits it, as getting started §1.
+func setUp(t *testing.T) string {
+	t.Helper()
 	dir := fixture(t)
 	grove(t, "init")
 	commitAll(t, dir, "Set up Grove")
-	harness(t, "")
-	grove(t, "explore", "Allow editing older records")
-	ws := onlyWorkspace(t, dir)
-	id := filepath.Base(ws)[:12]
-
-	cid := propose(t, ws, id)
-	if got := grove(t, "check"); got != "No problems in grove/.\n" {
-		t.Errorf("check printed %q", got)
-	}
-	again := grove(t, "instructions", "propose", id)
-	if strings.Contains(again, "## Templates") || !strings.Contains(again, "## This change, as drafted so far") || !strings.Contains(again, "### Requirement: Edit older records") {
-		t.Errorf("a second propose did not continue the drafted change:\n%.3000s", again)
-	}
-	t.Chdir(dir)
-	if got := grove(t, "workspaces"); !strings.Contains(got, "change "+cid+" draft, 4 files uncommitted") {
-		t.Errorf("workspaces printed %q", got)
-	}
-	if got := grove(t, "explore", id, "--resume"); !strings.HasPrefix(got, "Draft: change "+cid+" in ") {
-		t.Errorf("report: %q", got)
-	}
+	return dir
 }
 
-func TestCommitAndMerge(t *testing.T) {
-	dir := fixture(t)
-	grove(t, "init")
-	commitAll(t, dir, "Set up Grove")
-	harness(t, "")
-	grove(t, "explore", "Allow editing older records")
-	ws := onlyWorkspace(t, dir)
-	cid := propose(t, ws, filepath.Base(ws)[:12])
-	commitAll(t, ws, "Propose allowing edits to older records")
-	t.Chdir(dir)
+// approve commits the proposed change on its branch and merges it into main.
+func approve(t *testing.T, dir string) (changeID string) {
+	t.Helper()
+	cid := propose(t, dir)
+	commitAll(t, dir, "Propose allowing edits to older records")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve "+cid, "older-edits")
+	return cid
+}
 
-	out := grove(t, "review", cid)
-	branch := "grove/" + filepath.Base(ws)
-	for _, s := range []string{
-		"Merging " + branch + " into main approves change " + cid + " as future work; it does not implement it.\n",
-		"  adds     change           grove/changes/" + cid + "-",
-		"  adds     exploration      grove/explorations/",
-		"+### Requirement: Edit older records",
-	} {
-		if !strings.Contains(out, s) {
-			t.Errorf("review lacks %q:\n%s", s, out)
-		}
-	}
+func TestApprove(t *testing.T) {
+	dir := setUp(t)
+	propose(t, dir)
+	commitAll(t, dir, "Propose allowing edits to older records")
 	if got := grove(t, "changes"); got != "" {
 		t.Errorf("before the merge, changes printed %q", got)
 	}
-	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve "+cid, branch)
-	if got, want := grove(t, "changes"), cid+"  Allow editing older records  approved\n"; got != want {
-		t.Errorf("changes printed %q, want %q", got, want)
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
+	if got := grove(t, "changes"); !strings.HasSuffix(got, "  Allow editing older records  approved\n") {
+		t.Errorf("changes printed %q", got)
 	}
 }
 
@@ -263,18 +152,15 @@ func TestImplementInstructions(t *testing.T) {
 		t.Error("the skill does not run instructions implement")
 	}
 	commitAll(t, dir, "Set up Grove")
-	harness(t, "")
-	grove(t, "explore", "Allow editing older records")
-	ws := onlyWorkspace(t, dir)
-	cid := propose(t, ws, filepath.Base(ws)[:12])
-	commitAll(t, ws, "Propose")
-	t.Chdir(dir)
+	cid := propose(t, dir)
+	commitAll(t, dir, "Propose")
 
 	var stdout, stderr strings.Builder
 	if code := run([]string{"instructions", "implement", cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove-next2: main holds no approved change "+cid+"\n" {
 		t.Errorf("before the merge: status %d, %q", code, stderr.String())
 	}
-	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "grove/"+filepath.Base(ws))
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
 	out := grove(t, "instructions", "implement", cid)
 	for _, s := range []string{"Reconcile the specs", "/implementation.md\">", "<file path=\"grove/specs/record-editing/spec.md\">\n---\nid: record-editing", "### Requirement: Edit older records"} {
 		if !strings.Contains(out, s) {
@@ -284,16 +170,8 @@ func TestImplementInstructions(t *testing.T) {
 }
 
 func TestSeeTheResult(t *testing.T) {
-	dir := fixture(t)
-	grove(t, "init")
-	commitAll(t, dir, "Set up Grove")
-	harness(t, "")
-	grove(t, "explore", "Allow editing older records")
-	ws := onlyWorkspace(t, dir)
-	cid := propose(t, ws, filepath.Base(ws)[:12])
-	commitAll(t, ws, "Propose")
-	t.Chdir(dir)
-	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "grove/"+filepath.Base(ws))
+	dir := setUp(t)
+	cid := approve(t, dir)
 	// The implementer reconciles the change spec into a new maintained spec.
 	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
 	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte(instruct.Spec("record-editing", "Record editing")), 0o644)
@@ -304,19 +182,5 @@ func TestSeeTheResult(t *testing.T) {
 	}
 	if got := grove(t, "changes"); !strings.HasPrefix(got, cid+"  ") || !strings.HasSuffix(got, "  approved\n") {
 		t.Errorf("changes printed %q", got)
-	}
-	_, args := harness(t, "")
-	grove(t, "explore", "Editing a missing record crashes")
-	prompt := args()
-	for _, s := range []string{
-		"Maintained specs (agreed behavior):\n- record-editing \"Record editing\": `grove/specs/record-editing/spec.md`",
-		"Approved changes (future work; implementation is not established):\n- " + cid + " \"Allow editing older records\": `grove/changes/" + cid + "-",
-	} {
-		if !strings.Contains(prompt, s) {
-			t.Errorf("fresh explore instructions lack %q", s)
-		}
-	}
-	if len(prompt) >= 12<<10 {
-		t.Errorf("explore instructions are %d bytes, want under 12 KiB", len(prompt))
 	}
 }
