@@ -47,7 +47,7 @@ func grove(t *testing.T, args ...string) string {
 	t.Helper()
 	var stdout, stderr strings.Builder
 	if code := run(args, &stdout, &stderr); code != 0 {
-		t.Fatalf("grove-next2 %v: status %d\n%s", args, code, stderr.String())
+		t.Fatalf("grove %v: status %d\n%s", args, code, stderr.String())
 	}
 	return stdout.String()
 }
@@ -96,7 +96,7 @@ func TestInit(t *testing.T) {
 
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte("agents: [cursor]\n"), 0o644)
 	var stdout, stderr strings.Builder
-	if code := run([]string{"init"}, &stdout, &stderr); code != 1 || stderr.String() != "grove-next2: grove.yaml lists agent \"cursor\"; Grove knows claude and codex\n" {
+	if code := run([]string{"init"}, &stdout, &stderr); code != 1 || stderr.String() != "grove: grove.yaml lists agent \"cursor\"; Grove knows claude and codex\n" {
 		t.Errorf("an unknown agent: status %d, %q", code, stderr.String())
 	}
 }
@@ -112,7 +112,7 @@ func TestCheck(t *testing.T) {
 	code := run([]string{"check"}, &stdout, &stderr)
 	want := "grove/specs/record-editing/spec.md:3: unknown field \"owner\"; this document takes id, title and description\n" +
 		"grove/specs/record-editing/spec.md:1: title: required field is missing\n"
-	if code != 1 || stdout.String() != want || stderr.String() != "grove-next2: 2 problems found\n" {
+	if code != 1 || stdout.String() != want || stderr.String() != "grove: 2 problems found\n" {
 		t.Errorf("check: status %d\n%s%s", code, stdout.String(), stderr.String())
 	}
 }
@@ -182,7 +182,7 @@ func TestPropose(t *testing.T) {
 		}
 	}
 	var stdout, stderr strings.Builder
-	if code := run([]string{"instructions", "propose", "261015-zzzzz"}, &stdout, &stderr); code != 1 || stderr.String() != "grove-next2: no change 261015-zzzzz in this working tree\n" {
+	if code := run([]string{"instructions", "propose", "261015-zzzzz"}, &stdout, &stderr); code != 1 || stderr.String() != "grove: no change 261015-zzzzz in this working tree\n" {
 		t.Errorf("an unknown change: status %d, %q", code, stderr.String())
 	}
 	if out := grove(t, "instructions", "propose", "Editing a missing record should print an error"); !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") {
@@ -217,7 +217,7 @@ func TestApprove(t *testing.T) {
 func TestImplementInstructions(t *testing.T) {
 	dir := fixture(t)
 	grove(t, "init")
-	if !strings.Contains(read(t, filepath.Join(dir, ".claude/skills/grove-implement/SKILL.md")), " instructions implement $ARGUMENTS`") {
+	if !strings.Contains(read(t, filepath.Join(dir, ".claude/skills/grove-implement/SKILL.md")), "Run `grove instructions implement $ARGUMENTS`") {
 		t.Error("the skill does not run instructions implement")
 	}
 	commitAll(t, dir, "Set up Grove")
@@ -225,7 +225,7 @@ func TestImplementInstructions(t *testing.T) {
 	commitAll(t, dir, "Propose")
 
 	var stdout, stderr strings.Builder
-	if code := run([]string{"instructions", "implement", cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove-next2: main holds no approved change "+cid+"\n" {
+	if code := run([]string{"instructions", "implement", cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove: main holds no approved change "+cid+"\n" {
 		t.Errorf("before the merge: status %d, %q", code, stderr.String())
 	}
 	git(t, dir, "switch", "-q", "main")

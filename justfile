@@ -3,9 +3,9 @@ set positional-arguments
 default:
     @just --list
 
-# Build bin/grove-next2.
+# Build bin/grove. Put bin/ first on PATH to run this build as `grove`.
 build:
-    go build -o bin/grove-next2 ./cmd/grove-next2
+    go build -o bin/grove ./cmd/grove
 
 test:
     go test ./...

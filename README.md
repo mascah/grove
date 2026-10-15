@@ -38,6 +38,3 @@ In Codex, type `$grove-explore` instead of `/grove-explore`, and so on.
   idea to updated spec.
 - [Concepts](docs/concepts.md): specs, changes, approval and archive.
 - [Reference](docs/reference.md): every command, skill and setting.
-
-During this trial the binary is `bin/grove-next2`, built with `just build`.
-The docs call it `grove`.

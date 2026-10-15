@@ -7,20 +7,21 @@ again in Codex. The documentation is the specification (CONSTITUTION.md rule
 8); each step here names the page section it tests. Grove's output is quoted
 only where it carries meaning.
 
-Setup: `just build`, `G=~/GitHub/mascah/grove-next2/bin/grove-next2`,
-`just fixture ~/tmp/ledger`, `cd ~/tmp/ledger`. For Codex, use a second
-fixture and type `$grove-…` where this says `/grove-…`.
+Setup: `just build`, then `export PATH=~/GitHub/mascah/grove-next2/bin:$PATH`
+in the shell the agent is started from, so `grove` there is this build and
+the agent inherits it. `just fixture ~/tmp/ledger`, `cd ~/tmp/ledger`. For
+Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 
 ## Main line: allow editing older records
 
-1. **Set up** (getting started §1). `$G init`
+1. **Set up** (getting started §1). `grove init`
    > Wrote grove.yaml and the Grove skills for claude and codex; nothing is committed.
 
    `.claude/skills/` and `.agents/skills/` each hold `grove-explore`,
    `grove-propose`, `grove-implement` and `grove-archive`. Under `context` in
    `grove.yaml`, write "Python 3 standard library only; tests run with
    python3 -m unittest." Then `git add -A && git commit -m "Set up Grove"`.
-   Running `$G init` again rewrites the skills and leaves `grove.yaml` as
+   Running `grove init` again rewrites the skills and leaves `grove.yaml` as
    edited.
 
 2. **Explore** (§2). `git switch -c older-edits`, start `claude`, and type
@@ -39,16 +40,16 @@ fixture and type `$grove-…` where this says `/grove-…`.
    `proposal.md` (my decision quoted, the category question open),
    `specs/record-editing/spec.md` (an ADDED requirement as an EARS sentence
    with scenarios), and `tasks.md` (T-01 with its acceptance). It runs
-   `$G check` until:
+   `grove check` until:
    > No problems in grove/.
 
 4. **Review and approve** (§4).
    `git add -A && git commit -m "Propose allowing edits to older records"`,
-   then `$G review`:
+   then `grove review`:
    > Merging older-edits into main approves change 261015-k3m9q as future work; it does not implement it.
 
    Then each document, labelled change or maintained spec, and the diff.
-   `git switch main && git merge --no-ff older-edits`, then `$G changes`:
+   `git switch main && git merge --no-ff older-edits`, then `grove changes`:
    > 261015-k3m9q  Allow editing older records  approved
 
 5. **Implement** (§5). `git switch -c older-edits-impl`, a fresh `claude`,
@@ -57,15 +58,15 @@ fixture and type `$grove-…` where this says `/grove-…`.
    T-01's status and evidence. `python3 -m unittest` passes.
 
 6. **Archive** (§6). `/grove-archive 261015-k3m9q`. The session adds the
-   requirement to a new `grove/specs/record-editing/spec.md`, runs `$G check`, then `$G archive 261015-k3m9q`:
+   requirement to a new `grove/specs/record-editing/spec.md`, runs `grove check`, then `grove archive 261015-k3m9q`:
    > Archived 261015-k3m9q to grove/changes/archive/261015-k3m9q-allow-editing-older-records/; nothing is committed.
 
-   Commit, `git switch main && git merge --no-ff older-edits-impl`. `$G specs`:
+   Commit, `git switch main && git merge --no-ff older-edits-impl`. `grove specs`:
    > record-editing  Record editing  grove/specs/record-editing/spec.md
 
    The spec says "When a user edits an existing record and leaves its
    category unchanged, the system shall save the edit, even if that category
-   is no longer allowed for new records." `$G changes` lists nothing. `$G`
+   is no longer allowed for new records." `grove changes` lists nothing. `grove`
    opens the reader on the spec.
 
 7. **Next** (§Next). A fresh `/grove-explore Editing a missing record crashes`
@@ -79,7 +80,7 @@ fixture and type `$grove-…` where this says `/grove-…`.
   change.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
   is given that change's files in full and edits them.
-- **Drop a change** (concepts, "The loop"). `$G archive <change-id>` on an
+- **Drop a change** (concepts, "The loop"). `grove archive <change-id>` on an
   approved change nobody will build moves it without touching the specs.
 
 ## Decided
@@ -112,7 +113,7 @@ Agent inference, not the owner's decisions (rule 25).
   Its second run says "Kept grove.yaml and wrote the Grove skills for claude
   and codex; nothing is committed." A field left out of `grove.yaml` takes
   its default; an agent other than `claude` or `codex` stops `init`.
-- A skill runs the binary by the absolute path `init` was run from. Claude
+- A skill runs `grove` from the PATH of the agent's shell. Claude
   Code's skills pass the user's words as `$ARGUMENTS`; Codex has no such
   substitution, so its skills name them `<args>` and say what that stands
   for.
@@ -134,4 +135,3 @@ Agent inference, not the owner's decisions (rule 25).
 - Explore's instructions offer no document to fill in.
 - A new change's folder name is its ID and a slug the agent chooses from the
   title; Grove allocates the ID and `created` timestamp.
-- The docs call the binary `grove`; this trial builds `bin/grove-next2`.

@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-const usage = `usage: grove-next2 [command]
+const usage = `usage: grove [command]
 
 With no command, open the reader on the maintained specs and approved changes.
 
@@ -62,7 +62,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	if err != nil {
-		fmt.Fprintf(stderr, "grove-next2: %v\n", err)
+		fmt.Fprintf(stderr, "grove: %v\n", err)
 		return 1
 	}
 	return 0

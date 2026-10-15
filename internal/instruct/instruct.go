@@ -69,7 +69,6 @@ type Project struct {
 	Target  string              // target branch, such as "main"
 	Commit  string              // the target's commit
 	Agreed  *doc.Collection     // the documents at Commit
-	Exe     string              // the Grove binary, to run its commands
 	Context string              // grove.yaml's context
 	Rules   map[string][]string // grove.yaml's rules, by kind of document
 }
@@ -165,7 +164,7 @@ func withChange(in Instructions, c *doc.Change, files map[string]string) Instruc
 // Markdown renders the instructions as the text a session reads.
 func (in Instructions) Markdown() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# Grove instructions: %s\n\n%s Run Grove as `%s`.\n\n%s\n", in.Workflow, in.Task, in.Exe, meanings)
+	fmt.Fprintf(&b, "# Grove instructions: %s\n\n%s Run Grove as `grove`.\n\n%s\n", in.Workflow, in.Task, meanings)
 	if in.Context != "" {
 		fmt.Fprintf(&b, "## Project context\n\n%s\n\n", strings.TrimRight(in.Context, "\n"))
 	}

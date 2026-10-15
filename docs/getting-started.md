@@ -1,7 +1,8 @@
 # Getting started
 
 This page takes one change from an idea to a spec that describes the new
-behavior. You need Git, a repository, and Claude Code or Codex.
+behavior. You need Git, a repository, Claude Code or Codex, and the `grove` command on
+your PATH.
 
 Commands marked **terminal** go in your shell. Commands marked **chat** go in
 your agent's conversation. In Codex, skills start with `$` instead of `/`.

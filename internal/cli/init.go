@@ -52,10 +52,6 @@ func initProject(stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	exe, err := os.Executable()
-	if err != nil {
-		return err
-	}
 	for _, agent := range p.Agents {
 		h, ok := harnesses[agent]
 		if !ok {
@@ -67,8 +63,8 @@ func initProject(stdout io.Writer) error {
 			if args == "" {
 				note = ""
 			}
-			skill := fmt.Sprintf("---\nname: grove-%s\ndescription: %s\n---\n\nRun `%s instructions %s` and follow what it prints, in this conversation.%s\n",
-				w.Name, w.Skill, exe, strings.TrimSpace(w.Name+" "+args), note)
+			skill := fmt.Sprintf("---\nname: grove-%s\ndescription: %s\n---\n\nRun `grove instructions %s` and follow what it prints, in this conversation.%s\n",
+				w.Name, w.Skill, strings.TrimSpace(w.Name+" "+args), note)
 			path := filepath.Join(top, h.dir, "grove-"+w.Name, "SKILL.md")
 			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 				return err
