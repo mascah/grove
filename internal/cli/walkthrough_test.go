@@ -89,8 +89,8 @@ func harness(t *testing.T, script string) (cwd, args func() string) {
 	return func() string { return strings.TrimSpace(read(t, out+"/cwd")) }, func() string { return read(t, out+"/args") }
 }
 
-// workspace returns the only workspace's directory.
-func workspace(t *testing.T, dir string) string {
+// onlyWorkspace returns the only workspace's directory.
+func onlyWorkspace(t *testing.T, dir string) string {
 	t.Helper()
 	m, _ := filepath.Glob(filepath.Join(dir, ".grove", "worktrees", "*"))
 	if len(m) != 1 {
@@ -106,7 +106,7 @@ func TestExplore(t *testing.T) {
 	cwd, args := harness(t, "")
 
 	out := grove(t, "explore", "Allow editing older records")
-	ws := workspace(t, dir)
+	ws := onlyWorkspace(t, dir)
 	name := filepath.Base(ws)
 	id := name[:12]
 	if got, _ := filepath.EvalSymlinks(ws); cwd() != got {
@@ -130,5 +130,25 @@ func TestExplore(t *testing.T) {
 		if !strings.Contains(prompt, s) {
 			t.Errorf("instructions lack %q", s)
 		}
+	}
+}
+
+func TestComingBack(t *testing.T) {
+	dir := fixture(t)
+	grove(t, "init")
+	commitAll(t, dir, "Set up Grove")
+	_, args := harness(t, `for f in grove/explorations/*.md; do echo "- Owner: only the misc records." >> "$f"; done`)
+	grove(t, "explore", "Allow editing older records")
+	id := filepath.Base(onlyWorkspace(t, dir))[:12]
+
+	if got, want := grove(t, "workspaces"), id+"  Allow editing older records  no change yet, 1 file uncommitted\n"; got != want {
+		t.Errorf("workspaces printed %q, want %q", got, want)
+	}
+	grove(t, "explore", id)
+	if !strings.Contains(args(), "- Owner: only the misc records.") {
+		t.Error("a new conversation was not given the saved exploration")
+	}
+	if out := grove(t, "explore", id, "--resume"); args() != "--continue" || !strings.Contains(out, "Draft: exploration "+id) {
+		t.Errorf("--resume ran claude %q and printed %q", args(), out)
 	}
 }

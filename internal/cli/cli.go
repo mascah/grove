@@ -6,12 +6,16 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/mascah/grove-next2/internal/doc"
 )
 
 const usage = `usage: grove-next2 <command>
 
   init                       set up Grove in this repository
   explore "<description>"    explore in a new workspace
+  explore <id> [--resume]    a new conversation in that workspace, or the last one
+  workspaces                 list the workspaces
 `
 
 // Main runs one command and returns the exit status.
@@ -22,8 +26,14 @@ func run(args []string, stdout, stderr io.Writer) int {
 	switch {
 	case len(args) == 1 && args[0] == "init":
 		err = initProject(stdout)
+	case len(args) == 2 && args[0] == "explore" && doc.ValidID(args[1]):
+		err = reopen(stdout, args[1], false)
 	case len(args) == 2 && args[0] == "explore":
 		err = explore(stdout, args[1])
+	case len(args) == 3 && args[0] == "explore" && args[2] == "--resume":
+		err = reopen(stdout, args[1], true)
+	case len(args) == 1 && args[0] == "workspaces":
+		err = listWorkspaces(stdout)
 	default:
 		fmt.Fprint(stderr, usage)
 		return 2

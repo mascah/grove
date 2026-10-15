@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -147,3 +148,8 @@ func NewID(now time.Time) string {
 	}
 	return now.UTC().Format("060102") + "-" + string(suffix[:])
 }
+
+var idPattern = regexp.MustCompile(`^[0-9]{6}-[0-9a-hjkmnp-tv-z]{5}$`)
+
+// ValidID reports whether s is an exploration or change ID.
+func ValidID(s string) bool { return idPattern.MatchString(s) }

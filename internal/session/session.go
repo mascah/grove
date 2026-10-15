@@ -10,6 +10,10 @@ import (
 // Start opens a new conversation in dir with prompt as its first message.
 func Start(dir, prompt string) error { return attach(dir, prompt) }
 
+// Resume reopens the most recent conversation in dir. Each workspace is its
+// own directory, so that is the workspace's last session.
+func Resume(dir string) error { return attach(dir, "--continue") }
+
 func attach(dir string, args ...string) error {
 	cmd := exec.Command("claude", args...)
 	cmd.Dir = dir
