@@ -29,7 +29,6 @@ workflows:
   - name: explore
     skill: Explore an idea with the owner before proposing a change, in an interview that writes nothing unless asked.
     guide: guides/explore.md
-    writes: [spec]
   - name: propose
     skill: Propose a change from this conversation or from a description, or revise a drafted change given its ID.
     args: '"<args>"'

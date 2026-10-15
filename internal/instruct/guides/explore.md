@@ -32,18 +32,7 @@ requirements until the owner asks. Do not settle on the first plausible
 option: the owner sees the options and open questions before anything is
 recommended. Do not change code.
 
-### 4. Optional: one small baseline spec
-
-A baseline records the behavior the owner says is intended today, so a change
-is measured against agreed rules. It states the rules that hold before the
-change being explored, not that change: a rule the change adds or alters
-belongs in the proposal. When the conversation reaches rules no
-maintained spec holds, offer it once as a choice, with that reason in a line.
-Write it only if the owner says yes, as the spec under "Documents" below,
-covering only the area this conversation touches. It becomes agreed when the
-owner merges this branch. Then run Grove's `check` and fix what it reports.
-
-### 5. Finish
+### 4. Finish
 
 - Say what you found, what the owner decided (quoted), what is still open, and
   which result this reached: no change, options to choose from, a

@@ -13,7 +13,6 @@ stripped to what the walkthrough uses.
 | `internal/gitx/gitx.go` (`ResolveBranch`) | `internal/gitx/repo.go` | Branch tip. |
 | `internal/instruct/guides/explore.md` | `internal/instruct/guides/explore.md` | The interview rules of section 1, section 3 and the finish, rewritten for a conversation that saves no document. |
 | `internal/instruct/templates/spec.md` | `internal/templates/defaults/spec.md` | Whole file; the title placeholder became `{{title}}`. |
-| `internal/instruct/guides/explore.md`, section 4 | `internal/instruct/guides/explore.md` | The optional baseline section, plus where it is written and when it becomes maintained. |
 | `internal/instruct/templates/{proposal,change-spec,tasks}.md` | `internal/templates/defaults/` | Whole files; `text/template` fields became plain placeholders, the spec-ID conditionals became `<capability>`. |
 | `internal/instruct/guides/propose.md`; sections 3 to 5 as `guides/{proposal,change-spec,tasks}.md` | `internal/instruct/guides/propose.md` | Sections 2, 6 and 7, with section 1 rewritten for proposing from the conversation, a description or a draft; `check` is Grove's `check`. Each document's section became that kind's guide in the schema. |
 | `internal/tui/render.go` | `internal/render/render.go` | `Markdown`, `Sanitize` and the output filter that lets only the style's own SGR sequences through. Dropped `Plain`, truncation and the wrap fallback, which needed `charmbracelet/x/ansi` directly. |

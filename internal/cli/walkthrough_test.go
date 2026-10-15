@@ -159,13 +159,13 @@ func TestExplore(t *testing.T) {
 	setUp(t)
 	out := grove(t, "instructions", "explore")
 	for _, s := range []string{"# Grove instructions: explore", "Interview before you conclude anything",
-		"Maintained specs (agreed behavior):\n- None.", "### spec: `grove/specs/<capability>/spec.md`"} {
+		"Maintained specs (agreed behavior):\n- None."} {
 		if !strings.Contains(out, s) {
 			t.Errorf("explore instructions lack %q", s)
 		}
 	}
-	if strings.Contains(out, "proposal.md") {
-		t.Error("explore instructions offer a proposal to fill in")
+	if strings.Contains(out, "## Documents") {
+		t.Error("explore instructions offer a document to fill in")
 	}
 }
 

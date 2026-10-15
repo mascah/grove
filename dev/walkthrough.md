@@ -34,11 +34,7 @@ fixture and type `$grove-…` where this says `/grove-…`.
    leave open what happens if the category is changed. `git status` shows
    nothing new: exploring wrote no file.
 
-3. *(Optional)* **Baseline** (§2). I ask for a baseline spec. The session
-   writes `grove/specs/record-editing/spec.md` with the rules I confirm, and
-   "Known discrepancies" where the code differs. Then it runs `$G check`.
-
-4. **Propose** (§3). `/grove-propose` in the same conversation. The session
+3. **Propose** (§3). `/grove-propose` in the same conversation. The session
    creates `grove/changes/261015-k3m9q-allow-editing-older-records/` with
    `proposal.md` (my decision quoted, the category question open),
    `specs/record-editing/spec.md` (an ADDED requirement as an EARS sentence
@@ -46,7 +42,7 @@ fixture and type `$grove-…` where this says `/grove-…`.
    `$G check` until:
    > No problems in grove/.
 
-5. **Review and approve** (§4).
+4. **Review and approve** (§4).
    `git add -A && git commit -m "Propose allowing edits to older records"`,
    then `$G review`:
    > Merging older-edits into main approves change 261015-k3m9q as future work; it does not implement it.
@@ -55,14 +51,13 @@ fixture and type `$grove-…` where this says `/grove-…`.
    `git switch main && git merge --no-ff older-edits`, then `$G changes`:
    > 261015-k3m9q  Allow editing older records  approved
 
-6. **Implement** (§5). `git switch -c older-edits-impl`, a fresh `claude`,
+5. **Implement** (§5). `git switch -c older-edits-impl`, a fresh `claude`,
    `/grove-implement 261015-k3m9q`. The session asks the open question before
    building, works T-01 with a test, and writes `implementation.md` with
    T-01's status and evidence. `python3 -m unittest` passes.
 
-7. **Archive** (§6). `/grove-archive 261015-k3m9q`. The session adds the
-   requirement to `grove/specs/record-editing/spec.md`, creating it if step 3
-   was skipped, runs `$G check`, then `$G archive 261015-k3m9q`:
+6. **Archive** (§6). `/grove-archive 261015-k3m9q`. The session adds the
+   requirement to a new `grove/specs/record-editing/spec.md`, runs `$G check`, then `$G archive 261015-k3m9q`:
    > Archived 261015-k3m9q to grove/changes/archive/261015-k3m9q-allow-editing-older-records/; nothing is committed.
 
    Commit, `git switch main && git merge --no-ff older-edits-impl`. `$G specs`:
@@ -73,7 +68,7 @@ fixture and type `$grove-…` where this says `/grove-…`.
    is no longer allowed for new records." `$G changes` lists nothing. `$G`
    opens the reader on the spec.
 
-8. **Next** (§Next). A fresh `/grove-explore Editing a missing record crashes`
+7. **Next** (§Next). A fresh `/grove-explore Editing a missing record crashes`
    cites that requirement as agreed and lists no approved changes. Its
    instructions are under 12 KiB.
 
@@ -105,16 +100,6 @@ Owner, asked whether to add each:
 
 - Does the reader showing `implementation.md` count as reading it under rule
   3? Owner: "No, but im not certain." Until settled, the reader shows it.
-- May a baseline (step 3) hold the rule the change then implements? In both
-  Claude Code runs of 2026-10-15 the session read "older records keep their
-  category when it is unchanged" as intended today, wrote it into the
-  baseline with the code as a known discrepancy, and the change spec then
-  added no requirement; steps 4 and 7 expect an ADDED requirement. In the
-  second run `/grove-propose` asked, and moving the rule into the change gave
-  the ADDED path. Codex asked during explore whether the rule was intended
-  today or new. The explore guide says a baseline holds "the rules that hold
-  before the change being explored, not that change"; whether a bug fix's
-  rule is that change is not settled.
 
 ## Assumptions to confirm
 
@@ -146,9 +131,7 @@ Agent inference, not the owner's decisions (rule 25).
 - `changes` lists approved changes that are not archived; drafts on the
   current branch are shown by `review`, not by `changes`.
 - IDs use the UTC date.
-- Explore's instructions include the maintained spec's template and guide,
-  for a baseline the owner asks for (getting started §2); they offer no
-  other document.
+- Explore's instructions offer no document to fill in.
 - A new change's folder name is its ID and a slug the agent chooses from the
   title; Grove allocates the ID and `created` timestamp.
 - The docs call the binary `grove`; this trial builds `bin/grove-next2`.

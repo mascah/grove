@@ -46,10 +46,6 @@ you, one question at a time. It keeps apart what is agreed, what is approved
 and what the code merely does. Exploring writes nothing; when you want
 something kept, ask, or go on to propose.
 
-If you want the behavior you intend today written down before you change it,
-ask for a baseline spec. The agent writes it in `grove/specs/`, and it
-becomes agreed when your branch is merged.
-
 ## 3. Propose
 
 **Chat**, in the same conversation:

@@ -111,8 +111,7 @@ func build(p Project, name, task string, fill *strings.Replacer) Instructions {
 
 // Explore returns the instructions for interviewing the owner about an idea.
 func Explore(p Project) Instructions {
-	return build(p, "explore", "You are exploring an idea with the owner, in their own working tree.",
-		strings.NewReplacer("{{base}}", short(p.Commit)))
+	return build(p, "explore", "You are exploring an idea with the owner, in their own working tree.", strings.NewReplacer())
 }
 
 // Propose returns the instructions for writing new change id, created at

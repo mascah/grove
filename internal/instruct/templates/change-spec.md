@@ -31,10 +31,8 @@ maintained spec yet, every proposed requirement goes here and today's behavior
 goes under "Observed current behavior": nothing can be MODIFIED or REMOVED
 until a maintained requirement exists.
 
-Name the baseline as the review will see it: "the baseline proposed alongside
-this change in specs/<capability>/spec.md", or "no maintained spec at
-{{base}}". Not "no maintained spec exists in the target branch": merged
-together with its baseline, the change would make that false. -->
+Say "no maintained spec at {{base}}", not "no maintained spec exists in the
+target branch": a later merge could make that false. -->
 
 ### Requirement: [short name of the rule]
 
