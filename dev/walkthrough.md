@@ -7,9 +7,12 @@ again in Codex. The documentation is the specification (CONSTITUTION.md rule
 8); each step here names the page section it tests. Grove's output is quoted
 only where it carries meaning.
 
-Setup: `just build`, then `export PATH=~/GitHub/mascah/grove-next2/bin:$PATH`
-in the shell the agent is started from, so `grove` there is this build and
-the agent inherits it. `just fixture ~/tmp/ledger`, `cd ~/tmp/ledger`. For
+Setup: in the checkout or worktree under test, `eval "$(just dev-path)"`
+in the shell the agent is started from. It builds `bin/grove` and puts that
+`bin/` first on PATH, so `grove` there is this build and the agent inherits
+it; other shells keep the everyday `grove` from `just install`. After
+changing a guide, template or the schema, `just build` is enough; after
+changing skill text, run `grove init` again in the fixture. `just fixture ~/tmp/ledger`, `cd ~/tmp/ledger`. For
 Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 
 ## Main line: allow editing older records

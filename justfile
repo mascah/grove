@@ -7,6 +7,14 @@ default:
 build:
     go build -o bin/grove ./cmd/grove
 
+# Build bin/grove and print the line putting it first on PATH: eval "$(just dev-path)"
+dev-path: build
+    @echo 'export PATH="{{justfile_directory()}}/bin:$PATH"'
+
+# Install this checkout's build as the everyday grove, in ~/.local/bin.
+install:
+    go build -o ~/.local/bin/grove ./cmd/grove
+
 test:
     go test ./...
 
