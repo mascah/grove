@@ -1,5 +1,5 @@
-**Implement builds an approved change and brings the maintained specs up to
-date.** The change is agreed future work: build what it says, nothing more.
+**Implement builds an approved change.** The change is agreed future work:
+build what it says, nothing more.
 
 ### 1. Before you start
 
@@ -21,18 +21,9 @@ date.** The change is agreed future work: build what it says, nothing more.
 
 Keep `implementation.md` current as you work; see "Documents" below.
 
-### 4. Reconcile the specs
+### 4. Finish
 
-When every task is done, apply each change spec to its maintained spec,
-`specs/<capability>/spec.md` under the document root. ADDED requirements become
-requirements, MODIFIED ones replace the requirement of the same name, REMOVED
-ones are deleted; the ADDED/MODIFIED/REMOVED headings never appear in a
-maintained spec. Remove the known discrepancies the work resolved. Where there
-is no maintained spec, create it from the spec template below. List each reconciled
-spec in `implementation.md`. Then run Grove's `check` and fix what it reports.
-
-### 5. Finish
-
-Run the project's tests. Commit the code, `implementation.md` and the
-reconciled specs together. Tell the owner what was done and that merging is
-theirs.
+Run the project's tests. Tell the owner what was done, and what is left if a
+task is not done. Leave the work uncommitted unless the owner asks: the owner
+commits. When every task is done, the next step is archiving the change,
+which brings the maintained specs up to date on this branch.

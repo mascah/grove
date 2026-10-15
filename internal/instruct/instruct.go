@@ -143,6 +143,13 @@ func Implement(p Project, c *doc.Change, files map[string]string) Instructions {
 	return withChange(build(p, "implement", task, fill(p, c)), c, files)
 }
 
+// Archive returns the instructions for archiving change c, read from the
+// working tree; files are c.Files as read from there.
+func Archive(p Project, c *doc.Change, files map[string]string) Instructions {
+	task := fmt.Sprintf("You are archiving change %s, %q, in the owner's own working tree.", c.Proposal.Meta.ID, c.Proposal.Meta.Title)
+	return withChange(build(p, "archive", task, fill(p, c)), c, files)
+}
+
 // fill puts change c's values into paths and templates.
 func fill(p Project, c *doc.Change) *strings.Replacer {
 	return strings.NewReplacer("<change>", path.Base(c.Dir), "{{title}}", c.Proposal.Meta.Title,

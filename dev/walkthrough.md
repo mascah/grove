@@ -129,7 +129,10 @@ Agent inference, not the owner's decisions (rule 25).
 - `instructions propose` tells a change ID (`YYMMDD-xxxxx`) from a
   description by its form.
 - `archive` only moves the folder; the agent does the reconciliation, from
-  `instructions archive`.
+  `instructions archive`. Both read the change from the working tree, where
+  `implementation.md` is, and neither checks that the change is approved.
+- Implement leaves its work uncommitted unless the owner asks, like every
+  other workflow; the owner commits after archiving (getting started §6).
 - `changes` lists approved changes that are not archived; drafts on the
   current branch are shown by `review`, not by `changes`.
 - IDs use the UTC date.

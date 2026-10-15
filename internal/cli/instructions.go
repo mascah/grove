@@ -52,6 +52,47 @@ func instructionsPropose(stdout io.Writer, arg string) error {
 	return nil
 }
 
+// instructionsArchive prints the archive instructions for change id as the
+// working tree holds it.
+func instructionsArchive(stdout io.Writer, id string) error {
+	p, err := openProject()
+	if err != nil {
+		return err
+	}
+	ip, err := p.agreed()
+	if err != nil {
+		return err
+	}
+	c, files, err := change(os.DirFS(filepath.Join(p.Top, p.Root)), id)
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(stdout, instruct.Archive(ip, c, files).Markdown())
+	return nil
+}
+
+// archive moves change id's folder in the working tree to changes/archive/.
+func archive(stdout io.Writer, id string) error {
+	p, err := openProject()
+	if err != nil {
+		return err
+	}
+	root := filepath.Join(p.Top, p.Root)
+	c, _, err := change(os.DirFS(root), id)
+	if err != nil {
+		return err
+	}
+	to := "changes/archive/" + filepath.Base(c.Dir)
+	if err := os.MkdirAll(filepath.Join(root, "changes", "archive"), 0o755); err != nil {
+		return err
+	}
+	if err := os.Rename(filepath.Join(root, c.Dir), filepath.Join(root, to)); err != nil {
+		return err
+	}
+	fmt.Fprintf(stdout, "Archived %s to %s/%s/; nothing is committed.\n", id, p.Root, to)
+	return nil
+}
+
 // instructionsImplement prints the implement instructions for change id as
 // the target holds it.
 func instructionsImplement(stdout io.Writer, id string) error {

@@ -39,4 +39,9 @@ workflows:
     skill: Implement an approved change given its ID, recording progress in its implementation.md.
     args: <args>
     guide: guides/implement.md
-    writes: [implementation, spec]
+    writes: [implementation]
+  - name: archive
+    skill: Archive a finished or dropped change given its ID, first folding a finished change's specs into the maintained specs.
+    args: <args>
+    guide: guides/archive.md
+    writes: [spec]

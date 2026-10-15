@@ -61,7 +61,10 @@ func review(stdout io.Writer) error {
 
 // meaning names what a document under the root stands for once merged.
 func meaning(root, path string) string {
-	if strings.HasPrefix(path, root+"/changes/") {
+	switch {
+	case strings.HasPrefix(path, root+"/changes/archive/"):
+		return "archived change"
+	case strings.HasPrefix(path, root+"/changes/"):
 		return "change"
 	}
 	return "maintained spec"

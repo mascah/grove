@@ -67,7 +67,7 @@ func TestInit(t *testing.T) {
 		t.Errorf("init said %q, want %q", got, want)
 	}
 	for _, h := range []string{".claude", ".agents"} {
-		for _, w := range []string{"explore", "propose", "implement"} {
+		for _, w := range []string{"explore", "propose", "implement", "archive"} {
 			if skill := read(t, filepath.Join(dir, h, "skills", "grove-"+w, "SKILL.md")); !strings.Contains(skill, "name: grove-"+w+"\n") || !strings.Contains(skill, " instructions "+w) {
 				t.Errorf("%s skill grove-%s:\n%s", h, w, skill)
 			}
@@ -231,19 +231,28 @@ func TestImplementInstructions(t *testing.T) {
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
 	out := grove(t, "instructions", "implement", cid)
-	for _, s := range []string{"Reconcile the specs", "/implementation.md\">", "<file path=\"grove/specs/<capability>/spec.md\">\n---\nid: <capability>", "### Requirement: Edit older records"} {
+	for _, s := range []string{"/implementation.md\">\n# Implementation: Allow editing older records", "### Requirement: Edit older records"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("implement instructions lack %q", s)
 		}
 	}
 }
 
-func TestSeeTheResult(t *testing.T) {
+func TestArchive(t *testing.T) {
 	dir := setUp(t)
 	cid := approve(t, dir)
-	// The implementer reconciles the change spec into a new maintained spec,
-	// from the template its instructions give.
-	out := grove(t, "instructions", "implement", cid)
+	git(t, dir, "switch", "-q", "-c", "older-edits-impl")
+	folder := "grove/changes/" + cid + "-allow-editing-older-records"
+	os.WriteFile(filepath.Join(dir, folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
+
+	// The session reconciles the change spec into a new maintained spec,
+	// from the template its instructions give, then archives the change.
+	out := grove(t, "instructions", "archive", cid)
+	for _, s := range []string{"Reconcile the specs", "Status: done", "### Requirement: Edit older records"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("archive instructions lack %q", s)
+		}
+	}
 	m := regexp.MustCompile(`(?s)<file path="grove/specs/<capability>/spec.md">\n(.*?)\n</file>`).FindStringSubmatch(out)
 	if m == nil {
 		t.Fatalf("no spec template in:\n%s", out)
@@ -254,17 +263,27 @@ func TestSeeTheResult(t *testing.T) {
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
 		t.Errorf("check printed %q", got)
 	}
-	commitAll(t, dir, "Implement")
+	if got, want := grove(t, "archive", cid), "Archived "+cid+" to grove/changes/archive/"+cid+"-allow-editing-older-records/; nothing is committed.\n"; got != want {
+		t.Errorf("archive printed %q, want %q", got, want)
+	}
+	read(t, filepath.Join(dir, "grove/changes/archive", cid+"-allow-editing-older-records", "implementation.md"))
+	commitAll(t, dir, "Implement and archive")
+	if out := grove(t, "review"); !strings.Contains(out, "approves no new change.") || !strings.Contains(out, "  adds     archived change  grove/changes/archive/") || !strings.Contains(out, "  adds     maintained spec  grove/specs/record-editing/spec.md") {
+		t.Errorf("review of the implementation branch:\n%.2000s", out)
+	}
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Implement", "older-edits-impl")
 
 	if got, want := grove(t, "specs"), "record-editing  Record editing  grove/specs/record-editing/spec.md\n"; got != want {
 		t.Errorf("specs printed %q, want %q", got, want)
 	}
-	if got := grove(t, "changes"); !strings.HasPrefix(got, cid+"  ") || !strings.HasSuffix(got, "  approved\n") {
+	if got := grove(t, "changes"); got != "" {
 		t.Errorf("changes printed %q", got)
 	}
 	next := grove(t, "instructions", "explore")
 	for _, s := range []string{
 		"Maintained specs (agreed behavior):\n- record-editing \"Record editing\": `grove/specs/record-editing/spec.md`",
+		"Approved changes (future work; implementation is not established):\n- None.",
 	} {
 		if !strings.Contains(next, s) {
 			t.Errorf("fresh explore instructions lack %q", s)
