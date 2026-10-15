@@ -50,12 +50,13 @@ only when the owner merges this workspace's branch.
   code differs, keep the rule and record the difference under "Known
   discrepancies" with its source.
 - Cover only the area this exploration touches.
-- Write it from "Baseline spec template" below.
+- Write it from "Baseline spec template" below, then run Grove's `check` and
+  fix what it reports.
 
 ### 5. Finish
 
-- The exploration must stand on its own. Keep its frontmatter as Grove wrote
-  it.
+- The exploration must stand on its own. Run Grove's `check` and fix what it
+  reports.
 - Tell the owner what was saved and where, what is unanswered, and which
   result this reached: no change, options to choose from, a prerequisite, or
   ready to propose.

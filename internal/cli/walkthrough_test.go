@@ -160,3 +160,21 @@ func TestBaselineTemplateParses(t *testing.T) {
 		t.Errorf("%v\n%s", d.Diagnostics, src)
 	}
 }
+
+func TestCheck(t *testing.T) {
+	dir := fixture(t)
+	grove(t, "init")
+	commitAll(t, dir, "Set up Grove")
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check printed %q", got)
+	}
+	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
+	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte("---\nid: record-editing\nowner: me\n---\n"), 0o644)
+	var stdout, stderr strings.Builder
+	code := run([]string{"check"}, &stdout, &stderr)
+	want := "grove/specs/record-editing/spec.md:3: unknown field \"owner\"; this document takes id, title and description\n" +
+		"grove/specs/record-editing/spec.md:1: title: required field is missing\n"
+	if code != 1 || stdout.String() != want || stderr.String() != "grove-next2: 2 problems found\n" {
+		t.Errorf("check: status %d\n%s%s", code, stdout.String(), stderr.String())
+	}
+}

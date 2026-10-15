@@ -45,6 +45,7 @@ type Project struct {
 	Agreed    *doc.Collection // the documents at Commit
 	Workspace string          // absolute path of the session's worktree
 	Branch    string          // branch checked out there
+	Exe       string          // the Grove binary, to run its commands
 }
 
 // Explore returns the instructions for exploring exploration, a document of
@@ -78,8 +79,8 @@ is the only approval.
 `
 
 func (p Project) preamble(b *strings.Builder, subject string) {
-	fmt.Fprintf(b, "You are working on %s in the workspace `%s`, on branch `%s`, started from %s@%s. Write only in this workspace.\n\n%s\n",
-		subject, p.Workspace, p.Branch, p.Target, short(p.Commit), meanings)
+	fmt.Fprintf(b, "You are working on %s in the workspace `%s`, on branch `%s`, started from %s@%s. Write only in this workspace. Run Grove as `%s`.\n\n%s\n",
+		subject, p.Workspace, p.Branch, p.Target, short(p.Commit), p.Exe, meanings)
 }
 
 func (p Project) index(b *strings.Builder) {

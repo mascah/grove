@@ -41,7 +41,8 @@ func openProject() (project, error) {
 
 // agreed returns the target's commit and the documents it holds.
 func (p project) agreed() (instruct.Project, error) {
-	ip := instruct.Project{Root: p.Root, Target: p.Target}
+	exe, _ := os.Executable()
+	ip := instruct.Project{Root: p.Root, Target: p.Target, Exe: exe}
 	var err error
 	if ip.Commit, err = gitx.ResolveBranch(p.Main, p.Target); err != nil {
 		return ip, err
@@ -81,9 +82,11 @@ func shown(path string) string {
 	return path
 }
 
-func files(n int) string {
+func files(n int) string { return plural(n, "file") }
+
+func plural(n int, noun string) string {
 	if n == 1 {
-		return "1 file"
+		return "1 " + noun
 	}
-	return fmt.Sprintf("%d files", n)
+	return fmt.Sprintf("%d %ss", n, noun)
 }
