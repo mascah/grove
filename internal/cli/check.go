@@ -41,3 +41,9 @@ func check(stdout io.Writer) error {
 	fmt.Fprintf(stdout, "No problems in %s/.\n", p.Root)
 	return nil
 }
+
+func problems(stdout io.Writer, ds []doc.Diagnostic) {
+	for _, d := range ds {
+		fmt.Fprintf(stdout, "  problem: %s\n", d)
+	}
+}

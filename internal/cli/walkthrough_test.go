@@ -223,3 +223,35 @@ func TestPropose(t *testing.T) {
 		t.Errorf("report: %q", got)
 	}
 }
+
+func TestCommitAndMerge(t *testing.T) {
+	dir := fixture(t)
+	grove(t, "init")
+	commitAll(t, dir, "Set up Grove")
+	harness(t, "")
+	grove(t, "explore", "Allow editing older records")
+	ws := onlyWorkspace(t, dir)
+	cid := propose(t, ws, filepath.Base(ws)[:12])
+	commitAll(t, ws, "Propose allowing edits to older records")
+	t.Chdir(dir)
+
+	out := grove(t, "review", cid)
+	branch := "grove/" + filepath.Base(ws)
+	for _, s := range []string{
+		"Merging " + branch + " into main approves change " + cid + " as future work; it does not implement it.\n",
+		"  adds     change           grove/changes/" + cid + "-",
+		"  adds     exploration      grove/explorations/",
+		"+### Requirement: Edit older records",
+	} {
+		if !strings.Contains(out, s) {
+			t.Errorf("review lacks %q:\n%s", s, out)
+		}
+	}
+	if got := grove(t, "changes"); got != "" {
+		t.Errorf("before the merge, changes printed %q", got)
+	}
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve "+cid, branch)
+	if got, want := grove(t, "changes"), cid+"  Allow editing older records  approved\n"; got != want {
+		t.Errorf("changes printed %q, want %q", got, want)
+	}
+}
