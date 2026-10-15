@@ -6,13 +6,13 @@ walkthrough is the spec, this file is the law. Every rule is one line and
 numbered so it can be quoted. Changing this file is its own commit with no
 code in it, and the owner reads it before any code follows.
 
-Rules restate entries in `decisions.md`: 1 is D-33; 2 and 3 are D-13, D-21 and D-39; 4 and 5 are D-02 to D-04 and D-38; 6 is D-24; 7 is D-01 and D-06; 8 is D-40; 9 is D-15 and D-35; 10 is D-34 and D-43; 11 is D-23 and D-33; 23 is D-30; 24 is D-28; 22 is D-31; 27 is D-32, D-41 and D-42. The size rules 12 to 18 are new and become decisions when the owner adopts this file.
+Rules restate entries in `decisions.md`: 1 is D-33; 2 and 3 are D-13, D-21, D-39, D-48 and D-50; 4 and 5 are D-02 to D-04 and D-38; 6 is D-24; 7 is D-01 and D-06; 8 is D-40; 9 is D-15 and D-35; 10 is D-34 and D-43; 11 is D-23 and D-33; 23 is D-30; 24 is D-28; 22 is D-31; 27 is D-32, D-41, D-42 and D-49. The size rules 12 to 18 are new and become decisions when the owner adopts this file.
 
 ## Product boundaries
 
 1. Grove prints instructions; the user's own agent, in a harness the user runs, follows them. Grove launches no process.
-2. `implement <change-id>` prints instructions and exits. Grove creates no workspace, launches no session and computes no state for implementation.
-3. Implementation progress is a convention in `implementation.md`, written by the implementing agent and read by people. No code reads it until cycles exist. Archive reconciles a change's specs into the maintained specs and moves the change to `changes/archive/`.
+2. `instructions apply <change-id>` prints instructions and exits. Grove creates no workspace and launches no session to apply a change.
+3. Implementation progress is a convention in `implementation.md`, written by the applying agent and read by people. `archive` reads it only to refuse a change unless every task in `tasks.md` has `Status: done` there, or the file says `Status: dropped`. Archive reconciles a finished change's specs into the maintained specs and moves the change to `changes/archive/`.
 4. Approval is the proposal being in the target branch. It never means implemented. Merging, committing, saving or ending a session approves nothing.
 5. Three meanings stay apart: maintained spec (agreed), change set (approved future work), observed behavior (evidence). Explore is a conversation and saves no document of its own. Code enforces the distinction only where a display or instruction would otherwise blur it.
 6. Review is `review`, a readout of what merging the current branch would agree to. No manifests, provenance records or review document kind until GitHub review exists.
@@ -42,4 +42,4 @@ Rules restate entries in `decisions.md`: 1 is D-33; 2 and 3 are D-13, D-21 and D
 24. Harness behavior that varies by user settings, such as permission prompts, is never a design input.
 25. Decisions in documents are the owner's, in the owner's words, attributed. Agent inference goes under open questions or assumptions to confirm.
 26. One walkthrough step per commit, demonstrated on the fixture with the command in the message. No bundling a fix round into a feature commit.
-27. `~/GitHub/mascah/grove-legacy`, `~/GitHub/mascah/grove` and `~/GitHub/mascah/bench` are read-only. Copied code is listed in `dev/reuse.md` with path and revision. The only remote is the owner's private GitHub repository. No hook or global install. The repository names no other tool as Grove's model or point of comparison.
+27. `~/GitHub/mascah/grove-legacy`, `~/GitHub/mascah/grove` and `~/GitHub/mascah/bench` are read-only. Copied code is listed in `dev/reuse.md` with path and revision. The only remote is the owner's private GitHub repository. Agents add no hook and install nothing globally; the owner installs the everyday `grove`. The repository names no other tool as Grove's model or point of comparison.
