@@ -121,7 +121,11 @@ Agent inference, not the owner's decisions (rule 25).
   Code's skills pass the user's words as `$ARGUMENTS`; Codex has no such
   substitution, so its skills name them `<args>` and say what that stands
   for.
-- `review` takes no argument and compares the current branch with the target.
+- `review` takes no argument and compares the current branch's last commit
+  with the target, so uncommitted files are not shown. A change counts as
+  approved by the merge when the target holds no change with its ID; with
+  none, the first line is "Merging <branch> into main approves no new
+  change."
 - `instructions propose` tells a change ID (`YYMMDD-xxxxx`) from a
   description by its form.
 - `archive` only moves the folder; the agent does the reconciliation, from

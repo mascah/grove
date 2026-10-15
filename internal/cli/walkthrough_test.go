@@ -192,8 +192,18 @@ func TestPropose(t *testing.T) {
 
 func TestApprove(t *testing.T) {
 	dir := setUp(t)
-	propose(t, dir)
+	cid := propose(t, dir)
 	commitAll(t, dir, "Propose allowing edits to older records")
+	out := grove(t, "review")
+	for _, s := range []string{
+		"Merging older-edits into main approves change " + cid + " as future work; it does not implement it.\n\n",
+		"  adds     change           grove/changes/" + cid + "-allow-editing-older-records/proposal.md\n",
+		"+### Requirement: Edit older records",
+	} {
+		if !strings.Contains(out, s) {
+			t.Errorf("review lacks %q:\n%s", s, out)
+		}
+	}
 	if got := grove(t, "changes"); got != "" {
 		t.Errorf("before the merge, changes printed %q", got)
 	}

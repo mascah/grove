@@ -18,6 +18,7 @@ With no command, open the reader on the maintained specs and approved changes.
                              print the instructions for proposing a new change, or revising one
   instructions implement <change-id>
                              print the instructions for implementing an approved change
+  review                     show what merging this branch into the target would approve
   specs                      list the maintained specs
   changes                    list the approved changes
   check                      report problems in this working tree's Grove documents
@@ -43,6 +44,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = instructionsPropose(stdout, args[2])
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "implement":
 		err = instructionsImplement(stdout, args[2])
+	case len(args) == 1 && args[0] == "review":
+		err = review(stdout)
 	case len(args) == 1 && args[0] == "changes":
 		err = listChanges(stdout)
 	case len(args) == 1 && args[0] == "check":
