@@ -52,6 +52,6 @@ func instructionsImplement(stdout io.Writer, id string) error {
 		}
 		files[name] = string(b)
 	}
-	fmt.Fprint(stdout, instruct.Implement(ip, c, files))
+	fmt.Fprint(stdout, instruct.Implement(ip, c, files).Markdown())
 	return nil
 }

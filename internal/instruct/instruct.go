@@ -68,20 +68,68 @@ type Project struct {
 	Exe    string          // the Grove binary, to run its commands
 }
 
+// Instructions is everything one workflow's instructions say, built before
+// it is printed (rule 10).
+type Instructions struct {
+	Project
+	Workflow  string
+	Task      string // what the session is doing, one sentence
+	Guide     string
+	Documents []Document // the kinds of document the workflow writes
+	Change    []File     // the change being worked on, in full
+}
+
+// Document is one kind of document to write, with its path and template
+// filled in.
+type Document struct{ Kind, Path, Guide, Template string }
+
+// File is one document included in full; Path is from the repository root.
+type File struct{ Path, Content string }
+
+// build returns workflow name's instructions with its guide and documents,
+// fill's values put into their paths and templates.
+func build(p Project, name, task string, fill *strings.Replacer) Instructions {
+	w := workflow(name)
+	in := Instructions{Project: p, Workflow: name, Task: task, Guide: embedded(w.Guide)}
+	for _, kn := range w.Writes {
+		k := kind(kn)
+		in.Documents = append(in.Documents, Document{Kind: k.Kind, Path: p.Root + "/" + fill.Replace(k.Path),
+			Guide: embedded(k.Guide), Template: fill.Replace(embedded(k.Template))})
+	}
+	return in
+}
+
 // Implement returns the instructions for implementing change c, which the
-// target holds; c.Files are read from there.
-func Implement(p Project, c *doc.Change, files map[string]string) string {
-	var b strings.Builder
-	b.WriteString("# Grove instructions: implement\n\n")
-	fmt.Fprintf(&b, "You are implementing approved change %s, %q, as %s@%s holds it, in your own working tree. Run Grove as `%s`.\n\n%s\n",
-		c.Proposal.Meta.ID, c.Proposal.Meta.Title, p.Target, short(p.Commit), p.Exe, meanings)
-	w := workflow("implement")
-	fmt.Fprintf(&b, "## How to implement\n\n%s\n", embedded(w.Guide))
-	p.documents(&b, w, strings.NewReplacer("<change>", path.Base(c.Dir), "{{title}}", c.Proposal.Meta.Title, "{{change}}", c.Proposal.Meta.ID, "{{base}}", short(p.Commit)))
-	p.index(&b)
-	b.WriteString("## The change\n\n")
+// target holds; files are c.Files as read from there.
+func Implement(p Project, c *doc.Change, files map[string]string) Instructions {
+	task := fmt.Sprintf("You are implementing approved change %s, %q, as %s@%s holds it, in your own working tree.",
+		c.Proposal.Meta.ID, c.Proposal.Meta.Title, p.Target, short(p.Commit))
+	in := build(p, "implement", task, strings.NewReplacer("<change>", path.Base(c.Dir),
+		"{{title}}", c.Proposal.Meta.Title, "{{change}}", c.Proposal.Meta.ID, "{{base}}", short(p.Commit)))
 	for _, name := range c.Files {
-		include(&b, p.Root+"/"+name, files[name])
+		in.Change = append(in.Change, File{p.Root + "/" + name, files[name]})
+	}
+	return in
+}
+
+// Markdown renders the instructions as the text a session reads.
+func (in Instructions) Markdown() string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "# Grove instructions: %s\n\n%s Run Grove as `%s`.\n\n%s\n", in.Workflow, in.Task, in.Exe, meanings)
+	fmt.Fprintf(&b, "## How to %s\n\n%s\n", in.Workflow, in.Guide)
+	if len(in.Documents) > 0 {
+		b.WriteString("## Documents\n\n")
+	}
+	for _, d := range in.Documents {
+		fmt.Fprintf(&b, "### %s: `%s`\n\n%s\n", d.Kind, d.Path, d.Guide)
+		include(&b, d.Path, d.Template)
+	}
+	in.index(&b)
+	if len(in.Change) > 0 {
+		b.WriteString("## The change\n\n")
+	}
+	for _, f := range in.Change {
+		include(&b, f.Path, f.Content)
 	}
 	return b.String()
 }
@@ -98,18 +146,6 @@ const meanings = `Grove keeps three meanings apart; keep them apart when you spe
 Grove commits nothing. The owner commits, and merging into the target branch
 is the only approval.
 `
-
-// documents gives each kind w writes: its path, guide and template, with
-// fill's values put in.
-func (p Project) documents(b *strings.Builder, w Workflow, fill *strings.Replacer) {
-	b.WriteString("## Documents\n\n")
-	for _, name := range w.Writes {
-		k := kind(name)
-		path := p.Root + "/" + fill.Replace(k.Path)
-		fmt.Fprintf(b, "### %s: `%s`\n\n%s\n", k.Kind, path, embedded(k.Guide))
-		include(b, path, fill.Replace(embedded(k.Template)))
-	}
-}
 
 func (p Project) index(b *strings.Builder) {
 	fmt.Fprintf(b, "## Project index\n\nWhat %s says at %s. Read a listed document with `git show %s:<path>`.\n\n",
