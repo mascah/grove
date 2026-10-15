@@ -70,7 +70,7 @@ type Project struct {
 	Commit  string              // the target's commit
 	Agreed  *doc.Collection     // the documents at Commit
 	Context string              // grove.yaml's context
-	Rules   map[string][]string // grove.yaml's rules, by kind of document
+	Rules   map[string][]string // grove.yaml's rules, by kind of document or workflow
 }
 
 // Instructions is everything one workflow's instructions say, built before
@@ -169,6 +169,7 @@ func (in Instructions) Markdown() string {
 		fmt.Fprintf(&b, "## Project context\n\n%s\n\n", strings.TrimRight(in.Context, "\n"))
 	}
 	fmt.Fprintf(&b, "## How to %s\n\n%s\n", in.Workflow, in.Guide)
+	rules(&b, "workflow", in.Rules[in.Workflow])
 	if in.Description != "" {
 		fmt.Fprintf(&b, "## Owner's description\n\n%s\n\n", in.Description)
 	}
@@ -177,13 +178,7 @@ func (in Instructions) Markdown() string {
 	}
 	for _, d := range in.Documents {
 		fmt.Fprintf(&b, "### %s: `%s`\n\n%s\n", d.Kind, d.Path, d.Guide)
-		if len(d.Rules) > 0 {
-			b.WriteString("The project's own rules for this document:\n\n")
-			for _, r := range d.Rules {
-				fmt.Fprintf(&b, "- %s\n", r)
-			}
-			b.WriteString("\n")
-		}
+		rules(&b, "document", d.Rules)
 		include(&b, d.Path, d.Template)
 	}
 	in.index(&b)
@@ -208,8 +203,8 @@ const meanings = `Grove keeps three meanings apart; keep them apart when you spe
 A Grove document in the working tree that the target does not hold as it is,
 is a draft: not agreed until it is merged.
 
-Grove commits nothing. The owner commits, and merging into the target branch
-is the only approval.
+Grove itself commits nothing. Commit only when the owner or the project's
+rules ask; merging into the target branch is the only approval.
 `
 
 func (p Project) index(b *strings.Builder) {
@@ -241,6 +236,17 @@ func entry(b *strings.Builder, path string, d *doc.Document) {
 	for _, diag := range d.Diagnostics {
 		fmt.Fprintf(b, "  - problem: %s\n", diag)
 	}
+}
+
+func rules(b *strings.Builder, of string, rs []string) {
+	if len(rs) == 0 {
+		return
+	}
+	fmt.Fprintf(b, "The project's own rules for this %s:\n\n", of)
+	for _, r := range rs {
+		fmt.Fprintf(b, "- %s\n", r)
+	}
+	b.WriteString("\n")
 }
 
 func include(b *strings.Builder, path, content string) {

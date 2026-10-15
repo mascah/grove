@@ -28,6 +28,6 @@ Run Grove's `archive <change-id>`. It moves the change's folder to
 
 ### 4. Finish
 
-Tell the owner which specs changed and where the change went. Leave
-everything uncommitted: the owner commits and merges this branch, which
-lands the code, the specs and the archived change together.
+Tell the owner which specs changed and where the change went. Commit only
+when the owner or the project's rules ask. The owner merges this branch,
+which lands the code, the specs and the archived change together.

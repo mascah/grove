@@ -80,6 +80,10 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
   change.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
   is given that change's files in full and edits them.
+- **Commit as you go** (reference, `rules`). With
+  `implement: [Commit after each task, naming its task ID.]` under `rules`
+  in `grove.yaml`, `/grove-implement` commits T-01 with its ID in the
+  message.
 - **Drop a change** (concepts, "The loop"). `grove archive <change-id>` on an
   approved change nobody will build moves it without touching the specs.
 
@@ -108,7 +112,7 @@ Agent inference, not the owner's decisions (rule 25).
 
 - `grove.yaml` fields and defaults: `root: grove`, `target: main`,
   `agents: [claude, codex]`, `context`, and `rules` keyed by `proposal`,
-  `change-spec`, `tasks`, `implementation` and `spec`.
+  `change-spec`, `tasks`, `implementation` and `spec`, or by a workflow.
 - `init` never overwrites `grove.yaml` and always rewrites the skills.
   Its second run says "Kept grove.yaml and wrote the Grove skills for claude
   and codex; nothing is committed." A field left out of `grove.yaml` takes
@@ -127,8 +131,10 @@ Agent inference, not the owner's decisions (rule 25).
 - `archive` only moves the folder; the agent does the reconciliation, from
   `instructions archive`. Both read the change from the working tree, where
   `implementation.md` is, and neither checks that the change is approved.
-- Implement leaves its work uncommitted unless the owner asks, like every
-  other workflow; the owner commits after archiving (getting started §6).
+- Every workflow commits only when the owner or its `rules` ask; otherwise
+  the owner commits after archiving (getting started §6).
+- Implement leaves files no task names, such as the README or a changelog,
+  as they are; propose makes such updates tasks when the owner wants them.
 - `changes` lists approved changes that are not archived; drafts on the
   current branch are shown by `review`, not by `changes`.
 - IDs use the UTC date.

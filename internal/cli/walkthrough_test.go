@@ -77,7 +77,7 @@ func TestInit(t *testing.T) {
 		t.Errorf("codex propose skill:\n%s", skill)
 	}
 	yaml := strings.Replace(read(t, filepath.Join(dir, "grove.yaml")), `context: ""`, "context: Python 3 standard library only.", 1)
-	yaml = strings.Replace(yaml, "rules: {}", "rules:\n  proposal:\n    - Name the owner for every decision.", 1)
+	yaml = strings.Replace(yaml, "rules: {}", "rules:\n  proposal:\n    - Name the owner for every decision.\n  propose:\n    - Commit the change folder when check passes.", 1)
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(yaml), 0o644)
 	os.WriteFile(filepath.Join(dir, ".claude/skills/grove-explore/SKILL.md"), []byte("edited"), 0o644)
 	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove skills for claude and codex; nothing is committed.\n"; got != want {
@@ -88,7 +88,8 @@ func TestInit(t *testing.T) {
 	}
 	commitAll(t, dir, "Set up Grove")
 	out := grove(t, "instructions", "propose")
-	for _, s := range []string{"## Project context\n\nPython 3 standard library only.\n", "The project's own rules for this document:\n\n- Name the owner for every decision.\n"} {
+	for _, s := range []string{"## Project context\n\nPython 3 standard library only.\n", "The project's own rules for this document:\n\n- Name the owner for every decision.\n",
+		"The project's own rules for this workflow:\n\n- Commit the change folder when check passes.\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("propose instructions lack %q", s)
 		}

@@ -40,4 +40,4 @@ recommended. Do not change code.
 - The owner keeps anything by asking you to write it down, or by proposing
   from this conversation. When they ask for a proposal, run Grove's
   `instructions propose` with no argument and follow what it prints, here.
-- Leave anything you wrote uncommitted: the owner commits.
+- Commit anything you wrote only when the owner or the project's rules ask.

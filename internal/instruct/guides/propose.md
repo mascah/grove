@@ -41,6 +41,6 @@ estimates. No code changes.
 - Run Grove's `check` and fix what it reports in the files you wrote.
 - Tell the owner which files you wrote, the qualified task IDs (such as
   `<change-id>:T-01`), and the questions still open.
-- Leave the files uncommitted. The next step is the owner's: commit the
-  change, read what Grove's `review` shows, and merge it into the target
+- Commit only when the owner or the project's rules ask; otherwise leave the
+  files uncommitted. The next step is the owner's: commit the change, read what Grove's `review` shows, and merge it into the target
   branch. Merging is the approval.

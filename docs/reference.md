@@ -50,6 +50,8 @@ rules:
     - List who is affected.
   tasks:
     - Every task names its test.
+  implement:
+    - Commit after each task, naming its task ID.
 ```
 
 | Field | Default | Meaning |
@@ -58,10 +60,13 @@ rules:
 | `target` | `main` | The branch whose contents count as agreed. Merging into it approves. |
 | `agents` | `[claude, codex]` | The harnesses `init` writes skills for. |
 | `context` | empty | Facts about the project, given to every skill. Keep it to what an agent cannot read from the code. |
-| `rules` | none | Extra lines for one kind of document, given when that document is written. Kinds: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`. |
+| `rules` | none | Extra lines for one kind of document, given when that document is written, or for one workflow, given with its instructions. Kinds: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`. Workflows: `explore`, `propose`, `implement`, `archive`. |
 
 `context` and `rules` add to Grove's own instructions; they cannot remove or
 replace them. Short rules work better than long ones.
+
+Grove's skills commit nothing unless you ask in the conversation or a rule
+asks, as `implement` does above.
 
 ## Files
 

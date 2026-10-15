@@ -21,10 +21,14 @@ agents: [claude, codex]
 # Facts about this project given to every skill: the language, how tests
 # run, anything an agent cannot read from the code. Keep it short.
 context: ""
-# Extra lines for one kind of document, given when it is written, such as
+# Extra lines for one kind of document, given when it is written, or for one
+# workflow, given with its guide, such as
 #   proposal:
 #     - List who is affected.
+#   implement:
+#     - Commit after each task, naming its task ID.
 # Kinds: proposal, change-spec, tasks, implementation, spec.
+# Workflows: explore, propose, implement, archive.
 rules: {}
 `
 
