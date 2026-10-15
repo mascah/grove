@@ -1,0 +1,8 @@
+[
+  {"id": 1, "date": "2025-02-03", "amount": 42.5, "category": "misc", "note": "Bike repair"},
+  {"id": 2, "date": "2025-04-01", "amount": 1200.0, "category": "rent", "note": "April rent"},
+  {"id": 3, "date": "2025-06-07", "amount": 18.2, "category": "misc", "note": "Library fine"},
+  {"id": 4, "date": "2026-01-12", "amount": 63.75, "category": "food", "note": "Groceries"},
+  {"id": 5, "date": "2026-03-02", "amount": 310.0, "category": "travel", "note": "Train to Calgary"},
+  {"id": 6, "date": "2026-09-30", "amount": 88.4, "category": "utilities", "note": "Power bill"}
+]
