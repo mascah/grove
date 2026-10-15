@@ -25,10 +25,10 @@ context: ""
 # workflow, given with its guide, such as
 #   proposal:
 #     - List who is affected.
-#   implement:
+#   apply:
 #     - Commit after each task, naming its task ID.
 # Kinds: proposal, change-spec, tasks, implementation, spec.
-# Workflows: explore, propose, implement, archive.
+# Workflows: explore, propose, apply, archive.
 rules: {}
 `
 

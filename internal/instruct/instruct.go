@@ -133,12 +133,12 @@ func Revise(p Project, c *doc.Change, files map[string]string) Instructions {
 	return withChange(build(p, "propose", task, fill(p, c)), c, files)
 }
 
-// Implement returns the instructions for implementing change c, which the
-// target holds; files are c.Files as read from there.
-func Implement(p Project, c *doc.Change, files map[string]string) Instructions {
-	task := fmt.Sprintf("You are implementing approved change %s, %q, as %s@%s holds it, in your own working tree.",
+// Apply returns the instructions for applying change c, which the target
+// holds; files are c.Files as read from there.
+func Apply(p Project, c *doc.Change, files map[string]string) Instructions {
+	task := fmt.Sprintf("You are applying approved change %s, %q, as %s@%s holds it, in your own working tree.",
 		c.Proposal.Meta.ID, c.Proposal.Meta.Title, p.Target, short(p.Commit))
-	return withChange(build(p, "implement", task, fill(p, c)), c, files)
+	return withChange(build(p, "apply", task, fill(p, c)), c, files)
 }
 
 // Archive returns the instructions for archiving change c, read from the
@@ -196,7 +196,7 @@ const meanings = `Grove keeps three meanings apart; keep them apart when you spe
 - A maintained spec (` + "`specs/<id>/spec.md`" + ` in the target branch) is agreed behavior.
 - A change (` + "`changes/<id>-<slug>/`" + `) in the target branch is approved future work.
   Approval is the proposal being in the target branch; it never means
-  implemented. Whoever implements it records progress in its
+  implemented. Whoever applies it records progress in its
   ` + "`implementation.md`" + `.
 - What the code does is observed behavior: evidence, not a rule.
 

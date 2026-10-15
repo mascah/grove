@@ -34,10 +34,10 @@ workflows:
     args: '"<args>"'
     guide: guides/propose.md
     writes: [proposal, change-spec, tasks]
-  - name: implement
-    skill: Implement an approved change given its ID, recording progress in its implementation.md.
+  - name: apply
+    skill: Apply an approved change given its ID, building its tasks and recording progress in its implementation.md.
     args: <args>
-    guide: guides/implement.md
+    guide: guides/apply.md
     writes: [implementation]
   - name: archive
     skill: Archive a finished or dropped change given its ID, first folding a finished change's specs into the maintained specs.

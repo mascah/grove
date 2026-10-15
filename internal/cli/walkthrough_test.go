@@ -67,7 +67,7 @@ func TestInit(t *testing.T) {
 		t.Errorf("init said %q, want %q", got, want)
 	}
 	for _, h := range []string{".claude", ".agents"} {
-		for _, w := range []string{"explore", "propose", "implement", "archive"} {
+		for _, w := range []string{"explore", "propose", "apply", "archive"} {
 			if skill := read(t, filepath.Join(dir, h, "skills", "grove-"+w, "SKILL.md")); !strings.Contains(skill, "name: grove-"+w+"\n") || !strings.Contains(skill, " instructions "+w) {
 				t.Errorf("%s skill grove-%s:\n%s", h, w, skill)
 			}
@@ -215,26 +215,26 @@ func TestApprove(t *testing.T) {
 	}
 }
 
-func TestImplementInstructions(t *testing.T) {
+func TestApplyInstructions(t *testing.T) {
 	dir := fixture(t)
 	grove(t, "init")
-	if !strings.Contains(read(t, filepath.Join(dir, ".claude/skills/grove-implement/SKILL.md")), "Run `grove instructions implement $ARGUMENTS`") {
-		t.Error("the skill does not run instructions implement")
+	if !strings.Contains(read(t, filepath.Join(dir, ".claude/skills/grove-apply/SKILL.md")), "Run `grove instructions apply $ARGUMENTS`") {
+		t.Error("the skill does not run instructions apply")
 	}
 	commitAll(t, dir, "Set up Grove")
 	cid := propose(t, dir)
 	commitAll(t, dir, "Propose")
 
 	var stdout, stderr strings.Builder
-	if code := run([]string{"instructions", "implement", cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove: main holds no approved change "+cid+"\n" {
+	if code := run([]string{"instructions", "apply", cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove: main holds no approved change "+cid+"\n" {
 		t.Errorf("before the merge: status %d, %q", code, stderr.String())
 	}
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
-	out := grove(t, "instructions", "implement", cid)
+	out := grove(t, "instructions", "apply", cid)
 	for _, s := range []string{"/implementation.md\">\n# Implementation: Allow editing older records", "### Requirement: Edit older records"} {
 		if !strings.Contains(out, s) {
-			t.Errorf("implement instructions lack %q", s)
+			t.Errorf("apply instructions lack %q", s)
 		}
 	}
 }

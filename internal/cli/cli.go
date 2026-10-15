@@ -16,8 +16,8 @@ With no command, open the reader on the maintained specs and approved changes.
   instructions explore       print the instructions for exploring an idea
   instructions propose ["<description>" | <change-id>]
                              print the instructions for proposing a new change, or revising one
-  instructions implement <change-id>
-                             print the instructions for implementing an approved change
+  instructions apply <change-id>
+                             print the instructions for applying an approved change
   instructions archive <change-id>
                              print the instructions for archiving a change
   archive <change-id>        move a change to changes/archive/
@@ -45,8 +45,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = instructionsPropose(stdout, "")
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "propose":
 		err = instructionsPropose(stdout, args[2])
-	case len(args) == 3 && args[0] == "instructions" && args[1] == "implement":
-		err = instructionsImplement(stdout, args[2])
+	case len(args) == 3 && args[0] == "instructions" && args[1] == "apply":
+		err = instructionsApply(stdout, args[2])
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "archive":
 		err = instructionsArchive(stdout, args[2])
 	case len(args) == 2 && args[0] == "archive":

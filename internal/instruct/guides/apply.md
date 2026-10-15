@@ -1,4 +1,4 @@
-**Implement builds an approved change.** The change is agreed future work:
+**Apply builds an approved change.** The change is agreed future work:
 build what it says, nothing more.
 
 ### 1. Before you start

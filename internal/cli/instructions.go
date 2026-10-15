@@ -93,9 +93,9 @@ func archive(stdout io.Writer, id string) error {
 	return nil
 }
 
-// instructionsImplement prints the implement instructions for change id as
-// the target holds it.
-func instructionsImplement(stdout io.Writer, id string) error {
+// instructionsApply prints the apply instructions for change id as the
+// target holds it.
+func instructionsApply(stdout io.Writer, id string) error {
 	p, err := openProject()
 	if err != nil {
 		return err
@@ -115,7 +115,7 @@ func instructionsImplement(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprint(stdout, instruct.Implement(ip, c, files).Markdown())
+	fmt.Fprint(stdout, instruct.Apply(ip, c, files).Markdown())
 	return nil
 }
 

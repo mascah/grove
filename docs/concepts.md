@@ -37,7 +37,7 @@ A change folder holds:
 | `tasks.md` | propose | The work as numbered tasks, each with how to check it is done. |
 | `implementation.md` | implement | Each task's status and evidence, and which specs were updated. |
 
-`tasks.md` is part of what was approved, so implementing never edits it;
+`tasks.md` is part of what was approved, so applying it never edits it;
 progress goes in `implementation.md`.
 
 ## The loop
@@ -48,7 +48,7 @@ progress goes in `implementation.md`.
    description.
 3. **Review and merge.** You read the change and merge it. Now it is
    approved.
-4. **Implement.** The agent builds the change on a branch and records
+4. **Apply.** The agent builds the change on a branch and records
    progress.
 5. **Archive.** The agent folds the change's specs into the maintained specs
    and moves the change to `grove/changes/archive/`. You merge code, specs and

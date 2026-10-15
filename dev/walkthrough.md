@@ -18,7 +18,7 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    > Wrote grove.yaml and the Grove skills for claude and codex; nothing is committed.
 
    `.claude/skills/` and `.agents/skills/` each hold `grove-explore`,
-   `grove-propose`, `grove-implement` and `grove-archive`. Under `context` in
+   `grove-propose`, `grove-apply` and `grove-archive`. Under `context` in
    `grove.yaml`, write "Python 3 standard library only; tests run with
    python3 -m unittest." Then `git add -A && git commit -m "Set up Grove"`.
    Running `grove init` again rewrites the skills and leaves `grove.yaml` as
@@ -52,8 +52,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    `git switch main && git merge --no-ff older-edits`, then `grove changes`:
    > 261015-k3m9q  Allow editing older records  approved
 
-5. **Implement** (§5). `git switch -c older-edits-impl`, a fresh `claude`,
-   `/grove-implement 261015-k3m9q`. The session asks the open question before
+5. **Apply** (§5). `git switch -c older-edits-impl`, a fresh `claude`,
+   `/grove-apply 261015-k3m9q`. The session asks the open question before
    building, works T-01 with a test, and writes `implementation.md` with
    T-01's status and evidence. `python3 -m unittest` passes.
 
@@ -81,8 +81,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
   is given that change's files in full and edits them.
 - **Commit as you go** (reference, `rules`). With
-  `implement: [Commit after each task, naming its task ID.]` under `rules`
-  in `grove.yaml`, `/grove-implement` commits T-01 with its ID in the
+  `apply: [Commit after each task, naming its task ID.]` under `rules`
+  in `grove.yaml`, `/grove-apply` commits T-01 with its ID in the
   message.
 - **Drop a change** (concepts, "The loop"). `grove archive <change-id>` on an
   approved change nobody will build moves it without touching the specs.
@@ -133,7 +133,7 @@ Agent inference, not the owner's decisions (rule 25).
   `implementation.md` is, and neither checks that the change is approved.
 - Every workflow commits only when the owner or its `rules` ask; otherwise
   the owner commits after archiving (getting started §6).
-- Implement leaves files no task names, such as the README or a changelog,
+- Apply leaves files no task names, such as the README or a changelog,
   as they are; propose makes such updates tasks when the owner wants them.
 - `changes` lists approved changes that are not archived; drafts on the
   current branch are shown by `review`, not by `changes`.

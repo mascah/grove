@@ -11,7 +11,7 @@ Grove has two halves:
   checks specs and changes, shows what a merge would approve, and opens a
   reader.
 - **In your agent's chat** (Claude Code or Codex), Grove's skills explore an
-  idea, propose a change, implement it and archive it. Each skill asks `grove`
+  idea, propose a change, apply it and archive it. Each skill asks `grove`
   for instructions and follows them in the conversation you are already in.
 
 Grove never starts an agent and never commits. You run your agent and you
@@ -25,7 +25,7 @@ terminal  git switch -c my-change
 chat      /grove-explore <what you want>        talk it through; nothing is written
 chat      /grove-propose                        writes the change
 terminal  grove review, then merge              the merge approves the change
-chat      /grove-implement <change-id>          builds it, on a new branch
+chat      /grove-apply <change-id>              builds it, on a new branch
 chat      /grove-archive <change-id>            updates the specs, files the change away
 terminal  merge
 ```

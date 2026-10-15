@@ -90,12 +90,12 @@ grove changes
 
 The merge is the approval. Approved means agreed future work, not built.
 
-## 5. Implement
+## 5. Apply
 
 **Terminal:** `git switch -c rename-projects-impl`. **Chat:**
 
 ```text
-/grove-implement 261015-k3m9q
+/grove-apply 261015-k3m9q
 ```
 
 The agent works through the tasks with tests and records each task's status

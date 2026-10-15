@@ -6,5 +6,5 @@
   a new task takes the next unused number, and a split task gets new IDs with
   a note naming the one it replaces.
 - When the owner wants the README, a changelog or other files outside the
-  code updated, that is a task. Implementing changes nothing no task names.
+  code updated, that is a task. Applying a change touches nothing no task names.
 - No ordering, no execution plan, no status and no checkboxes.

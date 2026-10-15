@@ -18,7 +18,7 @@ Skills run these; you do not need to:
 | --- | --- |
 | `grove instructions explore` | Interview the user about an idea, with the project's specs and changes listed. |
 | `grove instructions propose ["<description>" \| <change-id>]` | Write a new change from the conversation or the description, or revise a drafted one. |
-| `grove instructions implement <change-id>` | Build an approved change and record progress. |
+| `grove instructions apply <change-id>` | Build an approved change and record progress. |
 | `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs, then run `grove archive`. |
 
 ## Skills
@@ -29,7 +29,7 @@ Skills run these; you do not need to:
 | --- | --- | --- |
 | explore | `/grove-explore` | `$grove-explore` |
 | propose | `/grove-propose` | `$grove-propose` |
-| implement | `/grove-implement` | `$grove-implement` |
+| apply | `/grove-apply` | `$grove-apply` |
 | archive | `/grove-archive` | `$grove-archive` |
 
 Claude Code reads them from `.claude/skills/grove-<workflow>/SKILL.md`, Codex
@@ -50,7 +50,7 @@ rules:
     - List who is affected.
   tasks:
     - Every task names its test.
-  implement:
+  apply:
     - Commit after each task, naming its task ID.
 ```
 
@@ -60,13 +60,13 @@ rules:
 | `target` | `main` | The branch whose contents count as agreed. Merging into it approves. |
 | `agents` | `[claude, codex]` | The harnesses `init` writes skills for. |
 | `context` | empty | Facts about the project, given to every skill. Keep it to what an agent cannot read from the code. |
-| `rules` | none | Extra lines for one kind of document, given when that document is written, or for one workflow, given with its instructions. Kinds: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`. Workflows: `explore`, `propose`, `implement`, `archive`. |
+| `rules` | none | Extra lines for one kind of document, given when that document is written, or for one workflow, given with its instructions. Kinds: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`. Workflows: `explore`, `propose`, `apply`, `archive`. |
 
 `context` and `rules` add to Grove's own instructions; they cannot remove or
 replace them. Short rules work better than long ones.
 
 Grove's skills commit nothing unless you ask in the conversation or a rule
-asks, as `implement` does above.
+asks, as `apply` does above.
 
 ## Files
 
