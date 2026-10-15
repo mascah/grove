@@ -1,8 +1,8 @@
 # Walkthrough
 
 The working test script. It runs every step of
-[Getting started](getting-started.md) on the ledger fixture
-(`docs/fixture.md`), with what to type and what to expect, in Claude Code and
+[Getting started](../docs/getting-started.md) on the ledger fixture
+(`dev/fixture.md`), with what to type and what to expect, in Claude Code and
 again in Codex. The documentation is the specification (CONSTITUTION.md rule
 8); each step here names the page section it tests. Grove's output is quoted
 only where it carries meaning.
