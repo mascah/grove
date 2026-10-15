@@ -86,9 +86,11 @@ Setup: `just build`, `G=~/GitHub/mascah/grove-next2/bin/grove-next2`,
   when there is no change yet). Nothing is committed or approved.
 - `$G workspaces` lists each workspace and what is in it:
   > 261014-n6va0  Allow editing older records  change 261014-k3m9q draft, 4 files uncommitted
-- `$G explore 261014-n6va0 --resume` reopens the same conversation.
+- `$G explore 261014-n6va0 --resume` reopens the latest conversation Grove
+  started for 261014-n6va0, never another one run in that folder.
 - `$G explore 261014-n6va0` starts a new conversation in the same workspace,
-  given the exploration and its change in full.
+  given the exploration and its change in full. It becomes the one `--resume`
+  reopens.
 
 ## A second change on the same capability
 
@@ -117,6 +119,10 @@ Owner, 2026-10-14, asked whether to add each:
 - A top-level `implement <change-id>` beside `instructions implement`: "No".
 - Whether a session can confirm that the Grove files it wrote are valid
   before I commit: "yes"; how: "by calling the CLI?".
+- `--resume` must restore the conversation the exploration was started in,
+  never an arbitrary later one: "This is not ok in any scenario … It is not
+  optional." With several, it reopens "The latest one grove started for that
+  id" (2026-10-15).
 - Whether the modules Bubble Tea and Glamour pull in count against rule 16:
   "We need bubble tea and glamour".
 
@@ -135,7 +141,9 @@ Agent inference, not the owner's decisions (rule 25).
 - Ids are `YYMMDD-xxxxx`, names are `<id>-<slug>`, frontmatter carries
   `created` and an optional `description` shown in indexes (from the
   2026-10-14 feedback, a lean under rule 22).
-- The harness is `claude`; `--resume` runs `claude --continue` in the workspace.
+- The harness is `claude`. Grove starts each conversation with
+  `--session-id <uuid>`, records the ID in the worktree's own Git directory,
+  and `--resume` runs `claude --resume <uuid>`.
 - Workspaces live in `.grove/worktrees/` on branches `grove/<id>-<slug>`.
   `grove.yaml` holds only the root (`grove`) and the target branch (`main`).
 - Grove commits nothing; I commit and merge with ordinary Git.
