@@ -1,6 +1,6 @@
-# {{title}}
+# Changes to <capability>
 
-<!-- The changes that change set {{change}} proposes to the requirements of
+<!-- The changes that change {{change}} proposes to the requirements of
 `<capability>`. This is future work: nothing here describes the target branch
 until the change is implemented and the maintained spec is reconciled.
 

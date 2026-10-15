@@ -11,14 +11,13 @@ import (
 	"slices"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/mascah/grove-next2/internal/doc"
 )
 
-//go:embed templates guides
+//go:embed schema.yaml templates guides
 var files embed.FS
-
-// Template returns the embedded template called name, such as "spec.md".
-func Template(name string) string { return embedded("templates/" + name) }
 
 func embedded(name string) string {
 	b, err := files.ReadFile(name)
@@ -28,9 +27,36 @@ func embedded(name string) string {
 	return string(b)
 }
 
-// Spec returns a new maintained spec, frontmatter included.
-func Spec(id, title string) string {
-	return doc.Format(doc.Meta{ID: id, Title: title}, "\n"+strings.ReplaceAll(Template("spec.md"), "{{title}}", title))
+// Kind is one kind of document: where it goes, the template it starts from
+// and the guide for writing it. Path is relative to the document root.
+type Kind struct{ Kind, Path, Template, Guide string }
+
+// Workflow is one workflow: its guide and the kinds of document it writes.
+type Workflow struct {
+	Name, Guide string
+	Writes      []string
+}
+
+// schema is the embedded document set and workflows, schema.yaml.
+var schema struct {
+	Documents []Kind
+	Workflows []Workflow
+}
+
+func init() {
+	if err := yaml.Unmarshal([]byte(embedded("schema.yaml")), &schema); err != nil {
+		panic(err) // embedded at build time
+	}
+}
+
+func workflow(name string) Workflow {
+	i := slices.IndexFunc(schema.Workflows, func(w Workflow) bool { return w.Name == name })
+	return schema.Workflows[i]
+}
+
+func kind(name string) Kind {
+	i := slices.IndexFunc(schema.Documents, func(k Kind) bool { return k.Kind == name })
+	return schema.Documents[i]
 }
 
 // Project is what a session is told about the repository.
@@ -49,16 +75,9 @@ func Implement(p Project, c *doc.Change, files map[string]string) string {
 	b.WriteString("# Grove instructions: implement\n\n")
 	fmt.Fprintf(&b, "You are implementing approved change %s, %q, as %s@%s holds it, in your own working tree. Run Grove as `%s`.\n\n%s\n",
 		c.Proposal.Meta.ID, c.Proposal.Meta.Title, p.Target, short(p.Commit), p.Exe, meanings)
-	fmt.Fprintf(&b, "## How to implement\n\n%s\n", embedded("guides/implement.md"))
-	dir := p.Root + "/" + c.Dir
-	b.WriteString("## Templates\n\n")
-	include(&b, dir+"/implementation.md", strings.NewReplacer("{{title}}", c.Proposal.Meta.Title, "{{change}}", c.Proposal.Meta.ID).Replace(Template("implementation.md")))
-	for _, name := range c.Files {
-		capability, ok := strings.CutPrefix(path.Dir(name), c.Dir+"/specs/")
-		if ok && !slices.ContainsFunc(p.Agreed.Specs, func(d *doc.Document) bool { return d.Meta.ID == capability }) {
-			include(&b, p.Root+"/specs/"+capability+"/spec.md", Spec(capability, "<title>"))
-		}
-	}
+	w := workflow("implement")
+	fmt.Fprintf(&b, "## How to implement\n\n%s\n", embedded(w.Guide))
+	p.documents(&b, w, strings.NewReplacer("<change>", path.Base(c.Dir), "{{title}}", c.Proposal.Meta.Title, "{{change}}", c.Proposal.Meta.ID, "{{base}}", short(p.Commit)))
 	p.index(&b)
 	b.WriteString("## The change\n\n")
 	for _, name := range c.Files {
@@ -79,6 +98,18 @@ const meanings = `Grove keeps three meanings apart; keep them apart when you spe
 Grove commits nothing. The owner commits, and merging into the target branch
 is the only approval.
 `
+
+// documents gives each kind w writes: its path, guide and template, with
+// fill's values put in.
+func (p Project) documents(b *strings.Builder, w Workflow, fill *strings.Replacer) {
+	b.WriteString("## Documents\n\n")
+	for _, name := range w.Writes {
+		k := kind(name)
+		path := p.Root + "/" + fill.Replace(k.Path)
+		fmt.Fprintf(b, "### %s: `%s`\n\n%s\n", k.Kind, path, embedded(k.Guide))
+		include(b, path, fill.Replace(embedded(k.Template)))
+	}
+}
 
 func (p Project) index(b *strings.Builder) {
 	fmt.Fprintf(b, "## Project index\n\nWhat %s says at %s. Read a listed document with `git show %s:<path>`.\n\n",

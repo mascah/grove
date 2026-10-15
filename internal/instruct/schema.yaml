@@ -1,0 +1,35 @@
+# The document set and the workflows (CONSTITUTION.md rule 10): a plain list.
+# A path is relative to the document root; <change> is the change's folder
+# name and <capability> a capability's ID. It holds no dependencies between
+# steps and no status.
+documents:
+  - kind: spec
+    path: specs/<capability>/spec.md
+    template: templates/spec.md
+    guide: guides/spec.md
+  - kind: proposal
+    path: changes/<change>/proposal.md
+    template: templates/proposal.md
+    guide: guides/proposal.md
+  - kind: change-spec
+    path: changes/<change>/specs/<capability>/spec.md
+    template: templates/change-spec.md
+    guide: guides/change-spec.md
+  - kind: tasks
+    path: changes/<change>/tasks.md
+    template: templates/tasks.md
+    guide: guides/tasks.md
+  - kind: implementation
+    path: changes/<change>/implementation.md
+    template: templates/implementation.md
+    guide: guides/implementation.md
+workflows:
+  - name: explore
+    guide: guides/explore.md
+    writes: [spec]
+  - name: propose
+    guide: guides/propose.md
+    writes: [proposal, change-spec, tasks]
+  - name: implement
+    guide: guides/implement.md
+    writes: [implementation, spec]

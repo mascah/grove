@@ -1,4 +1,9 @@
-# {{title}}
+---
+id: <capability>
+title: <title>
+---
+
+# <title>
 
 <!-- A maintained spec states the agreed behavior expected of the target branch.
 It is not a report of what the code does today or of what is deployed: where

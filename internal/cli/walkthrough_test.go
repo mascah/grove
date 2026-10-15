@@ -2,10 +2,10 @@ package cli
 
 import (
 	"github.com/mascah/grove-next2/internal/doc"
-	"github.com/mascah/grove-next2/internal/instruct"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -73,13 +73,6 @@ func TestInit(t *testing.T) {
 		t.Error("grove.yaml does not name the target")
 	}
 	commitAll(t, dir, "Set up Grove")
-}
-
-func TestBaselineTemplateParses(t *testing.T) {
-	src := instruct.Spec("record-editing", "Record editing")
-	if d := doc.Parse("specs/record-editing/spec.md", []byte(src), []string{"id", "title"}); len(d.Diagnostics) > 0 {
-		t.Errorf("%v\n%s", d.Diagnostics, src)
-	}
 }
 
 func TestCheck(t *testing.T) {
@@ -162,7 +155,7 @@ func TestImplementInstructions(t *testing.T) {
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
 	out := grove(t, "instructions", "implement", cid)
-	for _, s := range []string{"Reconcile the specs", "/implementation.md\">", "<file path=\"grove/specs/record-editing/spec.md\">\n---\nid: record-editing", "### Requirement: Edit older records"} {
+	for _, s := range []string{"Reconcile the specs", "/implementation.md\">", "<file path=\"grove/specs/<capability>/spec.md\">\n---\nid: <capability>", "### Requirement: Edit older records"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("implement instructions lack %q", s)
 		}
@@ -172,9 +165,19 @@ func TestImplementInstructions(t *testing.T) {
 func TestSeeTheResult(t *testing.T) {
 	dir := setUp(t)
 	cid := approve(t, dir)
-	// The implementer reconciles the change spec into a new maintained spec.
+	// The implementer reconciles the change spec into a new maintained spec,
+	// from the template its instructions give.
+	out := grove(t, "instructions", "implement", cid)
+	m := regexp.MustCompile(`(?s)<file path="grove/specs/<capability>/spec.md">\n(.*?)\n</file>`).FindStringSubmatch(out)
+	if m == nil {
+		t.Fatalf("no spec template in:\n%s", out)
+	}
+	spec := strings.NewReplacer("<capability>", "record-editing", "<title>", "Record editing").Replace(m[1])
 	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
-	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte(instruct.Spec("record-editing", "Record editing")), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte(spec), 0o644)
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check printed %q", got)
+	}
 	commitAll(t, dir, "Implement")
 
 	if got, want := grove(t, "specs"), "record-editing  Record editing  grove/specs/record-editing/spec.md\n"; got != want {

@@ -1,0 +1,11 @@
+A maintained spec states the behavior agreed for one capability. It becomes
+agreed only when the owner merges it into the target branch.
+
+- The capability's ID is lowercase kebab-case, such as `record-editing`; use
+  the change spec's when there is one.
+- State intended behavior, not whatever the code does. Go through each rule
+  with the owner before writing it. Where the code differs, keep the rule and
+  record the difference under "Known discrepancies" with its source.
+- Each requirement is one EARS sentence about behavior a user or caller can
+  observe, followed by at least one scenario at the boundary that matters.
+- Cover only the area at hand.

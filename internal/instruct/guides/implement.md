@@ -5,8 +5,8 @@ date.** The change is agreed future work: build what it says, nothing more.
 
 - Read the change below and the maintained specs it touches, listed in the
   project index.
-- Work in this working tree. Grove created no branch or workspace; if you are
-  on the target branch, ask the owner whether to create one first.
+- Work in this working tree. If you are on the target branch, ask the owner
+  whether to create a branch first.
 - If an open question in the change decides how a task is built, ask the owner
   before building that part. Do not settle it yourself.
 
@@ -19,9 +19,7 @@ date.** The change is agreed future work: build what it says, nothing more.
 
 ### 3. Record progress
 
-Write `implementation.md` in the change folder from the template below and
-keep it current: each task's status (not started, in progress, done, blocked)
-and its evidence (what changed, the checks run and their result).
+Keep `implementation.md` current as you work; see "Documents" below.
 
 ### 4. Reconcile the specs
 
@@ -30,7 +28,7 @@ When every task is done, apply each change spec to its maintained spec,
 requirements, MODIFIED ones replace the requirement of the same name, REMOVED
 ones are deleted; the ADDED/MODIFIED/REMOVED headings never appear in a
 maintained spec. Remove the known discrepancies the work resolved. Where there
-is no maintained spec, create it from the template below. List each reconciled
+is no maintained spec, create it from the spec template below. List each reconciled
 spec in `implementation.md`. Then run Grove's `check` and fix what it reports.
 
 ### 5. Finish
