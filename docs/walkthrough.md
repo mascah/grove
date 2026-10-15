@@ -28,7 +28,8 @@ Setup: `just build`, `G=~/GitHub/mascah/grove-next2/bin/grove-next2`,
 
 3. *(Optional)* **Baseline.** I ask for a baseline spec. The session writes
    `grove/specs/record-editing/spec.md` in the workspace: the rules I say are
-   intended, and, where the code differs, "Known discrepancies". It becomes the
+   intended, and, where the code differs, "Known discrepancies"; then it runs
+   `$G check` as in step 4. It becomes the
    maintained spec when the branch is merged in step 5. Without a baseline, the
    change spec adds requirements to a capability that has no maintained spec,
    and reconciliation in step 6 creates the spec.
@@ -39,7 +40,11 @@ Setup: `just build`, `G=~/GitHub/mascah/grove-next2/bin/grove-next2`,
    with `proposal.md`, `specs/record-editing/spec.md` (ADDED requirements as
    EARS sentences with scenarios) and `tasks.md` (T-01 with its acceptance). It
    asks rather than assumes, and writes undecided points as open questions, not
-   decisions. I `/exit`.
+   decisions. It runs `$G check` in the workspace and fixes each problem it
+   prints, until:
+   > No problems in grove/.
+
+   I `/exit`.
    > Draft: change 261014-k3m9q in .grove/worktrees/261014-n6va0-allow-editing-older-records, 4 files uncommitted.
    > Continue: $G explore 261014-n6va0 --resume
 
@@ -100,7 +105,7 @@ and merge. `$G specs` still lists one spec, now with both requirements;
 ## Command surface
 
 `init`, `explore "<description>"`, `explore <id> [--resume]`, `workspaces`,
-`instructions propose <id>`, `instructions implement <change-id>`,
+`instructions propose <id>`, `check`, `instructions implement <change-id>`,
 `review <change-id>`, `specs`, `changes`, and no arguments for the reader. The
 one skill is `/grove-implement`.
 
@@ -111,7 +116,7 @@ Owner, 2026-10-14, asked whether to add each:
 - A review session or `instructions review <id>`: "No".
 - A top-level `implement <change-id>` beside `instructions implement`: "No".
 - Whether a session can confirm that the Grove files it wrote are valid
-  before I commit: "yes". How is not yet written here.
+  before I commit: "yes"; how: "by calling the CLI?".
 - Whether the modules Bubble Tea and Glamour pull in count against rule 16:
   "We need bubble tea and glamour".
 
@@ -134,5 +139,8 @@ Agent inference, not the owner's decisions (rule 25).
 - Workspaces live in `.grove/worktrees/` on branches `grove/<id>-<slug>`.
   `grove.yaml` holds only the root (`grove`) and the target branch (`main`).
 - Grove commits nothing; I commit and merge with ordinary Git.
+- The command is `check`. It reads the Grove documents in the working tree it
+  runs in, prints each problem as `path:line: message`, and exits non-zero
+  when there is one.
 - `go.mod` requires directly only the four modules rule 16 names; what
   Bubble Tea and Glamour pull in is listed there as indirect.
