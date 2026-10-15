@@ -60,5 +60,6 @@ only when the owner merges this workspace's branch.
 - Tell the owner what was saved and where, what is unanswered, and which
   result this reached: no change, options to choose from, a prerequisite, or
   ready to propose.
-- Offer the baseline (section 4) as an explicit choice.
+- Offer the baseline (section 4) as an explicit choice. Then say the owner can
+  ask for the proposal in this session; see "Switching to propose".
 - Leave the files uncommitted: the owner commits.

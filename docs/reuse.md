@@ -17,3 +17,5 @@ stripped to what the walkthrough uses.
 | `internal/instruct/guides/explore.md` | `internal/instruct/guides/explore.md` | Sections 1 to 3 and the finish; `check` removed (not in the walkthrough). |
 | `internal/instruct/templates/spec.md` | `internal/templates/defaults/spec.md` | Whole file; the title placeholder became `{{title}}`. |
 | `internal/instruct/guides/explore.md`, section 4 | `internal/instruct/guides/explore.md` | The optional baseline section, plus where it is written and when it becomes maintained. |
+| `internal/instruct/templates/{proposal,change-spec,tasks}.md` | `internal/templates/defaults/` | Whole files; `text/template` fields became plain placeholders, the spec-ID conditionals became `<capability>`. |
+| `internal/instruct/guides/propose.md` | `internal/instruct/guides/propose.md` | Whole file; `check` is Grove's `check`, and the no-exploration path is gone (every proposal here follows an exploration). |

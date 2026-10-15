@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -176,5 +177,49 @@ func TestCheck(t *testing.T) {
 		"grove/specs/record-editing/spec.md:1: title: required field is missing\n"
 	if code != 1 || stdout.String() != want || stderr.String() != "grove-next2: 2 problems found\n" {
 		t.Errorf("check: status %d\n%s%s", code, stdout.String(), stderr.String())
+	}
+}
+
+// propose plays a session that switches to propose: it writes the change the
+// instructions name, as a session following them would.
+func propose(t *testing.T, ws, id string) (changeID string) {
+	t.Helper()
+	t.Chdir(ws)
+	out := grove(t, "instructions", "propose", id)
+	m := regexp.MustCompile("Create the change in `grove/(changes/([0-9]{6}-[0-9a-z]{5})-[a-z0-9-]+)/`").FindStringSubmatch(out)
+	if m == nil {
+		t.Fatalf("propose instructions name no new change:\n%.2000s", out)
+	}
+	dir := filepath.Join(ws, "grove", m[1])
+	os.MkdirAll(filepath.Join(dir, "specs", "record-editing"), 0o755)
+	os.WriteFile(filepath.Join(dir, "proposal.md"), []byte("---\nid: "+m[2]+"\ntitle: Allow editing older records\ncreated: \"2026-10-14T00:00:00Z\"\nexploration: "+id+"\n---\n\n# Allow editing older records\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "specs", "record-editing", "spec.md"), []byte("# Changes to record-editing\n\n## ADDED Requirements\n\n### Requirement: Edit older records\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "tasks.md"), []byte("## T-01 — Edit older records\n"), 0o644)
+	return m[2]
+}
+
+func TestPropose(t *testing.T) {
+	dir := fixture(t)
+	grove(t, "init")
+	commitAll(t, dir, "Set up Grove")
+	harness(t, "")
+	grove(t, "explore", "Allow editing older records")
+	ws := onlyWorkspace(t, dir)
+	id := filepath.Base(ws)[:12]
+
+	cid := propose(t, ws, id)
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check printed %q", got)
+	}
+	again := grove(t, "instructions", "propose", id)
+	if strings.Contains(again, "## Templates") || !strings.Contains(again, "## This change, as drafted so far") || !strings.Contains(again, "### Requirement: Edit older records") {
+		t.Errorf("a second propose did not continue the drafted change:\n%.3000s", again)
+	}
+	t.Chdir(dir)
+	if got := grove(t, "workspaces"); !strings.Contains(got, "change "+cid+" draft, 4 files uncommitted") {
+		t.Errorf("workspaces printed %q", got)
+	}
+	if got := grove(t, "explore", id, "--resume"); !strings.HasPrefix(got, "Draft: change "+cid+" in ") {
+		t.Errorf("report: %q", got)
 	}
 }

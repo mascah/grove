@@ -41,7 +41,7 @@ func explore(stdout io.Writer, description string) error {
 	}
 	fmt.Fprintf(stdout, "Workspace %s on branch %s, from %s@%s.\n", shown(ip.Workspace), ip.Branch, p.Target, ip.Commit[:7])
 	err = session.Start(ip.Workspace, instruct.Explore(ip, exploration))
-	if rerr := report(stdout, ip.Workspace, id); err == nil {
+	if rerr := report(stdout, p, id); err == nil {
 		err = rerr
 	}
 	return err
@@ -49,13 +49,21 @@ func explore(stdout io.Writer, description string) error {
 
 // report is the two lines printed when a session ends: where the draft is
 // and how to continue.
-func report(stdout io.Writer, workspace, id string) error {
-	n, err := gitx.Uncommitted(workspace)
+func report(stdout io.Writer, p project, id string) error {
+	ws, err := p.workspace(id)
 	if err != nil {
 		return err
 	}
+	n, err := gitx.Uncommitted(ws.Path)
+	if err != nil {
+		return err
+	}
+	what := "exploration " + id
+	if c := ws.change(); c != nil {
+		what = "change " + c.Proposal.Meta.ID
+	}
 	exe, _ := os.Executable()
-	fmt.Fprintf(stdout, "Draft: exploration %s in %s, %s uncommitted.\n", id, shown(workspace), files(n))
+	fmt.Fprintf(stdout, "Draft: %s in %s, %s uncommitted.\n", what, shown(ws.Path), files(n))
 	fmt.Fprintf(stdout, "Continue: %s explore %s --resume\n", exe, id)
 	return nil
 }

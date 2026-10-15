@@ -16,6 +16,7 @@ const usage = `usage: grove-next2 <command>
   explore "<description>"    explore in a new workspace
   explore <id> [--resume]    a new conversation in that workspace, or the last one
   workspaces                 list the workspaces
+  instructions propose <id>  print the propose instructions for that exploration
   check                      report problems in this working tree's Grove documents
 `
 
@@ -33,6 +34,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = explore(stdout, args[1])
 	case len(args) == 3 && args[0] == "explore" && args[2] == "--resume":
 		err = reopen(stdout, args[1], true)
+	case len(args) == 3 && args[0] == "instructions" && args[1] == "propose":
+		err = instructionsPropose(stdout, args[2])
 	case len(args) == 1 && args[0] == "check":
 		err = check(stdout)
 	case len(args) == 1 && args[0] == "workspaces":
