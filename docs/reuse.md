@@ -6,3 +6,5 @@ stripped to what the walkthrough uses.
 
 | Copied to | From | What was kept |
 | --- | --- | --- |
+| `internal/instruct/templates/brief.md` | `internal/templates/defaults/brief.md` | Whole file; the title placeholder became "Product brief". |
+| `internal/gitx/gitx.go` | `internal/gitx/gitx.go` | `Run`: argv with `-C dir`, Git's standard error in the failure. Dropped the environment cleaning, replace/graft switches, context and wait delay (rule 13). |
