@@ -104,6 +104,21 @@ and merge. `$G specs` still lists one spec, now with both requirements;
 `review <change-id>`, `specs`, `changes`, and no arguments for the reader. The
 one skill is `/grove-implement`.
 
+## Decided
+
+Owner, 2026-10-14, asked whether to add each:
+
+- A review session or `instructions review <id>`: "No".
+- A top-level `implement <change-id>` beside `instructions implement`: "No".
+
+## Open questions
+
+- Does the reader showing `implementation.md` as written count as reading it
+  under rule 3? Owner: "No, but im not certain." Until settled, it shows it.
+- Should `changes` keep saying `approved` for a change that has been
+  implemented and reconciled? Owner: "Im not sure." Until settled, it does,
+  because no code reads `implementation.md` (rule 3).
+
 ## Assumptions to confirm
 
 Agent inference, not the owner's decisions (rule 25).
