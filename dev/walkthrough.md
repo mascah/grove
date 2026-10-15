@@ -122,4 +122,9 @@ Agent inference, not the owner's decisions (rule 25).
 - `changes` lists approved changes that are not archived; drafts on the
   current branch are shown by `review`, not by `changes`.
 - IDs use the UTC date.
+- Explore's instructions include the maintained spec's template and guide,
+  for a baseline the owner asks for (getting started §2); they offer no
+  other document.
+- A new change's folder name is its ID and a slug the agent chooses from the
+  title; Grove allocates the ID and `created` timestamp.
 - The docs call the binary `grove`; this trial builds `bin/grove-next2`.

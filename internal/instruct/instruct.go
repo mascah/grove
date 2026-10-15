@@ -61,22 +61,24 @@ func kind(name string) Kind {
 
 // Project is what a session is told about the repository.
 type Project struct {
-	Root   string          // document root, such as "grove"
-	Target string          // target branch, such as "main"
-	Commit string          // the target's commit
-	Agreed *doc.Collection // the documents at Commit
-	Exe    string          // the Grove binary, to run its commands
+	Root    string          // document root, such as "grove"
+	Target  string          // target branch, such as "main"
+	Commit  string          // the target's commit
+	Agreed  *doc.Collection // the documents at Commit
+	Exe     string          // the Grove binary, to run its commands
+	Context string          // grove.yaml's context
 }
 
 // Instructions is everything one workflow's instructions say, built before
 // it is printed (rule 10).
 type Instructions struct {
 	Project
-	Workflow  string
-	Task      string // what the session is doing, one sentence
-	Guide     string
-	Documents []Document // the kinds of document the workflow writes
-	Change    []File     // the change being worked on, in full
+	Workflow    string
+	Task        string // what the session is doing, one sentence
+	Guide       string
+	Description string     // the owner's description, when given
+	Documents   []Document // the kinds of document the workflow writes
+	Change      []File     // the change being worked on, in full
 }
 
 // Document is one kind of document to write, with its path and template
@@ -99,15 +101,49 @@ func build(p Project, name, task string, fill *strings.Replacer) Instructions {
 	return in
 }
 
+// Explore returns the instructions for interviewing the owner about an idea.
+func Explore(p Project) Instructions {
+	return build(p, "explore", "You are exploring an idea with the owner, in their own working tree.",
+		strings.NewReplacer("{{base}}", short(p.Commit)))
+}
+
+// Propose returns the instructions for writing new change id, created at
+// created, from the conversation or from description when it is not empty.
+func Propose(p Project, id, created, description string) Instructions {
+	from := "this conversation"
+	if description != "" {
+		from = "the owner's description below"
+	}
+	in := build(p, "propose", fmt.Sprintf("You are proposing new change %s from %s, in the owner's own working tree.", id, from),
+		strings.NewReplacer("<change>", id+"-<slug>", "{{change}}", id, "{{created}}", created, "{{base}}", short(p.Commit)))
+	in.Description = description
+	return in
+}
+
+// Revise returns the instructions for revising drafted change c, read from
+// the working tree; files are c.Files as read from there.
+func Revise(p Project, c *doc.Change, files map[string]string) Instructions {
+	task := fmt.Sprintf("You are revising drafted change %s, %q, in the owner's own working tree.", c.Proposal.Meta.ID, c.Proposal.Meta.Title)
+	return withChange(build(p, "propose", task, fill(p, c)), c, files)
+}
+
 // Implement returns the instructions for implementing change c, which the
 // target holds; files are c.Files as read from there.
 func Implement(p Project, c *doc.Change, files map[string]string) Instructions {
 	task := fmt.Sprintf("You are implementing approved change %s, %q, as %s@%s holds it, in your own working tree.",
 		c.Proposal.Meta.ID, c.Proposal.Meta.Title, p.Target, short(p.Commit))
-	in := build(p, "implement", task, strings.NewReplacer("<change>", path.Base(c.Dir),
-		"{{title}}", c.Proposal.Meta.Title, "{{change}}", c.Proposal.Meta.ID, "{{base}}", short(p.Commit)))
+	return withChange(build(p, "implement", task, fill(p, c)), c, files)
+}
+
+// fill puts change c's values into paths and templates.
+func fill(p Project, c *doc.Change) *strings.Replacer {
+	return strings.NewReplacer("<change>", path.Base(c.Dir), "{{title}}", c.Proposal.Meta.Title,
+		"{{change}}", c.Proposal.Meta.ID, "{{created}}", c.Proposal.Meta.Created, "{{base}}", short(p.Commit))
+}
+
+func withChange(in Instructions, c *doc.Change, files map[string]string) Instructions {
 	for _, name := range c.Files {
-		in.Change = append(in.Change, File{p.Root + "/" + name, files[name]})
+		in.Change = append(in.Change, File{in.Root + "/" + name, files[name]})
 	}
 	return in
 }
@@ -116,7 +152,13 @@ func Implement(p Project, c *doc.Change, files map[string]string) Instructions {
 func (in Instructions) Markdown() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# Grove instructions: %s\n\n%s Run Grove as `%s`.\n\n%s\n", in.Workflow, in.Task, in.Exe, meanings)
+	if in.Context != "" {
+		fmt.Fprintf(&b, "## Project context\n\n%s\n\n", strings.TrimRight(in.Context, "\n"))
+	}
 	fmt.Fprintf(&b, "## How to %s\n\n%s\n", in.Workflow, in.Guide)
+	if in.Description != "" {
+		fmt.Fprintf(&b, "## Owner's description\n\n%s\n\n", in.Description)
+	}
 	if len(in.Documents) > 0 {
 		b.WriteString("## Documents\n\n")
 	}
@@ -142,6 +184,9 @@ const meanings = `Grove keeps three meanings apart; keep them apart when you spe
   implemented. Whoever implements it records progress in its
   ` + "`implementation.md`" + `.
 - What the code does is observed behavior: evidence, not a rule.
+
+A Grove document in the working tree that the target does not hold as it is,
+is a draft: not agreed until it is merged.
 
 Grove commits nothing. The owner commits, and merging into the target branch
 is the only approval.

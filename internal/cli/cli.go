@@ -13,8 +13,11 @@ const usage = `usage: grove-next2 [command]
 With no command, open the reader on the maintained specs and approved changes.
 
   init                       set up Grove in this repository
+  instructions explore       print the instructions for exploring an idea
+  instructions propose ["<description>" | <change-id>]
+                             print the instructions for proposing a new change, or revising one
   instructions implement <change-id>
-                             print the implement instructions for an approved change
+                             print the instructions for implementing an approved change
   specs                      list the maintained specs
   changes                    list the approved changes
   check                      report problems in this working tree's Grove documents
@@ -32,6 +35,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = listSpecs(stdout)
 	case len(args) == 1 && args[0] == "init":
 		err = initProject(stdout)
+	case len(args) == 2 && args[0] == "instructions" && args[1] == "explore":
+		err = instructionsExplore(stdout)
+	case len(args) == 2 && args[0] == "instructions" && args[1] == "propose":
+		err = instructionsPropose(stdout, "")
+	case len(args) == 3 && args[0] == "instructions" && args[1] == "propose":
+		err = instructionsPropose(stdout, args[2])
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "implement":
 		err = instructionsImplement(stdout, args[2])
 	case len(args) == 1 && args[0] == "changes":

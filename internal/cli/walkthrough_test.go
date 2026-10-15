@@ -1,14 +1,12 @@
 package cli
 
 import (
-	"github.com/mascah/grove-next2/internal/doc"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
-	"time"
 )
 
 // fixture creates the ledger fixture as a fresh repository, as `just fixture`
@@ -91,12 +89,17 @@ func TestCheck(t *testing.T) {
 	}
 }
 
-// propose plays a session that proposes a change: it writes the change
-// folder in the working tree, on a new branch, and returns its ID.
-func propose(t *testing.T, dir string) (changeID string) {
+// propose plays a session that proposes a change on a new branch: it asks
+// for the propose instructions and writes the change folder they name.
+func propose(t *testing.T, dir string, args ...string) (changeID string) {
 	t.Helper()
 	git(t, dir, "switch", "-q", "-c", "older-edits")
-	id := doc.NewID(time.Now())
+	out := grove(t, append([]string{"instructions", "propose"}, args...)...)
+	m := regexp.MustCompile("### proposal: `grove/changes/([0-9]{6}-[0-9a-z]{5})-<slug>/proposal.md`").FindStringSubmatch(out)
+	if m == nil {
+		t.Fatalf("propose instructions name no new change:\n%.3000s", out)
+	}
+	id := m[1]
 	change := filepath.Join(dir, "grove", "changes", id+"-allow-editing-older-records")
 	os.MkdirAll(filepath.Join(change, "specs", "record-editing"), 0o755)
 	os.WriteFile(filepath.Join(change, "proposal.md"), []byte("---\nid: "+id+"\ntitle: Allow editing older records\ncreated: \"2026-10-14T00:00:00Z\"\n---\n\n# Allow editing older records\n"), 0o644)
@@ -122,6 +125,42 @@ func approve(t *testing.T, dir string) (changeID string) {
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve "+cid, "older-edits")
 	return cid
+}
+
+func TestExplore(t *testing.T) {
+	dir := setUp(t)
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte("root: grove\ntarget: main\ncontext: Python 3 standard library only.\n"), 0o644)
+	out := grove(t, "instructions", "explore")
+	for _, s := range []string{"# Grove instructions: explore", "Interview before you conclude anything",
+		"## Project context\n\nPython 3 standard library only.\n", "Maintained specs (agreed behavior):\n- None.", "### spec: `grove/specs/<capability>/spec.md`"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("explore instructions lack %q", s)
+		}
+	}
+	if strings.Contains(out, "proposal.md") {
+		t.Error("explore instructions offer a proposal to fill in")
+	}
+}
+
+func TestPropose(t *testing.T) {
+	dir := setUp(t)
+	cid := propose(t, dir)
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check printed %q", got)
+	}
+	revise := grove(t, "instructions", "propose", cid)
+	for _, s := range []string{"You are revising drafted change " + cid, "### proposal: `grove/changes/" + cid + "-allow-editing-older-records/proposal.md`", "## The change", "### Requirement: Edit older records"} {
+		if !strings.Contains(revise, s) {
+			t.Errorf("revise instructions lack %q", s)
+		}
+	}
+	var stdout, stderr strings.Builder
+	if code := run([]string{"instructions", "propose", "261015-zzzzz"}, &stdout, &stderr); code != 1 || stderr.String() != "grove-next2: no change 261015-zzzzz in this working tree\n" {
+		t.Errorf("an unknown change: status %d, %q", code, stderr.String())
+	}
+	if out := grove(t, "instructions", "propose", "Editing a missing record should print an error"); !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") {
+		t.Errorf("propose from a description:\n%.3000s", out)
+	}
 }
 
 func TestApprove(t *testing.T) {
@@ -185,5 +224,16 @@ func TestSeeTheResult(t *testing.T) {
 	}
 	if got := grove(t, "changes"); !strings.HasPrefix(got, cid+"  ") || !strings.HasSuffix(got, "  approved\n") {
 		t.Errorf("changes printed %q", got)
+	}
+	next := grove(t, "instructions", "explore")
+	for _, s := range []string{
+		"Maintained specs (agreed behavior):\n- record-editing \"Record editing\": `grove/specs/record-editing/spec.md`",
+	} {
+		if !strings.Contains(next, s) {
+			t.Errorf("fresh explore instructions lack %q", s)
+		}
+	}
+	if len(next) >= 12<<10 {
+		t.Errorf("explore instructions are %d bytes, want under 12 KiB", len(next))
 	}
 }

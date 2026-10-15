@@ -14,9 +14,10 @@ import (
 
 // project is the repository Grove was run in.
 type project struct {
-	Top    string `yaml:"-"` // the top of the working tree
-	Root   string `yaml:"root"`
-	Target string `yaml:"target"`
+	Top     string `yaml:"-"` // the top of the working tree
+	Root    string `yaml:"root"`
+	Target  string `yaml:"target"`
+	Context string `yaml:"context"`
 }
 
 func openProject() (project, error) {
@@ -36,7 +37,7 @@ func openProject() (project, error) {
 // agreed returns the target's commit and the documents it holds.
 func (p project) agreed() (instruct.Project, error) {
 	exe, _ := os.Executable()
-	ip := instruct.Project{Root: p.Root, Target: p.Target, Exe: exe}
+	ip := instruct.Project{Root: p.Root, Target: p.Target, Exe: exe, Context: p.Context}
 	var err error
 	if ip.Commit, err = gitx.ResolveBranch(p.Top, p.Target); err != nil {
 		return ip, err
