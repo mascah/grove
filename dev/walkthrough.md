@@ -96,7 +96,10 @@ Owner, asked whether to add each:
 - Whether a session can confirm the Grove files it wrote are valid,
   2026-10-14: "yes"; how: "by calling the CLI?".
 - Bubble Tea and Glamour, 2026-10-14: "We need bubble tea and glamour".
-- The rest of this page's shape is decisions D-33 to D-41 of 2026-10-15.
+- Codex reads repository skills from `.agents/skills/`, typed
+  `$grove-<workflow>`, 2026-10-15: "I know this is how it works. We don't
+  need to verify this."
+- The rest of this page's shape is decisions D-33 to D-43 of 2026-10-15.
 
 ## Open questions
 
@@ -110,8 +113,6 @@ Agent inference, not the owner's decisions (rule 25).
 - `grove.yaml` fields and defaults: `root: grove`, `target: main`,
   `agents: [claude, codex]`, `context`, and `rules` keyed by `proposal`,
   `change-spec`, `tasks`, `implementation` and `spec`.
-- Codex reads repository skills from `.agents/skills/` and they are typed
-  `$grove-<workflow>`.
 - `init` never overwrites `grove.yaml` and always rewrites the skills.
 - `review` takes no argument and compares the current branch with the target.
 - `instructions propose` tells a change ID (`YYMMDD-xxxxx`) from a
