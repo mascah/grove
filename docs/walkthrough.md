@@ -110,6 +110,10 @@ Owner, 2026-10-14, asked whether to add each:
 
 - A review session or `instructions review <id>`: "No".
 - A top-level `implement <change-id>` beside `instructions implement`: "No".
+- Whether a session can confirm that the Grove files it wrote are valid
+  before I commit: "yes". How is not yet written here.
+- Whether the modules Bubble Tea and Glamour pull in count against rule 16:
+  "We need bubble tea and glamour".
 
 ## Open questions
 
@@ -130,3 +134,5 @@ Agent inference, not the owner's decisions (rule 25).
 - Workspaces live in `.grove/worktrees/` on branches `grove/<id>-<slug>`.
   `grove.yaml` holds only the root (`grove`) and the target branch (`main`).
 - Grove commits nothing; I commit and merge with ordinary Git.
+- `go.mod` requires directly only the four modules rule 16 names; what
+  Bubble Tea and Glamour pull in is listed there as indirect.
