@@ -32,6 +32,11 @@ func Exploration(title, description, base string) string {
 		Replace(Template("exploration.md"))
 }
 
+// Spec returns a new maintained spec, frontmatter included.
+func Spec(id, title string) string {
+	return doc.Format(doc.Meta{ID: id, Title: title}, "\n"+strings.ReplaceAll(Template("spec.md"), "{{title}}", title))
+}
+
 // Project is what a session is told about the repository.
 type Project struct {
 	Root      string          // document root, such as "grove"
@@ -49,6 +54,8 @@ func Explore(p Project, exploration *doc.Document) string {
 	fmt.Fprintf(&b, "# Grove instructions: explore\n\n")
 	p.preamble(&b, fmt.Sprintf("exploration %s, %q", exploration.Meta.ID, exploration.Meta.Title))
 	fmt.Fprintf(&b, "## How to explore\n\n%s\n", embedded("guides/explore.md"))
+	b.WriteString("## Baseline spec template\n\nOnly when the owner asks for a baseline. Choose the capability's ID, lowercase kebab-case such as `record-editing`.\n\n")
+	include(&b, p.Root+"/specs/<capability>/spec.md", Spec("<capability>", "<title>"))
 	p.index(&b)
 	p.brief(&b)
 	fmt.Fprintf(&b, "## This exploration\n\n")

@@ -38,11 +38,26 @@ requirements for the change until the owner asks. Do not settle on the first
 plausible option: the owner sees the options and open questions before
 anything is recommended. Do not change code.
 
-### 4. Finish
+### 4. Optional: one small baseline spec
+
+It records the behavior the owner says is intended today, so a change is
+measured against agreed rules. Never skip it silently: offer it as a choice,
+with that reason in a line. Skipping is fine. It becomes the maintained spec
+only when the owner merges this workspace's branch.
+
+- State intended behavior, not the change being explored and not whatever the
+  code does. Go through each rule with the owner before writing it. Where the
+  code differs, keep the rule and record the difference under "Known
+  discrepancies" with its source.
+- Cover only the area this exploration touches.
+- Write it from "Baseline spec template" below.
+
+### 5. Finish
 
 - The exploration must stand on its own. Keep its frontmatter as Grove wrote
   it.
 - Tell the owner what was saved and where, what is unanswered, and which
   result this reached: no change, options to choose from, a prerequisite, or
   ready to propose.
+- Offer the baseline (section 4) as an explicit choice.
 - Leave the files uncommitted: the owner commits.

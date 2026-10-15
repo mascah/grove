@@ -15,3 +15,5 @@ stripped to what the walkthrough uses.
 | `internal/gitx/gitx.go` (`ResolveBranch`, `Uncommitted`) | `internal/gitx/repo.go`, `internal/gitx/status.go` | Branch tip; NUL status without renames, counted. |
 | `internal/instruct/templates/exploration.md` | `internal/templates/defaults/exploration.md` | Whole file; `text/template` fields became plain placeholders. |
 | `internal/instruct/guides/explore.md` | `internal/instruct/guides/explore.md` | Sections 1 to 3 and the finish; `check` removed (not in the walkthrough). |
+| `internal/instruct/templates/spec.md` | `internal/templates/defaults/spec.md` | Whole file; the title placeholder became `{{title}}`. |
+| `internal/instruct/guides/explore.md`, section 4 | `internal/instruct/guides/explore.md` | The optional baseline section, plus where it is written and when it becomes maintained. |

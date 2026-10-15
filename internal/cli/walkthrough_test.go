@@ -2,6 +2,7 @@ package cli
 
 import (
 	"github.com/mascah/grove-next2/internal/doc"
+	"github.com/mascah/grove-next2/internal/instruct"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -150,5 +151,12 @@ func TestComingBack(t *testing.T) {
 	}
 	if out := grove(t, "explore", id, "--resume"); args() != "--continue" || !strings.Contains(out, "Draft: exploration "+id) {
 		t.Errorf("--resume ran claude %q and printed %q", args(), out)
+	}
+}
+
+func TestBaselineTemplateParses(t *testing.T) {
+	src := instruct.Spec("record-editing", "Record editing")
+	if d := doc.Parse("specs/record-editing/spec.md", []byte(src), []string{"id", "title"}); len(d.Diagnostics) > 0 {
+		t.Errorf("%v\n%s", d.Diagnostics, src)
 	}
 }
