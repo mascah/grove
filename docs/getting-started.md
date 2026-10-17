@@ -63,7 +63,8 @@ The agent writes a change folder, such as
 - `tasks.md`: the work, each task with how to check it is done.
 
 It asks rather than assumes, keeps anything you leave undecided as an open
-question, and runs `grove check` until the folder has no problems. You can
+question, and says which task, if any, that question blocks. It runs
+`grove check` until the folder has no problems. You can
 also propose without exploring: `/grove-propose <description>`. To revise a
 drafted change later, run `/grove-propose <change-id>`.
 

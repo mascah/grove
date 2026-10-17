@@ -19,8 +19,10 @@ describes future work. It does not plan or perform the implementation.
   the intended outcome, what is in scope and what is not. Ask the owner to
   confirm or correct it before you write.
 - If several options are still open, ask which one. If an unanswered question
-  would change the requirements, ask it now. A question the owner defers goes
-  into the proposal's open questions; it is not answered by guess.
+  would change the requirements or how a task is built, ask it now. A
+  question the owner defers goes into the proposal's open questions, naming
+  the task it blocks if it decides how that task is built; it is not answered
+  by guess.
 - If the direction turns out not to be settled, say so. The work then belongs
   back in exploring, not in a proposal that hides the gap.
 

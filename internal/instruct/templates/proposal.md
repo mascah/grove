@@ -41,7 +41,8 @@ more room. -->
 
 ## Open questions
 
-<!-- Say which must be answered before review and which can wait. -->
+<!-- Say which must be answered before review and which can wait. Name the
+task a question blocks when it decides how that task is built. -->
 
 ## Related documents
 

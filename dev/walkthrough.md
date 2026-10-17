@@ -40,7 +40,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 
 3. **Propose** (§3). `/grove-propose` in the same conversation. The session
    creates `grove/changes/261015-k3m9q-allow-editing-older-records/` with
-   `proposal.md` (my decision quoted, the category question open),
+   `proposal.md` (my decision quoted, the category question open and
+   blocking no task, since T-01 leaves the category unchanged),
    `specs/record-editing/spec.md` (an ADDED requirement as an EARS sentence
    with scenarios), and `tasks.md` (T-01 with its acceptance). It runs
    `grove check` until:

@@ -9,5 +9,6 @@ consequential decisions and the open questions.
 - What you infer or propose is not a decision, however likely. Put it under
   open questions, or in a list headed "Assumptions to confirm in review".
 - Open questions: say which must be answered before review and which can
-  wait.
+  wait. Name the task a question blocks when it decides how that task is
+  built: applying leaves that task unbuilt until the proposal answers it.
 - Related documents: link each change spec and the tasks.
