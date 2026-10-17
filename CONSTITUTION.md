@@ -1,10 +1,11 @@
 # Grove constitution
 
-Draft 2026-10-14, amended 2026-10-15. Copy into the repository as `CONSTITUTION.md`. It is the
-only document whose sentences bind an agent. `grove.md` is direction, the
-walkthrough is the spec, this file is the law. Every rule is one line and
-numbered so it can be quoted. Changing this file is its own commit with no
-code in it, and the owner reads it before any code follows.
+Draft 2026-10-14, amended 2026-10-15 and 2026-10-17. It is the only document
+whose sentences bind an agent. `grove.md` is direction, the docs in `docs/` are
+the spec, `dev/walkthrough.md` runs them on the fixture, this file is the law.
+Every rule is one line and numbered so it can be quoted. Changing this file is
+its own commit with no code in it, and the owner reads it before any code
+follows.
 
 Rules restate entries in `decisions.md`: 1 is D-33; 2 and 3 are D-13, D-21, D-39, D-48 and D-50; 4 and 5 are D-02 to D-04 and D-38; 6 is D-24; 7 is D-01 and D-06; 8 is D-40; 9 is D-15 and D-35; 10 is D-34 and D-43; 11 is D-23 and D-33; 23 is D-30; 24 is D-28; 22 is D-31; 27 is D-32, D-41, D-42 and D-49. The size rules 12 to 18 are new and become decisions when the owner adopts this file.
 
@@ -37,7 +38,7 @@ Rules restate entries in `decisions.md`: 1 is D-33; 2 and 3 are D-13, D-21, D-39
 19. Read this file first in every session and every sub-agent brief; quote the rule number for anything called fixed or out of scope.
 20. Scope lives here and only here. `AGENTS.md` describes the code and points to this file; it never restates scope.
 21. Questions about whether Grove should do something are asked in text, name the rule they would cross, and offer no recommended option. "How should it work" is asked only after "whether" is answered.
-22. An owner's answer from a phone or a tap is a lean, not a decision. A decision is the owner's words written into this file, `grove.md` or the walkthrough.
+22. An owner's answer from a phone or a tap is a lean, not a decision. A decision is the owner's words written into `decisions.md` or this file.
 23. Adversarial review is run by the owner, by hand, after a real run. Agents do not invoke it, and a finding gets a fix only with a fixture reproduction.
 24. Harness behavior that varies by user settings, such as permission prompts, is never a design input.
 25. Decisions in documents are the owner's, in the owner's words, attributed. Agent inference goes under open questions or assumptions to confirm.
