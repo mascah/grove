@@ -57,8 +57,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    > 261015-k3m9q  Allow editing older records  approved
 
 5. **Apply** (§5). `git switch -c older-edits-impl`, a fresh `claude`,
-   `/grove-apply 261015-k3m9q`. The session asks the open question before
-   building, works T-01 with a test, and writes `implementation.md` with
+   `/grove-apply 261015-k3m9q`. The open question blocks no task, so the
+   session asks nothing, works T-01 with a test, and writes `implementation.md` with
    T-01's status and evidence. `python3 -m unittest` passes.
 
 6. **Archive** (§6). `/grove-archive 261015-k3m9q`. The session adds the
@@ -84,6 +84,14 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
   change.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
   is given that change's files in full and edits them.
+- **A question that blocks a task** (§5). On a new branch,
+  `/grove-propose Editing a missing record should print an error`; when
+  asked whether it should exit 2 like other errors, defer it. The proposal
+  names T-01 as blocked by that question. Merge it, then, on another branch,
+  run apply headless: `claude -p "/grove-apply <change-id>"`. It builds
+  nothing, `implementation.md` says `Status: blocked` under T-01 with the
+  question, and its last message names the question. `grove archive
+  <change-id>` refuses.
 - **Commit as you go** (reference, `rules`). With
   `apply: [Commit after each task, naming its task ID.]` under `rules`
   in `grove.yaml`, `/grove-apply` commits T-01 with its ID in the
@@ -140,6 +148,8 @@ Agent inference, not the owner's decisions (rule 25).
   `implementation.md` is, and neither checks that the change is approved.
 - Every workflow commits only when the owner or its `rules` ask; otherwise
   the owner commits after archiving (getting started §6).
+- A blocked task's question is answered by revising the change with
+  propose and merging it, not by the owner telling the applying session.
 - Apply leaves files no task names, such as the README or a changelog,
   as they are; propose makes such updates tasks when the owner wants them.
 - `changes` lists approved changes that are not archived; drafts on the

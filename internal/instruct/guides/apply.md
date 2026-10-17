@@ -7,8 +7,10 @@ build what it says, nothing more.
   project index.
 - Work in this working tree. If you are on the target branch, ask the owner
   whether to create a branch first.
-- If an open question in the change decides how a task is built, ask the owner
-  before building that part. Do not settle it yourself.
+- If an open question in the change decides how a task is built, do not
+  build that task and do not settle the question yourself, even if you could
+  ask. Mark the task `Status: blocked` in `implementation.md`, write the
+  question under it, and go on with the other tasks.
 
 ### 2. Work the tasks
 
@@ -26,8 +28,10 @@ Keep `implementation.md` current as you work; see "Documents" below.
 
 ### 4. Finish
 
-Run the project's tests. Tell the owner what was done, and what is left if a
-task is not done. Commit only when the owner or the project's rules ask;
-otherwise leave the work uncommitted for the owner. When every task is done,
+Run the project's tests. Tell the owner what was done, what is left if a
+task is not done, and the question that blocks each blocked task: it is
+answered by revising the change, not in this session. Commit only when the
+owner or the project's rules ask; otherwise leave the work uncommitted for
+the owner. When every task is done,
 the next step is archiving the change, which brings the maintained specs up
 to date on this branch.

@@ -100,7 +100,11 @@ The merge is the approval. Approved means agreed future work, not built.
 ```
 
 The agent works through the tasks with tests and records each task's status
-and evidence in the change's `implementation.md`.
+and evidence in the change's `implementation.md`. If an open question decides
+how a task is built, the agent does not guess: it marks that task blocked,
+writes the question there, and builds the rest. To unblock it, answer the
+question with `/grove-propose 261015-k3m9q`, merge the revision, and apply
+again.
 
 ## 6. Archive
 
