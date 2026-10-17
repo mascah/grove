@@ -26,11 +26,11 @@ Rules restate entries in `decisions.md`: 1 is D-33; 2 and 3 are D-13, D-21, D-39
 ## Size and shape
 
 12. Budget: 5,000 non-test Go lines and 3,000 test lines, counted by `just check`, which fails above them. Raising the budget is a change to this file.
-13. No guard, fallback or error branch without a failure reproduced on the fixture and named in the commit message.
+13. No guard or fallback for a state no documented step can reach, unless a failure was reproduced on the fixture and named in the commit message. Handling an error that a call returns is not a guard.
 14. A user-facing message is one sentence. Explanation lives in the guides and the walkthrough, not in Go strings.
-15. Six packages at most. No interface with one implementation, no converter between two structs that mean the same thing.
+15. Each package has one job, stated in its package comment, and a new package is named in the message of the commit that adds it. No interface with one implementation, no converter between two structs that mean the same thing.
 16. Dependencies are the standard library plus what the owner lists here: `gopkg.in/yaml.v3`, Bubble Tea, Glamour, `golang.org/x/term`. Nothing else without a change to this file.
-17. Tests follow the walkthrough path on real disposable Git repositories. No PTY harness, fake Git, or adversarial-input suite without a reproduced bug.
+17. End-to-end tests follow the walkthrough on real disposable Git repositories. Logic with branches, such as a parser or the schema loader, may also have a small direct test. No PTY harness, fake Git, or adversarial-input suite without a reproduced bug.
 18. Comments say why, not what. A function whose name and body say what it does has no comment.
 
 ## How agents work here
