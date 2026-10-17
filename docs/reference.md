@@ -82,6 +82,7 @@ grove/
   changes/archive/<id>-<slug>/
 ```
 
-Every document starts with frontmatter. Specs carry `id` and `title`; a
-proposal carries `id`, `title` and `created`; any of them may add a one-line
-`description`, shown in lists.
+Maintained specs and proposals start with frontmatter. Specs carry `id` and
+`title`; a proposal carries `id`, `title` and `created`; either may add a
+one-line `description`, shown in lists. A change's other files have none:
+their folder names their change.
