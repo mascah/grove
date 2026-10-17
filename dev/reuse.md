@@ -16,3 +16,5 @@ stripped to what the walkthrough uses.
 | `internal/instruct/templates/{proposal,change-spec,tasks}.md` | `internal/templates/defaults/` | Whole files; `text/template` fields became plain placeholders, the spec-ID conditionals became `<capability>`. |
 | `internal/instruct/guides/propose.md`; sections 3 to 5 as `guides/{proposal,change-spec,tasks}.md` | `internal/instruct/guides/propose.md` | Sections 2, 6 and 7, with section 1 rewritten for proposing from the conversation, a description or a draft; `check` is Grove's `check`. Each document's section became that kind's guide in the schema. |
 | `internal/tui/render.go` | `internal/render/render.go` | `Markdown`, `Sanitize` and the output filter that lets only the style's own SGR sequences through. Dropped `Plain`, truncation and the wrap fallback, which needed `charmbracelet/x/ansi` directly. |
+
+`lefthook.yml` is copied from `~/GitHub/mascah/grove-legacy` at `a708af3`; the comment was rewritten to explain why the hook runs no tests.

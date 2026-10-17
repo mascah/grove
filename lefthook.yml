@@ -1,0 +1,16 @@
+# Pre-commit jobs inherit GIT_DIR and GIT_INDEX_FILE. The walkthrough tests run Git in
+# fixture repositories with the inherited environment, so `go test` stays out of
+# this hook; run `just check` before committing instead.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: gofmt
+      glob: "*.go"
+      run: gofmt -w {staged_files}
+      stage_fixed: true
+    - name: vet
+      glob: "*.go"
+      run: go vet ./...
+    - name: mod-tidy
+      glob: "{*.go,go.mod,go.sum}"
+      run: go mod tidy -diff
