@@ -7,12 +7,6 @@
 # from its metadata_template; it takes no rules of its own (D-54). It holds no
 # dependencies between steps and no status.
 documents:
-  - kind: spec
-    path: specs/<capability>/spec.md
-    template: templates/spec.md
-    metadata: specs/<capability>/.grove.yaml
-    metadata_template: templates/spec.grove.yaml
-    guide: guides/spec.md
   - kind: proposal
     path: changes/<change>/proposal.md
     template: templates/proposal.md
@@ -31,6 +25,12 @@ documents:
     path: changes/<change>/implementation.md
     template: templates/implementation.md
     guide: guides/implementation.md
+  - kind: spec
+    path: specs/<capability>/spec.md
+    template: templates/spec.md
+    metadata: specs/<capability>/.grove.yaml
+    metadata_template: templates/spec.grove.yaml
+    guide: guides/spec.md
 workflows:
   - name: explore
     skill: Explore an idea with the owner before proposing a change, in an interview that writes nothing unless asked.

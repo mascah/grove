@@ -107,6 +107,18 @@ func TestCheck(t *testing.T) {
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
 		t.Errorf("check printed %q", got)
 	}
+	config := read(t, filepath.Join(dir, "grove.yaml"))
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(config, "rules: {}", "rules:\n  derp: [x]\nrule: {}", 1)), 0o644)
+	var stdout, stderr strings.Builder
+	code := run([]string{"check"}, &stdout, &stderr)
+	want := "grove.yaml:18: unknown rules key \"derp\"; kinds are proposal, change-spec, tasks, implementation, spec, and workflows are explore, propose, apply, archive\n" +
+		"grove.yaml:19: unknown field \"rule\"; grove.yaml takes root, target, agents, context and rules\n"
+	if code != 1 || stdout.String() != want || stderr.String() != "grove: 2 problems found\n" {
+		t.Errorf("check of grove.yaml: status %d\n%s%s", code, stdout.String(), stderr.String())
+	}
+	grove(t, "changes")
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(config), 0o644)
+
 	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
 	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte("# Record editing\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", ".grove.yaml"), []byte("description: Editing records.\nowner: me\n"), 0o644)
@@ -118,9 +130,10 @@ func TestCheck(t *testing.T) {
 			os.WriteFile(filepath.Join(dir, "grove", "changes", folder, ".grove.yaml"), []byte(meta), 0o644)
 		}
 	}
-	var stdout, stderr strings.Builder
-	code := run([]string{"check"}, &stdout, &stderr)
-	want := "grove/specs/record-editing/.grove.yaml:2: unknown field \"owner\"; this file takes title and description\n" +
+	stdout.Reset()
+	stderr.Reset()
+	code = run([]string{"check"}, &stdout, &stderr)
+	want = "grove/specs/record-editing/.grove.yaml:2: unknown field \"owner\"; this file takes title and description\n" +
 		"grove/specs/record-editing/.grove.yaml: title: required field is missing\n" +
 		"grove/changes/261015-k3m9q-no-metadata/.grove.yaml: missing; it holds the change's title and created\n" +
 		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created and description\n" +

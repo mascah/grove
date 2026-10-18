@@ -8,7 +8,7 @@
 | `grove init` | Writes `grove.yaml` if there is none, and the skills for each harness it lists. Safe to re-run: it rewrites the skills and leaves `grove.yaml` alone. Commits nothing. |
 | `grove specs` | Lists the maintained specs on the target branch. |
 | `grove changes` | Lists the approved changes on the target branch that are not archived. |
-| `grove check` | Reports each problem in the Grove documents of this working tree as `path:line: message`, and exits non-zero if there is one. |
+| `grove check` | Reports each problem in the Grove documents of this working tree, and each unknown field or `rules` key in `grove.yaml`, as `path:line: message`, and exits non-zero if there is one. |
 | `grove review` | Shows what merging the current branch into the target would approve: each change or spec it adds or alters, and the diff. |
 | `grove archive <change-id>` | Moves the change's folder to `changes/archive/`. Refuses unless `implementation.md` marks every task in `tasks.md` `Status: done`, or says `Status: dropped`. Commits nothing. |
 
@@ -61,6 +61,9 @@ rules:
 | `agents` | `[claude, codex]` | The harnesses `init` writes skills for. |
 | `context` | empty | Facts about the project, given to every skill. Keep it to what an agent cannot read from the code. |
 | `rules` | none | Extra lines for one kind of document, given when that document is written, or for one workflow, given with its instructions. Kinds: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`. Workflows: `explore`, `propose`, `apply`, `archive`. |
+
+`grove check` reports a field or `rules` key that Grove does not know; other
+commands ignore it.
 
 `context` and `rules` add to Grove's own instructions; they cannot remove or
 replace them. Short rules work better than long ones.

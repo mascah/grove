@@ -46,6 +46,15 @@ type Workflow struct {
 // Workflows returns the schema's workflows, in order.
 func Workflows() []Workflow { return schema.Workflows }
 
+// Kinds returns the names of the schema's kinds of document, in order.
+func Kinds() []string {
+	var names []string
+	for _, k := range schema.Documents {
+		names = append(names, k.Kind)
+	}
+	return names
+}
+
 // schema is the embedded document set and workflows, schema.yaml.
 var schema struct {
 	Documents []Kind

@@ -97,6 +97,14 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 - **A title that drifted** (reference, "Files"). Change `title` in a
   change's `.grove.yaml` and run `grove check`:
   > grove/changes/<change-id>-<slug>/proposal.md:1: the first heading should be "# <new title>", the title in .grove.yaml
+- **A mistake in grove.yaml** (reference, "grove.yaml"). Add `derp: [x]`
+  under `rules` and a top-level `rule: {}` in `grove.yaml`. `grove check`
+  reports both and exits non-zero:
+  > grove.yaml:<line>: unknown rules key "derp"; kinds are proposal, change-spec, tasks, implementation, spec, and workflows are explore, propose, apply, archive
+
+  > grove.yaml:<line>: unknown field "rule"; grove.yaml takes root, target, agents, context and rules
+
+  `grove changes` still works.
 - **Commit as you go** (reference, `rules`). With
   `apply: [Commit after each task, naming its task ID.]` under `rules`
   in `grove.yaml`, `/grove-apply` commits T-01 with its ID in the
