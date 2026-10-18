@@ -21,14 +21,15 @@ func check(stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	unknown, err := unknownConfig(p.Top)
+	ip := p.instruct()
+	unknown, err := unknownConfig(p.Top, ip)
 	if err != nil {
 		return err
 	}
 	for _, u := range unknown {
 		fmt.Fprintln(stdout, u)
 	}
-	c, err := doc.Load(os.DirFS(filepath.Join(p.Top, p.Root)), instruct.MainDocument())
+	c, err := doc.Load(os.DirFS(filepath.Join(p.Top, p.Root)), ip.MainDocument)
 	if err != nil {
 		return err
 	}
@@ -51,11 +52,11 @@ func check(stdout io.Writer) error {
 }
 
 // configFields are grove.yaml's fields, as project reads them.
-var configFields = []string{"root", "target", "agents", "context", "rules"}
+var configFields = []string{"root", "target", "agents", "schema", "context", "rules"}
 
 // unknownConfig returns a problem for each field and rules key of grove.yaml
 // that Grove does not know. Other commands ignore them (D-58).
-func unknownConfig(top string) ([]string, error) {
+func unknownConfig(top string, ip instruct.Project) ([]string, error) {
 	b, err := os.ReadFile(filepath.Join(top, "grove.yaml"))
 	if err != nil {
 		return nil, err
@@ -68,12 +69,12 @@ func unknownConfig(top string) ([]string, error) {
 	for _, s := range instruct.Skills() {
 		skills = append(skills, s.Name)
 	}
-	kinds, out := instruct.Kinds(), []string(nil)
+	kinds, out := ip.Kinds(), []string(nil)
 	fields := root.Content[0].Content
 	for i := 0; i+1 < len(fields); i += 2 {
 		key, value := fields[i], fields[i+1]
 		if !slices.Contains(configFields, key.Value) {
-			out = append(out, fmt.Sprintf("grove.yaml:%d: unknown field %q; grove.yaml takes %s and rules", key.Line, key.Value, strings.Join(configFields[:4], ", ")))
+			out = append(out, fmt.Sprintf("grove.yaml:%d: unknown field %q; grove.yaml takes %s and rules", key.Line, key.Value, strings.Join(configFields[:5], ", ")))
 			continue
 		}
 		for j := 0; key.Value == "rules" && j+1 < len(value.Content); j += 2 {

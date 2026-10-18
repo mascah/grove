@@ -102,7 +102,7 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
   > grove/changes/<change-id>-<slug>/proposal.md:1: the first heading should be "# <new title>", the title in .grove.yaml
 - **A change without its proposal** (reference, "Files"). After step 3,
   delete the change's `proposal.md` and run `grove check`. It exits non-zero:
-  > grove/changes/<change-id>-<slug>/proposal.md: missing; it is the change's main document
+  > grove/changes/<change-id>-<slug>/proposal.md: missing; it is the change's main document in schema default
 
   `grove instructions propose <change-id>` still finds the change, so a
   session can write the proposal again.
@@ -115,12 +115,28 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
   propose "x"` now gives that template. `/grove-propose Editing a missing
   record should print an error` writes `tasks.md` with a `Rollback:` line in
   each task, and `grove check` is clean.
+- **A bug** (reference, "Change schemas"). On a new branch, write
+  `grove/schemas/bugfix/` from the reference's example. In a fresh
+  session, `/grove-propose Editing a missing record crashes. It's a bug.`
+  The session sees `bugfix` under "Change schemas", confirms with me that
+  this is a bug, runs `grove instructions propose --schema bugfix "..."`,
+  and follows that: it reproduces the `StopIteration` traceback of
+  `ledger edit 99 --note x`, and finds no maintained requirement for a
+  missing record, so it asks whether the corrected behavior should be
+  agreed. I say yes. It writes `proposal.md` with Observed, Expected,
+  Reproduction and The requirement it breaks, a change spec adding "editing
+  a missing record prints an error" to `record-editing`, `tasks.md` whose
+  T-01 starts with a test that reproduces the crash, and `.grove.yaml` with
+  `schema: bugfix`. Commit and merge it, then on another branch
+  `/grove-apply <change-id>` builds it (its instructions name schema
+  `bugfix`) and `/grove-archive <change-id>` adds the requirement to
+  `grove/specs/record-editing/spec.md` and archives the change.
 - **A mistake in grove.yaml** (reference, "grove.yaml"). Add `derp: [x]`
   under `rules` and a top-level `rule: {}` in `grove.yaml`. `grove check`
   reports both and exits non-zero:
   > grove.yaml:<line>: unknown rules key "derp"; kinds are proposal, change-spec, tasks, implementation, spec, and skills are explore, propose, apply, archive
 
-  > grove.yaml:<line>: unknown field "rule"; grove.yaml takes root, target, agents, context and rules
+  > grove.yaml:<line>: unknown field "rule"; grove.yaml takes root, target, agents, schema, context and rules
 
   `grove changes` still works.
 - **Commit as you go** (reference, `rules`). With
@@ -157,7 +173,7 @@ Owner, asked whether to add each:
 Agent inference, not the owner's decisions (rule 25).
 
 - `grove.yaml` fields and defaults: `root: grove`, `target: main`,
-  `agents: [claude, codex]`, `context`, and `rules` keyed by `proposal`,
+  `agents: [claude, codex]`, `schema: default`, `context`, and `rules` keyed by `proposal`,
   `change-spec`, `tasks`, `implementation` and `spec`, or by a skill.
 - `init` never overwrites `grove.yaml` and always rewrites the skills.
   Its second run says "Kept grove.yaml and wrote the Grove skills for claude

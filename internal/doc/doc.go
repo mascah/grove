@@ -8,6 +8,7 @@
 package doc
 
 import (
+	"cmp"
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
@@ -33,7 +34,7 @@ func (d Diagnostic) String() string {
 }
 
 // Meta is a document's metadata.
-type Meta struct{ Title, Created, Description string }
+type Meta struct{ Title, Created, Description, Schema string }
 
 // Document is a maintained spec or a change: a folder, with its metadata.
 type Document struct {
@@ -55,16 +56,10 @@ type Collection struct {
 	Changes []*Change
 }
 
-// Required fields of each kind, in written order; description is optional
-// everywhere.
-var (
-	specFields   = []string{"title"}
-	changeFields = []string{"title", "created"}
-)
-
-// Load reads the collection under fsys; main is the file of a change folder
-// that holds its main document.
-func Load(fsys fs.FS, main string) (*Collection, error) {
+// Load reads the collection under fsys. main returns the file in a change
+// folder that holds the main document of a change schema, or a problem when
+// the name is not a schema's.
+func Load(fsys fs.FS, main func(schema string) (file, problem string)) (*Collection, error) {
 	c := &Collection{}
 	specs, err := fs.Glob(fsys, "specs/*/.grove.yaml") // sorted
 	if err != nil {
@@ -72,7 +67,10 @@ func Load(fsys fs.FS, main string) (*Collection, error) {
 	}
 	for _, name := range specs {
 		d := &Document{ID: path.Base(path.Dir(name)), Dir: path.Dir(name)}
-		if err := d.read(fsys, specFields, "spec.md", "spec's"); err != nil {
+		if _, err := d.read(fsys, []string{"title"}, "description"); err != nil {
+			return nil, err
+		}
+		if err := d.heading(fsys, d.Dir+"/spec.md", "missing; it is the spec's main document"); err != nil {
 			return nil, err
 		}
 		c.Specs = append(c.Specs, d)
@@ -88,10 +86,20 @@ func Load(fsys fs.FS, main string) (*Collection, error) {
 		} else {
 			ch.report(ch.Dir+"/", 0, "the folder name must start with a change ID, such as 261015-k3m9q")
 		}
-		if err := ch.read(fsys, changeFields, main, "change's"); err != nil {
+		lines, err := ch.read(fsys, []string{"title", "created"}, "schema", "description")
+		if err != nil {
 			return nil, err
 		}
-		err := fs.WalkDir(fsys, ch.Dir, func(name string, d fs.DirEntry, err error) error {
+		ch.Meta.Schema = cmp.Or(ch.Meta.Schema, "default") // changes made before schemas
+		switch file, problem := main(ch.Meta.Schema); {
+		case problem != "":
+			ch.report(name, lines["schema"], problem)
+		case file != "":
+			if err := ch.heading(fsys, ch.Dir+"/"+file, "missing; it is the change's main document in schema "+ch.Meta.Schema); err != nil {
+				return nil, err
+			}
+		}
+		err = fs.WalkDir(fsys, ch.Dir, func(name string, d fs.DirEntry, err error) error {
 			if err == nil && !d.IsDir() && (strings.HasSuffix(name, ".md") || name == ch.Dir+"/.grove.yaml") {
 				ch.Files = append(ch.Files, name)
 			}

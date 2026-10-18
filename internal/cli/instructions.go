@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"cmp"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -28,10 +30,10 @@ func instructionsExplore(stdout io.Writer) error {
 	return show(stdout)(instruct.Explore(ip))
 }
 
-// instructionsPropose prints the propose instructions: for a new change
-// when arg is empty or a description, or for revising the drafted change
-// whose ID arg is.
-func instructionsPropose(stdout io.Writer, arg string) error {
+// instructionsPropose prints the propose instructions: for a new change in
+// change schema schema, or grove.yaml's when it is empty, when arg is empty
+// or a description, or for revising the drafted change whose ID arg is.
+func instructionsPropose(stdout io.Writer, schema, arg string) error {
 	p, err := openProject()
 	if err != nil {
 		return err
@@ -42,10 +44,12 @@ func instructionsPropose(stdout io.Writer, arg string) error {
 	}
 	if !doc.ValidID(arg) {
 		now := time.Now()
-		return show(stdout)(instruct.Propose(ip, doc.NewID(now), now.UTC().Format(time.RFC3339), arg))
+		return show(stdout)(instruct.Propose(ip, cmp.Or(schema, p.Schema), doc.NewID(now), now.UTC().Format(time.RFC3339), arg))
 	}
-	fsys := os.DirFS(filepath.Join(p.Top, p.Root))
-	c, files, err := change(fsys, arg)
+	if schema != "" {
+		return errors.New("a change keeps its schema; to change it, edit schema in the change's .grove.yaml")
+	}
+	c, files, err := change(os.DirFS(filepath.Join(p.Top, p.Root)), ip.MainDocument, arg)
 	if err != nil {
 		return err
 	}
@@ -63,7 +67,7 @@ func instructionsArchive(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
-	c, files, err := change(os.DirFS(filepath.Join(p.Top, p.Root)), id)
+	c, files, err := change(os.DirFS(filepath.Join(p.Top, p.Root)), ip.MainDocument, id)
 	if err != nil {
 		return err
 	}
@@ -77,7 +81,7 @@ func archive(stdout io.Writer, id string) error {
 		return err
 	}
 	root := filepath.Join(p.Top, p.Root)
-	c, _, err := change(os.DirFS(root), id)
+	c, _, err := change(os.DirFS(root), p.instruct().MainDocument, id)
 	if err != nil {
 		return err
 	}
@@ -141,7 +145,7 @@ func instructionsApply(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
-	c, files, err := change(fsys, id)
+	c, files, err := change(fsys, ip.MainDocument, id)
 	if err != nil {
 		return err
 	}
@@ -159,9 +163,9 @@ func show(stdout io.Writer) func(instruct.Instructions, error) error {
 }
 
 // change loads change id from the document root fsys, with every file it
-// holds.
-func change(fsys fs.FS, id string) (*doc.Change, map[string]string, error) {
-	all, err := doc.Load(fsys, instruct.MainDocument())
+// holds; main is as doc.Load takes it.
+func change(fsys fs.FS, main func(string) (string, string), id string) (*doc.Change, map[string]string, error) {
+	all, err := doc.Load(fsys, main)
 	if err != nil {
 		return nil, nil, err
 	}

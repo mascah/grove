@@ -28,11 +28,14 @@ you merge it.
 
 ## A change
 
-A change folder holds:
+A change has a change schema, which decides the documents it holds and
+how each step goes for it. It is `default` unless the project has others
+and you choose one while proposing (see [Reference](reference.md), "Change
+schemas"). A `default` change folder holds:
 
 | File | Written by | Says |
 | --- | --- | --- |
-| `.grove.yaml` | propose | Title, when it was created, and an optional one-line description. |
+| `.grove.yaml` | propose | Title, when it was created, its schema, and an optional one-line description. |
 | `proposal.md` | propose | Why, what changes, decisions with who made them, open questions. |
 | `specs/<capability>/spec.md` | propose | Requirements the change adds, changes or removes, for one capability each. |
 | `tasks.md` | propose | The work as numbered tasks, each with how to check it is done. |
@@ -64,7 +67,8 @@ builds the change as your main branch holds it and records each task's
 status in `implementation.md`, and archiving refuses a change that is
 neither finished nor dropped. How each step goes, and which documents a
 change has, comes from the change's schema. Grove's built-in schema,
-`default`, is the software change this page describes.
+`default`, is the software change this page describes; a project can change
+its files and add schemas of its own.
 
 ## Two halves
 
@@ -87,6 +91,8 @@ capability's ID is a short lowercase name, such as `projects`.
   `changes/archive/`.
 - **Capability:** one area of behavior, with one maintained spec.
 - **Change:** a folder proposing future work.
+- **Change schema:** what a kind of change consists of and how each skill
+  goes for it; Grove's is `default`.
 - **Context:** project facts in `grove.yaml` given to every skill.
 - **Harness:** the agent you run, such as Claude Code or Codex.
 - **Maintained spec:** agreed behavior of one capability.

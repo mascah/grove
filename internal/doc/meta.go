@@ -14,21 +14,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// read reads d's .grove.yaml into d.Meta, then checks main, the main
-// document of whose folder d is.
-func (d *Document) read(fsys fs.FS, required []string, main, whose string) error {
+// read reads d's .grove.yaml into d.Meta and returns the line of each field
+// it set.
+func (d *Document) read(fsys fs.FS, required []string, optional ...string) (map[string]int, error) {
 	b, err := fs.ReadFile(fsys, d.Dir+"/.grove.yaml")
 	if err != nil {
-		return err
+		return nil, err
 	}
-	d.parse(d.Dir+"/.grove.yaml", b, required)
-	return d.heading(fsys, d.Dir+"/"+main, whose)
+	return d.parse(d.Dir+"/.grove.yaml", b, required, optional), nil
 }
 
 // parse reads the YAML mapping src of file into d.Meta, reporting every
 // field of required that is missing or empty, and every field that is
-// neither required nor description.
-func (d *Document) parse(file string, src []byte, required []string) {
+// neither required nor optional, and returns the line of each field it set.
+func (d *Document) parse(file string, src []byte, required, optional []string) map[string]int {
 	var root yaml.Node
 	if err := yaml.NewDecoder(bytes.NewReader(src)).Decode(&root); err != nil && !errors.Is(err, io.EOF) {
 		line, msg := 0, strings.TrimPrefix(err.Error(), "yaml: ")
@@ -37,22 +36,23 @@ func (d *Document) parse(file string, src []byte, required []string) {
 			msg = m[2]
 		}
 		d.report(file, line, "invalid YAML: "+msg)
-		return
+		return nil
 	}
 	values, lines := map[string]string{}, map[string]int{}
 	if len(root.Content) > 0 {
 		n := root.Content[0]
 		if n.Kind != yaml.MappingNode {
 			d.report(file, n.Line, "expected a YAML mapping of fields")
-			return
+			return nil
 		}
 		for i := 0; i+1 < len(n.Content); i += 2 {
 			key, value := n.Content[i], n.Content[i+1]
 			switch first, seen := lines[key.Value]; {
 			case seen:
 				d.report(file, key.Line, fmt.Sprintf("duplicate key %q; first set on line %d", key.Value, first))
-			case !slices.Contains(required, key.Value) && key.Value != "description":
-				d.report(file, key.Line, fmt.Sprintf("unknown field %q; this file takes %s and description", key.Value, strings.Join(required, ", ")))
+			case !slices.Contains(required, key.Value) && !slices.Contains(optional, key.Value):
+				all := slices.Concat(required, optional)
+				d.report(file, key.Line, fmt.Sprintf("unknown field %q; this file takes %s and %s", key.Value, strings.Join(all[:len(all)-1], ", "), all[len(all)-1]))
 			case value.Kind != yaml.ScalarNode || strings.TrimSpace(value.Value) == "":
 				d.report(file, key.Line, key.Value+": expected a non-empty value")
 			default:
@@ -65,16 +65,17 @@ func (d *Document) parse(file string, src []byte, required []string) {
 			d.report(file, 0, key+": required field is missing")
 		}
 	}
-	d.Meta = Meta{Title: values["title"], Created: values["created"], Description: values["description"]}
+	d.Meta = Meta{Title: values["title"], Created: values["created"], Description: values["description"], Schema: values["schema"]}
+	return lines
 }
 
-// heading reports file when it is missing or its first "# " heading is not
-// d's title. With no title, the missing title is the problem, reported
-// already.
-func (d *Document) heading(fsys fs.FS, file, whose string) error {
+// heading reports file, with missing when there is none, or when its first
+// "# " heading is not d's title. With no title, the missing title is the
+// problem, reported already.
+func (d *Document) heading(fsys fs.FS, file, missing string) error {
 	b, err := fs.ReadFile(fsys, file)
 	if errors.Is(err, fs.ErrNotExist) {
-		d.report(file, 0, "missing; it is the "+whose+" main document")
+		d.report(file, 0, missing)
 		return nil
 	}
 	if err != nil || d.Meta.Title == "" {

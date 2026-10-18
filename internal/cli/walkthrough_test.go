@@ -111,8 +111,8 @@ func TestCheck(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(config, "rules: {}", "rules:\n  derp: [x]\nrule: {}", 1)), 0o644)
 	var stdout, stderr strings.Builder
 	code := run([]string{"check"}, &stdout, &stderr)
-	want := "grove.yaml:18: unknown rules key \"derp\"; kinds are proposal, change-spec, tasks, implementation, spec, and skills are explore, propose, apply, archive\n" +
-		"grove.yaml:19: unknown field \"rule\"; grove.yaml takes root, target, agents, context and rules\n"
+	want := "grove.yaml:22: unknown rules key \"derp\"; kinds are proposal, change-spec, tasks, implementation, spec, and skills are explore, propose, apply, archive\n" +
+		"grove.yaml:23: unknown field \"rule\"; grove.yaml takes root, target, agents, schema, context and rules\n"
 	if code != 1 || stdout.String() != want || stderr.String() != "grove: 2 problems found\n" {
 		t.Errorf("check of grove.yaml: status %d\n%s%s", code, stdout.String(), stderr.String())
 	}
@@ -135,8 +135,8 @@ func TestCheck(t *testing.T) {
 	code = run([]string{"check"}, &stdout, &stderr)
 	want = "grove/specs/record-editing/.grove.yaml:2: unknown field \"owner\"; this file takes title and description\n" +
 		"grove/specs/record-editing/.grove.yaml: title: required field is missing\n" +
-		"grove/changes/261015-k3m9q-no-proposal/proposal.md: missing; it is the change's main document\n" +
-		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created and description\n" +
+		"grove/changes/261015-k3m9q-no-proposal/proposal.md: missing; it is the change's main document in schema default\n" +
+		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created, schema and description\n" +
 		"grove/changes/261015-q7r2s-drifted/proposal.md:1: the first heading should be \"# New title\", the title in .grove.yaml\n" +
 		"grove/changes/no-id/: the folder name must start with a change ID, such as 261015-k3m9q\n"
 	if code != 1 || stdout.String() != want || stderr.String() != "grove: 6 problems found\n" {
@@ -343,5 +343,57 @@ func TestArchive(t *testing.T) {
 	}
 	if len(next) >= 12<<10 {
 		t.Errorf("explore instructions are %d bytes, want under 12 KiB", len(next))
+	}
+}
+
+// TestSchemas follows the walkthrough's "A bug": a project schema chosen
+// for a new change, and kept by the change.
+func TestSchemas(t *testing.T) {
+	dir := setUp(t)
+	for name, content := range map[string]string{
+		"bugfix/schema.yaml":           "description: A fix for behavior that is wrong.\n",
+		"bugfix/guides/propose.md":     "**Propose a bug fix.**\n",
+		"bugfix/templates/proposal.md": "# <title>\n\n## Observed\n",
+		"short/schema.yaml":            "description: Short.\nskills:\n  propose:\n    writes: [proposal, tasks]\n",
+	} {
+		os.MkdirAll(filepath.Dir(filepath.Join(dir, "grove/schemas", name)), 0o755)
+		os.WriteFile(filepath.Join(dir, "grove/schemas", name), []byte(content), 0o644)
+	}
+	if out := grove(t, "instructions", "propose", "Editing a missing record crashes"); !strings.Contains(out, "these instructions follow `default`.\n\n- `default`: Software changes") ||
+		!strings.Contains(out, "- `bugfix`: A fix for behavior that is wrong.\n- `short`: Short.\n") {
+		t.Errorf("propose instructions do not list the schemas:\n%s", out)
+	}
+	out := grove(t, "instructions", "propose", "--schema", "bugfix", "Editing a missing record crashes")
+	for _, s := range []string{", with change schema bugfix, from the owner's description", "## How to propose\n\n**Propose a bug fix.**", "/proposal.md\">\n# <title>\n\n## Observed\n",
+		"### change-spec: ", "### tasks: ", "/.grove.yaml\">\ntitle: <title>\ncreated: ", "schema: bugfix\n</file>"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("bugfix propose instructions lack %q", s)
+		}
+	}
+	if out := grove(t, "instructions", "propose", "--schema", "short"); strings.Contains(out, "### change-spec: ") || !strings.Contains(out, "**Propose says") {
+		t.Errorf("short propose instructions:\n%s", out)
+	}
+	var stdout, stderr strings.Builder
+	if code := run([]string{"instructions", "propose", "--schema", "bugfx"}, &stdout, &stderr); code != 1 || stderr.String() != "grove: schema \"bugfx\" is not a change schema; schemas are default, bugfix and short\n" {
+		t.Errorf("an unknown schema: status %d, %q", code, stderr.String())
+	}
+
+	cid := propose(t, dir)
+	folder := filepath.Join(dir, "grove/changes", cid+"-allow-editing-older-records")
+	os.WriteFile(filepath.Join(folder, ".grove.yaml"), []byte("title: Allow editing older records\ncreated: 2026-10-14T00:00:00Z\nschema: bugfix\n"), 0o644)
+	stderr.Reset()
+	if code := run([]string{"instructions", "propose", "--schema", "default", cid}, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), "a change keeps its schema") {
+		t.Errorf("--schema with a change ID: status %d, %q", code, stderr.String())
+	}
+	if out := grove(t, "instructions", "propose", cid); !strings.Contains(out, "\"Allow editing older records\", with change schema bugfix, in") || !strings.Contains(out, "**Propose a bug fix.**") {
+		t.Errorf("bugfix revise instructions:\n%.2000s", out)
+	}
+	commitAll(t, dir, "Propose")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
+	for skill, s := range map[string]string{"apply": "One task at a time", "archive": "Reconcile the specs"} {
+		if out := grove(t, "instructions", skill, cid); !strings.Contains(out, ", with change schema bugfix, ") || !strings.Contains(out, s) {
+			t.Errorf("bugfix %s instructions:\n%.2000s", skill, out)
+		}
 	}
 }

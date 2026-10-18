@@ -18,6 +18,9 @@ const config = `# Grove: where its documents live, which branch holds what is ag
 root: grove
 target: main
 agents: [claude, codex]
+# The change schema a new change has unless the owner names another while
+# proposing: Grove's default, or one of the project's in <root>/schemas/.
+schema: default
 # Facts about this project given to every skill: the language, how tests
 # run, anything an agent cannot read from the code. Keep it short.
 context: ""
@@ -27,7 +30,8 @@ context: ""
 #     - List who is affected.
 #   apply:
 #     - Commit after each task, naming its task ID.
-# Kinds: proposal, change-spec, tasks, implementation, spec.
+# Kinds: proposal, change-spec, tasks, implementation, spec, and those of
+# the project's own schemas.
 # Skills: explore, propose, apply, archive.
 rules: {}
 `

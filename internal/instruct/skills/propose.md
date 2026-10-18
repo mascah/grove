@@ -3,6 +3,11 @@
 - Write the documents below in the change folder their paths name, with its
   `.grove.yaml` from its template. For a new change, replace `<slug>` with a
   few lowercase words of its title joined by hyphens.
+- A new change: if the project's change schemas are listed below and the
+  owner says the work is of another kind than these instructions follow,
+  confirm it with them, run Grove's `instructions propose --schema <name>`
+  with the owner's description in quotes, if there is one, and follow what
+  it prints instead.
 - Revising a drafted change: its files are below. Change what the owner asks
   for and leave the rest as it is. If the project index lists it as
   approved, tell the owner that editing it changes approved work before you

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"path"
 	"slices"
 	"strings"
@@ -45,9 +46,10 @@ var skills []Skill
 // Paths are relative to the document root.
 type Kind struct{ Kind, Path, Template, Guide, Metadata string }
 
-// Schema is a change schema: its kinds of document and, for each skill, its
-// guide and the kinds of document it writes.
+// Schema is a change schema as a project has it: its kinds of document
+// and, for each skill, its guide and the kinds of document it writes.
 type Schema struct {
+	Name        string `yaml:"-"`
 	Description string
 	Documents   []Kind
 	Skills      map[string]Step
@@ -59,8 +61,8 @@ type Step struct {
 	Writes []string
 }
 
-// schema is Grove's built-in change schema, default.
-var schema Schema
+// builtin is Grove's change schema, default, as its schema.yaml has it.
+var builtin Schema
 
 // changeMetadata is where a change's metadata goes; the kind that names it
 // is the change's main document.
@@ -75,36 +77,107 @@ var metadataTemplates = map[string]string{
 }
 
 func init() {
-	for name, v := range map[string]any{"skills.yaml": &skills, "schemas/default/schema.yaml": &schema} {
+	for name, v := range map[string]any{"skills.yaml": &skills, "schemas/default/schema.yaml": &builtin} {
 		if err := yaml.Unmarshal([]byte(embedded(name)), v); err != nil {
 			panic(err) // embedded at build time
 		}
 	}
 }
 
-// Kinds returns the names of the schema's kinds of document, in order.
-func Kinds() []string {
-	var names []string
-	for _, k := range schema.Documents {
-		names = append(names, k.Kind)
+// SchemaNames returns the project's change schemas: default, then each
+// folder of <root>/schemas/ that holds a schema.yaml.
+func (p Project) SchemaNames() []string {
+	names := []string{"default"}
+	found, _ := fs.Glob(p.Schemas, "*/schema.yaml") // only a bad pattern fails
+	for _, f := range found {
+		if dir := path.Dir(f); dir != "default" {
+			names = append(names, dir)
+		}
 	}
 	return names
 }
 
-// MainDocument returns the file of a change folder that holds its main
-// document.
-func MainDocument() string {
-	for _, k := range schema.Documents {
-		if k.Metadata == changeMetadata {
-			return strings.TrimPrefix(k.Path, "changes/<change>/")
+// dirs are the folders of <root>/schemas/ that schema name's files come
+// from, first first; Grove's default comes after them (D-55).
+func dirs(name string) []string { return slices.Compact([]string{name, "default"}) }
+
+// load returns change schema name: Grove's default, with the schema.yaml of
+// the project's default folder over it, then the schema's own, field by
+// field.
+func (p Project) load(name string) (Schema, error) {
+	if names := p.SchemaNames(); !slices.Contains(names, name) {
+		return Schema{}, errors.New(notSchema(name, names))
+	}
+	s := builtin
+	s.Name, s.Skills = name, maps.Clone(builtin.Skills)
+	for _, dir := range slices.Backward(dirs(name)) {
+		b, err := fs.ReadFile(p.Schemas, dir+"/schema.yaml")
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		var l Schema
+		if err == nil {
+			err = yaml.Unmarshal(b, &l)
+		}
+		if err != nil {
+			return s, fmt.Errorf("%s/schemas/%s/schema.yaml: %w", p.Root, dir, err)
+		}
+		s.Description = cmp.Or(l.Description, s.Description)
+		if l.Documents != nil {
+			s.Documents = l.Documents
+		}
+		for n, st := range l.Skills {
+			cur := s.Skills[n]
+			cur.Guide = cmp.Or(st.Guide, cur.Guide)
+			if st.Writes != nil {
+				cur.Writes = st.Writes
+			}
+			s.Skills[n] = cur
 		}
 	}
-	return ""
+	return s, nil
 }
 
-func kind(name string) Kind {
-	i := slices.IndexFunc(schema.Documents, func(k Kind) bool { return k.Kind == name })
-	return schema.Documents[i]
+func notSchema(name string, names []string) string {
+	return fmt.Sprintf("schema %q is not a change schema; schemas are %s", name, and(names))
+}
+
+// and joins names as "a, b and c".
+func and(names []string) string {
+	if len(names) == 1 {
+		return names[0]
+	}
+	return strings.Join(names[:len(names)-1], ", ") + " and " + names[len(names)-1]
+}
+
+// Kinds returns the names of the kinds of document of every change schema
+// the project has, in order.
+func (p Project) Kinds() []string {
+	var names []string
+	for _, n := range p.SchemaNames() {
+		s, _ := p.load(n) // a broken schema.yaml is check's to report
+		for _, k := range s.Documents {
+			if !slices.Contains(names, k.Kind) {
+				names = append(names, k.Kind)
+			}
+		}
+	}
+	return names
+}
+
+// MainDocument returns the file in a change folder that holds the main
+// document of change schema name, or a problem when name is not a schema.
+func (p Project) MainDocument(name string) (file, problem string) {
+	if names := p.SchemaNames(); !slices.Contains(names, name) {
+		return "", notSchema(name, names)
+	}
+	s, _ := p.load(name) // a broken schema.yaml is check's to report
+	for _, k := range s.Documents {
+		if k.Metadata == changeMetadata {
+			return strings.TrimPrefix(k.Path, "changes/<change>/"), ""
+		}
+	}
+	return "", ""
 }
 
 // Project is what a session is told about the repository.
@@ -116,6 +189,7 @@ type Project struct {
 	Context string              // grove.yaml's context
 	Rules   map[string][]string // grove.yaml's rules, by kind of document or skill
 	Schemas fs.FS               // <root>/schemas in the working tree, the project's own schema files
+	Schema  string              // grove.yaml's schema, for exploring and new changes
 }
 
 // Instructions is everything one skill's instructions say, built before
@@ -123,6 +197,8 @@ type Project struct {
 type Instructions struct {
 	Project
 	Skill       string
+	Follows     Schema     // the change schema the instructions follow
+	Schemas     []Schema   // the project's change schemas, listed when a new change may choose
 	Task        string     // what the session is doing, one sentence
 	Requires    string     // what Grove requires of the skill, in every schema
 	Guide       string     // how the skill goes, from the change schema
@@ -142,30 +218,47 @@ type Document struct {
 // File is one document included in full; Path is from the repository root.
 type File struct{ Path, Content string }
 
-// file returns a file of the change schema: the project's own, from
-// <root>/schemas/default/, if it has one, else Grove's (D-55).
-func (p Project) file(name string) (string, error) {
-	b, err := fs.ReadFile(p.Schemas, "default/"+name)
-	if errors.Is(err, fs.ErrNotExist) {
-		return embedded("schemas/default/" + name), nil
+// file returns change schema s's file name, from the first of its folders
+// that has it, else from Grove's default.
+func (p Project) file(s, name string) (string, error) {
+	for _, dir := range dirs(s) {
+		b, err := fs.ReadFile(p.Schemas, dir+"/"+name)
+		if !errors.Is(err, fs.ErrNotExist) {
+			return string(b), err
+		}
 	}
-	return string(b), err
+	b, err := files.ReadFile("schemas/default/" + name)
+	if err != nil {
+		also := ""
+		if s != "default" {
+			also = ", in " + p.Root + "/schemas/default"
+		}
+		return "", fmt.Errorf("%s/schemas/%s: no %s here%s or in Grove's default", p.Root, s, name, also)
+	}
+	return string(b), nil
 }
 
-// build returns skill name's instructions with its guide and documents,
-// fill's values put into their paths and templates, and change c's files
-// when c is not nil.
-func build(p Project, name, task string, fill *strings.Replacer, c *doc.Change, files map[string]string) (Instructions, error) {
-	var err error
+// build returns skill name's instructions in change schema s, with its guide
+// and documents, fill's values put into their paths and templates, and
+// change c's files when c is not nil.
+func build(p Project, s, name, task string, fill *strings.Replacer, c *doc.Change, files map[string]string) (Instructions, error) {
+	schema, err := p.load(s)
+	if err != nil {
+		return Instructions{}, err
+	}
 	file := func(name string) string {
-		s, e := p.file(name)
+		f, e := p.file(s, name)
 		err = cmp.Or(err, e)
-		return s
+		return f
 	}
 	st := schema.Skills[name]
-	in := Instructions{Project: p, Skill: name, Task: task, Requires: embedded("skills/" + name + ".md"), Guide: file(st.Guide)}
+	in := Instructions{Project: p, Skill: name, Follows: schema, Task: task, Requires: embedded("skills/" + name + ".md"), Guide: file(st.Guide)}
 	for _, kn := range st.Writes {
-		k := kind(kn)
+		i := slices.IndexFunc(schema.Documents, func(k Kind) bool { return k.Kind == kn })
+		if i < 0 {
+			return in, fmt.Errorf("%s/schemas/%s/schema.yaml: %s writes %q, which this schema does not list", p.Root, s, name, kn)
+		}
+		k := schema.Documents[i]
 		d := Document{Kind: k.Kind, Path: p.Root + "/" + fill.Replace(k.Path),
 			Guide: file(k.Guide), Template: fill.Replace(file(k.Template)), Rules: p.Rules[k.Kind]}
 		if k.Metadata != "" {
@@ -181,50 +274,76 @@ func build(p Project, name, task string, fill *strings.Replacer, c *doc.Change, 
 	return in, err
 }
 
-// Explore returns the instructions for interviewing the owner about an idea.
-func Explore(p Project) (Instructions, error) {
-	return build(p, "explore", "You are exploring an idea with the owner, in their own working tree.", strings.NewReplacer(), nil, nil)
+// choices returns the project's change schemas when it has more than
+// default, for a new change to choose from.
+func (p Project) choices() []Schema {
+	names := p.SchemaNames()
+	if len(names) == 1 {
+		return nil
+	}
+	var out []Schema
+	for _, n := range names {
+		s, _ := p.load(n) // a broken schema.yaml is check's to report
+		out = append(out, s)
+	}
+	return out
 }
 
-// Propose returns the instructions for writing new change id, created at
-// created, from the conversation or from description when it is not empty.
-func Propose(p Project, id, created, description string) (Instructions, error) {
+// with names change schema s in a task sentence, unless it is default.
+func with(s string) string {
+	if s == "default" {
+		return ""
+	}
+	return ", with change schema " + s
+}
+
+// Explore returns the instructions for interviewing the owner about an idea.
+func Explore(p Project) (Instructions, error) {
+	in, err := build(p, p.Schema, "explore", "You are exploring an idea with the owner, in their own working tree.", strings.NewReplacer(), nil, nil)
+	in.Schemas = p.choices()
+	return in, err
+}
+
+// Propose returns the instructions for writing new change id in change
+// schema s, created at created, from the conversation or from description
+// when it is not empty.
+func Propose(p Project, s, id, created, description string) (Instructions, error) {
 	from := "this conversation"
 	if description != "" {
 		from = "the owner's description below"
 	}
-	in, err := build(p, "propose", fmt.Sprintf("You are proposing new change %s from %s, in the owner's own working tree.", id, from),
-		strings.NewReplacer("<change>", id+"-<slug>", "{{change}}", id, "{{created}}", created, "{{base}}", short(p.Commit)), nil, nil)
-	in.Description = description
+	in, err := build(p, s, "propose", fmt.Sprintf("You are proposing new change %s%s, from %s, in the owner's own working tree.", id, with(s), from),
+		strings.NewReplacer("<change>", id+"-<slug>", "{{change}}", id, "{{created}}", created, "{{schema}}", s, "{{base}}", short(p.Commit)), nil, nil)
+	in.Description, in.Schemas = description, p.choices()
 	return in, err
 }
 
 // Revise returns the instructions for revising drafted change c, read from
 // the working tree; files are c.Files as read from there.
 func Revise(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
-	task := fmt.Sprintf("You are revising drafted change %s, %q, in the owner's own working tree.", c.ID, c.Meta.Title)
-	return build(p, "propose", task, fill(p, c), c, files)
+	task := fmt.Sprintf("You are revising drafted change %s, %q%s, in the owner's own working tree.", c.ID, c.Meta.Title, with(c.Meta.Schema))
+	return build(p, c.Meta.Schema, "propose", task, fill(p, c), c, files)
 }
 
 // Apply returns the instructions for applying change c, which the target
 // holds; files are c.Files as read from there.
 func Apply(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
-	task := fmt.Sprintf("You are applying approved change %s, %q, as %s@%s holds it, in your own working tree.",
-		c.ID, c.Meta.Title, p.Target, short(p.Commit))
-	return build(p, "apply", task, fill(p, c), c, files)
+	task := fmt.Sprintf("You are applying approved change %s, %q%s, as %s@%s holds it, in your own working tree.",
+		c.ID, c.Meta.Title, with(c.Meta.Schema), p.Target, short(p.Commit))
+	return build(p, c.Meta.Schema, "apply", task, fill(p, c), c, files)
 }
 
 // Archive returns the instructions for archiving change c, read from the
 // working tree; files are c.Files as read from there.
 func Archive(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
-	task := fmt.Sprintf("You are archiving change %s, %q, in the owner's own working tree.", c.ID, c.Meta.Title)
-	return build(p, "archive", task, fill(p, c), c, files)
+	task := fmt.Sprintf("You are archiving change %s, %q%s, in the owner's own working tree.", c.ID, c.Meta.Title, with(c.Meta.Schema))
+	return build(p, c.Meta.Schema, "archive", task, fill(p, c), c, files)
 }
 
 // fill puts change c's values into paths and templates.
 func fill(p Project, c *doc.Change) *strings.Replacer {
 	return strings.NewReplacer("<change>", path.Base(c.Dir), "{{title}}", c.Meta.Title,
-		"{{change}}", c.ID, "{{created}}", c.Meta.Created, "{{base}}", short(p.Commit))
+		"{{change}}", c.ID, "{{created}}", c.Meta.Created, "{{schema}}", c.Meta.Schema, "{{base}}", short(p.Commit))
 }
 
 // Markdown renders the instructions as the text a session reads.
@@ -237,6 +356,13 @@ func (in Instructions) Markdown() string {
 	fmt.Fprintf(&b, "## What Grove requires of %s\n\n%s\n", in.Skill, in.Requires)
 	fmt.Fprintf(&b, "## How to %s\n\n%s\n", in.Skill, in.Guide)
 	rules(&b, "skill", in.Rules[in.Skill])
+	if len(in.Schemas) > 0 {
+		fmt.Fprintf(&b, "## Change schemas\n\nThe project's change schemas; these instructions follow `%s`.\n\n", in.Follows.Name)
+		for _, s := range in.Schemas {
+			fmt.Fprintf(&b, "- `%s`: %s\n", s.Name, s.Description)
+		}
+		b.WriteString("\n")
+	}
 	if in.Description != "" {
 		fmt.Fprintf(&b, "## Owner's description\n\n%s\n\n", in.Description)
 	}
