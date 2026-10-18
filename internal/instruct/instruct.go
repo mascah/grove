@@ -5,13 +5,16 @@
 package instruct
 
 import (
+	"bytes"
 	"cmp"
 	"embed"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"maps"
 	"path"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -218,6 +221,135 @@ type Document struct {
 // File is one document included in full; Path is from the repository root.
 type File struct{ Path, Content string }
 
+// Check returns each problem in the project's change schemas: the
+// structure every schema keeps, the files each names, and, which other
+// commands ignore, unknown fields and unused files.
+func (p Project) Check() []string {
+	out, used := p.fields(), map[string]bool{}
+	for _, n := range p.SchemaNames() {
+		s, err := p.load(n)
+		if err != nil {
+			continue // invalid YAML, which fields reports
+		}
+		out = append(out, p.problems(s)...)
+		for _, f := range s.files() {
+			for _, dir := range dirs(n) {
+				used[dir+"/"+f] = true
+			}
+		}
+	}
+	fs.WalkDir(p.Schemas, ".", func(name string, d fs.DirEntry, err error) error {
+		dir, _, _ := strings.Cut(name, "/")
+		if err == nil && !d.IsDir() && path.Base(name) != "schema.yaml" && !used[name] && slices.Contains(p.SchemaNames(), dir) {
+			out = append(out, fmt.Sprintf("%s/schemas/%s: schema %s does not use this file", p.Root, name, dir))
+		}
+		return err
+	})
+	return out
+}
+
+var (
+	yamlLine     = regexp.MustCompile(`^(?:yaml: )?line ([0-9]+): (.*)$`)
+	unknownField = regexp.MustCompile(`^field (\S+) not found in type instruct\.(\w+)$`)
+	takes        = map[string]string{"Schema": "schema.yaml takes description, documents and skills",
+		"Kind": "a document takes kind, path, template, guide and metadata", "Step": "a skill takes guide and writes"}
+)
+
+// fields returns each unknown field and YAML error in the project's
+// schema.yaml files.
+func (p Project) fields() []string {
+	var out []string
+	for _, n := range p.SchemaNames() {
+		file := n + "/schema.yaml"
+		b, err := fs.ReadFile(p.Schemas, file)
+		if err != nil {
+			continue // default's is optional
+		}
+		d := yaml.NewDecoder(bytes.NewReader(b))
+		d.KnownFields(true)
+		msgs, te := []string{}, &yaml.TypeError{}
+		if err := d.Decode(&Schema{}); errors.As(err, &te) {
+			msgs = te.Errors
+		} else if err != nil && !errors.Is(err, io.EOF) {
+			msgs = []string{err.Error()}
+		}
+		for _, m := range msgs {
+			line, msg := "", m
+			if l := yamlLine.FindStringSubmatch(m); l != nil {
+				line, msg = ":"+l[1], l[2]
+			}
+			if f := unknownField.FindStringSubmatch(msg); f != nil {
+				msg = fmt.Sprintf("unknown field %q; %s", f[1], takes[f[2]])
+			}
+			out = append(out, fmt.Sprintf("%s/schemas/%s%s: %s", p.Root, file, line, msg))
+		}
+	}
+	return out
+}
+
+// problems returns what makes schema s unusable: a structure Grove relies
+// on that it lacks, a kind it writes but does not list, or a file it names
+// that is in none of its places.
+func (p Project) problems(s Schema) []string {
+	var out []string
+	report := func(format string, a ...any) {
+		out = append(out, fmt.Sprintf("%s/schemas/%s/schema.yaml: ", p.Root, s.Name)+fmt.Sprintf(format, a...))
+	}
+	kinds, mains := map[string]Kind{}, 0
+	for _, k := range s.Documents {
+		kinds[k.Kind] = k
+		if _, ok := metadataTemplates[k.Metadata]; k.Metadata != "" && !ok {
+			report("%s: metadata must be %s or specs/<capability>/.grove.yaml", k.Kind, changeMetadata)
+		}
+		if k.Metadata == changeMetadata {
+			mains++
+		}
+		if !strings.HasPrefix(k.Path, "changes/<change>/") && (k.Kind != "spec" || k.Path != "specs/<capability>/spec.md") {
+			report("%s is at %s; kinds are in changes/<change>/, except spec at specs/<capability>/spec.md", k.Kind, k.Path)
+		}
+	}
+	for _, k := range []string{"tasks", "implementation"} {
+		if kinds[k].Path != "changes/<change>/"+k+".md" {
+			report("%s must be at changes/<change>/%s.md; Grove reads it to archive", k, k)
+		}
+	}
+	if mains != 1 {
+		report("one kind, the change's main document, must have metadata %s", changeMetadata)
+	}
+	var names []string
+	for _, sk := range skills {
+		names = append(names, sk.Name)
+		for _, w := range s.Skills[sk.Name].Writes {
+			if _, ok := kinds[w]; !ok {
+				report("%s writes %q, which this schema does not list", sk.Name, w)
+			}
+		}
+	}
+	for _, n := range slices.Sorted(maps.Keys(s.Skills)) {
+		if !slices.Contains(names, n) {
+			report("unknown skill %q; skills are %s", n, and(names))
+		}
+	}
+	for _, f := range s.files() {
+		if _, err := p.file(s.Name, f); err != nil {
+			out = append(out, err.Error())
+		}
+	}
+	return out
+}
+
+// files returns every file schema s names.
+func (s Schema) files() []string {
+	var out []string
+	for _, k := range s.Documents {
+		out = append(out, k.Template, k.Guide)
+	}
+	for _, sk := range skills {
+		out = append(out, s.Skills[sk.Name].Guide)
+	}
+	return out
+}
+
 // file returns change schema s's file name, from the first of its folders
 // that has it, else from Grove's default.
 func (p Project) file(s, name string) (string, error) {
@@ -246,6 +378,9 @@ func build(p Project, s, name, task string, fill *strings.Replacer, c *doc.Chang
 	if err != nil {
 		return Instructions{}, err
 	}
+	if problems := p.problems(schema); len(problems) > 0 {
+		return Instructions{}, errors.New(problems[0])
+	}
 	file := func(name string) string {
 		f, e := p.file(s, name)
 		err = cmp.Or(err, e)
@@ -254,11 +389,7 @@ func build(p Project, s, name, task string, fill *strings.Replacer, c *doc.Chang
 	st := schema.Skills[name]
 	in := Instructions{Project: p, Skill: name, Follows: schema, Task: task, Requires: embedded("skills/" + name + ".md"), Guide: file(st.Guide)}
 	for _, kn := range st.Writes {
-		i := slices.IndexFunc(schema.Documents, func(k Kind) bool { return k.Kind == kn })
-		if i < 0 {
-			return in, fmt.Errorf("%s/schemas/%s/schema.yaml: %s writes %q, which this schema does not list", p.Root, s, name, kn)
-		}
-		k := schema.Documents[i]
+		k := schema.Documents[slices.IndexFunc(schema.Documents, func(k Kind) bool { return k.Kind == kn })]
 		d := Document{Kind: k.Kind, Path: p.Root + "/" + fill.Replace(k.Path),
 			Guide: file(k.Guide), Template: fill.Replace(file(k.Template)), Rules: p.Rules[k.Kind]}
 		if k.Metadata != "" {

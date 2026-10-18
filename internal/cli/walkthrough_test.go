@@ -399,4 +399,32 @@ func TestSchemas(t *testing.T) {
 			t.Errorf("bugfix %s instructions:\n%.2000s", skill, out)
 		}
 	}
+
+	// The walkthrough's "A mistake in a schema", a change naming no schema,
+	// and a schema without tasks.
+	schemas := filepath.Join(dir, "grove/schemas")
+	os.Rename(filepath.Join(schemas, "bugfix/templates/proposal.md"), filepath.Join(schemas, "bugfix/templates/propsal.md"))
+	os.WriteFile(filepath.Join(schemas, "bugfix/schema.yaml"), []byte("description: A fix for behavior that is wrong.\ninstrution: x\n"), 0o644)
+	os.WriteFile(filepath.Join(folder, ".grove.yaml"), []byte("title: Allow editing older records\ncreated: 2026-10-14T00:00:00Z\nschema: bugfx\n"), 0o644)
+	os.MkdirAll(filepath.Join(schemas, "notasks"), 0o755)
+	os.WriteFile(filepath.Join(schemas, "notasks/schema.yaml"), []byte("description: N.\ndocuments:\n  - {kind: proposal, path: changes/<change>/proposal.md, template: templates/proposal.md, guide: guides/proposal.md, metadata: changes/<change>/.grove.yaml}\n"), 0o644)
+	stdout.Reset()
+	stderr.Reset()
+	code := run([]string{"check"}, &stdout, &stderr)
+	for _, s := range []string{
+		"grove/schemas/bugfix/schema.yaml:2: unknown field \"instrution\"; schema.yaml takes description, documents and skills\n",
+		"grove/schemas/bugfix/templates/propsal.md: schema bugfix does not use this file\n",
+		"grove/schemas/notasks/schema.yaml: tasks must be at changes/<change>/tasks.md; Grove reads it to archive\n",
+		"grove/changes/" + cid + "-allow-editing-older-records/.grove.yaml:3: schema \"bugfx\" is not a change schema; schemas are default, bugfix, notasks and short\n",
+	} {
+		if code != 1 || !strings.Contains(stdout.String(), s) {
+			t.Errorf("check lacks %q: status %d\n%s", s, code, stdout.String())
+		}
+	}
+	grove(t, "changes")
+	grove(t, "instructions", "propose", "--schema", "bugfix") // an unknown field or unused file stops no skill
+	stderr.Reset()
+	if code := run([]string{"instructions", "propose", "--schema", "notasks"}, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), "grove: grove/schemas/notasks/schema.yaml: ") {
+		t.Errorf("propose with a broken schema: status %d, %q", code, stderr.String())
+	}
 }

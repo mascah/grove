@@ -132,6 +132,15 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
   `/grove-apply <change-id>` builds it (its instructions name schema
   `bugfix`) and `/grove-archive <change-id>` adds the requirement to
   `grove/specs/record-editing/spec.md` and archives the change.
+- **A mistake in a schema** (reference, "Change schemas"). After "A bug",
+  rename `grove/schemas/bugfix/templates/proposal.md` to
+  `templates/propsal.md` and add `instrution: x` to its `schema.yaml`.
+  `grove check` reports both and exits non-zero:
+  > grove/schemas/bugfix/schema.yaml:2: unknown field "instrution"; schema.yaml takes description, documents and skills
+
+  > grove/schemas/bugfix/templates/propsal.md: schema bugfix does not use this file
+
+  `grove changes` still works.
 - **A mistake in grove.yaml** (reference, "grove.yaml"). Add `derp: [x]`
   under `rules` and a top-level `rule: {}` in `grove.yaml`. `grove check`
   reports both and exits non-zero:

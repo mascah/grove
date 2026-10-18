@@ -26,6 +26,7 @@ func check(stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
+	unknown = append(unknown, ip.Check()...)
 	for _, u := range unknown {
 		fmt.Fprintln(stdout, u)
 	}
@@ -55,7 +56,8 @@ func check(stdout io.Writer) error {
 var configFields = []string{"root", "target", "agents", "schema", "context", "rules"}
 
 // unknownConfig returns a problem for each field and rules key of grove.yaml
-// that Grove does not know. Other commands ignore them (D-58).
+// that Grove does not know, and a schema that is not one. Other commands
+// ignore the unknown fields and keys (D-58).
 func unknownConfig(top string, ip instruct.Project) ([]string, error) {
 	b, err := os.ReadFile(filepath.Join(top, "grove.yaml"))
 	if err != nil {
@@ -73,6 +75,9 @@ func unknownConfig(top string, ip instruct.Project) ([]string, error) {
 	fields := root.Content[0].Content
 	for i := 0; i+1 < len(fields); i += 2 {
 		key, value := fields[i], fields[i+1]
+		if _, problem := ip.MainDocument(value.Value); key.Value == "schema" && problem != "" {
+			out = append(out, fmt.Sprintf("grove.yaml:%d: %s", value.Line, problem))
+		}
 		if !slices.Contains(configFields, key.Value) {
 			out = append(out, fmt.Sprintf("grove.yaml:%d: unknown field %q; grove.yaml takes %s and rules", key.Line, key.Value, strings.Join(configFields[:5], ", ")))
 			continue
