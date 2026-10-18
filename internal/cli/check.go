@@ -64,9 +64,9 @@ func unknownConfig(top string) ([]string, error) {
 	if err := yaml.Unmarshal(b, &root); err != nil || len(root.Content) == 0 {
 		return nil, err
 	}
-	var workflows []string
-	for _, w := range instruct.Workflows() {
-		workflows = append(workflows, w.Name)
+	var skills []string
+	for _, s := range instruct.Skills() {
+		skills = append(skills, s.Name)
 	}
 	kinds, out := instruct.Kinds(), []string(nil)
 	fields := root.Content[0].Content
@@ -77,9 +77,9 @@ func unknownConfig(top string) ([]string, error) {
 			continue
 		}
 		for j := 0; key.Value == "rules" && j+1 < len(value.Content); j += 2 {
-			if k := value.Content[j]; !slices.Contains(kinds, k.Value) && !slices.Contains(workflows, k.Value) {
-				out = append(out, fmt.Sprintf("grove.yaml:%d: unknown rules key %q; kinds are %s, and workflows are %s",
-					k.Line, k.Value, strings.Join(kinds, ", "), strings.Join(workflows, ", ")))
+			if k := value.Content[j]; !slices.Contains(kinds, k.Value) && !slices.Contains(skills, k.Value) {
+				out = append(out, fmt.Sprintf("grove.yaml:%d: unknown rules key %q; kinds are %s, and skills are %s",
+					k.Line, k.Value, strings.Join(kinds, ", "), strings.Join(skills, ", ")))
 			}
 		}
 	}

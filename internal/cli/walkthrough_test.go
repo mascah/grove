@@ -89,7 +89,7 @@ func TestInit(t *testing.T) {
 	commitAll(t, dir, "Set up Grove")
 	out := grove(t, "instructions", "propose")
 	for _, s := range []string{"## Project context\n\nPython 3 standard library only.\n", "The project's own rules for this document:\n\n- Name the owner for every decision.\n",
-		"The project's own rules for this workflow:\n\n- Commit the change folder when check passes.\n"} {
+		"The project's own rules for this skill:\n\n- Commit the change folder when check passes.\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("propose instructions lack %q", s)
 		}
@@ -111,7 +111,7 @@ func TestCheck(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(config, "rules: {}", "rules:\n  derp: [x]\nrule: {}", 1)), 0o644)
 	var stdout, stderr strings.Builder
 	code := run([]string{"check"}, &stdout, &stderr)
-	want := "grove.yaml:18: unknown rules key \"derp\"; kinds are proposal, change-spec, tasks, implementation, spec, and workflows are explore, propose, apply, archive\n" +
+	want := "grove.yaml:18: unknown rules key \"derp\"; kinds are proposal, change-spec, tasks, implementation, spec, and skills are explore, propose, apply, archive\n" +
 		"grove.yaml:19: unknown field \"rule\"; grove.yaml takes root, target, agents, context and rules\n"
 	if code != 1 || stdout.String() != want || stderr.String() != "grove: 2 problems found\n" {
 		t.Errorf("check of grove.yaml: status %d\n%s%s", code, stdout.String(), stderr.String())

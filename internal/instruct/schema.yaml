@@ -1,8 +1,8 @@
-# The document set and the workflows (CONSTITUTION.md rule 10): a plain list.
+# The document set and the skills (CONSTITUTION.md rule 10): a plain list.
 # A path is relative to the document root; <change> is the change's folder
-# name and <capability> a capability's ID. A workflow's skill is the
+# name and <capability> a capability's ID. A skill's description is the
 # description of the skill init writes for it, and args what that skill
-# passes to `instructions <workflow>`, <args> being what the user typed after
+# passes to `instructions <skill>`, <args> being what the user typed after
 # the skill's name. A kind's metadata is the .grove.yaml written beside it,
 # from its metadata_template; it takes no rules of its own (D-54). It holds no
 # dependencies between steps and no status.
@@ -31,22 +31,22 @@ documents:
     metadata: specs/<capability>/.grove.yaml
     metadata_template: templates/spec.grove.yaml
     guide: guides/spec.md
-workflows:
+skills:
   - name: explore
-    skill: Explore an idea with the owner before proposing a change, in an interview that writes nothing unless asked.
+    description: Explore an idea with the owner before proposing a change, in an interview that writes nothing unless asked.
     guide: guides/explore.md
   - name: propose
-    skill: Propose a change from this conversation or from a description, or revise a drafted change given its ID.
+    description: Propose a change from this conversation or from a description, or revise a drafted change given its ID.
     args: '"<args>"'
     guide: guides/propose.md
     writes: [proposal, change-spec, tasks]
   - name: apply
-    skill: Apply an approved change given its ID, building its tasks and recording progress in its implementation.md.
+    description: Apply an approved change given its ID, building its tasks and recording progress in its implementation.md.
     args: <args>
     guide: guides/apply.md
     writes: [implementation]
   - name: archive
-    skill: Archive a finished or dropped change given its ID, first folding a finished change's specs into the maintained specs.
+    description: Archive a finished or dropped change given its ID, first folding a finished change's specs into the maintained specs.
     args: <args>
     guide: guides/archive.md
     writes: [spec, implementation]

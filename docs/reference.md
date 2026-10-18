@@ -23,17 +23,17 @@ Skills run these; you do not need to:
 
 ## Skills
 
-`grove init` writes one skill per workflow for each harness in `grove.yaml`.
+`grove init` writes one skill for each of Grove's four skills, for each harness in `grove.yaml`.
 
-| Workflow | Claude Code | Codex |
+| Skill | Claude Code | Codex |
 | --- | --- | --- |
 | explore | `/grove-explore` | `$grove-explore` |
 | propose | `/grove-propose` | `$grove-propose` |
 | apply | `/grove-apply` | `$grove-apply` |
 | archive | `/grove-archive` | `$grove-archive` |
 
-Claude Code reads them from `.claude/skills/grove-<workflow>/SKILL.md`, Codex
-from `.agents/skills/grove-<workflow>/SKILL.md`. Commit them with your
+Claude Code reads them from `.claude/skills/grove-<skill>/SKILL.md`, Codex
+from `.agents/skills/grove-<skill>/SKILL.md`. Commit them with your
 project.
 
 ## grove.yaml
@@ -60,7 +60,7 @@ rules:
 | `target` | `main` | The branch whose contents count as agreed. Merging into it approves. |
 | `agents` | `[claude, codex]` | The harnesses `init` writes skills for. |
 | `context` | empty | Facts about the project, given to every skill. Keep it to what an agent cannot read from the code. |
-| `rules` | none | Extra lines for one kind of document, given when that document is written, or for one workflow, given with its instructions. Kinds: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`. Workflows: `explore`, `propose`, `apply`, `archive`. |
+| `rules` | none | Extra lines for one kind of document, given when that document is written, or for one skill, given with its instructions. Kinds: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`. Skills: `explore`, `propose`, `apply`, `archive`. |
 
 `grove check` reports a field or `rules` key that Grove does not know; other
 commands ignore it.

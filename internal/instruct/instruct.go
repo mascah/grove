@@ -36,15 +36,15 @@ type Kind struct {
 	MetadataTemplate            string `yaml:"metadata_template"`
 }
 
-// Workflow is one workflow: its skill, its guide and the kinds of document
-// it writes.
-type Workflow struct {
-	Name, Skill, Args, Guide string
-	Writes                   []string
+// Skill is one skill: the description of the skill init writes for it, its
+// guide and the kinds of document it writes.
+type Skill struct {
+	Name, Description, Args, Guide string
+	Writes                         []string
 }
 
-// Workflows returns the schema's workflows, in order.
-func Workflows() []Workflow { return schema.Workflows }
+// Skills returns the schema's skills, in order.
+func Skills() []Skill { return schema.Skills }
 
 // Kinds returns the names of the schema's kinds of document, in order.
 func Kinds() []string {
@@ -55,10 +55,10 @@ func Kinds() []string {
 	return names
 }
 
-// schema is the embedded document set and workflows, schema.yaml.
+// schema is the embedded document set and skills, schema.yaml.
 var schema struct {
 	Documents []Kind
-	Workflows []Workflow
+	Skills    []Skill
 }
 
 func init() {
@@ -67,9 +67,9 @@ func init() {
 	}
 }
 
-func workflow(name string) Workflow {
-	i := slices.IndexFunc(schema.Workflows, func(w Workflow) bool { return w.Name == name })
-	return schema.Workflows[i]
+func skill(name string) Skill {
+	i := slices.IndexFunc(schema.Skills, func(s Skill) bool { return s.Name == name })
+	return schema.Skills[i]
 }
 
 func kind(name string) Kind {
@@ -84,18 +84,18 @@ type Project struct {
 	Commit  string              // the target's commit
 	Agreed  *doc.Collection     // the documents at Commit
 	Context string              // grove.yaml's context
-	Rules   map[string][]string // grove.yaml's rules, by kind of document or workflow
+	Rules   map[string][]string // grove.yaml's rules, by kind of document or skill
 }
 
-// Instructions is everything one workflow's instructions say, built before
+// Instructions is everything one skill's instructions say, built before
 // it is printed (rule 10).
 type Instructions struct {
 	Project
-	Workflow    string
+	Skill       string
 	Task        string // what the session is doing, one sentence
 	Guide       string
 	Description string     // the owner's description, when given
-	Documents   []Document // the kinds of document the workflow writes
+	Documents   []Document // the kinds of document the skill writes
 	Change      []File     // the change being worked on, in full
 }
 
@@ -110,12 +110,12 @@ type Document struct {
 // File is one document included in full; Path is from the repository root.
 type File struct{ Path, Content string }
 
-// build returns workflow name's instructions with its guide and documents,
+// build returns skill name's instructions with its guide and documents,
 // fill's values put into their paths and templates.
 func build(p Project, name, task string, fill *strings.Replacer) Instructions {
-	w := workflow(name)
-	in := Instructions{Project: p, Workflow: name, Task: task, Guide: embedded(w.Guide)}
-	for _, kn := range w.Writes {
+	s := skill(name)
+	in := Instructions{Project: p, Skill: name, Task: task, Guide: embedded(s.Guide)}
+	for _, kn := range s.Writes {
 		k := kind(kn)
 		d := Document{Kind: k.Kind, Path: p.Root + "/" + fill.Replace(k.Path),
 			Guide: embedded(k.Guide), Template: fill.Replace(embedded(k.Template)), Rules: p.Rules[k.Kind]}
@@ -183,12 +183,12 @@ func withChange(in Instructions, c *doc.Change, files map[string]string) Instruc
 // Markdown renders the instructions as the text a session reads.
 func (in Instructions) Markdown() string {
 	var b strings.Builder
-	fmt.Fprintf(&b, "# Grove instructions: %s\n\n%s Run Grove as `grove`.\n\n%s\n", in.Workflow, in.Task, meanings)
+	fmt.Fprintf(&b, "# Grove instructions: %s\n\n%s Run Grove as `grove`.\n\n%s\n", in.Skill, in.Task, meanings)
 	if in.Context != "" {
 		fmt.Fprintf(&b, "## Project context\n\n%s\n\n", strings.TrimRight(in.Context, "\n"))
 	}
-	fmt.Fprintf(&b, "## How to %s\n\n%s\n", in.Workflow, in.Guide)
-	rules(&b, "workflow", in.Rules[in.Workflow])
+	fmt.Fprintf(&b, "## How to %s\n\n%s\n", in.Skill, in.Guide)
+	rules(&b, "skill", in.Rules[in.Skill])
 	if in.Description != "" {
 		fmt.Fprintf(&b, "## Owner's description\n\n%s\n\n", in.Description)
 	}

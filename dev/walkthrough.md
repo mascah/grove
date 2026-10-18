@@ -100,7 +100,7 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 - **A mistake in grove.yaml** (reference, "grove.yaml"). Add `derp: [x]`
   under `rules` and a top-level `rule: {}` in `grove.yaml`. `grove check`
   reports both and exits non-zero:
-  > grove.yaml:<line>: unknown rules key "derp"; kinds are proposal, change-spec, tasks, implementation, spec, and workflows are explore, propose, apply, archive
+  > grove.yaml:<line>: unknown rules key "derp"; kinds are proposal, change-spec, tasks, implementation, spec, and skills are explore, propose, apply, archive
 
   > grove.yaml:<line>: unknown field "rule"; grove.yaml takes root, target, agents, context and rules
 
@@ -125,7 +125,7 @@ Owner, asked whether to add each:
   2026-10-14: "yes"; how: "by calling the CLI?".
 - Bubble Tea and Glamour, 2026-10-14: "We need bubble tea and glamour".
 - Codex reads repository skills from `.agents/skills/`, typed
-  `$grove-<workflow>`, 2026-10-15: "I know this is how it works. We don't
+  `$grove-<skill>`, 2026-10-15: "I know this is how it works. We don't
   need to verify this."
 - The rest of this page's shape is decisions D-33 to D-43 of 2026-10-15.
 
@@ -140,7 +140,7 @@ Agent inference, not the owner's decisions (rule 25).
 
 - `grove.yaml` fields and defaults: `root: grove`, `target: main`,
   `agents: [claude, codex]`, `context`, and `rules` keyed by `proposal`,
-  `change-spec`, `tasks`, `implementation` and `spec`, or by a workflow.
+  `change-spec`, `tasks`, `implementation` and `spec`, or by a skill.
 - `init` never overwrites `grove.yaml` and always rewrites the skills.
   Its second run says "Kept grove.yaml and wrote the Grove skills for claude
   and codex; nothing is committed." A field left out of `grove.yaml` takes
@@ -159,7 +159,7 @@ Agent inference, not the owner's decisions (rule 25).
 - `archive` only moves the folder; the agent does the reconciliation, from
   `instructions archive`. Both read the change from the working tree, where
   `implementation.md` is, and neither checks that the change is approved.
-- Every workflow commits only when the owner or its `rules` ask; otherwise
+- Every skill commits only when the owner or its `rules` ask; otherwise
   the owner commits after archiving (getting started §6).
 - A blocked task's question is answered by revising the change with
   propose and merging it, not by the owner telling the applying session.

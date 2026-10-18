@@ -8,7 +8,7 @@ and how to work here; this file describes the code and never restates scope
 
 A Go CLI. The `grove` command sets up a project, lists, checks, reviews and
 archives Markdown specs and changes, and opens a reader. Skills that `grove
-init` writes for Claude Code and Codex run `grove instructions <workflow>` and
+init` writes for Claude Code and Codex run `grove instructions <skill>` and
 follow what it prints. What Grove does is specified by `docs/` (rule 8).
 
 ## Layout
@@ -17,7 +17,7 @@ follow what it prints. What Grove does is specified by `docs/` (rule 8).
 | --- | --- |
 | `cmd/grove` | `main`, calling `cli.Main`. |
 | `internal/cli` | Parses commands and wires the other packages together; the only package that writes to the terminal. One file per command. |
-| `internal/instruct` | The embedded `schema.yaml` (document kinds and workflows), `templates/` and `guides/`, and building one workflow's instructions as a value before printing. |
+| `internal/instruct` | The embedded `schema.yaml` (document kinds and skills), `templates/` and `guides/`, and building one skill's instructions as a value before printing. |
 | `internal/doc` | Reads Grove's documents: `.grove.yaml`, diagnostics, IDs, the folder layout. |
 | `internal/gitx` | The only place Git runs, by argv. `TreeFS` reads a commit's tree as an `fs.FS`. |
 | `internal/tui` | The reader (Bubble Tea, Glamour). Knows nothing about Git or Grove's documents. |

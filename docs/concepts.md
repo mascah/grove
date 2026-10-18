@@ -62,7 +62,7 @@ specs; its `implementation.md` says `Status: dropped` and why.
 
 The `grove` command runs in your terminal: it sets up, lists, checks, reviews
 and reads. Skills run in your agent's chat: each one runs
-`grove instructions <workflow>` and follows what it prints. Grove starts no
+`grove instructions <skill>` and follows what it prints. Grove starts no
 agent and makes no commits, so it works with the agent you already use, in
 the checkout and branch you already have.
 

@@ -22,13 +22,13 @@ agents: [claude, codex]
 # run, anything an agent cannot read from the code. Keep it short.
 context: ""
 # Extra lines for one kind of document, given when it is written, or for one
-# workflow, given with its guide, such as
+# skill, given with its guide, such as
 #   proposal:
 #     - List who is affected.
 #   apply:
 #     - Commit after each task, naming its task ID.
 # Kinds: proposal, change-spec, tasks, implementation, spec.
-# Workflows: explore, propose, apply, archive.
+# Skills: explore, propose, apply, archive.
 rules: {}
 `
 
@@ -40,7 +40,7 @@ var harnesses = map[string]struct{ dir, args, note string }{
 }
 
 // initProject writes grove.yaml at the top of the worktree unless it is
-// there, then the skills of every workflow for each harness it lists.
+// there, then a SKILL.md for each skill and each harness it lists.
 func initProject(stdout io.Writer) error {
 	top, err := gitx.TopLevel(".")
 	if err != nil {
@@ -61,15 +61,15 @@ func initProject(stdout io.Writer) error {
 		if !ok {
 			return fmt.Errorf("grove.yaml lists agent %q; Grove knows claude and codex", agent)
 		}
-		for _, w := range instruct.Workflows() {
-			args := strings.ReplaceAll(w.Args, "<args>", h.args)
+		for _, s := range instruct.Skills() {
+			args := strings.ReplaceAll(s.Args, "<args>", h.args)
 			note := h.note
 			if args == "" {
 				note = ""
 			}
 			skill := fmt.Sprintf("---\nname: grove-%s\ndescription: %s\n---\n\nRun `grove instructions %s` and follow what it prints, in this conversation.%s\n",
-				w.Name, w.Skill, strings.TrimSpace(w.Name+" "+args), note)
-			path := filepath.Join(top, h.dir, "grove-"+w.Name, "SKILL.md")
+				s.Name, s.Description, strings.TrimSpace(s.Name+" "+args), note)
+			path := filepath.Join(top, h.dir, "grove-"+s.Name, "SKILL.md")
 			if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 				return err
 			}
