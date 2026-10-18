@@ -25,8 +25,7 @@ func instructionsExplore(stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprint(stdout, instruct.Explore(ip).Markdown())
-	return nil
+	return show(stdout)(instruct.Explore(ip))
 }
 
 // instructionsPropose prints the propose instructions: for a new change
@@ -43,16 +42,14 @@ func instructionsPropose(stdout io.Writer, arg string) error {
 	}
 	if !doc.ValidID(arg) {
 		now := time.Now()
-		fmt.Fprint(stdout, instruct.Propose(ip, doc.NewID(now), now.UTC().Format(time.RFC3339), arg).Markdown())
-		return nil
+		return show(stdout)(instruct.Propose(ip, doc.NewID(now), now.UTC().Format(time.RFC3339), arg))
 	}
 	fsys := os.DirFS(filepath.Join(p.Top, p.Root))
 	c, files, err := change(fsys, arg)
 	if err != nil {
 		return err
 	}
-	fmt.Fprint(stdout, instruct.Revise(ip, c, files).Markdown())
-	return nil
+	return show(stdout)(instruct.Revise(ip, c, files))
 }
 
 // instructionsArchive prints the archive instructions for change id as the
@@ -70,8 +67,7 @@ func instructionsArchive(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprint(stdout, instruct.Archive(ip, c, files).Markdown())
-	return nil
+	return show(stdout)(instruct.Archive(ip, c, files))
 }
 
 // archive moves change id's folder in the working tree to changes/archive/.
@@ -149,8 +145,17 @@ func instructionsApply(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Fprint(stdout, instruct.Apply(ip, c, files).Markdown())
-	return nil
+	return show(stdout)(instruct.Apply(ip, c, files))
+}
+
+// show returns a function printing instructions unless building them failed.
+func show(stdout io.Writer) func(instruct.Instructions, error) error {
+	return func(in instruct.Instructions, err error) error {
+		if err == nil {
+			fmt.Fprint(stdout, in.Markdown())
+		}
+		return err
+	}
 }
 
 // change loads change id from the document root fsys, with every file it

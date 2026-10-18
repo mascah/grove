@@ -106,6 +106,15 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 
   `grove instructions propose <change-id>` still finds the change, so a
   session can write the proposal again.
+- **Your own tasks template** (reference, "Change schemas"). On a new
+  branch, copy the tasks template from `grove instructions propose "x"` (the
+  `<file>` whose path ends in `tasks.md`) to
+  `grove/schemas/default/templates/tasks.md` with `{{change}}` where it
+  shows the new change's ID, and add a line
+  `Rollback: [how to undo this task]` to its task. `grove instructions
+  propose "x"` now gives that template. `/grove-propose Editing a missing
+  record should print an error` writes `tasks.md` with a `Rollback:` line in
+  each task, and `grove check` is clean.
 - **A mistake in grove.yaml** (reference, "grove.yaml"). Add `derp: [x]`
   under `rules` and a top-level `rule: {}` in `grove.yaml`. `grove check`
   reports both and exits non-zero:

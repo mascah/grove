@@ -5,8 +5,11 @@
 package instruct
 
 import (
+	"cmp"
 	"embed"
+	"errors"
 	"fmt"
+	"io/fs"
 	"path"
 	"slices"
 	"strings"
@@ -112,6 +115,7 @@ type Project struct {
 	Agreed  *doc.Collection     // the documents at Commit
 	Context string              // grove.yaml's context
 	Rules   map[string][]string // grove.yaml's rules, by kind of document or skill
+	Schemas fs.FS               // <root>/schemas in the working tree, the project's own schema files
 }
 
 // Instructions is everything one skill's instructions say, built before
@@ -138,10 +142,27 @@ type Document struct {
 // File is one document included in full; Path is from the repository root.
 type File struct{ Path, Content string }
 
+// file returns a file of the change schema: the project's own, from
+// <root>/schemas/default/, if it has one, else Grove's (D-55).
+func (p Project) file(name string) (string, error) {
+	b, err := fs.ReadFile(p.Schemas, "default/"+name)
+	if errors.Is(err, fs.ErrNotExist) {
+		return embedded("schemas/default/" + name), nil
+	}
+	return string(b), err
+}
+
 // build returns skill name's instructions with its guide and documents,
-// fill's values put into their paths and templates.
-func build(p Project, name, task string, fill *strings.Replacer) Instructions {
-	st, file := schema.Skills[name], func(name string) string { return embedded("schemas/default/" + name) }
+// fill's values put into their paths and templates, and change c's files
+// when c is not nil.
+func build(p Project, name, task string, fill *strings.Replacer, c *doc.Change, files map[string]string) (Instructions, error) {
+	var err error
+	file := func(name string) string {
+		s, e := p.file(name)
+		err = cmp.Or(err, e)
+		return s
+	}
+	st := schema.Skills[name]
 	in := Instructions{Project: p, Skill: name, Task: task, Requires: embedded("skills/" + name + ".md"), Guide: file(st.Guide)}
 	for _, kn := range st.Writes {
 		k := kind(kn)
@@ -152,60 +173,58 @@ func build(p Project, name, task string, fill *strings.Replacer) Instructions {
 		}
 		in.Documents = append(in.Documents, d)
 	}
-	return in
+	if c != nil {
+		for _, name := range c.Files {
+			in.Change = append(in.Change, File{in.Root + "/" + name, files[name]})
+		}
+	}
+	return in, err
 }
 
 // Explore returns the instructions for interviewing the owner about an idea.
-func Explore(p Project) Instructions {
-	return build(p, "explore", "You are exploring an idea with the owner, in their own working tree.", strings.NewReplacer())
+func Explore(p Project) (Instructions, error) {
+	return build(p, "explore", "You are exploring an idea with the owner, in their own working tree.", strings.NewReplacer(), nil, nil)
 }
 
 // Propose returns the instructions for writing new change id, created at
 // created, from the conversation or from description when it is not empty.
-func Propose(p Project, id, created, description string) Instructions {
+func Propose(p Project, id, created, description string) (Instructions, error) {
 	from := "this conversation"
 	if description != "" {
 		from = "the owner's description below"
 	}
-	in := build(p, "propose", fmt.Sprintf("You are proposing new change %s from %s, in the owner's own working tree.", id, from),
-		strings.NewReplacer("<change>", id+"-<slug>", "{{change}}", id, "{{created}}", created, "{{base}}", short(p.Commit)))
+	in, err := build(p, "propose", fmt.Sprintf("You are proposing new change %s from %s, in the owner's own working tree.", id, from),
+		strings.NewReplacer("<change>", id+"-<slug>", "{{change}}", id, "{{created}}", created, "{{base}}", short(p.Commit)), nil, nil)
 	in.Description = description
-	return in
+	return in, err
 }
 
 // Revise returns the instructions for revising drafted change c, read from
 // the working tree; files are c.Files as read from there.
-func Revise(p Project, c *doc.Change, files map[string]string) Instructions {
+func Revise(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
 	task := fmt.Sprintf("You are revising drafted change %s, %q, in the owner's own working tree.", c.ID, c.Meta.Title)
-	return withChange(build(p, "propose", task, fill(p, c)), c, files)
+	return build(p, "propose", task, fill(p, c), c, files)
 }
 
 // Apply returns the instructions for applying change c, which the target
 // holds; files are c.Files as read from there.
-func Apply(p Project, c *doc.Change, files map[string]string) Instructions {
+func Apply(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
 	task := fmt.Sprintf("You are applying approved change %s, %q, as %s@%s holds it, in your own working tree.",
 		c.ID, c.Meta.Title, p.Target, short(p.Commit))
-	return withChange(build(p, "apply", task, fill(p, c)), c, files)
+	return build(p, "apply", task, fill(p, c), c, files)
 }
 
 // Archive returns the instructions for archiving change c, read from the
 // working tree; files are c.Files as read from there.
-func Archive(p Project, c *doc.Change, files map[string]string) Instructions {
+func Archive(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
 	task := fmt.Sprintf("You are archiving change %s, %q, in the owner's own working tree.", c.ID, c.Meta.Title)
-	return withChange(build(p, "archive", task, fill(p, c)), c, files)
+	return build(p, "archive", task, fill(p, c), c, files)
 }
 
 // fill puts change c's values into paths and templates.
 func fill(p Project, c *doc.Change) *strings.Replacer {
 	return strings.NewReplacer("<change>", path.Base(c.Dir), "{{title}}", c.Meta.Title,
 		"{{change}}", c.ID, "{{created}}", c.Meta.Created, "{{base}}", short(p.Commit))
-}
-
-func withChange(in Instructions, c *doc.Change, files map[string]string) Instructions {
-	for _, name := range c.Files {
-		in.Change = append(in.Change, File{in.Root + "/" + name, files[name]})
-	}
-	return in
 }
 
 // Markdown renders the instructions as the text a session reads.

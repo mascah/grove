@@ -218,6 +218,13 @@ func TestPropose(t *testing.T) {
 	if !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") || req < 0 || how < req {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
+
+	os.MkdirAll(filepath.Join(dir, "grove/schemas/default/templates"), 0o755)
+	os.WriteFile(filepath.Join(dir, "grove/schemas/default/templates/tasks.md"), []byte("## T-01 — [title]\n\nRollback: [how to undo this task]\n"), 0o644)
+	if out := grove(t, "instructions", "propose", "x"); !strings.Contains(out, "/tasks.md\">\n## T-01 — [title]\n\nRollback: [how to undo this task]\n</file>") {
+		t.Errorf("propose with the project's tasks template:\n%s", out)
+	}
+	grove(t, "check")
 }
 
 func TestApprove(t *testing.T) {

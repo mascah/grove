@@ -38,7 +38,8 @@ func openProject() (project, error) {
 
 // agreed returns the target's commit and the documents it holds.
 func (p project) agreed() (instruct.Project, error) {
-	ip := instruct.Project{Root: p.Root, Target: p.Target, Context: p.Context, Rules: p.Rules}
+	ip := instruct.Project{Root: p.Root, Target: p.Target, Context: p.Context, Rules: p.Rules,
+		Schemas: os.DirFS(filepath.Join(p.Top, p.Root, "schemas"))}
 	var err error
 	if ip.Commit, err = gitx.ResolveBranch(p.Top, p.Target); err != nil {
 		return ip, err

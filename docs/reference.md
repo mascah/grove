@@ -71,11 +71,47 @@ replace them. Short rules work better than long ones.
 Grove's skills commit nothing unless you ask in the conversation or a rule
 asks, as `apply` does above.
 
+## Change schemas
+
+A change schema says what a change consists of and how each skill goes: its
+kinds of document, each with a path, a template and a guide, and for each
+skill its guide and the kinds of document it writes. Grove's built-in schema
+is `default`, the software change [Concepts](concepts.md) describes. Its
+files are:
+
+```text
+templates/   proposal.md, change-spec.md, tasks.md, implementation.md, spec.md
+guides/      the same five, one per kind, and explore.md, propose.md,
+             apply.md, archive.md, one per skill
+```
+
+To change one of them for your project, put your own at the same path under
+`grove/schemas/default/`, such as `grove/schemas/default/templates/tasks.md`.
+It replaces Grove's file whole; every file you do not put there stays
+Grove's, including later improvements to it. A skill's instructions include
+the guides and templates it uses, so `grove instructions propose "x"` shows
+the proposal, change-spec and tasks templates to start from. Grove fills in
+a template's `{{change}}` (the change's ID), `{{title}}`, `{{created}}` and
+`{{base}}` (the target's commit) before printing it; put them back where you
+copy one.
+
+A schema cannot change Grove's skills or what Grove requires of each, which
+its instructions give first; that a merge approves a change; a change's
+`.grove.yaml`; or how progress is recorded: each task is a `T-NN` heading in
+`tasks.md`, and its status a `Status:` line in `implementation.md`, which
+`grove archive` reads. Keep those lines as Grove's implementation template
+has them.
+
+To add lines to Grove's instructions rather than replace a file, use `rules`
+in `grove.yaml`.
+
 ## Files
 
 ```text
 grove.yaml
 grove/
+  schemas/default/
+    templates/, guides/
   specs/<capability>/
     .grove.yaml
     spec.md
@@ -96,4 +132,5 @@ shown in lists. The folder name gives the ID: a spec's is the whole name, a
 change's the start of it. `spec.md` and `proposal.md` start with the title as
 their heading, and `grove check` reports one whose first heading is not `# `
 and the title. A change's other files have no metadata: their folder names
-their change.
+their change. `schemas/` holds the project's own files for change schemas
+(see "Change schemas").
