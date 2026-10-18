@@ -110,7 +110,8 @@ func TestCheck(t *testing.T) {
 	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
 	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte("# Record editing\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", ".grove.yaml"), []byte("description: Editing records.\nowner: me\n"), 0o644)
-	for folder, meta := range map[string]string{"261015-k3m9q-no-metadata": "", "261015-p4x8d-extra-field": "title: T\ncreated: x\nowner: me\n", "no-id": "title: T\ncreated: x\n"} {
+	for folder, meta := range map[string]string{"261015-k3m9q-no-metadata": "", "261015-p4x8d-extra-field": "title: T\ncreated: x\nowner: me\n",
+		"261015-q7r2s-drifted": "title: New title\ncreated: x\n", "no-id": "title: T\ncreated: x\n"} {
 		os.MkdirAll(filepath.Join(dir, "grove", "changes", folder), 0o755)
 		os.WriteFile(filepath.Join(dir, "grove", "changes", folder, "proposal.md"), []byte("# T\n"), 0o644)
 		if meta != "" {
@@ -123,8 +124,9 @@ func TestCheck(t *testing.T) {
 		"grove/specs/record-editing/.grove.yaml: title: required field is missing\n" +
 		"grove/changes/261015-k3m9q-no-metadata/.grove.yaml: missing; it holds the change's title and created\n" +
 		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created and description\n" +
+		"grove/changes/261015-q7r2s-drifted/proposal.md:1: the first heading should be \"# New title\", the title in .grove.yaml\n" +
 		"grove/changes/no-id/: the folder name must start with a change ID, such as 261015-k3m9q\n"
-	if code != 1 || stdout.String() != want || stderr.String() != "grove: 5 problems found\n" {
+	if code != 1 || stdout.String() != want || stderr.String() != "grove: 6 problems found\n" {
 		t.Errorf("check: status %d\n%s%s", code, stdout.String(), stderr.String())
 	}
 }

@@ -94,6 +94,9 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
   nothing, `implementation.md` says `Status: blocked` under T-01 with the
   question, and its last message names the question. `grove archive
   <change-id>` refuses.
+- **A title that drifted** (reference, "Files"). Change `title` in a
+  change's `.grove.yaml` and run `grove check`:
+  > grove/changes/<change-id>-<slug>/proposal.md:1: the first heading should be "# <new title>", the title in .grove.yaml
 - **Commit as you go** (reference, `rules`). With
   `apply: [Commit after each task, naming its task ID.]` under `rules`
   in `grove.yaml`, `/grove-apply` commits T-01 with its ID in the

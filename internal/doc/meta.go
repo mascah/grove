@@ -72,6 +72,30 @@ func (d *Document) parse(file string, src []byte, required []string) {
 	d.Meta = Meta{Title: values["title"], Created: values["created"], Description: values["description"]}
 }
 
+// heading reports file when its first "# " heading is not d's title. With
+// no title, the missing title is the problem, reported already.
+func (d *Document) heading(fsys fs.FS, file string) error {
+	if d.Meta.Title == "" {
+		return nil
+	}
+	b, err := fs.ReadFile(fsys, file)
+	if err != nil {
+		return err
+	}
+	want, line := "# "+d.Meta.Title, 1
+	for i, l := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(l, "# ") {
+			if strings.TrimRight(l, " \t\r") == want {
+				return nil
+			}
+			line = i + 1
+			break
+		}
+	}
+	d.report(file, line, fmt.Sprintf("the first heading should be %q, the title in .grove.yaml", want))
+	return nil
+}
+
 var yamlErrorLine = regexp.MustCompile(`^yaml: line ([0-9]+): (.*)$`)
 
 func (d *Document) report(file string, line int, msg string) {

@@ -89,5 +89,6 @@ A maintained spec's `.grove.yaml` holds its `title`; a change's holds its
 `title` and when it was `created`. Either may add a one-line `description`,
 shown in lists. The folder name gives the ID: a spec's is the whole name, a
 change's the start of it. `spec.md` and `proposal.md` start with the title as
-their heading. A change's other files have no metadata: their folder names
+their heading, and `grove check` reports one whose first heading is not `# `
+and the title. A change's other files have no metadata: their folder names
 their change.

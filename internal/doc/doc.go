@@ -75,6 +75,9 @@ func Load(fsys fs.FS) (*Collection, error) {
 		if err := d.readMeta(fsys, specFields, "spec's title"); err != nil {
 			return nil, err
 		}
+		if err := d.heading(fsys, name); err != nil {
+			return nil, err
+		}
 		c.Specs = append(c.Specs, d)
 	}
 	proposals, err := fs.Glob(fsys, "changes/*/proposal.md")
@@ -89,6 +92,9 @@ func Load(fsys fs.FS) (*Collection, error) {
 			ch.report(ch.Dir+"/", 0, "the folder name must start with a change ID, such as 261015-k3m9q")
 		}
 		if err := ch.readMeta(fsys, changeFields, "change's title and created"); err != nil {
+			return nil, err
+		}
+		if err := ch.heading(fsys, name); err != nil {
 			return nil, err
 		}
 		err := fs.WalkDir(fsys, ch.Dir, func(name string, d fs.DirEntry, err error) error {
