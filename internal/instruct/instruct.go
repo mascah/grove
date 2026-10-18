@@ -28,8 +28,13 @@ func embedded(name string) string {
 }
 
 // Kind is one kind of document: where it goes, the template it starts from
-// and the guide for writing it. Path is relative to the document root.
-type Kind struct{ Kind, Path, Template, Guide string }
+// and the guide for writing it, and where its metadata goes and the template
+// that starts from, if it has any. Paths are relative to the document root.
+type Kind struct {
+	Kind, Path, Template, Guide string
+	Metadata                    string
+	MetadataTemplate            string `yaml:"metadata_template"`
+}
 
 // Workflow is one workflow: its skill, its guide and the kinds of document
 // it writes.
@@ -85,10 +90,11 @@ type Instructions struct {
 	Change      []File     // the change being worked on, in full
 }
 
-// Document is one kind of document to write, with its path and template
+// Document is one kind of document to write, with its paths and templates
 // filled in.
 type Document struct {
 	Kind, Path, Guide, Template string
+	Metadata, MetadataTemplate  string   // empty when the kind has no metadata
 	Rules                       []string // the project's own, from grove.yaml
 }
 
@@ -102,8 +108,12 @@ func build(p Project, name, task string, fill *strings.Replacer) Instructions {
 	in := Instructions{Project: p, Workflow: name, Task: task, Guide: embedded(w.Guide)}
 	for _, kn := range w.Writes {
 		k := kind(kn)
-		in.Documents = append(in.Documents, Document{Kind: k.Kind, Path: p.Root + "/" + fill.Replace(k.Path),
-			Guide: embedded(k.Guide), Template: fill.Replace(embedded(k.Template)), Rules: p.Rules[k.Kind]})
+		d := Document{Kind: k.Kind, Path: p.Root + "/" + fill.Replace(k.Path),
+			Guide: embedded(k.Guide), Template: fill.Replace(embedded(k.Template)), Rules: p.Rules[k.Kind]}
+		if k.Metadata != "" {
+			d.Metadata, d.MetadataTemplate = p.Root+"/"+fill.Replace(k.Metadata), fill.Replace(embedded(k.MetadataTemplate))
+		}
+		in.Documents = append(in.Documents, d)
 	}
 	return in
 }
@@ -129,7 +139,7 @@ func Propose(p Project, id, created, description string) Instructions {
 // Revise returns the instructions for revising drafted change c, read from
 // the working tree; files are c.Files as read from there.
 func Revise(p Project, c *doc.Change, files map[string]string) Instructions {
-	task := fmt.Sprintf("You are revising drafted change %s, %q, in the owner's own working tree.", c.Proposal.Meta.ID, c.Proposal.Meta.Title)
+	task := fmt.Sprintf("You are revising drafted change %s, %q, in the owner's own working tree.", c.ID, c.Meta.Title)
 	return withChange(build(p, "propose", task, fill(p, c)), c, files)
 }
 
@@ -137,21 +147,21 @@ func Revise(p Project, c *doc.Change, files map[string]string) Instructions {
 // holds; files are c.Files as read from there.
 func Apply(p Project, c *doc.Change, files map[string]string) Instructions {
 	task := fmt.Sprintf("You are applying approved change %s, %q, as %s@%s holds it, in your own working tree.",
-		c.Proposal.Meta.ID, c.Proposal.Meta.Title, p.Target, short(p.Commit))
+		c.ID, c.Meta.Title, p.Target, short(p.Commit))
 	return withChange(build(p, "apply", task, fill(p, c)), c, files)
 }
 
 // Archive returns the instructions for archiving change c, read from the
 // working tree; files are c.Files as read from there.
 func Archive(p Project, c *doc.Change, files map[string]string) Instructions {
-	task := fmt.Sprintf("You are archiving change %s, %q, in the owner's own working tree.", c.Proposal.Meta.ID, c.Proposal.Meta.Title)
+	task := fmt.Sprintf("You are archiving change %s, %q, in the owner's own working tree.", c.ID, c.Meta.Title)
 	return withChange(build(p, "archive", task, fill(p, c)), c, files)
 }
 
 // fill puts change c's values into paths and templates.
 func fill(p Project, c *doc.Change) *strings.Replacer {
-	return strings.NewReplacer("<change>", path.Base(c.Dir), "{{title}}", c.Proposal.Meta.Title,
-		"{{change}}", c.Proposal.Meta.ID, "{{created}}", c.Proposal.Meta.Created, "{{base}}", short(p.Commit))
+	return strings.NewReplacer("<change>", path.Base(c.Dir), "{{title}}", c.Meta.Title,
+		"{{change}}", c.ID, "{{created}}", c.Meta.Created, "{{base}}", short(p.Commit))
 }
 
 func withChange(in Instructions, c *doc.Change, files map[string]string) Instructions {
@@ -179,6 +189,9 @@ func (in Instructions) Markdown() string {
 	for _, d := range in.Documents {
 		fmt.Fprintf(&b, "### %s: `%s`\n\n%s\n", d.Kind, d.Path, d.Guide)
 		rules(&b, "document", d.Rules)
+		if d.Metadata != "" {
+			include(&b, d.Metadata, d.MetadataTemplate)
+		}
 		include(&b, d.Path, d.Template)
 	}
 	in.index(&b)
@@ -212,14 +225,14 @@ func (p Project) index(b *strings.Builder) {
 		p.Target, short(p.Commit), short(p.Commit))
 	b.WriteString("Maintained specs (agreed behavior):\n")
 	for _, d := range p.Agreed.Specs {
-		entry(b, p.Root+"/"+d.Path, d)
+		entry(b, p.Root+"/"+d.Dir+"/spec.md", d)
 	}
 	if len(p.Agreed.Specs) == 0 {
 		b.WriteString("- None. Where nothing is agreed, what the code does is observed behavior.\n")
 	}
 	b.WriteString("\nApproved changes (future work; implementation is not established):\n")
 	for _, c := range p.Agreed.Changes {
-		entry(b, p.Root+"/"+c.Dir+"/", c.Proposal)
+		entry(b, p.Root+"/"+c.Dir+"/", &c.Document)
 	}
 	if len(p.Agreed.Changes) == 0 {
 		b.WriteString("- None.\n")
@@ -228,7 +241,7 @@ func (p Project) index(b *strings.Builder) {
 }
 
 func entry(b *strings.Builder, path string, d *doc.Document) {
-	fmt.Fprintf(b, "- %s %q: `%s`", d.Meta.ID, d.Meta.Title, path)
+	fmt.Fprintf(b, "- %s %q: `%s`", d.ID, d.Meta.Title, path)
 	if d.Meta.Description != "" {
 		fmt.Fprintf(b, " — %s", d.Meta.Description)
 	}

@@ -58,6 +58,7 @@ something kept, ask, or go on to propose.
 The agent writes a change folder, such as
 `grove/changes/261015-k3m9q-let-users-rename-projects/`, with:
 
+- `.grove.yaml`: the change's title and when it was created.
 - `proposal.md`: why, what changes, and your decisions in your words.
 - `specs/<capability>/spec.md`: the requirements this adds or changes.
 - `tasks.md`: the work, each task with how to check it is done.

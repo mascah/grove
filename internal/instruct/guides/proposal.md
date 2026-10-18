@@ -1,6 +1,8 @@
 `proposal.md` states the problem, the intended outcome, the scope, the
 consequential decisions and the open questions.
 
+- Title: write it in `.grove.yaml` and repeat it as the proposal's first
+  heading.
 - Problem: cite observations by their source instead of restating them as
   fact.
 - Decisions: only choices the owner made, in this conversation, that

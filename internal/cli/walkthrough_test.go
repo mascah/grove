@@ -109,11 +109,21 @@ func TestCheck(t *testing.T) {
 	}
 	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
 	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte("---\nid: record-editing\nowner: me\n---\n"), 0o644)
+	for folder, meta := range map[string]string{"261015-k3m9q-no-metadata": "", "261015-p4x8d-extra-field": "title: T\ncreated: x\nowner: me\n", "no-id": "title: T\ncreated: x\n"} {
+		os.MkdirAll(filepath.Join(dir, "grove", "changes", folder), 0o755)
+		os.WriteFile(filepath.Join(dir, "grove", "changes", folder, "proposal.md"), []byte("# T\n"), 0o644)
+		if meta != "" {
+			os.WriteFile(filepath.Join(dir, "grove", "changes", folder, ".grove.yaml"), []byte(meta), 0o644)
+		}
+	}
 	var stdout, stderr strings.Builder
 	code := run([]string{"check"}, &stdout, &stderr)
-	want := "grove/specs/record-editing/spec.md:3: unknown field \"owner\"; this document takes id, title and description\n" +
-		"grove/specs/record-editing/spec.md:1: title: required field is missing\n"
-	if code != 1 || stdout.String() != want || stderr.String() != "grove: 2 problems found\n" {
+	want := "grove/specs/record-editing/spec.md:3: unknown field \"owner\"; this file takes id, title and description\n" +
+		"grove/specs/record-editing/spec.md:1: title: required field is missing\n" +
+		"grove/changes/261015-k3m9q-no-metadata/.grove.yaml: missing; it holds the change's title and created\n" +
+		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created and description\n" +
+		"grove/changes/no-id/: the folder name must start with a change ID, such as 261015-k3m9q\n"
+	if code != 1 || stdout.String() != want || stderr.String() != "grove: 5 problems found\n" {
 		t.Errorf("check: status %d\n%s%s", code, stdout.String(), stderr.String())
 	}
 }
@@ -131,7 +141,8 @@ func propose(t *testing.T, dir string, args ...string) (changeID string) {
 	id := m[1]
 	change := filepath.Join(dir, "grove", "changes", id+"-allow-editing-older-records")
 	os.MkdirAll(filepath.Join(change, "specs", "record-editing"), 0o755)
-	os.WriteFile(filepath.Join(change, "proposal.md"), []byte("---\nid: "+id+"\ntitle: Allow editing older records\ncreated: \"2026-10-14T00:00:00Z\"\n---\n\n# Allow editing older records\n"), 0o644)
+	os.WriteFile(filepath.Join(change, ".grove.yaml"), []byte("title: Allow editing older records\ncreated: 2026-10-14T00:00:00Z\n"), 0o644)
+	os.WriteFile(filepath.Join(change, "proposal.md"), []byte("# Allow editing older records\n"), 0o644)
 	os.WriteFile(filepath.Join(change, "specs", "record-editing", "spec.md"), []byte("# Changes to record-editing\n\n## ADDED Requirements\n\n### Requirement: Edit older records\n"), 0o644)
 	os.WriteFile(filepath.Join(change, "tasks.md"), []byte("## T-01 — Edit older records\n"), 0o644)
 	return id

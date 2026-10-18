@@ -75,6 +75,7 @@ grove.yaml
 grove/
   specs/<capability>/spec.md
   changes/<id>-<slug>/
+    .grove.yaml
     proposal.md
     specs/<capability>/spec.md
     tasks.md
@@ -82,7 +83,10 @@ grove/
   changes/archive/<id>-<slug>/
 ```
 
-Maintained specs and proposals start with frontmatter. Specs carry `id` and
-`title`; a proposal carries `id`, `title` and `created`; either may add a
-one-line `description`, shown in lists. A change's other files have none:
-their folder names their change.
+Maintained specs start with frontmatter carrying `id` and `title`, and may
+add a one-line `description`, shown in lists.
+
+A change's `.grove.yaml` holds its `title`, when it was `created`, and may add
+a one-line `description`, shown in lists. The folder name gives the change's
+ID, and `proposal.md` starts with the title as its heading. A change's other
+files have no metadata: their folder names their change.

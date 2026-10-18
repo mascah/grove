@@ -15,8 +15,8 @@ func listChanges(stdout io.Writer) error {
 		return err
 	}
 	for _, c := range ip.Agreed.Changes {
-		fmt.Fprintf(stdout, "%s  %s  approved\n", c.Proposal.Meta.ID, c.Proposal.Meta.Title)
-		problems(stdout, c.Proposal.Diagnostics)
+		fmt.Fprintf(stdout, "%s  %s  approved\n", c.ID, c.Meta.Title)
+		problems(stdout, c.Diagnostics)
 	}
 	return nil
 }

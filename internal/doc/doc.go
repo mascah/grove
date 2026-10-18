@@ -1,15 +1,16 @@
-// Package doc reads Grove's documents: Markdown files with a small YAML
-// frontmatter block, through an fs.FS rooted at the document root.
+// Package doc reads Grove's documents through an fs.FS rooted at the
+// document root: Markdown files, and the metadata beside them.
 //
-// Under the root are maintained specs (specs/<id>/spec.md) and changes
-// (changes/<id>-<slug>/, identified by their proposal.md). Problems inside a
-// document are Diagnostics, never errors, so one broken document does not
-// hide the others.
+// Under the root are maintained specs (specs/<id>/spec.md, with frontmatter)
+// and changes (changes/<id>-<slug>/, identified by their proposal.md, with a
+// .grove.yaml). Problems inside a document are Diagnostics, never errors, so
+// one broken document does not hide the others.
 package doc
 
 import (
 	"crypto/rand"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io/fs"
 	"path"
@@ -32,27 +33,21 @@ func (d Diagnostic) String() string {
 	return d.Path + ": " + d.Message
 }
 
-// Meta is a document's frontmatter.
-type Meta struct {
-	ID          string `yaml:"id"`
-	Title       string `yaml:"title"`
-	Created     string `yaml:"created,omitempty"`
-	Description string `yaml:"description,omitempty"`
-}
+// Meta is a document's metadata.
+type Meta struct{ Title, Created, Description string }
 
-// Document is one loaded Markdown file.
+// Document is a maintained spec or a change: a folder, with its metadata.
 type Document struct {
-	Path        string // relative to the document root
-	Source      string
+	ID          string
+	Dir         string // relative to the document root
 	Meta        Meta
 	Diagnostics []Diagnostic
 }
 
 // Change is one change folder, changes/<id>-<slug>/.
 type Change struct {
-	Dir      string // relative to the document root
-	Proposal *Document
-	Files    []string // every Markdown file in Dir, relative to the root, sorted
+	Document
+	Files []string // every Markdown file in Dir and its .grove.yaml, relative to the root, sorted
 }
 
 // Collection is everything under one document root.
@@ -65,24 +60,51 @@ type Collection struct {
 // everywhere.
 var (
 	specFields   = []string{"id", "title"}
-	changeFields = []string{"id", "title", "created"}
+	changeFields = []string{"title", "created"}
 )
 
 // Load reads the collection under fsys.
 func Load(fsys fs.FS) (*Collection, error) {
 	c := &Collection{}
-	var err error
-	if c.Specs, err = load(fsys, "specs/*/spec.md", specFields); err != nil {
-		return nil, err
-	}
-	proposals, err := load(fsys, "changes/*/proposal.md", changeFields)
+	specs, err := fs.Glob(fsys, "specs/*/spec.md") // sorted
 	if err != nil {
 		return nil, err
 	}
-	for _, p := range proposals {
-		ch := &Change{Dir: path.Dir(p.Path), Proposal: p}
+	for _, name := range specs {
+		b, err := fs.ReadFile(fsys, name)
+		if err != nil {
+			return nil, err
+		}
+		d := &Document{Dir: path.Dir(name)}
+		if meta, problem := splitFrontmatter(string(b)); problem != "" {
+			d.report(name, 1, problem)
+		} else {
+			d.ID = d.parse(name, meta, 1, specFields)["id"]
+		}
+		c.Specs = append(c.Specs, d)
+	}
+	proposals, err := fs.Glob(fsys, "changes/*/proposal.md")
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range proposals {
+		ch := &Change{Document: Document{Dir: path.Dir(name)}}
+		if folder := path.Base(ch.Dir); len(folder) >= 12 && ValidID(folder[:12]) && (len(folder) == 12 || folder[12] == '-') {
+			ch.ID = folder[:12]
+		} else {
+			ch.report(ch.Dir+"/", 0, "the folder name must start with a change ID, such as 261015-k3m9q")
+		}
+		meta := ch.Dir + "/.grove.yaml"
+		switch b, err := fs.ReadFile(fsys, meta); {
+		case errors.Is(err, fs.ErrNotExist):
+			ch.report(meta, 0, "missing; it holds the change's title and created")
+		case err != nil:
+			return nil, err
+		default:
+			ch.parse(meta, b, 0, changeFields)
+		}
 		err := fs.WalkDir(fsys, ch.Dir, func(name string, d fs.DirEntry, err error) error {
-			if err == nil && !d.IsDir() && strings.HasSuffix(name, ".md") {
+			if err == nil && !d.IsDir() && (strings.HasSuffix(name, ".md") || name == meta) {
 				ch.Files = append(ch.Files, name)
 			}
 			return err
@@ -95,26 +117,10 @@ func Load(fsys fs.FS) (*Collection, error) {
 	return c, nil
 }
 
-func load(fsys fs.FS, pattern string, required []string) ([]*Document, error) {
-	names, err := fs.Glob(fsys, pattern) // sorted
-	if err != nil {
-		return nil, err
-	}
-	var docs []*Document
-	for _, name := range names {
-		b, err := fs.ReadFile(fsys, name)
-		if err != nil {
-			return nil, err
-		}
-		docs = append(docs, Parse(name, b, required))
-	}
-	return docs, nil
-}
-
 // Change returns the change whose ID is id, or nil.
 func (c *Collection) Change(id string) *Change {
 	for _, ch := range c.Changes {
-		if ch.Proposal.Meta.ID == id {
+		if ch.ID == id {
 			return ch
 		}
 	}

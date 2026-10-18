@@ -40,7 +40,7 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 
 3. **Propose** (§3). `/grove-propose` in the same conversation. The session
    creates `grove/changes/261015-k3m9q-allow-editing-older-records/` with
-   `proposal.md` (my decision quoted, the category question open and
+   `.grove.yaml` (its title and created time), `proposal.md` (my decision quoted, the category question open and
    blocking no task, since T-01 leaves the category unchanged),
    `specs/record-editing/spec.md` (an ADDED requirement as an EARS sentence
    with scenarios), and `tasks.md` (T-01 with its acceptance). It runs
@@ -156,5 +156,7 @@ Agent inference, not the owner's decisions (rule 25).
   current branch are shown by `review`, not by `changes`.
 - IDs use the UTC date.
 - Explore's instructions offer no document to fill in.
+- A change's ID is the start of its folder name. `check` reports a change
+  folder whose name does not start with an ID, and one with no `.grove.yaml`.
 - A new change's folder name is its ID and a slug the agent chooses from the
   title; Grove allocates the ID and `created` timestamp.

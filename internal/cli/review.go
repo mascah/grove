@@ -36,8 +36,8 @@ func review(stdout io.Writer) error {
 	branch = strings.TrimSpace(branch)
 	approves := 0
 	for _, c := range head.Changes {
-		if ip.Agreed.Change(c.Proposal.Meta.ID) == nil {
-			fmt.Fprintf(stdout, "Merging %s into %s approves change %s as future work; it does not implement it.\n", branch, p.Target, c.Proposal.Meta.ID)
+		if ip.Agreed.Change(c.ID) == nil {
+			fmt.Fprintf(stdout, "Merging %s into %s approves change %s as future work; it does not implement it.\n", branch, p.Target, c.ID)
 			approves++
 		}
 	}

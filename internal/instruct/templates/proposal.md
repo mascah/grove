@@ -1,9 +1,3 @@
----
-id: {{change}}
-title: <title>
-created: {{created}}
----
-
 # <title>
 
 <!-- A proposal describes future work. It becomes approved future work when it

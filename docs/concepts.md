@@ -32,6 +32,7 @@ A change folder holds:
 
 | File | Written by | Says |
 | --- | --- | --- |
+| `.grove.yaml` | propose | Title, when it was created, and an optional one-line description. |
 | `proposal.md` | propose | Why, what changes, decisions with who made them, open questions. |
 | `specs/<capability>/spec.md` | propose | Requirements the change adds, changes or removes, for one capability each. |
 | `tasks.md` | propose | The work as numbered tasks, each with how to check it is done. |

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"path"
 	"slices"
 	"strings"
 
@@ -22,7 +23,7 @@ func listSpecs(stdout io.Writer) error {
 		return err
 	}
 	for _, s := range ip.Agreed.Specs {
-		fmt.Fprintf(stdout, "%s  %s  %s/%s\n", s.Meta.ID, s.Meta.Title, p.Root, s.Path)
+		fmt.Fprintf(stdout, "%s  %s  %s/%s/spec.md\n", s.ID, s.Meta.Title, p.Root, s.Dir)
 		problems(stdout, s.Diagnostics)
 	}
 	return nil
@@ -45,10 +46,14 @@ func reader() error {
 	}
 	var items []tui.Item
 	for _, s := range ip.Agreed.Specs {
-		items = append(items, tui.Item{Label: "maintained spec", ID: s.Meta.ID, Title: s.Meta.Title, Sections: []string{doc.Body(s.Source)}})
+		b, err := fs.ReadFile(fsys, s.Dir+"/spec.md")
+		if err != nil {
+			return err
+		}
+		items = append(items, tui.Item{Label: "maintained spec", ID: s.ID, Title: s.Meta.Title, Sections: []string{doc.Body(string(b))}})
 	}
 	for _, c := range ip.Agreed.Changes {
-		it := tui.Item{Label: "approved change", ID: c.Proposal.Meta.ID, Title: c.Proposal.Meta.Title}
+		it := tui.Item{Label: "approved change", ID: c.ID, Title: c.Meta.Title}
 		for _, name := range readingOrder(c) {
 			b, err := fs.ReadFile(fsys, name)
 			if err != nil {
@@ -62,7 +67,8 @@ func reader() error {
 }
 
 // readingOrder is the proposal, the change specs, the tasks, then whatever
-// else the folder holds, implementation.md among it.
+// else the folder holds, implementation.md among it. It leaves out
+// .grove.yaml, whose title the reader already shows.
 func readingOrder(c *doc.Change) []string {
 	rank := func(name string) int {
 		switch rest := strings.TrimPrefix(name, c.Dir+"/"); {
@@ -75,7 +81,7 @@ func readingOrder(c *doc.Change) []string {
 		}
 		return 3
 	}
-	files := slices.Clone(c.Files)
+	files := slices.DeleteFunc(slices.Clone(c.Files), func(name string) bool { return path.Base(name) == ".grove.yaml" })
 	slices.SortStableFunc(files, func(a, b string) int { return rank(a) - rank(b) })
 	return files
 }

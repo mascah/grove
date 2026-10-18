@@ -3,7 +3,9 @@
 # name and <capability> a capability's ID. A workflow's skill is the
 # description of the skill init writes for it, and args what that skill
 # passes to `instructions <workflow>`, <args> being what the user typed after
-# the skill's name. It holds no dependencies between steps and no status.
+# the skill's name. A kind's metadata is the .grove.yaml written beside it,
+# from its metadata_template; it takes no rules of its own (D-54). It holds no
+# dependencies between steps and no status.
 documents:
   - kind: spec
     path: specs/<capability>/spec.md
@@ -12,6 +14,8 @@ documents:
   - kind: proposal
     path: changes/<change>/proposal.md
     template: templates/proposal.md
+    metadata: changes/<change>/.grove.yaml
+    metadata_template: templates/change.grove.yaml
     guide: guides/proposal.md
   - kind: change-spec
     path: changes/<change>/specs/<capability>/spec.md
