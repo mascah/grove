@@ -66,6 +66,8 @@ func meaning(root, path string) string {
 		return "archived change"
 	case strings.HasPrefix(path, root+"/changes/"):
 		return "change"
+	case strings.HasPrefix(path, root+"/schemas/"):
+		return "change schema"
 	}
 	return "maintained spec"
 }

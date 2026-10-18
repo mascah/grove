@@ -9,7 +9,7 @@
 | `grove specs` | Lists the maintained specs on the target branch. |
 | `grove changes` | Lists the approved changes on the target branch that are not archived. |
 | `grove check` | Reports each problem in the Grove documents of this working tree, and each unknown field or `rules` key in `grove.yaml`, as `path:line: message`, and exits non-zero if there is one. |
-| `grove review` | Shows what merging the current branch into the target would approve: each change or spec it adds or alters, and the diff. |
+| `grove review` | Shows what merging the current branch into the target would approve: each change, maintained spec or change schema file it adds or alters, and the diff. |
 | `grove archive <change-id>` | Moves the change's folder to `changes/archive/`. Refuses unless `implementation.md` marks every task in `tasks.md` `Status: done`, or says `Status: dropped`. Commits nothing. |
 
 Skills run these; you do not need to:

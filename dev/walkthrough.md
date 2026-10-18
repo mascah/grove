@@ -127,7 +127,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
   Reproduction and The requirement it breaks, a change spec adding "editing
   a missing record prints an error" to `record-editing`, `tasks.md` whose
   T-01 starts with a test that reproduces the crash, and `.grove.yaml` with
-  `schema: bugfix`. Commit and merge it, then on another branch
+  `schema: bugfix`. Commit; `grove review` labels the schema's files
+  `change schema`, not `maintained spec`. Merge it, then on another branch
   `/grove-apply <change-id>` builds it (its instructions name schema
   `bugfix`) and `/grove-archive <change-id>` adds the requirement to
   `grove/specs/record-editing/spec.md` and archives the change.

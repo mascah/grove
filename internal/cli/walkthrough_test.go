@@ -389,6 +389,9 @@ func TestSchemas(t *testing.T) {
 		t.Errorf("bugfix revise instructions:\n%.2000s", out)
 	}
 	commitAll(t, dir, "Propose")
+	if out := grove(t, "review"); !strings.Contains(out, "  adds     change schema    grove/schemas/bugfix/schema.yaml\n") {
+		t.Errorf("review of a schema:\n%.1000s", out)
+	}
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
 	for skill, s := range map[string]string{"apply": "One task at a time", "archive": "Reconcile the specs"} {
