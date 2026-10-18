@@ -62,7 +62,9 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    T-01's status and evidence. `python3 -m unittest` passes.
 
 6. **Archive** (§6). `/grove-archive 261015-k3m9q`. The session adds the
-   requirement to a new `grove/specs/record-editing/spec.md`, runs `grove check`, then `grove archive 261015-k3m9q`:
+   requirement to a new `grove/specs/record-editing/spec.md`, with
+   `grove/specs/record-editing/.grove.yaml` beside it, runs `grove check`,
+   then `grove archive 261015-k3m9q`:
    > Archived 261015-k3m9q to grove/changes/archive/261015-k3m9q-allow-editing-older-records/; nothing is committed.
 
    Commit, `git switch main && git merge --no-ff older-edits-impl`. `grove specs`:

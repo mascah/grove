@@ -20,9 +20,9 @@ under the document root. ADDED requirements become requirements, MODIFIED
 ones replace the requirement of the same name, REMOVED ones are deleted; the
 ADDED/MODIFIED/REMOVED headings never appear in a maintained spec. Remove the
 known discrepancies the work resolved. Where there is no maintained spec,
-create it from the spec under "Documents" below. List each reconciled spec
-under "Reconciliation" in `implementation.md`. Then run Grove's `check` and
-fix what it reports.
+create it, and its `.grove.yaml`, from the templates under "Documents" below.
+List each reconciled spec under "Reconciliation" in `implementation.md`. Then
+run Grove's `check` and fix what it reports.
 
 ### 3. Move the change
 

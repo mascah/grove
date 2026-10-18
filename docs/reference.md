@@ -73,7 +73,9 @@ asks, as `apply` does above.
 ```text
 grove.yaml
 grove/
-  specs/<capability>/spec.md
+  specs/<capability>/
+    .grove.yaml
+    spec.md
   changes/<id>-<slug>/
     .grove.yaml
     proposal.md
@@ -83,10 +85,9 @@ grove/
   changes/archive/<id>-<slug>/
 ```
 
-Maintained specs start with frontmatter carrying `id` and `title`, and may
-add a one-line `description`, shown in lists.
-
-A change's `.grove.yaml` holds its `title`, when it was `created`, and may add
-a one-line `description`, shown in lists. The folder name gives the change's
-ID, and `proposal.md` starts with the title as its heading. A change's other
-files have no metadata: their folder names their change.
+A maintained spec's `.grove.yaml` holds its `title`; a change's holds its
+`title` and when it was `created`. Either may add a one-line `description`,
+shown in lists. The folder name gives the ID: a spec's is the whole name, a
+change's the start of it. `spec.md` and `proposal.md` start with the title as
+their heading. A change's other files have no metadata: their folder names
+their change.

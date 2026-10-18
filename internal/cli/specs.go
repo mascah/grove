@@ -50,7 +50,7 @@ func reader() error {
 		if err != nil {
 			return err
 		}
-		items = append(items, tui.Item{Label: "maintained spec", ID: s.ID, Title: s.Meta.Title, Sections: []string{doc.Body(string(b))}})
+		items = append(items, tui.Item{Label: "maintained spec", ID: s.ID, Title: s.Meta.Title, Sections: []string{string(b)}})
 	}
 	for _, c := range ip.Agreed.Changes {
 		it := tui.Item{Label: "approved change", ID: c.ID, Title: c.Meta.Title}
@@ -59,7 +59,7 @@ func reader() error {
 			if err != nil {
 				return err
 			}
-			it.Sections = append(it.Sections, "`"+p.Root+"/"+name+"`\n\n"+doc.Body(string(b)))
+			it.Sections = append(it.Sections, "`"+p.Root+"/"+name+"`\n\n"+string(b))
 		}
 		items = append(items, it)
 	}

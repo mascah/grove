@@ -10,6 +10,8 @@ documents:
   - kind: spec
     path: specs/<capability>/spec.md
     template: templates/spec.md
+    metadata: specs/<capability>/.grove.yaml
+    metadata_template: templates/spec.grove.yaml
     guide: guides/spec.md
   - kind: proposal
     path: changes/<change>/proposal.md

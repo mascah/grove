@@ -7,7 +7,7 @@ stripped to what the walkthrough uses.
 | Copied to | From | What was kept |
 | --- | --- | --- |
 | `internal/gitx/gitx.go` | `internal/gitx/gitx.go` | `Run`: argv with `-C dir`, Git's standard error in the failure. Dropped the environment cleaning, replace/graft switches, context and wait delay (rule 13). |
-| `internal/doc/frontmatter.go` | `internal/doc/frontmatter.go`, `internal/doc/document.go` | Frontmatter split, YAML error line, duplicate and unknown keys, required fields as diagnostics. Dropped kinds, typed schemas, timestamps, manifests, extensions, `Format` validation. |
+| `internal/doc/meta.go` | `internal/doc/frontmatter.go`, `internal/doc/document.go` | YAML error line, duplicate and unknown keys, required fields as diagnostics, now over `.grove.yaml`. Dropped splitting the `---` block, kinds, typed schemas, timestamps, manifests, extensions, `Format` validation. |
 | `internal/doc/doc.go` | `internal/doc/doc.go`, `internal/doc/ids.go`, `internal/doc/collection.go` | `Diagnostic`; `NewID` (YYMMDD-xxxxx, Crockford base32); the collection layout, as globs. Dropped severities, task parsing, implementation notes, review blockers, duplicate detection. |
 | `internal/gitx/tree.go` | `internal/gitx/tree.go` | `TreeFS` over `ls-tree` and one `cat-file --batch`. Dropped path validation, reply checks and `HasFile`. |
 | `internal/gitx/gitx.go` (`ResolveBranch`) | `internal/gitx/repo.go` | Branch tip. |

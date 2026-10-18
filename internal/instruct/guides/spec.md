@@ -3,6 +3,8 @@ agreed only when the owner merges it into the target branch.
 
 - The capability's ID is lowercase kebab-case, such as `record-editing`; use
   the change spec's when there is one.
+- Title: write it in `.grove.yaml` and repeat it as the spec's first
+  heading.
 - State intended behavior, not whatever the code does. Go through each rule
   with the owner before writing it. Where the code differs, keep the rule and
   record the difference under "Known discrepancies" with its source.

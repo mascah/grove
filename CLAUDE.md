@@ -18,7 +18,7 @@ follow what it prints. What Grove does is specified by `docs/` (rule 8).
 | `cmd/grove` | `main`, calling `cli.Main`. |
 | `internal/cli` | Parses commands and wires the other packages together; the only package that writes to the terminal. One file per command. |
 | `internal/instruct` | The embedded `schema.yaml` (document kinds and workflows), `templates/` and `guides/`, and building one workflow's instructions as a value before printing. |
-| `internal/doc` | Reads Grove's documents: frontmatter, diagnostics, IDs, the folder layout. |
+| `internal/doc` | Reads Grove's documents: `.grove.yaml`, diagnostics, IDs, the folder layout. |
 | `internal/gitx` | The only place Git runs, by argv. `TreeFS` reads a commit's tree as an `fs.FS`. |
 | `internal/tui` | The reader (Bubble Tea, Glamour). Knows nothing about Git or Grove's documents. |
 | `docs/`, `README.md` | User documentation, and the specification. |

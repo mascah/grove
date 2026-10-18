@@ -1,16 +1,16 @@
 // Package doc reads Grove's documents through an fs.FS rooted at the
-// document root: Markdown files, and the metadata beside them.
+// document root: Markdown files, and the .grove.yaml beside them.
 //
-// Under the root are maintained specs (specs/<id>/spec.md, with frontmatter)
-// and changes (changes/<id>-<slug>/, identified by their proposal.md, with a
-// .grove.yaml). Problems inside a document are Diagnostics, never errors, so
-// one broken document does not hide the others.
+// Under the root are maintained specs (specs/<id>/, identified by their
+// spec.md) and changes (changes/<id>-<slug>/, identified by their
+// proposal.md), each folder with a .grove.yaml. Problems inside a document
+// are Diagnostics, never errors, so one broken document does not hide the
+// others.
 package doc
 
 import (
 	"crypto/rand"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"io/fs"
 	"path"
@@ -59,7 +59,7 @@ type Collection struct {
 // Required fields of each kind, in written order; description is optional
 // everywhere.
 var (
-	specFields   = []string{"id", "title"}
+	specFields   = []string{"title"}
 	changeFields = []string{"title", "created"}
 )
 
@@ -71,15 +71,9 @@ func Load(fsys fs.FS) (*Collection, error) {
 		return nil, err
 	}
 	for _, name := range specs {
-		b, err := fs.ReadFile(fsys, name)
-		if err != nil {
+		d := &Document{ID: path.Base(path.Dir(name)), Dir: path.Dir(name)}
+		if err := d.readMeta(fsys, specFields, "spec's title"); err != nil {
 			return nil, err
-		}
-		d := &Document{Dir: path.Dir(name)}
-		if meta, problem := splitFrontmatter(string(b)); problem != "" {
-			d.report(name, 1, problem)
-		} else {
-			d.ID = d.parse(name, meta, 1, specFields)["id"]
 		}
 		c.Specs = append(c.Specs, d)
 	}
@@ -94,17 +88,11 @@ func Load(fsys fs.FS) (*Collection, error) {
 		} else {
 			ch.report(ch.Dir+"/", 0, "the folder name must start with a change ID, such as 261015-k3m9q")
 		}
-		meta := ch.Dir + "/.grove.yaml"
-		switch b, err := fs.ReadFile(fsys, meta); {
-		case errors.Is(err, fs.ErrNotExist):
-			ch.report(meta, 0, "missing; it holds the change's title and created")
-		case err != nil:
+		if err := ch.readMeta(fsys, changeFields, "change's title and created"); err != nil {
 			return nil, err
-		default:
-			ch.parse(meta, b, 0, changeFields)
 		}
 		err := fs.WalkDir(fsys, ch.Dir, func(name string, d fs.DirEntry, err error) error {
-			if err == nil && !d.IsDir() && (strings.HasSuffix(name, ".md") || name == meta) {
+			if err == nil && !d.IsDir() && (strings.HasSuffix(name, ".md") || name == ch.Dir+"/.grove.yaml") {
 				ch.Files = append(ch.Files, name)
 			}
 			return err

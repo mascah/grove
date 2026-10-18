@@ -108,7 +108,8 @@ func TestCheck(t *testing.T) {
 		t.Errorf("check printed %q", got)
 	}
 	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
-	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte("---\nid: record-editing\nowner: me\n---\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte("# Record editing\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", ".grove.yaml"), []byte("description: Editing records.\nowner: me\n"), 0o644)
 	for folder, meta := range map[string]string{"261015-k3m9q-no-metadata": "", "261015-p4x8d-extra-field": "title: T\ncreated: x\nowner: me\n", "no-id": "title: T\ncreated: x\n"} {
 		os.MkdirAll(filepath.Join(dir, "grove", "changes", folder), 0o755)
 		os.WriteFile(filepath.Join(dir, "grove", "changes", folder, "proposal.md"), []byte("# T\n"), 0o644)
@@ -118,8 +119,8 @@ func TestCheck(t *testing.T) {
 	}
 	var stdout, stderr strings.Builder
 	code := run([]string{"check"}, &stdout, &stderr)
-	want := "grove/specs/record-editing/spec.md:3: unknown field \"owner\"; this file takes id, title and description\n" +
-		"grove/specs/record-editing/spec.md:1: title: required field is missing\n" +
+	want := "grove/specs/record-editing/.grove.yaml:2: unknown field \"owner\"; this file takes title and description\n" +
+		"grove/specs/record-editing/.grove.yaml: title: required field is missing\n" +
 		"grove/changes/261015-k3m9q-no-metadata/.grove.yaml: missing; it holds the change's title and created\n" +
 		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created and description\n" +
 		"grove/changes/no-id/: the folder name must start with a change ID, such as 261015-k3m9q\n"
@@ -278,13 +279,15 @@ func TestArchive(t *testing.T) {
 			t.Errorf("archive instructions lack %q", s)
 		}
 	}
-	m := regexp.MustCompile(`(?s)<file path="grove/specs/<capability>/spec.md">\n(.*?)\n</file>`).FindStringSubmatch(out)
-	if m == nil {
-		t.Fatalf("no spec template in:\n%s", out)
-	}
-	spec := strings.NewReplacer("<capability>", "record-editing", "<title>", "Record editing").Replace(m[1])
 	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
-	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte(spec), 0o644)
+	for _, name := range []string{".grove.yaml", "spec.md"} {
+		m := regexp.MustCompile(`(?s)<file path="grove/specs/<capability>/` + regexp.QuoteMeta(name) + `">\n(.*?)\n</file>`).FindStringSubmatch(out)
+		if m == nil {
+			t.Fatalf("no %s template in:\n%s", name, out)
+		}
+		filled := strings.NewReplacer("<capability>", "record-editing", "<title>", "Record editing").Replace(m[1])
+		os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", name), []byte(filled), 0o644)
+	}
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
 		t.Errorf("check printed %q", got)
 	}

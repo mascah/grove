@@ -1,8 +1,3 @@
----
-id: <capability>
-title: <title>
----
-
 # <title>
 
 <!-- A maintained spec states the agreed behavior expected of the target branch.
