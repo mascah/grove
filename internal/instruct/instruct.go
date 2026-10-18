@@ -1,5 +1,5 @@
-// Package instruct holds Grove's embedded templates and guides and builds
-// the instructions a session follows. Instructions are index first: the
+// Package instruct holds Grove's skills and its built-in change schema, and
+// builds the instructions a session follows. Instructions are index first: the
 // documents being worked on are included in full, everything else is listed
 // with the commit to read it at.
 package instruct
@@ -16,7 +16,7 @@ import (
 	"github.com/mascah/grove-next2/internal/doc"
 )
 
-//go:embed schema.yaml templates guides
+//go:embed skills.yaml skills metadata schemas
 var files embed.FS
 
 func embedded(name string) string {
@@ -27,24 +27,57 @@ func embedded(name string) string {
 	return string(b)
 }
 
-// Kind is one kind of document: where it goes, the template it starts from
-// and the guide for writing it, and where its metadata goes and the template
-// that starts from, if it has any. Paths are relative to the document root.
-type Kind struct {
-	Kind, Path, Template, Guide string
-	Metadata                    string
-	MetadataTemplate            string `yaml:"metadata_template"`
-}
+// Skill is one of Grove's skills: the description of the skill init writes
+// for it, and what that skill passes to `instructions <skill>`. What Grove
+// requires of it is skills/<name>.md, the same in every change schema.
+type Skill struct{ Name, Description, Args string }
 
-// Skill is one skill: the description of the skill init writes for it, its
+// Skills returns Grove's skills, in order.
+func Skills() []Skill { return skills }
+
+var skills []Skill
+
+// Kind is one kind of document: where it goes, the template it starts from,
+// the guide for writing it, and the .grove.yaml written beside it, if any.
+// Paths are relative to the document root.
+type Kind struct{ Kind, Path, Template, Guide, Metadata string }
+
+// Schema is a change schema: its kinds of document and, for each skill, its
 // guide and the kinds of document it writes.
-type Skill struct {
-	Name, Description, Args, Guide string
-	Writes                         []string
+type Schema struct {
+	Description string
+	Documents   []Kind
+	Skills      map[string]Step
 }
 
-// Skills returns the schema's skills, in order.
-func Skills() []Skill { return schema.Skills }
+// Step is what a change schema says for one skill.
+type Step struct {
+	Guide  string
+	Writes []string
+}
+
+// schema is Grove's built-in change schema, default.
+var schema Schema
+
+// changeMetadata is where a change's metadata goes; the kind that names it
+// is the change's main document.
+const changeMetadata = "changes/<change>/.grove.yaml"
+
+// metadataTemplates are Grove's own templates for the .grove.yaml a kind's
+// metadata names. They are not a schema's, so no schema changes the fields
+// Grove reads.
+var metadataTemplates = map[string]string{
+	changeMetadata:                   "metadata/change.grove.yaml",
+	"specs/<capability>/.grove.yaml": "metadata/spec.grove.yaml",
+}
+
+func init() {
+	for name, v := range map[string]any{"skills.yaml": &skills, "schemas/default/schema.yaml": &schema} {
+		if err := yaml.Unmarshal([]byte(embedded(name)), v); err != nil {
+			panic(err) // embedded at build time
+		}
+	}
+}
 
 // Kinds returns the names of the schema's kinds of document, in order.
 func Kinds() []string {
@@ -55,21 +88,15 @@ func Kinds() []string {
 	return names
 }
 
-// schema is the embedded document set and skills, schema.yaml.
-var schema struct {
-	Documents []Kind
-	Skills    []Skill
-}
-
-func init() {
-	if err := yaml.Unmarshal([]byte(embedded("schema.yaml")), &schema); err != nil {
-		panic(err) // embedded at build time
+// MainDocument returns the file of a change folder that holds its main
+// document.
+func MainDocument() string {
+	for _, k := range schema.Documents {
+		if k.Metadata == changeMetadata {
+			return strings.TrimPrefix(k.Path, "changes/<change>/")
+		}
 	}
-}
-
-func skill(name string) Skill {
-	i := slices.IndexFunc(schema.Skills, func(s Skill) bool { return s.Name == name })
-	return schema.Skills[i]
+	return ""
 }
 
 func kind(name string) Kind {
@@ -92,8 +119,9 @@ type Project struct {
 type Instructions struct {
 	Project
 	Skill       string
-	Task        string // what the session is doing, one sentence
-	Guide       string
+	Task        string     // what the session is doing, one sentence
+	Requires    string     // what Grove requires of the skill, in every schema
+	Guide       string     // how the skill goes, from the change schema
 	Description string     // the owner's description, when given
 	Documents   []Document // the kinds of document the skill writes
 	Change      []File     // the change being worked on, in full
@@ -113,14 +141,14 @@ type File struct{ Path, Content string }
 // build returns skill name's instructions with its guide and documents,
 // fill's values put into their paths and templates.
 func build(p Project, name, task string, fill *strings.Replacer) Instructions {
-	s := skill(name)
-	in := Instructions{Project: p, Skill: name, Task: task, Guide: embedded(s.Guide)}
-	for _, kn := range s.Writes {
+	st, file := schema.Skills[name], func(name string) string { return embedded("schemas/default/" + name) }
+	in := Instructions{Project: p, Skill: name, Task: task, Requires: embedded("skills/" + name + ".md"), Guide: file(st.Guide)}
+	for _, kn := range st.Writes {
 		k := kind(kn)
 		d := Document{Kind: k.Kind, Path: p.Root + "/" + fill.Replace(k.Path),
-			Guide: embedded(k.Guide), Template: fill.Replace(embedded(k.Template)), Rules: p.Rules[k.Kind]}
+			Guide: file(k.Guide), Template: fill.Replace(file(k.Template)), Rules: p.Rules[k.Kind]}
 		if k.Metadata != "" {
-			d.Metadata, d.MetadataTemplate = p.Root+"/"+fill.Replace(k.Metadata), fill.Replace(embedded(k.MetadataTemplate))
+			d.Metadata, d.MetadataTemplate = p.Root+"/"+fill.Replace(k.Metadata), fill.Replace(embedded(metadataTemplates[k.Metadata]))
 		}
 		in.Documents = append(in.Documents, d)
 	}
@@ -187,6 +215,7 @@ func (in Instructions) Markdown() string {
 	if in.Context != "" {
 		fmt.Fprintf(&b, "## Project context\n\n%s\n\n", strings.TrimRight(in.Context, "\n"))
 	}
+	fmt.Fprintf(&b, "## What Grove requires of %s\n\n%s\n", in.Skill, in.Requires)
 	fmt.Fprintf(&b, "## How to %s\n\n%s\n", in.Skill, in.Guide)
 	rules(&b, "skill", in.Rules[in.Skill])
 	if in.Description != "" {

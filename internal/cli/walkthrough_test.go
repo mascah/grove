@@ -213,7 +213,9 @@ func TestPropose(t *testing.T) {
 	if code := run([]string{"instructions", "propose", "261015-zzzzz"}, &stdout, &stderr); code != 1 || stderr.String() != "grove: no change 261015-zzzzz in this working tree\n" {
 		t.Errorf("an unknown change: status %d, %q", code, stderr.String())
 	}
-	if out := grove(t, "instructions", "propose", "Editing a missing record should print an error"); !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") {
+	out := grove(t, "instructions", "propose", "Editing a missing record should print an error")
+	req, how := strings.Index(out, "## What Grove requires of propose\n\n- A change describes future work."), strings.Index(out, "## How to propose\n\n**Propose says")
+	if !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") || req < 0 || how < req {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
 }

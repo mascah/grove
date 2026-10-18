@@ -62,8 +62,9 @@ var (
 	changeFields = []string{"title", "created"}
 )
 
-// Load reads the collection under fsys.
-func Load(fsys fs.FS) (*Collection, error) {
+// Load reads the collection under fsys; main is the file of a change folder
+// that holds its main document.
+func Load(fsys fs.FS, main string) (*Collection, error) {
 	c := &Collection{}
 	specs, err := fs.Glob(fsys, "specs/*/.grove.yaml") // sorted
 	if err != nil {
@@ -87,7 +88,7 @@ func Load(fsys fs.FS) (*Collection, error) {
 		} else {
 			ch.report(ch.Dir+"/", 0, "the folder name must start with a change ID, such as 261015-k3m9q")
 		}
-		if err := ch.read(fsys, changeFields, "proposal.md", "change's"); err != nil {
+		if err := ch.read(fsys, changeFields, main, "change's"); err != nil {
 			return nil, err
 		}
 		err := fs.WalkDir(fsys, ch.Dir, func(name string, d fs.DirEntry, err error) error {

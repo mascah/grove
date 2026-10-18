@@ -1,7 +1,6 @@
-**Explore is a conversation about what the owner wants and what is true
-today.** It is an interview, not a document: write nothing unless the owner
-asks. No change, several options or a narrower prerequisite is a complete
-result.
+**Explore finds out what the owner wants and what is true today.** It is an
+interview, not a document. No change, several options or a narrower
+prerequisite is a complete result.
 
 ### 1. Interview before you conclude anything
 
@@ -19,25 +18,19 @@ result.
 
 ### 2. Keep evidence and agreement apart
 
-- What the code does is observed behavior: cite its source (file path and
-  commit). Whether it is intended is the owner's to say.
+- Cite the source of what the code does: file path and commit.
 - Where documents or code disagree, ask which is intended.
-- A question is settled only when the owner has answered it. Your own
-  inference stays open; say so.
 
 ### 3. Do not narrow early
 
 Do not push toward a proposal; write no proposal, change spec, tasks or
 requirements until the owner asks. Do not settle on the first plausible
 option: the owner sees the options and open questions before anything is
-recommended. Do not change code.
+recommended.
 
 ### 4. Finish
 
-- Say what you found, what the owner decided (quoted), what is still open, and
-  which result this reached: no change, options to choose from, a
-  prerequisite, or ready to propose.
-- The owner keeps anything by asking you to write it down, or by proposing
-  from this conversation. When they ask for a proposal, run Grove's
-  `instructions propose` with no argument and follow what it prints, here.
-- Commit anything you wrote only when the owner or the project's rules ask.
+Say what you found, what the owner decided (quoted), what is still open, and
+which result this reached: no change, options to choose from, a
+prerequisite, or ready to propose. The owner keeps anything by asking you to
+write it down, or by proposing from this conversation.

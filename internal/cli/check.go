@@ -28,7 +28,7 @@ func check(stdout io.Writer) error {
 	for _, u := range unknown {
 		fmt.Fprintln(stdout, u)
 	}
-	c, err := doc.Load(os.DirFS(filepath.Join(p.Top, p.Root)))
+	c, err := doc.Load(os.DirFS(filepath.Join(p.Top, p.Root)), instruct.MainDocument())
 	if err != nil {
 		return err
 	}

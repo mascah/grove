@@ -7,6 +7,7 @@ import (
 
 	"github.com/mascah/grove-next2/internal/doc"
 	"github.com/mascah/grove-next2/internal/gitx"
+	"github.com/mascah/grove-next2/internal/instruct"
 )
 
 // review shows what merging the current branch into the target would agree
@@ -29,7 +30,7 @@ func review(stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	head, err := doc.Load(fsys)
+	head, err := doc.Load(fsys, instruct.MainDocument())
 	if err != nil {
 		return err
 	}

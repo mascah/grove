@@ -47,7 +47,7 @@ func (p project) agreed() (instruct.Project, error) {
 	if err != nil {
 		return ip, err
 	}
-	ip.Agreed, err = doc.Load(fsys)
+	ip.Agreed, err = doc.Load(fsys, instruct.MainDocument())
 	return ip, err
 }
 

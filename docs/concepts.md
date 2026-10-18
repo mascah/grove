@@ -58,6 +58,14 @@ progress goes in `implementation.md`.
 A change you decide not to build is archived too, without touching the
 specs; its `implementation.md` says `Status: dropped` and why.
 
+What Grove requires at each step is the same in every project: exploring
+writes nothing unless you ask, only your merge approves a change, applying
+builds the change as your main branch holds it and records each task's
+status in `implementation.md`, and archiving refuses a change that is
+neither finished nor dropped. How each step goes, and which documents a
+change has, comes from the change's schema. Grove's built-in schema,
+`default`, is the software change this page describes.
+
 ## Two halves
 
 The `grove` command runs in your terminal: it sets up, lists, checks, reviews

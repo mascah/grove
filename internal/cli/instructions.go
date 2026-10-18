@@ -156,7 +156,7 @@ func instructionsApply(stdout io.Writer, id string) error {
 // change loads change id from the document root fsys, with every file it
 // holds.
 func change(fsys fs.FS, id string) (*doc.Change, map[string]string, error) {
-	all, err := doc.Load(fsys)
+	all, err := doc.Load(fsys, instruct.MainDocument())
 	if err != nil {
 		return nil, nil, err
 	}

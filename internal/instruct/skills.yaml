@@ -1,0 +1,16 @@
+# Grove's skills (CONSTITUTION.md rule 10). A skill's description is the
+# description of the skill init writes for it, and args what that skill
+# passes to `instructions <skill>`, <args> being what the user typed after
+# the skill's name. What Grove requires of a skill is skills/<name>.md; how
+# it goes is the change schema's.
+- name: explore
+  description: Explore an idea with the owner before proposing a change, in an interview that writes nothing unless asked.
+- name: propose
+  description: Propose a change from this conversation or from a description, or revise a drafted change given its ID.
+  args: '"<args>"'
+- name: apply
+  description: Apply an approved change given its ID, building its tasks and recording progress in its implementation.md.
+  args: <args>
+- name: archive
+  description: Archive a finished or dropped change given its ID, first folding a finished change's specs into the maintained specs.
+  args: <args>

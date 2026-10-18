@@ -11,7 +11,7 @@ Setup: in the checkout or worktree under test, `eval "$(just dev-path)"`
 in the shell the agent is started from. It builds `bin/grove` and puts that
 `bin/` first on PATH, so `grove` there is this build and the agent inherits
 it; other shells keep the everyday `grove` from `just install`. After
-changing a guide, template or the schema, `just build` is enough; after
+changing a guide, template or a schema, `just build` is enough; after
 changing skill text, run `grove init` again in the fixture. `just fixture ~/tmp/ledger`, `cd ~/tmp/ledger`. For
 Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 
@@ -46,6 +46,9 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    with scenarios), and `tasks.md` (T-01 with its acceptance). It runs
    `grove check` until:
    > No problems in grove/.
+
+   Its instructions, `grove instructions propose`, give
+   `## What Grove requires of propose` before `## How to propose`.
 
 4. **Review and approve** (§4).
    `git add -A && git commit -m "Propose allowing edits to older records"`,
