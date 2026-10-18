@@ -47,12 +47,14 @@ context: |
   Go 1.24 service; tests with go test ./...
   Every public API stays backwards compatible.
 rules:
-  proposal:
-    - List who is affected.
-  tasks:
-    - Every task names its test.
-  apply:
-    - Commit after each task, naming its task ID.
+  documents:
+    proposal:
+      - List who is affected.
+    tasks:
+      - Every task names its test.
+  skills:
+    apply:
+      - Commit after each task, naming its task ID.
 ```
 
 | Field | Default | Meaning |
@@ -62,7 +64,7 @@ rules:
 | `agents` | `[claude, codex]` | The harnesses `init` writes skills for. |
 | `schema` | `default` | The change schema a new change has unless the owner names another while proposing. See "Change schemas". |
 | `context` | empty | Facts about the project, given to every skill. Keep it to what an agent cannot read from the code. |
-| `rules` | none | Extra lines for one kind of document, given when that document is written, or for one skill, given with its instructions. Kinds: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Skills: `explore`, `propose`, `apply`, `archive`. |
+| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `propose`, `apply`, `archive`. |
 
 `grove check` reports a field or `rules` key that Grove does not know; other
 commands ignore it.

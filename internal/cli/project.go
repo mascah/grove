@@ -14,13 +14,13 @@ import (
 
 // project is the repository Grove was run in.
 type project struct {
-	Top     string              `yaml:"-"` // the top of the working tree
-	Root    string              `yaml:"root"`
-	Target  string              `yaml:"target"`
-	Agents  []string            `yaml:"agents"`
-	Schema  string              `yaml:"schema"`
-	Context string              `yaml:"context"`
-	Rules   map[string][]string `yaml:"rules"`
+	Top     string         `yaml:"-"` // the top of the working tree
+	Root    string         `yaml:"root"`
+	Target  string         `yaml:"target"`
+	Agents  []string       `yaml:"agents"`
+	Schema  string         `yaml:"schema"`
+	Context string         `yaml:"context"`
+	Rules   instruct.Rules `yaml:"rules"`
 }
 
 func openProject() (project, error) {

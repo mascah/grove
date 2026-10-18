@@ -142,16 +142,19 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 
   `grove changes` still works.
 - **A mistake in grove.yaml** (reference, "grove.yaml"). Add `derp: [x]`
-  under `rules` and a top-level `rule: {}` in `grove.yaml`. `grove check`
-  reports both and exits non-zero:
-  > grove.yaml:<line>: unknown rules key "derp"; kinds are proposal, change-spec, tasks, implementation, spec, and skills are explore, propose, apply, archive
+  under `rules`, `propsal: [x]` under `rules: documents:`, and a top-level
+  `rule: {}` in `grove.yaml`. `grove check` reports all three and exits
+  non-zero:
+  > grove.yaml:<line>: unknown rules key "derp"; rules takes documents and skills
+
+  > grove.yaml:<line>: unknown rules.documents key "propsal"; kinds are proposal, change-spec, tasks, implementation, spec
 
   > grove.yaml:<line>: unknown field "rule"; grove.yaml takes root, target, agents, schema, context and rules
 
   `grove changes` still works.
 - **Commit as you go** (reference, `rules`). With
-  `apply: [Commit after each task, naming its task ID.]` under `rules`
-  in `grove.yaml`, `/grove-apply` commits T-01 with its ID in the
+  `apply: [Commit after each task, naming its task ID.]` under
+  `rules: skills:` in `grove.yaml`, `/grove-apply` commits T-01 with its ID in the
   message.
 - **Drop a change** (concepts, "The loop"). `/grove-archive <change-id>` on
   an approved change nobody will build asks why, writes `Status: dropped`
@@ -183,8 +186,9 @@ Owner, asked whether to add each:
 Agent inference, not the owner's decisions (rule 25).
 
 - `grove.yaml` fields and defaults: `root: grove`, `target: main`,
-  `agents: [claude, codex]`, `schema: default`, `context`, and `rules` keyed by `proposal`,
-  `change-spec`, `tasks`, `implementation` and `spec`, or by a skill.
+  `agents: [claude, codex]`, `schema: default`, `context`, and `rules`, with `documents` keyed by
+  `proposal`, `change-spec`, `tasks`, `implementation` and `spec`, and
+  `skills` keyed by a skill.
 - `init` never overwrites `grove.yaml` and always rewrites the skills.
   Its second run says "Kept grove.yaml and wrote the Grove skills for claude
   and codex; nothing is committed." A field left out of `grove.yaml` takes

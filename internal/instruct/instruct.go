@@ -185,14 +185,22 @@ func (p Project) MainDocument(name string) (file, problem string) {
 
 // Project is what a session is told about the repository.
 type Project struct {
-	Root    string              // document root, such as "grove"
-	Target  string              // target branch, such as "main"
-	Commit  string              // the target's commit
-	Agreed  *doc.Collection     // the documents at Commit
-	Context string              // grove.yaml's context
-	Rules   map[string][]string // grove.yaml's rules, by kind of document or skill
-	Schemas fs.FS               // <root>/schemas in the working tree, the project's own schema files
-	Schema  string              // grove.yaml's schema, for exploring and new changes
+	Root    string          // document root, such as "grove"
+	Target  string          // target branch, such as "main"
+	Commit  string          // the target's commit
+	Agreed  *doc.Collection // the documents at Commit
+	Context string          // grove.yaml's context
+	Rules   Rules           // grove.yaml's rules
+	Schemas fs.FS           // <root>/schemas in the working tree, the project's own schema files
+	Schema  string          // grove.yaml's schema, for exploring and new changes
+}
+
+// Rules are grove.yaml's extra lines: for a kind of document, given when it
+// is written, and for a skill, given with its guide. They are apart because
+// the two are named alike, such as proposal and propose.
+type Rules struct {
+	Documents map[string][]string
+	Skills    map[string][]string
 }
 
 // Instructions is everything one skill's instructions say, built before
@@ -391,7 +399,7 @@ func build(p Project, s, name, task string, fill *strings.Replacer, c *doc.Chang
 	for _, kn := range st.Writes {
 		k := schema.Documents[slices.IndexFunc(schema.Documents, func(k Kind) bool { return k.Kind == kn })]
 		d := Document{Kind: k.Kind, Path: p.Root + "/" + fill.Replace(k.Path),
-			Guide: file(k.Guide), Template: fill.Replace(file(k.Template)), Rules: p.Rules[k.Kind]}
+			Guide: file(k.Guide), Template: fill.Replace(file(k.Template)), Rules: p.Rules.Documents[k.Kind]}
 		if k.Metadata != "" {
 			d.Metadata, d.MetadataTemplate = p.Root+"/"+fill.Replace(k.Metadata), fill.Replace(embedded(metadataTemplates[k.Metadata]))
 		}
@@ -486,7 +494,7 @@ func (in Instructions) Markdown() string {
 	}
 	fmt.Fprintf(&b, "## What Grove requires of %s\n\n%s\n", in.Skill, in.Requires)
 	fmt.Fprintf(&b, "## How to %s\n\n%s\n", in.Skill, in.Guide)
-	rules(&b, "skill", in.Rules[in.Skill])
+	rules(&b, "skill", in.Rules.Skills[in.Skill])
 	if len(in.Schemas) > 0 {
 		fmt.Fprintf(&b, "## Change schemas\n\nThe project's change schemas; these instructions follow `%s`.\n\n", in.Follows.Name)
 		for _, s := range in.Schemas {

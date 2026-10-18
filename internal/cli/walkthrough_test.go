@@ -77,7 +77,7 @@ func TestInit(t *testing.T) {
 		t.Errorf("codex propose skill:\n%s", skill)
 	}
 	yaml := strings.Replace(read(t, filepath.Join(dir, "grove.yaml")), `context: ""`, "context: Python 3 standard library only.", 1)
-	yaml = strings.Replace(yaml, "rules: {}", "rules:\n  proposal:\n    - Name the owner for every decision.\n  propose:\n    - Commit the change folder when check passes.", 1)
+	yaml = strings.Replace(yaml, "rules: {}", "rules:\n  documents:\n    proposal:\n      - Name the owner for every decision.\n  skills:\n    propose:\n      - Commit the change folder when check passes.", 1)
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(yaml), 0o644)
 	os.WriteFile(filepath.Join(dir, ".claude/skills/grove-explore/SKILL.md"), []byte("edited"), 0o644)
 	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove skills for claude and codex; nothing is committed.\n"; got != want {
@@ -108,12 +108,13 @@ func TestCheck(t *testing.T) {
 		t.Errorf("check printed %q", got)
 	}
 	config := read(t, filepath.Join(dir, "grove.yaml"))
-	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(config, "rules: {}", "rules:\n  derp: [x]\nrule: {}", 1)), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(config, "rules: {}", "rules:\n  derp: [x]\n  documents:\n    propsal: [x]\nrule: {}", 1)), 0o644)
 	var stdout, stderr strings.Builder
 	code := run([]string{"check"}, &stdout, &stderr)
-	want := "grove.yaml:22: unknown rules key \"derp\"; kinds are proposal, change-spec, tasks, implementation, spec, and skills are explore, propose, apply, archive\n" +
-		"grove.yaml:23: unknown field \"rule\"; grove.yaml takes root, target, agents, schema, context and rules\n"
-	if code != 1 || stdout.String() != want || stderr.String() != "grove: 2 problems found\n" {
+	want := "grove.yaml:25: unknown rules key \"derp\"; rules takes documents and skills\n" +
+		"grove.yaml:27: unknown rules.documents key \"propsal\"; kinds are proposal, change-spec, tasks, implementation, spec\n" +
+		"grove.yaml:28: unknown field \"rule\"; grove.yaml takes root, target, agents, schema, context and rules\n"
+	if code != 1 || stdout.String() != want || stderr.String() != "grove: 3 problems found\n" {
 		t.Errorf("check of grove.yaml: status %d\n%s%s", code, stdout.String(), stderr.String())
 	}
 	grove(t, "changes")

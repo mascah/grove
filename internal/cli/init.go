@@ -24,12 +24,15 @@ schema: default
 # Facts about this project given to every skill: the language, how tests
 # run, anything an agent cannot read from the code. Keep it short.
 context: ""
-# Extra lines for one kind of document, given when it is written, or for one
-# skill, given with its guide, such as
-#   proposal:
-#     - List who is affected.
-#   apply:
-#     - Commit after each task, naming its task ID.
+# Extra lines for Grove's instructions: under documents, for one kind of
+# document, given when it is written; under skills, for one skill, given
+# with its guide. Such as
+#   documents:
+#     proposal:
+#       - List who is affected.
+#   skills:
+#     apply:
+#       - Commit after each task, naming its task ID.
 # Kinds: proposal, change-spec, tasks, implementation, spec, and those of
 # the project's own schemas.
 # Skills: explore, propose, apply, archive.

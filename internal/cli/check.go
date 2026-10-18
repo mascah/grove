@@ -55,7 +55,8 @@ func check(stdout io.Writer) error {
 // configFields are grove.yaml's fields, as project reads them.
 var configFields = []string{"root", "target", "agents", "schema", "context", "rules"}
 
-// unknownConfig returns a problem for each field and rules key of grove.yaml
+// unknownConfig returns a problem for each field and rules key of grove.yaml,
+// rules being keyed by documents and skills, then by kind and by skill,
 // that Grove does not know, and a schema that is not one. Other commands
 // ignore the unknown fields and keys (D-58).
 func unknownConfig(top string, ip instruct.Project) ([]string, error) {
@@ -83,9 +84,20 @@ func unknownConfig(top string, ip instruct.Project) ([]string, error) {
 			continue
 		}
 		for j := 0; key.Value == "rules" && j+1 < len(value.Content); j += 2 {
-			if k := value.Content[j]; !slices.Contains(kinds, k.Value) && !slices.Contains(skills, k.Value) {
-				out = append(out, fmt.Sprintf("grove.yaml:%d: unknown rules key %q; kinds are %s, and skills are %s",
-					k.Line, k.Value, strings.Join(kinds, ", "), strings.Join(skills, ", ")))
+			section, names := value.Content[j], value.Content[j+1]
+			valid, noun := skills, "skills"
+			switch section.Value {
+			case "documents":
+				valid, noun = kinds, "kinds"
+			case "skills":
+			default:
+				out = append(out, fmt.Sprintf("grove.yaml:%d: unknown rules key %q; rules takes documents and skills", section.Line, section.Value))
+				continue
+			}
+			for n := 0; n+1 < len(names.Content); n += 2 {
+				if k := names.Content[n]; !slices.Contains(valid, k.Value) {
+					out = append(out, fmt.Sprintf("grove.yaml:%d: unknown rules.%s key %q; %s are %s", k.Line, section.Value, k.Value, noun, strings.Join(valid, ", ")))
+				}
 			}
 		}
 	}
