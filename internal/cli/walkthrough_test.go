@@ -220,8 +220,8 @@ func TestPropose(t *testing.T) {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
 
-	os.MkdirAll(filepath.Join(dir, "grove/schemas/default/templates"), 0o755)
-	os.WriteFile(filepath.Join(dir, "grove/schemas/default/templates/tasks.md"), []byte("## T-01 — [title]\n\nRollback: [how to undo this task]\n"), 0o644)
+	os.MkdirAll(filepath.Join(dir, "grove/schemas/default/documents/tasks"), 0o755)
+	os.WriteFile(filepath.Join(dir, "grove/schemas/default/documents/tasks/template.md"), []byte("## T-01 — [title]\n\nRollback: [how to undo this task]\n"), 0o644)
 	if out := grove(t, "instructions", "propose", "x"); !strings.Contains(out, "/tasks.md\">\n## T-01 — [title]\n\nRollback: [how to undo this task]\n</file>") {
 		t.Errorf("propose with the project's tasks template:\n%s", out)
 	}
@@ -352,10 +352,10 @@ func TestArchive(t *testing.T) {
 func TestSchemas(t *testing.T) {
 	dir := setUp(t)
 	for name, content := range map[string]string{
-		"bugfix/schema.yaml":           "description: A fix for behavior that is wrong.\n",
-		"bugfix/guides/propose.md":     "**Propose a bug fix.**\n",
-		"bugfix/templates/proposal.md": "# <title>\n\n## Observed\n",
-		"short/schema.yaml":            "description: Short.\nskills:\n  propose:\n    writes: [proposal, tasks]\n",
+		"bugfix/schema.yaml":                    "description: A fix for behavior that is wrong.\n",
+		"bugfix/skills/propose.md":              "**Propose a bug fix.**\n",
+		"bugfix/documents/proposal/template.md": "# <title>\n\n## Observed\n",
+		"short/schema.yaml":                     "description: Short.\nskills:\n  propose:\n    writes: [proposal, tasks]\n",
 	} {
 		os.MkdirAll(filepath.Dir(filepath.Join(dir, "grove/schemas", name)), 0o755)
 		os.WriteFile(filepath.Join(dir, "grove/schemas", name), []byte(content), 0o644)
@@ -404,17 +404,17 @@ func TestSchemas(t *testing.T) {
 	// The walkthrough's "A mistake in a schema", a change naming no schema,
 	// and a schema without tasks.
 	schemas := filepath.Join(dir, "grove/schemas")
-	os.Rename(filepath.Join(schemas, "bugfix/templates/proposal.md"), filepath.Join(schemas, "bugfix/templates/propsal.md"))
+	os.Rename(filepath.Join(schemas, "bugfix/documents/proposal"), filepath.Join(schemas, "bugfix/documents/propsal"))
 	os.WriteFile(filepath.Join(schemas, "bugfix/schema.yaml"), []byte("description: A fix for behavior that is wrong.\ninstrution: x\n"), 0o644)
 	os.WriteFile(filepath.Join(folder, ".grove.yaml"), []byte("title: Allow editing older records\ncreated: 2026-10-14T00:00:00Z\nschema: bugfx\n"), 0o644)
 	os.MkdirAll(filepath.Join(schemas, "notasks"), 0o755)
-	os.WriteFile(filepath.Join(schemas, "notasks/schema.yaml"), []byte("description: N.\ndocuments:\n  - {kind: proposal, path: changes/<change>/proposal.md, template: templates/proposal.md, guide: guides/proposal.md, metadata: changes/<change>/.grove.yaml}\n"), 0o644)
+	os.WriteFile(filepath.Join(schemas, "notasks/schema.yaml"), []byte("description: N.\ndocuments:\n  - {kind: proposal, path: changes/<change>/proposal.md, template: documents/proposal/template.md, guide: documents/proposal/guide.md, metadata: changes/<change>/.grove.yaml}\n"), 0o644)
 	stdout.Reset()
 	stderr.Reset()
 	code := run([]string{"check"}, &stdout, &stderr)
 	for _, s := range []string{
 		"grove/schemas/bugfix/schema.yaml:2: unknown field \"instrution\"; schema.yaml takes description, documents and skills\n",
-		"grove/schemas/bugfix/templates/propsal.md: schema bugfix does not use this file\n",
+		"grove/schemas/bugfix/documents/propsal/template.md: schema bugfix does not use this file\n",
 		"grove/schemas/notasks/schema.yaml: tasks must be at changes/<change>/tasks.md; Grove reads it to archive\n",
 		"grove/changes/" + cid + "-allow-editing-older-records/.grove.yaml:3: schema \"bugfx\" is not a change schema; schemas are default, bugfix, notasks and short\n",
 	} {

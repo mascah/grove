@@ -9,35 +9,35 @@ description: "Software changes: a proposal, the change to each affected capabili
 documents:
   - kind: proposal
     path: changes/<change>/proposal.md
-    template: templates/proposal.md
-    guide: guides/proposal.md
+    template: documents/proposal/template.md
+    guide: documents/proposal/guide.md
     metadata: changes/<change>/.grove.yaml
   - kind: change-spec
     path: changes/<change>/specs/<capability>/spec.md
-    template: templates/change-spec.md
-    guide: guides/change-spec.md
+    template: documents/change-spec/template.md
+    guide: documents/change-spec/guide.md
   - kind: tasks
     path: changes/<change>/tasks.md
-    template: templates/tasks.md
-    guide: guides/tasks.md
+    template: documents/tasks/template.md
+    guide: documents/tasks/guide.md
   - kind: implementation
     path: changes/<change>/implementation.md
-    template: templates/implementation.md
-    guide: guides/implementation.md
+    template: documents/implementation/template.md
+    guide: documents/implementation/guide.md
   - kind: spec
     path: specs/<capability>/spec.md
-    template: templates/spec.md
-    guide: guides/spec.md
+    template: documents/spec/template.md
+    guide: documents/spec/guide.md
     metadata: specs/<capability>/.grove.yaml
 skills:
   explore:
-    guide: guides/explore.md
+    guide: skills/explore.md
   propose:
-    guide: guides/propose.md
+    guide: skills/propose.md
     writes: [proposal, change-spec, tasks]
   apply:
-    guide: guides/apply.md
+    guide: skills/apply.md
     writes: [implementation]
   archive:
-    guide: guides/archive.md
+    guide: skills/archive.md
     writes: [spec, implementation]

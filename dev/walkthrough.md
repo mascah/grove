@@ -109,7 +109,7 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 - **Your own tasks template** (reference, "Change schemas"). On a new
   branch, copy the tasks template from `grove instructions propose "x"` (the
   `<file>` whose path ends in `tasks.md`) to
-  `grove/schemas/default/templates/tasks.md` with `{{change}}` where it
+  `grove/schemas/default/documents/tasks/template.md` with `{{change}}` where it
   shows the new change's ID, and add a line
   `Rollback: [how to undo this task]` to its task. `grove instructions
   propose "x"` now gives that template. `/grove-propose Editing a missing
@@ -133,12 +133,12 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
   `bugfix`) and `/grove-archive <change-id>` adds the requirement to
   `grove/specs/record-editing/spec.md` and archives the change.
 - **A mistake in a schema** (reference, "Change schemas"). After "A bug",
-  rename `grove/schemas/bugfix/templates/proposal.md` to
-  `templates/propsal.md` and add `instrution: x` to its `schema.yaml`.
+  rename `grove/schemas/bugfix/documents/proposal/template.md` to
+  `documents/propsal/template.md` and add `instrution: x` to its `schema.yaml`.
   `grove check` reports both and exits non-zero:
   > grove/schemas/bugfix/schema.yaml:2: unknown field "instrution"; schema.yaml takes description, documents and skills
 
-  > grove/schemas/bugfix/templates/propsal.md: schema bugfix does not use this file
+  > grove/schemas/bugfix/documents/propsal/template.md: schema bugfix does not use this file
 
   `grove changes` still works.
 - **A mistake in grove.yaml** (reference, "grove.yaml"). Add `derp: [x]`

@@ -23,7 +23,7 @@ import (
 	"github.com/mascah/grove-next2/internal/doc"
 )
 
-//go:embed skills.yaml skills metadata schemas
+//go:embed skills.yaml requires metadata schemas
 var files embed.FS
 
 func embedded(name string) string {
@@ -36,7 +36,7 @@ func embedded(name string) string {
 
 // Skill is one of Grove's skills: the description of the skill init writes
 // for it, and what that skill passes to `instructions <skill>`. What Grove
-// requires of it is skills/<name>.md, the same in every change schema.
+// requires of it is requires/<name>.md, the same in every change schema.
 type Skill struct{ Name, Description, Args string }
 
 // Skills returns Grove's skills, in order.
@@ -395,7 +395,7 @@ func build(p Project, s, name, task string, fill *strings.Replacer, c *doc.Chang
 		return f
 	}
 	st := schema.Skills[name]
-	in := Instructions{Project: p, Skill: name, Follows: schema, Task: task, Requires: embedded("skills/" + name + ".md"), Guide: file(st.Guide)}
+	in := Instructions{Project: p, Skill: name, Follows: schema, Task: task, Requires: embedded("requires/" + name + ".md"), Guide: file(st.Guide)}
 	for _, kn := range st.Writes {
 		k := schema.Documents[slices.IndexFunc(schema.Documents, func(k Kind) bool { return k.Kind == kn })]
 		d := Document{Kind: k.Kind, Path: p.Root + "/" + fill.Replace(k.Path),

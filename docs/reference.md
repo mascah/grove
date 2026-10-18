@@ -90,8 +90,9 @@ is `default`, the software change [Concepts](concepts.md) describes:
 | `implementation` | `changes/<change>/implementation.md` | apply, archive |
 | `spec` | `specs/<capability>/spec.md`, a maintained spec | archive |
 
-Each kind's template is `templates/<kind>.md` and its guide
-`guides/<kind>.md`; each skill's guide is `guides/<skill>.md`.
+A schema's folder holds `schema.yaml`, a folder for each kind of document,
+`documents/<kind>/` with its `template.md` and `guide.md`, and the guide for
+each skill, `skills/<skill>.md`.
 
 A schema cannot change Grove's skills or what Grove requires of each, which
 its instructions give first; that a merge approves a change; a change's
@@ -108,7 +109,7 @@ in `grove.yaml`.
 ### Your own files for default
 
 To change one of `default`'s files, put your own at the same path under
-`grove/schemas/default/`, such as `grove/schemas/default/templates/tasks.md`.
+`grove/schemas/default/`, such as `grove/schemas/default/documents/tasks/template.md`.
 It replaces Grove's file whole; every file you do not put there stays
 Grove's, including later improvements to it. A skill's instructions include
 the guides and templates it uses, so `grove instructions propose "x"` shows
@@ -160,7 +161,7 @@ template and its guide; everything else is `default`'s.
 description: A fix for behavior that is wrong, whether or not a maintained spec describes it.
 ```
 
-`grove/schemas/bugfix/guides/propose.md`:
+`grove/schemas/bugfix/skills/propose.md`:
 
 ```markdown
 **Propose a bug fix: "This is wrong; make it right."** It turns a bug into a
@@ -199,7 +200,7 @@ Tell the owner which of these it is:
   estimates.
 ```
 
-`grove/schemas/bugfix/templates/proposal.md`:
+`grove/schemas/bugfix/documents/proposal/template.md`:
 
 ```markdown
 # <title>
@@ -237,7 +238,7 @@ task a question blocks when it decides how that task is built. -->
 - Requirements: [the change spec, if the owner agreed one]
 ```
 
-`grove/schemas/bugfix/guides/proposal.md`:
+`grove/schemas/bugfix/documents/proposal/guide.md`:
 
 ```markdown
 `proposal.md` shows the bug: what is observed, what is expected, how to
@@ -262,7 +263,8 @@ grove.yaml
 grove/
   schemas/<name>/
     schema.yaml
-    templates/, guides/
+    documents/<kind>/template.md, guide.md
+    skills/<skill>.md
   specs/<capability>/
     .grove.yaml
     spec.md
