@@ -88,7 +88,9 @@ grove/
   changes/archive/<id>-<slug>/
 ```
 
-A maintained spec's `.grove.yaml` holds its `title`; a change's holds its
+A folder under `changes/` or `specs/` is a change or a maintained spec when
+it holds a `.grove.yaml`; `grove check` reports one without its
+`proposal.md` or `spec.md`. A maintained spec's `.grove.yaml` holds its `title`; a change's holds its
 `title` and when it was `created`. Either may add a one-line `description`,
 shown in lists. The folder name gives the ID: a spec's is the whole name, a
 change's the start of it. `spec.md` and `proposal.md` start with the title as

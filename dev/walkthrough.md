@@ -97,6 +97,12 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 - **A title that drifted** (reference, "Files"). Change `title` in a
   change's `.grove.yaml` and run `grove check`:
   > grove/changes/<change-id>-<slug>/proposal.md:1: the first heading should be "# <new title>", the title in .grove.yaml
+- **A change without its proposal** (reference, "Files"). After step 3,
+  delete the change's `proposal.md` and run `grove check`. It exits non-zero:
+  > grove/changes/<change-id>-<slug>/proposal.md: missing; it is the change's main document
+
+  `grove instructions propose <change-id>` still finds the change, so a
+  session can write the proposal again.
 - **A mistake in grove.yaml** (reference, "grove.yaml"). Add `derp: [x]`
   under `rules` and a top-level `rule: {}` in `grove.yaml`. `grove check`
   reports both and exits non-zero:
@@ -170,6 +176,6 @@ Agent inference, not the owner's decisions (rule 25).
 - IDs use the UTC date.
 - Explore's instructions offer no document to fill in.
 - A change's ID is the start of its folder name. `check` reports a change
-  folder whose name does not start with an ID, and one with no `.grove.yaml`.
+  folder whose name does not start with an ID.
 - A new change's folder name is its ID and a slug the agent chooses from the
   title; Grove allocates the ID and `created` timestamp.

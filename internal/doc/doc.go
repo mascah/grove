@@ -1,9 +1,8 @@
 // Package doc reads Grove's documents through an fs.FS rooted at the
 // document root: Markdown files, and the .grove.yaml beside them.
 //
-// Under the root are maintained specs (specs/<id>/, identified by their
-// spec.md) and changes (changes/<id>-<slug>/, identified by their
-// proposal.md), each folder with a .grove.yaml. Problems inside a document
+// Under the root are maintained specs (specs/<id>/) and changes
+// (changes/<id>-<slug>/), each folder found by its .grove.yaml. Problems inside a document
 // are Diagnostics, never errors, so one broken document does not hide the
 // others.
 package doc
@@ -66,35 +65,29 @@ var (
 // Load reads the collection under fsys.
 func Load(fsys fs.FS) (*Collection, error) {
 	c := &Collection{}
-	specs, err := fs.Glob(fsys, "specs/*/spec.md") // sorted
+	specs, err := fs.Glob(fsys, "specs/*/.grove.yaml") // sorted
 	if err != nil {
 		return nil, err
 	}
 	for _, name := range specs {
 		d := &Document{ID: path.Base(path.Dir(name)), Dir: path.Dir(name)}
-		if err := d.readMeta(fsys, specFields, "spec's title"); err != nil {
-			return nil, err
-		}
-		if err := d.heading(fsys, name); err != nil {
+		if err := d.read(fsys, specFields, "spec.md", "spec's"); err != nil {
 			return nil, err
 		}
 		c.Specs = append(c.Specs, d)
 	}
-	proposals, err := fs.Glob(fsys, "changes/*/proposal.md")
+	metas, err := fs.Glob(fsys, "changes/*/.grove.yaml")
 	if err != nil {
 		return nil, err
 	}
-	for _, name := range proposals {
+	for _, name := range metas {
 		ch := &Change{Document: Document{Dir: path.Dir(name)}}
 		if folder := path.Base(ch.Dir); len(folder) >= 12 && ValidID(folder[:12]) && (len(folder) == 12 || folder[12] == '-') {
 			ch.ID = folder[:12]
 		} else {
 			ch.report(ch.Dir+"/", 0, "the folder name must start with a change ID, such as 261015-k3m9q")
 		}
-		if err := ch.readMeta(fsys, changeFields, "change's title and created"); err != nil {
-			return nil, err
-		}
-		if err := ch.heading(fsys, name); err != nil {
+		if err := ch.read(fsys, changeFields, "proposal.md", "change's"); err != nil {
 			return nil, err
 		}
 		err := fs.WalkDir(fsys, ch.Dir, func(name string, d fs.DirEntry, err error) error {

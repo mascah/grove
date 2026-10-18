@@ -14,19 +14,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// readMeta reads d's .grove.yaml into d.Meta, reporting the file missing
-// when it is, as one that holds holds.
-func (d *Document) readMeta(fsys fs.FS, required []string, holds string) error {
-	file := d.Dir + "/.grove.yaml"
-	switch b, err := fs.ReadFile(fsys, file); {
-	case errors.Is(err, fs.ErrNotExist):
-		d.report(file, 0, "missing; it holds the "+holds)
-	case err != nil:
+// read reads d's .grove.yaml into d.Meta, then checks main, the main
+// document of whose folder d is.
+func (d *Document) read(fsys fs.FS, required []string, main, whose string) error {
+	b, err := fs.ReadFile(fsys, d.Dir+"/.grove.yaml")
+	if err != nil {
 		return err
-	default:
-		d.parse(file, b, required)
 	}
-	return nil
+	d.parse(d.Dir+"/.grove.yaml", b, required)
+	return d.heading(fsys, d.Dir+"/"+main, whose)
 }
 
 // parse reads the YAML mapping src of file into d.Meta, reporting every
@@ -72,14 +68,16 @@ func (d *Document) parse(file string, src []byte, required []string) {
 	d.Meta = Meta{Title: values["title"], Created: values["created"], Description: values["description"]}
 }
 
-// heading reports file when its first "# " heading is not d's title. With
-// no title, the missing title is the problem, reported already.
-func (d *Document) heading(fsys fs.FS, file string) error {
-	if d.Meta.Title == "" {
+// heading reports file when it is missing or its first "# " heading is not
+// d's title. With no title, the missing title is the problem, reported
+// already.
+func (d *Document) heading(fsys fs.FS, file, whose string) error {
+	b, err := fs.ReadFile(fsys, file)
+	if errors.Is(err, fs.ErrNotExist) {
+		d.report(file, 0, "missing; it is the "+whose+" main document")
 		return nil
 	}
-	b, err := fs.ReadFile(fsys, file)
-	if err != nil {
+	if err != nil || d.Meta.Title == "" {
 		return err
 	}
 	want, line := "# "+d.Meta.Title, 1
