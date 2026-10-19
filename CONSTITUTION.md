@@ -1,13 +1,13 @@
 # Grove constitution
 
-Draft 2026-10-14, amended 2026-10-15 and 2026-10-17. It is the only document
+Draft 2026-10-14, amended 2026-10-15, 2026-10-17 and 2026-10-19. It is the only document
 whose sentences bind an agent. `grove.md` is direction, the docs in `docs/` are
 the spec, `dev/walkthrough.md` runs them on the fixture, this file is the law.
 Every rule is one line and numbered so it can be quoted. Changing this file is
 its own commit with no code in it, and the owner reads it before any code
 follows.
 
-Rules restate entries in `decisions.md`: 1 is D-33; 2 and 3 are D-13, D-21, D-39, D-48 and D-50; 4 and 5 are D-02 to D-04 and D-38; 6 is D-24; 7 is D-01 and D-06; 8 is D-40; 9 is D-15 and D-35; 10 is D-34 and D-43; 11 is D-23 and D-33; 23 is D-30; 24 is D-28; 22 is D-31; 27 is D-32, D-41, D-42 and D-49. The size rules 12 to 18 are new and become decisions when the owner adopts this file.
+Rules restate entries in `decisions.md`: 1 is D-33; 2 and 3 are D-13, D-21, D-39, D-48 and D-50; 4 and 5 are D-02 to D-04 and D-38; 6 is D-24; 7 is D-01 and D-06; 8 is D-40; 9 is D-15 and D-35; 10 is D-34 and D-43; 11 is D-23 and D-33; 23 is D-30; 24 is D-28; 22 is D-31. The size rules 12 to 18 are new and become decisions when the owner adopts this file.
 
 ## Product boundaries
 
@@ -43,4 +43,3 @@ Rules restate entries in `decisions.md`: 1 is D-33; 2 and 3 are D-13, D-21, D-39
 24. Harness behavior that varies by user settings, such as permission prompts, is never a design input.
 25. Decisions in documents are the owner's, in the owner's words, attributed. Agent inference goes under open questions or assumptions to confirm.
 26. One walkthrough step per commit, demonstrated on the fixture with the command in the message. No bundling a fix round into a feature commit.
-27. `~/GitHub/mascah/grove-legacy`, `~/GitHub/mascah/grove-server-poc` and `~/GitHub/mascah/bench` are read-only. Copied code is listed in `dev/reuse.md` with path and revision. The only remote is the owner's private GitHub repository. Agents add no hook and install nothing globally; the owner installs the everyday `grove`. The repository names no other tool as Grove's model or point of comparison.
