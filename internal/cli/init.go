@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mascah/grove-next2/internal/gitx"
-	"github.com/mascah/grove-next2/internal/instruct"
+	"github.com/mascah/grove/internal/gitx"
+	"github.com/mascah/grove/internal/instruct"
 )
 
 const config = `# Grove: where its documents live, which branch holds what is agreed, and

@@ -8,9 +8,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/mascah/grove-next2/internal/doc"
-	"github.com/mascah/grove-next2/internal/gitx"
-	"github.com/mascah/grove-next2/internal/tui"
+	"github.com/mascah/grove/internal/doc"
+	"github.com/mascah/grove/internal/gitx"
+	"github.com/mascah/grove/internal/tui"
 )
 
 func listSpecs(stdout io.Writer) error {

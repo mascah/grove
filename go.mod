@@ -1,4 +1,4 @@
-module github.com/mascah/grove-next2
+module github.com/mascah/grove
 
 go 1.26
 

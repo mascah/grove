@@ -5,8 +5,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/mascah/grove-next2/internal/doc"
-	"github.com/mascah/grove-next2/internal/gitx"
+	"github.com/mascah/grove/internal/doc"
+	"github.com/mascah/grove/internal/gitx"
 )
 
 // review shows what merging the current branch into the target would agree

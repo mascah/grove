@@ -10,8 +10,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/mascah/grove-next2/internal/doc"
-	"github.com/mascah/grove-next2/internal/instruct"
+	"github.com/mascah/grove/internal/doc"
+	"github.com/mascah/grove/internal/instruct"
 )
 
 // check prints every problem in grove.yaml and in the Grove documents of

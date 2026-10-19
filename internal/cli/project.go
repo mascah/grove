@@ -7,9 +7,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/mascah/grove-next2/internal/doc"
-	"github.com/mascah/grove-next2/internal/gitx"
-	"github.com/mascah/grove-next2/internal/instruct"
+	"github.com/mascah/grove/internal/doc"
+	"github.com/mascah/grove/internal/gitx"
+	"github.com/mascah/grove/internal/instruct"
 )
 
 // project is the repository Grove was run in.

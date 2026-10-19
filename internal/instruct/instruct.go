@@ -20,7 +20,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/mascah/grove-next2/internal/doc"
+	"github.com/mascah/grove/internal/doc"
 )
 
 //go:embed skills.yaml requires metadata schemas
