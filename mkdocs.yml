@@ -1,0 +1,43 @@
+site_name: Grove
+site_url: https://mascah.github.io/grove/
+repo_url: https://github.com/mascah/grove
+docs_dir: docs
+
+nav:
+  - Home: index.md
+  - Install: install.md
+  - Getting started: getting-started.md
+  - Concepts: concepts.md
+  - Coordinating changes: coordinating.md
+  - Guides:
+      - Push to a tracker: guides/push-to-a-tracker.md
+      - A glossary and decision records: guides/glossary-and-decisions.md
+  - Reference: reference.md
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - tables
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format

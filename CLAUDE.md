@@ -22,6 +22,7 @@ follow what it prints. What Grove does is specified by `docs/` (rule 8).
 | `internal/gitx` | The only place Git runs, by argv. `TreeFS` reads a commit's tree as an `fs.FS`. |
 | `internal/tui` | The reader (Bubble Tea, Glamour). Knows nothing about Git or Grove's documents. |
 | `docs/`, `README.md` | User documentation, and the specification. |
+| `mkdocs.yml`, `.github/`, `.goreleaser.yaml`, `install.sh` | The docs site, CI, the release pipeline and the install script. |
 | `dev/walkthrough.md` | The manual test script: every docs step run on the fixture. |
 | `dev/fixture.md`, `testdata/ledger/` | The ledger fixture, a small Python project. |
 | `dev/reuse.md` | Code copied from earlier repositories, with path and revision. |
