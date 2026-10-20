@@ -1,0 +1,46 @@
+version: 2
+
+project_name: grove
+
+builds:
+  - id: grove
+    main: ./cmd/grove
+    binary: grove
+    # Pure Go, so every target cross-compiles from one Linux runner.
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - arm64
+      - amd64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/mascah/grove/internal/cli.version={{ .Version }}
+
+archives:
+  - id: grove
+    # No version in the name, so releases/latest/download/<name> always works
+    # for install.sh.
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - LICENSE*
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-dev+{{ .ShortCommit }}"
+
+# release-please writes CHANGELOG.md and creates the GitHub Release; GoReleaser
+# only uploads the archives onto it, leaving its notes alone.
+changelog:
+  disable: true
+
+release:
+  mode: keep-existing
