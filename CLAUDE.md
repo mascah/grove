@@ -7,8 +7,8 @@ build, test, commit and release. `AGENTS.md` is a symlink to this file.
 ## What it is
 
 A Go CLI. The `grove` command sets up a project, lists, checks, reviews and
-archives Markdown specs and changes, and opens a reader. Skills that `grove
-init` writes for Claude Code and Codex run `grove instructions <skill>` and
+archives Markdown specs and changes, and opens a reader. Skills and commands
+that `grove init` writes for each harness run `grove instructions <skill>` and
 follow what it prints. What Grove does is specified by `docs/` (rule 8).
 
 ## Layout

@@ -151,6 +151,11 @@ func unknownConfig(top string, ip instruct.Project) ([]string, error) {
 			out = append(out, fmt.Sprintf("grove.yaml:%d: unknown field %q; grove.yaml takes %s and rules", key.Line, key.Value, strings.Join(configFields[:5], ", ")))
 			continue
 		}
+		for j := 0; key.Value == "agents" && j+1 < len(value.Content); j += 2 {
+			if _, problem := harnessFile(value.Content[j].Value, value.Content[j+1].Value); problem != "" {
+				out = append(out, fmt.Sprintf("grove.yaml:%d: %s", value.Content[j].Line, problem))
+			}
+		}
 		for j := 0; key.Value == "rules" && j+1 < len(value.Content); j += 2 {
 			section, names := value.Content[j], value.Content[j+1]
 			valid, noun := skills, "skills"

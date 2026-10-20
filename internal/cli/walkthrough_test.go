@@ -74,8 +74,8 @@ func TestInit(t *testing.T) {
 			}
 		}
 	}
-	if skill := read(t, filepath.Join(dir, ".agents/skills/grove-propose/SKILL.md")); !strings.Contains(skill, ` instructions propose "<args>"`+"`") {
-		t.Errorf("codex propose skill:\n%s", skill)
+	if skill := read(t, filepath.Join(dir, ".agents/skills/grove-propose/SKILL.md")); !strings.Contains(skill, ` instructions propose "<args>"`+"`") || skill != read(t, filepath.Join(dir, ".claude/skills/grove-propose/SKILL.md")) {
+		t.Errorf("propose skill, which should be one body for every harness:\n%s", skill)
 	}
 	yaml := strings.Replace(read(t, filepath.Join(dir, "grove.yaml")), `context: ""`, "context: Python 3 standard library only.", 1)
 	yaml = strings.Replace(yaml, "rules: {}", "rules:\n  documents:\n    proposal:\n      - Name the owner for every decision.\n  skills:\n    propose:\n      - Commit the change folder when check passes.", 1)
@@ -95,11 +95,51 @@ func TestInit(t *testing.T) {
 			t.Errorf("propose instructions lack %q", s)
 		}
 	}
+}
 
-	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte("agents: [cursor]\n"), 0o644)
+// TestHarnesses follows the walkthrough's agents from the repository,
+// commands, dropping a harness, and a harness Grove does not have.
+func TestHarnesses(t *testing.T) {
+	dir := fixture(t)
+	for _, d := range []string{".claude", ".opencode", ".agents/skills/notes"} {
+		os.MkdirAll(filepath.Join(dir, d), 0o755)
+	}
+	if got, want := grove(t, "init"), "Wrote grove.yaml and the Grove skills for claude and opencode; nothing is committed.\n"; got != want {
+		t.Errorf("init said %q, want %q", got, want)
+	}
+	yaml := read(t, filepath.Join(dir, "grove.yaml"))
+	if !strings.Contains(yaml, "agents:\n  claude: skills\n  opencode: skills\n#") || read(t, filepath.Join(dir, ".claude/skills/grove-apply/SKILL.md")) != read(t, filepath.Join(dir, ".agents/skills/grove-apply/SKILL.md")) {
+		t.Errorf("init chose other agents, or skills that differ:\n%s", yaml)
+	}
+
+	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Agents\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "claude: skills", "claude: commands", 1)), 0o644)
+	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore and grove-propose from .claude/skills; nothing is committed.\n"; got != want {
+		t.Errorf("init with claude's commands said %q, want %q", got, want)
+	}
+	if cmd := read(t, filepath.Join(dir, ".claude/commands/grove/propose.md")); !strings.HasPrefix(cmd, "---\ndescription: ") || !strings.Contains(cmd, "Run `grove instructions propose \"$ARGUMENTS\"` and follow what it prints, in this conversation.\n") {
+		t.Errorf("claude's propose command:\n%s", cmd)
+	}
+
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "  claude: skills\n  opencode: skills\n", "  claude: commands\n", 1)), 0o644)
+	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore and grove-propose from .agents/skills; nothing is committed.\n"; got != want {
+		t.Errorf("init without opencode said %q, want %q", got, want)
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".agents/skills/notes")); err != nil {
+		t.Errorf("init removed a skill that is not Grove's: %v", err)
+	}
+
+	commitAll(t, dir, "Set up Grove")
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "  claude: skills\n  opencode: skills\n", "  codex: commands\n  zed: skills\n", 1)), 0o644)
 	var stdout, stderr strings.Builder
-	if code := run([]string{"init"}, &stdout, &stderr); code != 1 || stderr.String() != "grove: grove.yaml lists agent \"cursor\"; Grove knows claude and codex\n" {
-		t.Errorf("an unknown agent: status %d, %q", code, stderr.String())
+	want := "grove.yaml:9: harness \"codex\" has no form \"commands\"; it has skills\n" +
+		"grove.yaml:10: unknown harness \"zed\"; agents takes claude, codex, cursor, hermes, opencode and pi\n"
+	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != want {
+		t.Errorf("check of agents: status %d\n%s%s", code, stdout.String(), stderr.String())
+	}
+	stderr.Reset()
+	if code := run([]string{"init"}, &stdout, &stderr); code != 1 || stderr.String() != "grove: grove.yaml: harness \"codex\" has no form \"commands\"; it has skills\n" {
+		t.Errorf("init with a form codex has not: status %d, %q", code, stderr.String())
 	}
 }
 
@@ -120,9 +160,9 @@ func TestCheck(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(config, "rules: {}", "rules:\n  derp: [x]\n  documents:\n    propsal: [x]\nrule: {}", 1)), 0o644)
 	var stdout, stderr strings.Builder
 	code := run([]string{"check"}, &stdout, &stderr)
-	want := "grove.yaml:25: unknown rules key \"derp\"; rules takes documents and skills\n" +
-		"grove.yaml:27: unknown rules.documents key \"propsal\"; kinds are proposal, change-spec, tasks, implementation, spec\n" +
-		"grove.yaml:28: unknown field \"rule\"; grove.yaml takes root, target, agents, schema, context and rules\n"
+	want := "grove.yaml:30: unknown rules key \"derp\"; rules takes documents and skills\n" +
+		"grove.yaml:32: unknown rules.documents key \"propsal\"; kinds are proposal, change-spec, tasks, implementation, spec\n" +
+		"grove.yaml:33: unknown field \"rule\"; grove.yaml takes root, target, agents, schema, context and rules\n"
 	if code != 1 || stdout.String() != want || stderr.String() != "grove: 3 problems found\n" {
 		t.Errorf("check of grove.yaml: status %d\n%s%s", code, stdout.String(), stderr.String())
 	}
@@ -265,7 +305,7 @@ func TestApprove(t *testing.T) {
 func TestApplyInstructions(t *testing.T) {
 	dir := fixture(t)
 	grove(t, "init")
-	if !strings.Contains(read(t, filepath.Join(dir, ".claude/skills/grove-apply/SKILL.md")), "Run `grove instructions apply $ARGUMENTS`") {
+	if !strings.Contains(read(t, filepath.Join(dir, ".claude/skills/grove-apply/SKILL.md")), "Run `grove instructions apply <args>`") {
 		t.Error("the skill does not run instructions apply")
 	}
 	commitAll(t, dir, "Set up Grove")

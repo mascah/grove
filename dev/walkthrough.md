@@ -314,7 +314,7 @@ Owner, asked whether to add each:
 Agent inference, not the owner's decisions (`CLAUDE.md`).
 
 - `grove.yaml` fields and defaults: `root: grove`, `target: main`,
-  `agents` (left out, `claude` and `codex` as skills), `schema: default`, `context`, and `rules`, with `documents` keyed by
+  `agents` (left out or empty, `claude` and `codex` as skills), `schema: default`, `context`, and `rules`, with `documents` keyed by
   `proposal`, `change-spec`, `tasks`, `implementation` and `spec`, and
   `skills` keyed by a skill.
 - `init` never overwrites `grove.yaml` and always rewrites the skills.
@@ -322,6 +322,13 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
   and codex; nothing is committed." A field left out of `grove.yaml` takes
   its default. A harness Grove has no row for, or a form it does not
   have, stops `init` before it writes anything, with `check`'s words.
+- `agents` takes only the map of harness to form. The list form,
+  `agents: [claude, codex]`, which no release wrote, is a YAML error, not a
+  `check` problem; v0.1.0 is the first release, so the change is not marked
+  breaking.
+- `init` removes Grove's files it no longer writes before it writes the
+  rest, so a skill folder linked to another, such as `.claude/skills` to
+  `.agents/skills`, keeps its skills.
 - `init`'s message groups harnesses by form, skills first ("the Grove
   skills for opencode and commands for claude"), and names what it removed
   by folder ("grove-apply, … from .claude/skills"). It leaves a folder it

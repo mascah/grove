@@ -14,17 +14,17 @@ import (
 
 // project is the repository Grove was run in.
 type project struct {
-	Top     string         `yaml:"-"` // the top of the working tree
-	Root    string         `yaml:"root"`
-	Target  string         `yaml:"target"`
-	Agents  []string       `yaml:"agents"`
-	Schema  string         `yaml:"schema"`
-	Context string         `yaml:"context"`
-	Rules   instruct.Rules `yaml:"rules"`
+	Top     string            `yaml:"-"` // the top of the working tree
+	Root    string            `yaml:"root"`
+	Target  string            `yaml:"target"`
+	Agents  map[string]string `yaml:"agents"` // harness to form, skills or commands
+	Schema  string            `yaml:"schema"`
+	Context string            `yaml:"context"`
+	Rules   instruct.Rules    `yaml:"rules"`
 }
 
 func openProject() (project, error) {
-	p := project{Root: "grove", Target: "main", Agents: []string{"claude", "codex"}, Schema: "default"} // the documented defaults
+	p := project{Root: "grove", Target: "main", Schema: "default"} // the documented defaults
 	top, err := gitx.TopLevel(".")
 	if err != nil {
 		return p, err
@@ -34,7 +34,11 @@ func openProject() (project, error) {
 	if err != nil {
 		return p, err
 	}
-	return p, yaml.Unmarshal(b, &p)
+	err = yaml.Unmarshal(b, &p)
+	if len(p.Agents) == 0 { // set after reading, which would add to a default map rather than replace it
+		p.Agents = defaultAgents
+	}
+	return p, err
 }
 
 // instruct returns what instructions say about the project, without the
