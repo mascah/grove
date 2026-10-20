@@ -1,6 +1,6 @@
 # Ledger fixture
 
-The project every walkthrough step and every test runs on (rules 17 and 26). A
+The project every walkthrough step and every test runs on (rule 17). A
 small Python package, about 290 lines, standard library only, tests with
 `python3 -m unittest`. Described here; built in phase 1 under
 `testdata/ledger/`.
