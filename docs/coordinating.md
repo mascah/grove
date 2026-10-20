@@ -48,8 +48,9 @@ Applying a change that waits is refused. **Chat:**
 The agent tells you and builds nothing. There are two ways past: apply and
 archive the change it waits on, and merge that; or, if it need not wait
 after all, remove the dependency from `depends_on` on a branch and merge
-that. Any field of an approved change's `.grove.yaml` but `created` can
-change this way.
+that. Any field of an approved change's `.grove.yaml` but `created` and
+`base` can change this way; `base` changes only when the change is revised
+(see "When the plan is stale").
 
 `grove check` reports a `depends_on` that can never be met: one naming no
 change, open or archived; one naming a dropped change; and two or more
