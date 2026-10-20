@@ -12,6 +12,7 @@
 | `grove check` | Reports each problem in the Grove documents of this working tree, each unknown field or `rules` key in `grove.yaml`, and each mistake in a change schema, as `path:line: message`, and exits non-zero if there is one. Among the problems: a `depends_on` naming no change, open or archived, or a dropped change, changes that wait on each other in a loop, and a requirement a change modifies or removes that the target has rewritten or removed since the change's `base`. |
 | `grove review` | Shows what merging the current branch into the target would approve: each change, maintained spec or change schema file it adds or alters, and the diff. |
 | `grove archive <change-id>` | Moves the change's folder to `changes/archive/`. Refuses unless `implementation.md` marks every task in `tasks.md` `Status: done`, or says `Status: dropped`. Commits nothing. |
+| `grove version` | Prints the version of Grove, such as `grove 0.1.0`. A build from a checkout prints a Go pseudo-version naming its commit, and `dev` when Go recorded none. |
 
 Skills run these; you do not need to:
 

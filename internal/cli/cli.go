@@ -28,6 +28,7 @@ With no command, open the reader on the maintained specs and approved changes.
   specs                      list the maintained specs
   changes [--json]           list the approved changes, or print them as JSON
   check                      report problems in this working tree's Grove documents
+  version                    print Grove's version
 `
 
 // Main runs one command and returns the exit status.
@@ -64,6 +65,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = listChanges(stdout, true)
 	case len(args) == 1 && args[0] == "check":
 		err = check(stdout)
+	case len(args) == 1 && args[0] == "version":
+		printVersion(stdout)
 	default:
 		fmt.Fprint(stderr, usage)
 		return 2

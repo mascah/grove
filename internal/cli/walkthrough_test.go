@@ -103,6 +103,14 @@ func TestInit(t *testing.T) {
 	}
 }
 
+func TestVersion(t *testing.T) {
+	version = "0.1.0"
+	t.Cleanup(func() { version = "" })
+	if got := grove(t, "version"); got != "grove 0.1.0\n" {
+		t.Errorf("version said %q", got)
+	}
+}
+
 func TestCheck(t *testing.T) {
 	dir := setUp(t)
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
