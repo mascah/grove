@@ -152,17 +152,6 @@ It starts where the main line's step 6 ends: one archived change and the
    shows the unknown-ID and recategorize changes as `archived` with `T-01` `done`, and the delete change with no
    `waits_on`, since the unknown-ID change is archived.
 
-6. **Push to a tracker** ("Push to a tracker"). On main,
-   `gh repo create <owner>/ledger-trial --private --source . --push`, then
-   a fresh session given the page's prompt. Issues appear, one per change,
-   each labelled `grove`, its body the proposal ending with
-   `<!-- grove:<id> -->`; the archived changes' issues are closed. Archive
-   another change
-   (the delete change's `delete-impl` branch: `/grove-archive <delete-id>`,
-   commit, merge, push), give a fresh session the same prompt, and that
-   issue closes with no duplicate. Afterwards,
-   `gh repo delete <owner>/ledger-trial --yes`.
-
 ## Other paths
 
 - **Propose from a description** (§3). On a new branch, with no exploration,
@@ -302,9 +291,6 @@ Owner, asked whether to add each:
 
 - Does the reader showing `implementation.md` count as reading it under rule
   3? Owner: "No, but im not certain." Until settled, the reader shows it.
-- Whether to create a private GitHub repository from the fixture for
-  coordinating step 6. Owner's lean, from Remote Control, 2026-10-20: "Yes
-  you can do the GH run".
 - The wording of phase 3's `check` messages and the JSON's `root`-relative
   paths. Owner's lean, from Remote Control, 2026-10-20: "the wording is
   fine for now".

@@ -4,7 +4,7 @@
 updated spec. When several changes are approved at once, some must land
 before others. This page shows how a change says what it waits on, what
 happens when two changes rewrite the same requirement, and how to get the
-whole picture as data and push it to a tracker.
+whole picture as data.
 
 ## A change that waits
 
@@ -131,35 +131,5 @@ prints your main branch's changes as JSON, archived changes included, for your a
   change's tasks mostly have none.
 - A field with no value is left out.
 
-## Push to a tracker
-
-Grove pushes nothing to GitHub or any other tracker. Your agent does, from
-`grove changes --json`, with the tools it already has. Git stays the source
-of truth: each run replaces issue bodies whole, and people discuss in
-comments. **Chat**, on your main branch after a merge:
-
-```text
-Run `grove changes --json`. For each change, create or update one GitHub
-issue with the label `grove`: the title is the change's title, and the body
-is the file at <root>/<path> as main holds it (`git show main:<root>/<path>`),
-ending with the line <!-- grove:<id> -->. Find an existing issue by that
-marker, open or closed, and never create a second. Close the issue of each
-archived or dropped change, and reopen one whose change is approved. Then
-tell me what you created, updated and closed.
-```
-
-With GitHub's `gh`, the agent's commands look like this:
-
-```sh
-gh label create grove --force
-gh issue list --label grove --state all --limit 500 --json number,title,body,state
-git show main:grove/changes/261019-r2w7k-add-ledger-delete/proposal.md > body.md
-echo '<!-- grove:261019-r2w7k -->' >> body.md
-gh issue create --title "Add ledger delete ID" --body-file body.md --label grove
-gh issue edit 12 --body-file body.md
-gh issue close 9
-```
-
-The same prompt works with `glab` for GitLab, or with a Jira or Linear MCP
-server, if you name the tracker. Run it again after each merge into your main branch; the markers keep it from
-making duplicates.
+To keep a tracker's issues in step with this data, see the guide
+[Push to a tracker](guides/push-to-a-tracker.md).

@@ -1,9 +1,23 @@
 # Concepts
 
-## Three things Grove keeps apart
+## The problem
 
-- **A maintained spec** says how part of your system should behave. It lives
-  at `grove/specs/<capability>/spec.md` on your main branch, and it is
+Software drifts away from what anyone can explain about it. A coding agent
+changes a lot of code quickly, and the reasons for each change are settled in
+a conversation that ends when the session does. The next session starts from
+the code alone, and the code cannot say which of its behaviors were agreed
+and which just happened. After a few months nobody, person or agent, can say
+with confidence what the software is supposed to do.
+
+Grove keeps that answer written down, in your repository, next to the code.
+Before something is built, you and your agent agree on it in writing. After
+it is built, the written record is updated to match. The record is plain
+Markdown, so people and agents read the same thing.
+
+## Three things kept apart
+
+- **A maintained spec** says how one part of your system should behave. It
+  lives at `grove/specs/<capability>/spec.md` on your main branch, and it is
   agreed: someone merged it.
 - **A change** is a proposal for future work. It lives in
   `grove/changes/<id>-<slug>/`. Once it is merged into your main branch it is
@@ -12,8 +26,10 @@
   says what was agreed and the code shows what happens; neither silently
   wins.
 
-Grove's instructions tell your agent which is which, so a conversation never
-treats a draft as agreed or an approved change as done.
+Mixing these up is how the drift starts: a draft read as if it were agreed,
+an approved change read as if it were done, or today's code read as if it
+were the plan. Grove's instructions tell your agent which is which, so a
+conversation never treats a draft as agreed or an approved change as done.
 
 ## Approval is a merge
 
@@ -23,28 +39,25 @@ saving or ending a conversation approves nothing. Merge commits and squash
 merges both count. If you commit a proposal straight onto your main branch,
 that commit approves it.
 
-`grove review` shows what merging the branch you are on would approve, before
-you merge it.
+Your team already reviews and merges work into the main branch, and Git
+already records who merged what and when. Making the merge the approval
+means agreeing on a change uses the review you already do, and leaves no
+second record of approval to fall out of step with the first.
 
-## A change
-
-A change has a change schema, which decides the documents it holds and
-how each step goes for it. It is `default` unless the project has others
-and you choose one while proposing (see [Reference](reference.md), "Change
-schemas"). A `default` change folder holds:
-
-| File | Written by | Says |
-| --- | --- | --- |
-| `.grove.yaml` | propose | Title, when it was created, its schema, the commit it was proposed from, the changes it waits on if any, and an optional one-line description. |
-| `proposal.md` | propose | Why, what changes, decisions with who made them, open questions. |
-| `specs/<capability>/spec.md` | propose | Requirements the change adds, changes or removes, for one capability each. |
-| `tasks.md` | propose | The work as numbered tasks, each with how to check it is done. |
-| `implementation.md` | implement | Each task's status and evidence, and which specs were updated. |
-
-`tasks.md` is part of what was approved, so applying it never edits it;
-progress goes in `implementation.md`.
+`grove review` shows what merging the branch you are on would approve,
+before you merge it.
 
 ## The loop
+
+```mermaid
+flowchart LR
+    explore["Explore<br/>(a conversation)"] --> propose["Propose<br/>(writes a change)"]
+    propose --> merge1["Review and merge<br/>(approves it)"]
+    merge1 --> apply["Apply<br/>(builds it)"]
+    apply --> archive["Archive and merge<br/>(updates the specs)"]
+    archive --> specs[("Maintained specs")]
+    specs --> explore
+```
 
 1. **Explore.** A conversation with your agent about what you want and what
    is true today. It writes nothing unless you ask.
@@ -68,10 +81,49 @@ What Grove requires at each step is the same in every project: exploring
 writes nothing unless you ask, only your merge approves a change, applying
 builds the change as your main branch holds it and records each task's
 status in `implementation.md`, and archiving refuses a change that is
-neither finished nor dropped. How each step goes, and which documents a
-change has, comes from the change's schema. Grove's built-in schema,
-`default`, is the software change this page describes; a project can change
-its files and add schemas of its own.
+neither finished nor dropped.
+
+## Why archive folds a change into the specs
+
+A change says what is different: it adds, changes or removes requirements.
+That is the right shape for agreeing on work, and the wrong shape for
+reading what is agreed today, because you would have to replay every
+change in order. So when a change is built, archiving writes its
+requirements into the maintained specs, and the change itself moves to
+`grove/changes/archive/`, where it stays as the record of why.
+
+Because the code, the updated spec and the archived change are merged
+together, a maintained spec changes in the same merge as the code it
+describes. The next exploration starts from the maintained specs, so it
+starts from what is agreed, not from a pile of proposals.
+
+## A change
+
+A `default` change folder holds:
+
+| File | Written by | Says |
+| --- | --- | --- |
+| `.grove.yaml` | propose | Title, when it was created, its schema, the commit it was proposed from, the changes it waits on if any, and an optional one-line description. |
+| `proposal.md` | propose | Why, what changes, decisions with who made them, open questions. |
+| `specs/<capability>/spec.md` | propose | Requirements the change adds, changes or removes, for one capability each. |
+| `tasks.md` | propose | The work as numbered tasks, each with how to check it is done. |
+| `implementation.md` | apply, archive | Each task's status and evidence, and which specs were updated. |
+
+`tasks.md` is part of what was approved, so applying it never edits it;
+progress goes in `implementation.md`.
+
+## Change schemas
+
+Not every change is the same kind of work. A change schema decides which
+documents a change holds and how each step goes for it. Grove's built-in
+schema, `default`, is the software change this page describes. A project
+can replace any of its files and add schemas of its own, such as one for
+bug fixes; a change keeps the schema it was proposed with (see
+[Reference](reference.md), "Change schemas").
+
+A schema cannot change what Grove requires at each step, listed under "The
+loop": every schema keeps the same approval, the same tasks in `tasks.md`
+and the same progress in `implementation.md`.
 
 ## Two halves
 
@@ -97,7 +149,8 @@ capability's ID is a short lowercase name, such as `projects`.
 - **Change schema:** what a kind of change consists of and how each skill
   goes for it; Grove's is `default`.
 - **Context:** project facts in `grove.yaml` given to every skill.
-- **Harness:** the agent you run, such as Claude Code or Codex.
+- **Harness:** the program you run your coding agent in. `grove init` writes
+  skills for each harness `grove.yaml` lists.
 - **Maintained spec:** agreed behavior of one capability.
 - **Skill:** a chat command Grove installs for your harness.
 - **Target:** the branch whose contents count as agreed, usually `main`.
