@@ -2,6 +2,7 @@ package doc
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -13,6 +14,11 @@ func TestRequirements(t *testing.T) {
 ### Requirement: Keep a category
 
 When a user edits a record, the system shall keep its category.
+
+'''sh
+# edit a note
+ledger edit 3 --note x
+'''
 
 #### Scenario: A note
 
@@ -29,10 +35,10 @@ No longer wanted.
 Text.
 `
 	want := []Requirement{
-		{Section: "MODIFIED", Name: "Keep a category", Line: 5, Text: "When a user edits a record, the system shall keep its category.\n\n#### Scenario: A note\n\n- GIVEN a record"},
-		{Section: "REMOVED", Name: "Old rule", Line: 15, Text: "No longer wanted."},
+		{Section: "MODIFIED", Name: "Keep a category", Line: 5, Text: "When a user edits a record, the system shall keep its category.\n\n```sh\n# edit a note\nledger edit 3 --note x\n```\n\n#### Scenario: A note\n\n- GIVEN a record"},
+		{Section: "REMOVED", Name: "Old rule", Line: 20, Text: "No longer wanted."},
 	}
-	if got := Requirements(src); !reflect.DeepEqual(got, want) {
+	if got := Requirements(strings.ReplaceAll(src, "'''", "```")); !reflect.DeepEqual(got, want) {
 		t.Errorf("Requirements:\n got %#v\nwant %#v", got, want)
 	}
 }

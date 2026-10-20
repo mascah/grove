@@ -20,10 +20,11 @@ var (
 )
 
 // Requirements returns the requirement blocks of src, each running to the
-// next heading of level 3 or above.
+// next heading of level 3 or above. A line in a fenced code block is never a
+// heading, so a shell comment in an example does not end its requirement.
 func Requirements(src string) []Requirement {
 	var out []Requirement
-	sec, cur, text := "", -1, []string(nil)
+	sec, cur, text, fenced := "", -1, []string(nil), false
 	flush := func() {
 		if cur >= 0 {
 			out[cur].Text = strings.TrimSpace(strings.Join(text, "\n"))
@@ -31,7 +32,10 @@ func Requirements(src string) []Requirement {
 		cur, text = -1, nil
 	}
 	for i, l := range strings.Split(src, "\n") {
-		if !heading.MatchString(l) {
+		if f := strings.TrimLeft(l, " "); strings.HasPrefix(f, "```") || strings.HasPrefix(f, "~~~") {
+			fenced = !fenced
+		}
+		if fenced || !heading.MatchString(l) {
 			text = append(text, l)
 			continue
 		}
