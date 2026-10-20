@@ -221,3 +221,5 @@ Agent inference, not the owner's decisions (rule 25).
   folder whose name does not start with an ID.
 - A new change's folder name is its ID and a slug the agent chooses from the
   title; Grove allocates the ID and `created` timestamp.
+- The fixture's "Planned for 0.4" leaves out the direction note's
+  `imports/2024.csv` and its import item; no step needs them.

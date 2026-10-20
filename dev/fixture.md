@@ -14,7 +14,7 @@ To reset, delete `DIR` and run it again.
 | File | Lines | Contents |
 | --- | --- | --- |
 | `pyproject.toml` | 12 | Name `ledger`, version 0.3.0, script `ledger = "ledger.cli:main"`, no dependencies. |
-| `README.md` | 25 | What the ledger is, the four commands, and "Every record uses one of the categories food, rent, travel, utilities." |
+| `README.md` | 31 | What the ledger is, the four commands, "Every record uses one of the categories food, rent, travel, utilities.", and "Planned for 0.4": `ledger delete ID`, an error instead of a traceback for an unknown ID, and monthly budgets in `report`. |
 | `CHANGELOG.md` | 14 | 0.1.0 records and `list`; 0.2.0 `report`; 0.3.0 (2026-01-05) "Retired the `misc` category. New records must use one of food, rent, travel, utilities." |
 | `.gitignore` | 2 | `__pycache__/` |
 | `records.json` | 8 | The six records below, one per line. |
@@ -51,3 +51,20 @@ Records 1 and 3 predate 0.3.0.
   `StopIteration` traceback. Observed behavior, agreed nowhere.
 - All tests pass as shipped, so a failing test after implementation is the
   implementer's, not the fixture's.
+
+## What the coordinating walkthrough needs
+
+The README's "Planned for 0.4" gives three changes to coordinate, after the
+main line has run.
+
+- **Delete waits on the unknown-ID fix.** `delete` would find its record
+  with `find`, which ends in `StopIteration` for an unknown ID, as
+  `ledger edit 99 --note x` does today. So the delete change waits on the
+  change that makes an unknown ID print an error.
+- **Budgets wait on nothing.** They touch `report`, which neither of the
+  other two changes.
+- **Two changes to one requirement.** After the main line, the
+  `record-editing` spec holds the requirement for editing an older record.
+  Changing an older record's category, and printing what an edit saved, both
+  modify it, so whichever is archived second is proposed from text the
+  first rewrote.

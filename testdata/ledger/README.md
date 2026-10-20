@@ -17,6 +17,13 @@ Every command takes `--file PATH` to use another records file.
 Every record uses one of the categories food, rent, travel, utilities.
 Amounts are positive. Notes are at most 60 characters.
 
+## Planned for 0.4
+
+- `ledger delete ID` removes a record.
+- An unknown ID prints an error instead of a traceback, in `edit` and, once
+  it exists, `delete`.
+- Monthly budgets in `report`.
+
 ## Development
 
     python3 -m unittest
