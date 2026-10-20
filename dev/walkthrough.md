@@ -10,7 +10,11 @@ only where it carries meaning.
 Setup: in the checkout or worktree under test, `eval "$(just dev-path)"`
 in the shell the agent is started from. It builds `bin/grove` and puts that
 `bin/` first on PATH, so `grove` there is this build and the agent inherits
-it; other shells keep the everyday `grove` from `just install`. After
+it; other shells keep the everyday `grove` from `just install`. `grove version`
+(reference, "Terminal commands") shows which one runs: this build prints a
+pseudo-version naming the checkout's commit, such as
+`grove 0.0.0-<date>-<commit>`, ending `+dirty` when there are
+uncommitted changes. After
 changing a guide, template or a schema, `just build` is enough; after
 changing skill text, run `grove init` again in the fixture. `just fixture ~/tmp/ledger`, `cd ~/tmp/ledger`. For
 Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
@@ -336,3 +340,6 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
   top, rather than from the repository's top; `state` is worked out when
   the project is read; a field with no value is left out; a change's
   capabilities and problems are not in it.
+- `grove version` prints one line, `grove <version>`, without a leading
+  `v`, as `grove 0.1.0`; a release build sets it, `go install` of a tag
+  takes the tag, and a build with no version recorded says `dev`.
