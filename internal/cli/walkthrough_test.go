@@ -535,4 +535,19 @@ func TestCoordinating(t *testing.T) {
 	git(t, dir, "checkout", "--", ".")
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Accept the 0.4 plan", "plan-04")
+
+	// Lists by cycle; propose asks for a cycle.
+	if got := grove(t, "changes"); !strings.HasPrefix(got, cycle+"  0.4  0 of 2 archived\n  ") || !strings.Contains(got, "\n  "+del+"  Add ledger delete ID  approved\n") {
+		t.Errorf("changes printed %q", got)
+	}
+	if out := grove(t, "instructions", "propose", "x"); !strings.Contains(out, "Open cycles (planned work, not yet all archived):\n- "+cycle+" \"0.4\": `grove/cycles/"+cycle+"-0-4.yaml`\n  - goal: ") ||
+		!strings.Contains(out, "ask the owner\n  which, if any, the change joins") {
+		t.Errorf("propose instructions do not offer the cycle:\n%s", out)
+	}
+	os.WriteFile(budgetsMeta, []byte(strings.Replace(read(t, budgetsMeta), "cycle: "+cycle, "cycle: 260101-zzzzz", 1)), 0o644)
+	stdout.Reset()
+	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != "grove/changes/"+budgets+"-monthly-budgets-in-report/.grove.yaml:3: cycle: 260101-zzzzz names no file in cycles/\n" {
+		t.Errorf("check of a cycle naming no file: status %d\n%s", code, stdout.String())
+	}
+	git(t, dir, "checkout", "--", ".")
 }

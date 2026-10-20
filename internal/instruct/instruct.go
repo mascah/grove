@@ -595,6 +595,26 @@ func (p Project) index(b *strings.Builder) {
 		b.WriteString("- None.\n")
 	}
 	b.WriteString("\n")
+	open := slices.DeleteFunc(slices.Clone(p.Agreed.Cycles), func(cy *doc.Cycle) bool { return cy.Done })
+	if len(open) > 0 {
+		b.WriteString("Open cycles (planned work, not yet all archived):\n")
+	}
+	for _, cy := range open {
+		var more []string
+		if cy.Meta.Goal != "" {
+			more = append(more, "goal: "+cy.Meta.Goal)
+		}
+		if cy.Meta.Start != "" {
+			more = append(more, "start: "+cy.Meta.Start)
+		}
+		if cy.Meta.End != "" {
+			more = append(more, "end: "+cy.Meta.End)
+		}
+		entry(b, p.Root+"/"+cy.Path, &cy.Document, more...)
+	}
+	if len(open) > 0 {
+		b.WriteString("\n")
+	}
 }
 
 // entry lists document d at path, with more lines about it.

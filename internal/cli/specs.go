@@ -24,7 +24,7 @@ func listSpecs(stdout io.Writer) error {
 	}
 	for _, s := range ip.Agreed.Specs {
 		fmt.Fprintf(stdout, "%s  %s  %s/%s/spec.md\n", s.ID, s.Meta.Title, p.Root, s.Dir)
-		problems(stdout, s.Diagnostics)
+		problems(stdout, "  ", s.Diagnostics)
 	}
 	return nil
 }

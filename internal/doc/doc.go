@@ -152,6 +152,9 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 				ch.WaitsOn = append(ch.WaitsOn, id)
 			}
 		}
+		if ch.Meta.Cycle != "" && c.Cycle(ch.Meta.Cycle) == nil {
+			ch.report(ch.Dir+"/.grove.yaml", ch.lines["cycle"], "cycle: "+ch.Meta.Cycle+" names no file in cycles/")
+		}
 	}
 	c.dependencies()
 	return c, nil

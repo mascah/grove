@@ -128,6 +128,13 @@ It starts where the main line's step 6 ends: one archived change and the
    `.grove.yaml`, and runs `grove check` until clean. Commit; `grove review`
    labels the cycle file `cycle`. Merge.
 
+4. **Lists by cycle** ("Plan a cycle"). `grove changes`:
+   > \<cycle-id>  0.4  0 of 2 archived
+
+   then both changes, indented under it. A fresh `/grove-propose Show the
+   total in list` asks which open cycle, if any, it joins; I end the session
+   there.
+
 ## Other paths
 
 - **Propose from a description** (§3). On a new branch, with no exploration,
@@ -209,6 +216,10 @@ It starts where the main line's step 6 ends: one archived change and the
   > grove/changes/\<delete-id>-\<slug>/.grove.yaml:\<line>: depends_on: \<other-id> waits on this change in turn, so neither can be applied
 
   `grove changes` still works. Discard the edits.
+- **A cycle that is not there** (coordinating, "Plan a cycle"). After
+  coordinating step 4, set a change's `cycle` to `260101-zzzzz`. `grove
+  check` reports it and exits non-zero:
+  > grove/changes/\<change-id>-\<slug>/.grove.yaml:\<line>: cycle: 260101-zzzzz names no file in cycles/
 - **Commit as you go** (reference, `rules`). With
   `apply: [Commit after each task, naming its task ID.]` under
   `rules: skills:` in `grove.yaml`, `/grove-apply` commits T-01 with its ID in the
@@ -303,3 +314,7 @@ Agent inference, not the owner's decisions (rule 25).
 - A cycle file's name starts with its ID, as a change folder's does, and
   `check` reports one that does not.
 - A cycle with no change naming it counts as done.
+- `grove changes` writes a cycle as `<id>  <title>  [<start> to <end>]
+  N of M archived`, M counting its archived changes as well; a change whose
+  `cycle` names no file is listed with the changes in no cycle.
+- The project index lists open cycles only when there is one.

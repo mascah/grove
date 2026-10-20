@@ -89,7 +89,25 @@ goal, then writes the cycle file and `cycle:` in each change's
 `/grove-plan <cycle-id>`.
 
 Commit, read `grove review`, which labels the file `cycle`, and merge. The
-merge accepts the plan, as it approves a change.
+merge accepts the plan, as it approves a change. **Terminal:**
+
+```sh
+grove changes
+```
+
+> 261019-j83h9  0.4  2026-10-20 to 2026-11-06  0 of 2 archived
+>
+> &nbsp;&nbsp;261019-c4t8n  Monthly budgets in report  approved
+>
+> &nbsp;&nbsp;261019-r2w7k  Add ledger delete ID  approved
+
+`grove changes` lists each cycle that is not done, with its dates if it has
+them and how many of its changes are archived, and under it its approved
+changes. Changes in no cycle follow.
+
+Once a project has an open cycle, `/grove-propose` asks which cycle, if
+any, a new change joins. `grove check` reports a `cycle` that names no file
+in `grove/cycles/`.
 
 The order comes from `depends_on`: a change can be applied once every
 change it waits on is archived as finished, and changes that do not wait on

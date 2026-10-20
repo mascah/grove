@@ -107,8 +107,8 @@ func unknownConfig(top string, ip instruct.Project) ([]string, error) {
 	return out, nil
 }
 
-func problems(stdout io.Writer, ds []doc.Diagnostic) {
+func problems(stdout io.Writer, indent string, ds []doc.Diagnostic) {
 	for _, d := range ds {
-		fmt.Fprintf(stdout, "  problem: %s\n", d)
+		fmt.Fprintf(stdout, "%sproblem: %s\n", indent, d)
 	}
 }
