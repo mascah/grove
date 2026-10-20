@@ -2,7 +2,8 @@ Write one change spec for each affected capability, inside the change folder.
 
 - When a maintained spec exists for the capability, use its ID and link it. New rules go under ADDED. A changed
   rule goes under MODIFIED, written as the full intended requirement with all
-  of its scenarios. A dropped rule goes under REMOVED with the reason.
+  of its scenarios. A dropped rule goes under REMOVED, as `### Requirement: <name>` with its
+  name in the maintained spec, followed by the reason.
 - When no maintained spec exists, name the capability by choosing its spec ID,
   put every proposed requirement under ADDED, and describe what the code does
   today under "Observed current behavior", each observation with its source

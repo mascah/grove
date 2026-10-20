@@ -135,6 +135,26 @@ It starts where the main line's step 6 ends: one archived change and the
    total in list` asks which open cycle, if any, it joins; I end the session
    there.
 
+5. **When the plan is stale** ("When the plan is stale"). From main,
+   `git switch -c recategorize`, a fresh session, `/grove-propose An older
+   record's category can be changed, only to a current category`. When it
+   offers a new requirement, I ask it to fold the rule into the main line's
+   requirement instead, so its change spec MODIFIES that requirement.
+   Commit and merge. Then
+   `git switch main && git switch -c show-saved`, a fresh session,
+   `/grove-propose Editing a record prints what was saved`, which MODIFIES
+   the same requirement from the same text. Commit and merge. Apply and
+   archive `recategorize` on `recategorize-impl`; `grove check` there is
+   clean. Commit and merge. `grove check` on main now reports and exits
+   non-zero:
+   > grove/changes/\<show-saved>/specs/record-editing/spec.md:\<line>: requirement "\<name>" was rewritten on main since base \<sha7>; revise the change with propose
+
+   `git switch -c show-saved-revise`, a fresh session,
+   `/grove-propose <show-saved>`, asked to bring it up to date with main.
+   The session adds recategorize's scenario to show-saved's MODIFIED text
+   and sets `base` to main's commit. `grove check` is clean. Commit and
+   merge.
+
 ## Other paths
 
 - **Propose from a description** (§3). On a new branch, with no exploration,
@@ -318,3 +338,7 @@ Agent inference, not the owner's decisions (rule 25).
   N of M archived`, M counting its archived changes as well; a change whose
   `cycle` names no file is listed with the changes in no cycle.
 - The project index lists open cycles only when there is one.
+- The stale check compares a requirement's text below its heading, trimmed,
+  at `base` and on the target, by name; one missing on the target was
+  removed. A requirement the maintained spec did not have at `base` is not
+  compared. A `base` that is not a commit is reported.

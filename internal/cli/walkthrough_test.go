@@ -430,11 +430,18 @@ func TestSchemas(t *testing.T) {
 }
 
 // finish plays the sessions that apply and archive change id on a new
-// branch, then merges it.
-func finish(t *testing.T, dir, branch, id, folder string) {
+// branch, archiving writing spec as the record-editing maintained spec, then
+// merges it.
+func finish(t *testing.T, dir, branch, id, folder, spec string) {
 	t.Helper()
 	git(t, dir, "switch", "-q", "-c", branch)
 	os.WriteFile(filepath.Join(folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
+	os.MkdirAll(filepath.Join(dir, "grove/specs/record-editing"), 0o755)
+	os.WriteFile(filepath.Join(dir, "grove/specs/record-editing/.grove.yaml"), []byte("title: Record editing\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove/specs/record-editing/spec.md"), []byte("# Record editing\n\n## Requirements\n\n"+spec), 0o644)
+	if out := grove(t, "check"); out != "No problems in grove/.\n" {
+		t.Errorf("check on %s printed %q", branch, out)
+	}
 	grove(t, "archive", id)
 	commitAll(t, dir, "Implement and archive "+id)
 	git(t, dir, "switch", "-q", "main")
@@ -468,7 +475,8 @@ func TestCoordinating(t *testing.T) {
 	if code := run([]string{"instructions", "apply", del}, &stdout, &stderr); code != 1 || stderr.String() != "grove: "+del+" waits on "+unknown+", which main has not archived as finished\n" {
 		t.Errorf("apply before its dependency is archived: status %d, %q", code, stderr.String())
 	}
-	finish(t, dir, "unknown-id-impl", unknown, unknownDir)
+	keep := "### Requirement: Keep a category\n\nWhen a user edits a record and leaves its category unchanged, the system shall save the edit.\n"
+	finish(t, dir, "unknown-id-impl", unknown, unknownDir, keep)
 	grove(t, "instructions", "apply", del)
 
 	// check reports broken dependencies (Other paths).
@@ -550,4 +558,37 @@ func TestCoordinating(t *testing.T) {
 		t.Errorf("check of a cycle naming no file: status %d\n%s", code, stdout.String())
 	}
 	git(t, dir, "checkout", "--", ".")
+
+	// The stale-plan check.
+	modify := func(folder, text string) {
+		os.WriteFile(filepath.Join(folder, "specs/record-editing/spec.md"), []byte("# Changes to record-editing\n\n## MODIFIED Requirements\n\n### Requirement: Keep a category\n\n"+text), 0o644)
+	}
+	base := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
+	recat, recatDir := propose(t, dir, "recategorize", "Recategorize older records", "base: "+base+"\n")
+	recatText := "When a user edits a record and leaves its category unchanged, the system shall save the edit.\n\n#### Scenario: Change an older record's category to a current one\n"
+	modify(recatDir, recatText)
+	commitAll(t, dir, "Propose recategorizing")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve recategorizing", "recategorize")
+	show, showDir := propose(t, dir, "show-saved", "Show what was saved", "base: "+base+"\n")
+	modify(showDir, "When a user edits a record and leaves its category unchanged, the system shall save the edit and print what was saved.\n")
+	commitAll(t, dir, "Propose showing what was saved")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve showing what was saved", "show-saved")
+	finish(t, dir, "recategorize-impl", recat, recatDir, "### Requirement: Keep a category\n\n"+recatText)
+	stdout.Reset()
+	want := "grove/changes/" + filepath.Base(showDir) + "/specs/record-editing/spec.md:5: requirement \"Keep a category\" was rewritten on main since base " + base[:7] + "; revise the change with propose\n"
+	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != want {
+		t.Errorf("check of a stale change: status %d\n%s", code, stdout.String())
+	}
+	main = strings.TrimSpace(git(t, dir, "rev-parse", "main"))
+	git(t, dir, "switch", "-q", "-c", "show-saved-revise")
+	if out := grove(t, "instructions", "propose", show); !strings.Contains(out, "\nbase: "+main+"\n") || !strings.Contains(out, "never clear the report by hand") {
+		t.Errorf("revise instructions for a stale change:\n%s", out)
+	}
+	modify(showDir, strings.Replace(recatText, "save the edit", "save the edit and print what was saved", 1))
+	os.WriteFile(filepath.Join(showDir, ".grove.yaml"), []byte("title: Show what was saved\ncreated: 2026-10-14T00:00:00Z\nbase: "+main+"\n"), 0o644)
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check after revising printed %q", got)
+	}
 }

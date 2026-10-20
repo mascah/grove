@@ -52,7 +52,13 @@ scenarios, not just the words that change. -->
 
 ## REMOVED Requirements
 
-<!-- Name each maintained requirement being removed and say in a sentence why. -->
+<!-- Each maintained requirement being removed, under its heading as the
+maintained spec names it, then a sentence saying why:
+
+    ### Requirement: [its name in the maintained spec]
+
+    [Why it is removed.]
+-->
 
 ## Observed current behavior
 

@@ -3,8 +3,8 @@
 [Getting started](getting-started.md) takes one change from an idea to an
 updated spec. When several changes are approved at once, some must land
 before others, and some belong to one piece of work, such as a release.
-This page shows how a change says what it waits on, and how to plan a
-cycle.
+This page shows how a change says what it waits on, how to plan a cycle,
+and what happens when two changes rewrite the same requirement.
 
 ## A change that waits
 
@@ -113,3 +113,33 @@ The order comes from `depends_on`: a change can be applied once every
 change it waits on is archived as finished, and changes that do not wait on
 each other can be built in parallel, on separate branches. A cycle is done
 when every change in it is archived. It stays in `grove/cycles/`.
+
+## When the plan is stale
+
+A change's spec MODIFIES or REMOVES a maintained requirement as it read at
+the change's `base`. If another change rewrites or removes that requirement
+on your main branch first, the change was planned against text that is no
+longer there. `grove check` reports each such requirement:
+
+> grove/changes/261019-s5v3m-show-what-was-saved/specs/record-editing/spec.md:5: requirement "Keep an unchanged category on edit" was rewritten on main since base 4f1c2a9; revise the change with propose
+
+It compares `base` with your main branch, not with your working tree, so
+the branch that archives the first change does not report the second.
+`/grove-archive` runs `grove check` first, and stops if it reports the
+change being archived.
+
+To bring the change up to date, revise it on a branch. **Chat:**
+
+```text
+/grove-propose 261019-s5v3m
+```
+
+The agent rewrites that MODIFIED or REMOVED requirement from your main
+branch's text, keeping what the change itself alters, and sets `base` to
+your main branch's commit. `grove check` is clean again. Merge it, and the
+revised change is approved. Do not edit `base` by hand: that hides the
+report without bringing the change up to date.
+
+In a change spec, each REMOVED requirement keeps its heading,
+`### Requirement: <name>`, followed by why it goes, so `grove check` can
+find it.

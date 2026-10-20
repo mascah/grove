@@ -20,6 +20,11 @@
   for and leave the rest as it is. If the project index lists it as
   approved, tell the owner that editing it changes approved work before you
   do.
+- Revising a change that Grove's `check` reports as stale on a
+  requirement: bring that MODIFIED or REMOVED requirement up to date with
+  the target's maintained spec, keeping what this change alters, then set
+  `base` to the commit the `.grove.yaml` template below shows. Change `base`
+  only so; never clear the report by hand.
 - A question the owner defers is not answered by guess. It goes into the
   change's open questions, naming the task it blocks when it decides how
   that task is built.
