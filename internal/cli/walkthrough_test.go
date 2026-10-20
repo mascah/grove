@@ -455,7 +455,7 @@ func TestCoordinating(t *testing.T) {
 			t.Errorf("propose instructions lack %q:\n%s", s, out)
 		}
 	}
-	del, _ := approve(t, dir, "delete", "Add ledger delete ID", "depends_on: ["+unknown+"]\nbase: "+main+"\n")
+	del, delDir := approve(t, dir, "delete", "Add ledger delete ID", "depends_on: ["+unknown+"]\nbase: "+main+"\n")
 	if got := grove(t, "changes"); !strings.Contains(got, unknown+"  Editing an unknown ID prints an error  approved\n") || !strings.Contains(got, del+"  Add ledger delete ID  approved  waits on "+unknown+"\n") {
 		t.Errorf("changes printed %q", got)
 	}
@@ -470,4 +470,27 @@ func TestCoordinating(t *testing.T) {
 	}
 	finish(t, dir, "unknown-id-impl", unknown, unknownDir)
 	grove(t, "instructions", "apply", del)
+
+	// check reports broken dependencies (Other paths).
+	budgets, _ := propose(t, dir, "budgets", "Monthly budgets in report", "depends_on: ["+del+"]\n")
+	delMeta := filepath.Join(delDir, ".grove.yaml")
+	os.WriteFile(delMeta, []byte("title: Add ledger delete ID\ncreated: 2026-10-14T00:00:00Z\ndepends_on: [260101-zzzzz, "+budgets+"]\n"), 0o644)
+	unknownImpl := filepath.Join(dir, "grove/changes/archive", filepath.Base(unknownDir), "implementation.md")
+	os.WriteFile(unknownImpl, []byte("Status: dropped\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove/changes", budgets+"-monthly-budgets-in-report/.grove.yaml"), []byte("title: Monthly budgets in report\ncreated: 2026-10-14T00:00:00Z\ndepends_on: ["+del+", "+unknown+"]\n"), 0o644)
+	stdout.Reset()
+	stderr.Reset()
+	code := run([]string{"check"}, &stdout, &stderr)
+	for _, s := range []string{
+		"grove/changes/" + filepath.Base(delDir) + "/.grove.yaml:3: depends_on: 260101-zzzzz is no change, open or archived\n",
+		"grove/changes/" + filepath.Base(delDir) + "/.grove.yaml:3: depends_on: " + budgets + " waits on this change in turn, so neither can be applied\n",
+		"grove/changes/" + budgets + "-monthly-budgets-in-report/.grove.yaml:3: depends_on: " + del + " waits on this change in turn, so neither can be applied\n",
+		"grove/changes/" + budgets + "-monthly-budgets-in-report/.grove.yaml:3: depends_on: " + unknown + " was dropped, so this change could never be applied\n",
+	} {
+		if code != 1 || !strings.Contains(stdout.String(), s) {
+			t.Errorf("check lacks %q: status %d\n%s", s, code, stdout.String())
+		}
+	}
+	grove(t, "changes")
+	git(t, dir, "checkout", "--", ".")
 }

@@ -50,6 +50,7 @@ type Document struct {
 	Dir         string // relative to the document root
 	Meta        Meta
 	Diagnostics []Diagnostic
+	lines       map[string]int // the line of each field of its .grove.yaml
 }
 
 // Change is one change folder, changes/<id>-<slug>/ or, archived,
@@ -125,7 +126,50 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 			}
 		}
 	}
+	c.dependencies()
 	return c, nil
+}
+
+// dependencies reports each open change's depends_on that names no change,
+// a dropped change, or one that waits on it in turn.
+func (c *Collection) dependencies() {
+	open, all := map[string]*Change{}, map[string]*Change{}
+	for _, ch := range c.Changes {
+		open[ch.ID], all[ch.ID] = ch, ch
+	}
+	for _, ch := range c.Archived {
+		all[ch.ID] = ch
+	}
+	for _, ch := range c.Changes {
+		// reaches reports whether from waits on ch, directly or through other open changes.
+		seen := map[*Change]bool{}
+		var reaches func(from *Change) bool
+		reaches = func(from *Change) bool {
+			if from == ch {
+				return true
+			}
+			if seen[from] {
+				return false
+			}
+			seen[from] = true
+			for _, id := range from.Meta.DependsOn {
+				if d := open[id]; d != nil && reaches(d) {
+					return true
+				}
+			}
+			return false
+		}
+		for _, id := range ch.Meta.DependsOn {
+			switch d := all[id]; {
+			case d == nil:
+				ch.report(ch.Dir+"/.grove.yaml", ch.lines["depends_on"], "depends_on: "+id+" is no change, open or archived")
+			case d.Dropped:
+				ch.report(ch.Dir+"/.grove.yaml", ch.lines["depends_on"], "depends_on: "+id+" was dropped, so this change could never be applied")
+			case open[id] != nil && reaches(d):
+				ch.report(ch.Dir+"/.grove.yaml", ch.lines["depends_on"], "depends_on: "+id+" waits on this change in turn, so neither can be applied")
+			}
+		}
+	}
 }
 
 func loadChange(fsys fs.FS, name string, layout Layout) (*Change, error) {
@@ -139,6 +183,7 @@ func loadChange(fsys fs.FS, name string, layout Layout) (*Change, error) {
 	if err != nil {
 		return nil, err
 	}
+	ch.lines = lines
 	ch.Meta.Schema = cmp.Or(ch.Meta.Schema, "default") // changes made before schemas
 	main, capabilities, problem := layout(ch.Meta.Schema)
 	switch {

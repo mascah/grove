@@ -184,6 +184,17 @@ It starts where the main line's step 6 ends: one archived change and the
   > grove.yaml:<line>: unknown field "rule"; grove.yaml takes root, target, agents, schema, context and rules
 
   `grove changes` still works.
+- **A dependency that can never be met** (coordinating, "A change that
+  waits"). After coordinating step 2, set the delete change's `depends_on`
+  to `[260101-zzzzz]`, and `grove check` reports it and exits non-zero:
+  > grove/changes/\<delete-id>-\<slug>/.grove.yaml:\<line>: depends_on: 260101-zzzzz is no change, open or archived
+
+  Then propose another change on a branch with `depends_on: [<delete-id>]`,
+  and set the delete change's to `[<that change>]`. `grove check` reports
+  each with its `path:line`:
+  > grove/changes/\<delete-id>-\<slug>/.grove.yaml:\<line>: depends_on: \<other-id> waits on this change in turn, so neither can be applied
+
+  `grove changes` still works. Discard the edits.
 - **Commit as you go** (reference, `rules`). With
   `apply: [Commit after each task, naming its task ID.]` under
   `rules: skills:` in `grove.yaml`, `/grove-apply` commits T-01 with its ID in the
@@ -266,3 +277,6 @@ Agent inference, not the owner's decisions (rule 25).
 - `base` comes from `{{commit}}`, a placeholder only Grove's `.grove.yaml`
   template fills; `{{base}}` stays the short commit in schema templates.
 - The docs page for coordinating changes is `docs/coordinating.md`.
+- `check` looks for what `depends_on` names among the working tree's
+  changes, open and archived, and not on the target; a branch holds the
+  target's archive as of where it started.

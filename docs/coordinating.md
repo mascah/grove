@@ -48,3 +48,9 @@ archive the change it waits on, and merge that; or, if it need not wait
 after all, remove the dependency from `depends_on` on a branch and merge
 that. Any field of an approved change's `.grove.yaml` but `created` can
 change this way.
+
+`grove check` reports a `depends_on` that can never be met: one naming no
+change, open or archived; one naming a dropped change; and two or more
+changes that wait on each other in a loop.
+
+> grove/changes/261019-r2w7k-add-ledger-delete/.grove.yaml:4: depends_on: 260101-zzzzz is no change, open or archived
