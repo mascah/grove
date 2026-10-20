@@ -29,7 +29,7 @@ func review(stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	head, err := doc.Load(fsys, ip.MainDocument)
+	head, err := doc.Load(fsys, ip.Layout)
 	if err != nil {
 		return err
 	}

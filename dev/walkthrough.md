@@ -82,6 +82,27 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    cites that requirement as agreed and lists no approved changes. Its
    instructions are under 12 KiB.
 
+## Coordinating changes
+
+It starts where the main line's step 6 ends: one archived change and the
+`record-editing` spec. Each step names the section of
+[Coordinating changes](../docs/coordinating.md) it tests.
+
+1. **A change that waits** ("A change that waits"). From main,
+   `git switch -c unknown-id`, and in a fresh session
+   `/grove-propose Editing an unknown ID prints an error`. It finds no other
+   open change, says so, and leaves `depends_on` out. Commit, then
+   `git switch main && git merge --no-ff unknown-id`.
+   `git switch -c delete`, and in a fresh session
+   `/grove-propose Add ledger delete ID, from the README's planned list`. The
+   session asks whether it needs another open change first and names the
+   unknown-ID change, since `delete` would use `find`. I say yes.
+   `.grove.yaml` has `depends_on: [<unknown-id>]` and `base:` with main's
+   full commit. Commit and merge. `grove changes`:
+   > \<unknown-id>  Editing an unknown ID prints an error  approved
+
+   > \<delete-id>  Add ledger delete ID  approved  waits on \<unknown-id>
+
 ## Other paths
 
 - **Propose from a description** (§3). On a new branch, with no exploration,
@@ -223,3 +244,14 @@ Agent inference, not the owner's decisions (rule 25).
   title; Grove allocates the ID and `created` timestamp.
 - The fixture's "Planned for 0.4" leaves out the direction note's
   `imports/2024.csv` and its import item; no step needs them.
+- The project index lists each approved change's capabilities (the
+  `<capability>` folders of its files) and what it waits on, rather than
+  dependencies Grove works out as candidates. Propose names the likely ones
+  from it.
+- `grove changes` writes `waits on <id>, <id>` after `approved`, and
+  nothing for a change whose dependencies are all archived as finished.
+- A change with no dependency leaves `depends_on` out; `depends_on: []` is
+  reported like any other empty field.
+- `base` comes from `{{commit}}`, a placeholder only Grove's `.grove.yaml`
+  template fills; `{{base}}` stays the short commit in schema templates.
+- The docs page for coordinating changes is `docs/coordinating.md`.

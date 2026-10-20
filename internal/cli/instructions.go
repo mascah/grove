@@ -7,10 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/mascah/grove/internal/doc"
@@ -49,7 +46,7 @@ func instructionsPropose(stdout io.Writer, schema, arg string) error {
 	if schema != "" {
 		return errors.New("a change keeps its schema; to change it, edit schema in the change's .grove.yaml")
 	}
-	c, files, err := change(os.DirFS(filepath.Join(p.Top, p.Root)), ip.MainDocument, arg)
+	c, files, err := change(os.DirFS(filepath.Join(p.Top, p.Root)), ip.Layout, arg)
 	if err != nil {
 		return err
 	}
@@ -67,7 +64,7 @@ func instructionsArchive(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
-	c, files, err := change(os.DirFS(filepath.Join(p.Top, p.Root)), ip.MainDocument, id)
+	c, files, err := change(os.DirFS(filepath.Join(p.Top, p.Root)), ip.Layout, id)
 	if err != nil {
 		return err
 	}
@@ -81,12 +78,14 @@ func archive(stdout io.Writer, id string) error {
 		return err
 	}
 	root := filepath.Join(p.Top, p.Root)
-	c, _, err := change(os.DirFS(root), p.instruct().MainDocument, id)
+	c, _, err := change(os.DirFS(root), p.instruct().Layout, id)
 	if err != nil {
 		return err
 	}
-	if t := unfinished(os.DirFS(root), c); t != "" {
-		return fmt.Errorf("%s is not done in implementation.md; archive a change when every task is done or the file says Status: dropped", t)
+	for _, t := range c.Tasks {
+		if !c.Dropped && t.Status != "done" {
+			return fmt.Errorf("%s is not done in implementation.md; archive a change when every task is done or the file says Status: dropped", t.ID)
+		}
 	}
 	to := "changes/archive/" + filepath.Base(c.Dir)
 	if err := os.MkdirAll(filepath.Join(root, "changes", "archive"), 0o755); err != nil {
@@ -97,34 +96,6 @@ func archive(stdout io.Writer, id string) error {
 	}
 	fmt.Fprintf(stdout, "Archived %s to %s/%s/; nothing is committed.\n", id, p.Root, to)
 	return nil
-}
-
-var taskHeading = regexp.MustCompile(`^#+ (T-\d+)\b`)
-
-// unfinished returns the first task in change c's tasks.md that its
-// implementation.md does not mark done, or "" when every task is done or
-// the change is dropped (rule 3).
-func unfinished(fsys fs.FS, c *doc.Change) string {
-	tasks, _ := fs.ReadFile(fsys, path.Join(c.Dir, "tasks.md"))
-	impl, _ := fs.ReadFile(fsys, path.Join(c.Dir, "implementation.md"))
-	status, task := map[string]string{}, ""
-	for _, l := range strings.Split(string(impl), "\n") {
-		if m := taskHeading.FindStringSubmatch(l); m != nil {
-			task = m[1]
-		}
-		if s, ok := strings.CutPrefix(l, "Status: "); ok {
-			if s = strings.TrimSpace(s); s == "dropped" {
-				return ""
-			}
-			status[task] = strings.TrimSpace(s)
-		}
-	}
-	for _, l := range strings.Split(string(tasks), "\n") {
-		if m := taskHeading.FindStringSubmatch(l); m != nil && status[m[1]] != "done" {
-			return m[1]
-		}
-	}
-	return ""
 }
 
 // instructionsApply prints the apply instructions for change id as the
@@ -145,7 +116,7 @@ func instructionsApply(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
-	c, files, err := change(fsys, ip.MainDocument, id)
+	c, files, err := change(fsys, ip.Layout, id)
 	if err != nil {
 		return err
 	}
@@ -163,9 +134,9 @@ func show(stdout io.Writer) func(instruct.Instructions, error) error {
 }
 
 // change loads change id from the document root fsys, with every file it
-// holds; main is as doc.Load takes it.
-func change(fsys fs.FS, main func(string) (string, string), id string) (*doc.Change, map[string]string, error) {
-	all, err := doc.Load(fsys, main)
+// holds.
+func change(fsys fs.FS, layout doc.Layout, id string) (*doc.Change, map[string]string, error) {
+	all, err := doc.Load(fsys, layout)
 	if err != nil {
 		return nil, nil, err
 	}

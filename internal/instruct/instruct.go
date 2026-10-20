@@ -168,19 +168,22 @@ func (p Project) Kinds() []string {
 	return names
 }
 
-// MainDocument returns the file in a change folder that holds the main
-// document of change schema name, or a problem when name is not a schema.
-func (p Project) MainDocument(name string) (file, problem string) {
+// Layout is doc.Layout for the project's change schemas.
+func (p Project) Layout(name string) (main string, capabilities []string, problem string) {
 	if names := p.SchemaNames(); !slices.Contains(names, name) {
-		return "", notSchema(name, names)
+		return "", nil, notSchema(name, names)
 	}
 	s, _ := p.load(name) // a broken schema.yaml is check's to report
 	for _, k := range s.Documents {
+		rel, ok := strings.CutPrefix(k.Path, "changes/<change>/")
 		if k.Metadata == changeMetadata {
-			return strings.TrimPrefix(k.Path, "changes/<change>/"), ""
+			main = rel
+		}
+		if ok && strings.Contains(rel, "<capability>") {
+			capabilities = append(capabilities, rel)
 		}
 	}
-	return "", ""
+	return main, capabilities, ""
 }
 
 // Project is what a session is told about the repository.
@@ -452,7 +455,7 @@ func Propose(p Project, s, id, created, description string) (Instructions, error
 		from = "the owner's description below"
 	}
 	in, err := build(p, s, "propose", fmt.Sprintf("You are proposing new change %s%s, from %s, in the owner's own working tree.", id, with(s), from),
-		strings.NewReplacer("<change>", id+"-<slug>", "{{change}}", id, "{{created}}", created, "{{schema}}", s, "{{base}}", short(p.Commit)), nil, nil)
+		strings.NewReplacer("<change>", id+"-<slug>", "{{change}}", id, "{{created}}", created, "{{schema}}", s, "{{base}}", short(p.Commit), "{{commit}}", p.Commit), nil, nil)
 	in.Description, in.Schemas = description, p.choices()
 	return in, err
 }
@@ -479,10 +482,11 @@ func Archive(p Project, c *doc.Change, files map[string]string) (Instructions, e
 	return build(p, c.Meta.Schema, "archive", task, fill(p, c), c, files)
 }
 
-// fill puts change c's values into paths and templates.
+// fill puts change c's values into paths and templates. {{commit}} is the
+// target's full commit, which only Grove's own metadata template uses.
 func fill(p Project, c *doc.Change) *strings.Replacer {
 	return strings.NewReplacer("<change>", path.Base(c.Dir), "{{title}}", c.Meta.Title,
-		"{{change}}", c.ID, "{{created}}", c.Meta.Created, "{{schema}}", c.Meta.Schema, "{{base}}", short(p.Commit))
+		"{{change}}", c.ID, "{{created}}", c.Meta.Created, "{{schema}}", c.Meta.Schema, "{{base}}", short(p.Commit), "{{commit}}", p.Commit)
 }
 
 // Markdown renders the instructions as the text a session reads.
@@ -554,7 +558,14 @@ func (p Project) index(b *strings.Builder) {
 	}
 	b.WriteString("\nApproved changes (future work; implementation is not established):\n")
 	for _, c := range p.Agreed.Changes {
-		entry(b, p.Root+"/"+c.Dir+"/", &c.Document)
+		var more []string
+		if caps := c.Capabilities(); len(caps) > 0 {
+			more = append(more, "capabilities: "+strings.Join(caps, ", "))
+		}
+		if len(c.WaitsOn) > 0 {
+			more = append(more, "waits on: "+strings.Join(c.WaitsOn, ", ")+", not archived as finished")
+		}
+		entry(b, p.Root+"/"+c.Dir+"/", &c.Document, more...)
 	}
 	if len(p.Agreed.Changes) == 0 {
 		b.WriteString("- None.\n")
@@ -562,12 +573,16 @@ func (p Project) index(b *strings.Builder) {
 	b.WriteString("\n")
 }
 
-func entry(b *strings.Builder, path string, d *doc.Document) {
+// entry lists document d at path, with more lines about it.
+func entry(b *strings.Builder, path string, d *doc.Document, more ...string) {
 	fmt.Fprintf(b, "- %s %q: `%s`", d.ID, d.Meta.Title, path)
 	if d.Meta.Description != "" {
 		fmt.Fprintf(b, " — %s", d.Meta.Description)
 	}
 	b.WriteString("\n")
+	for _, m := range more {
+		fmt.Fprintf(b, "  - %s\n", m)
+	}
 	for _, diag := range d.Diagnostics {
 		fmt.Fprintf(b, "  - problem: %s\n", diag)
 	}

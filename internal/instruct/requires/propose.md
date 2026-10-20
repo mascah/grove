@@ -8,6 +8,11 @@
   confirm it with them, run Grove's `instructions propose --schema <name>`
   with the owner's description in quotes, if there is one, and follow what
   it prints instead.
+- A new change: ask the owner whether it needs another open change, approved
+  or drafted, to land first. Name any in the project index that touches the
+  same capabilities or code. Write each change the owner names in
+  `depends_on`; leave the field out when there is none. Keep `base` as the
+  template has it: the target commit the change is proposed from.
 - Revising a drafted change: its files are below. Change what the owner asks
   for and leave the rest as it is. If the project index lists it as
   approved, tell the owner that editing it changes approved work before you

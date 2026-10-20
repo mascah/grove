@@ -36,5 +36,7 @@ In Codex, type `$grove-explore` instead of `/grove-explore`, and so on.
 
 - [Getting started](docs/getting-started.md): set up and take one change from
   idea to updated spec.
+- [Coordinating changes](docs/coordinating.md): changes that wait on
+  others.
 - [Concepts](docs/concepts.md): specs, changes, approval and archive.
 - [Reference](docs/reference.md): every command, skill and setting.

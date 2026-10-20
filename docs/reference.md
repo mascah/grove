@@ -7,7 +7,7 @@
 | `grove` | Opens the reader on the maintained specs and approved changes. |
 | `grove init` | Writes `grove.yaml` if there is none, and the skills for each harness it lists. Safe to re-run: it rewrites the skills and leaves `grove.yaml` alone. Commits nothing. |
 | `grove specs` | Lists the maintained specs on the target branch. |
-| `grove changes` | Lists the approved changes on the target branch that are not archived. |
+| `grove changes` | Lists the approved changes on the target branch that are not archived, and what each waits on. |
 | `grove check` | Reports each problem in the Grove documents of this working tree, each unknown field or `rules` key in `grove.yaml`, and each mistake in a change schema, as `path:line: message`, and exits non-zero if there is one. |
 | `grove review` | Shows what merging the current branch into the target would approve: each change, maintained spec or change schema file it adds or alters, and the diff. |
 | `grove archive <change-id>` | Moves the change's folder to `changes/archive/`. Refuses unless `implementation.md` marks every task in `tasks.md` `Status: done`, or says `Status: dropped`. Commits nothing. |
@@ -281,8 +281,11 @@ A folder under `changes/` or `specs/` is a change or a maintained spec when
 it holds a `.grove.yaml`; `grove check` reports one without its main
 document: `spec.md`, or the change's schema's, `proposal.md` in `default`.
 A maintained spec's `.grove.yaml` holds its `title`; a change's holds its
-`title`, when it was `created`, and its `schema`. Either may add a one-line
-`description`, shown in lists. The folder name gives the ID: a spec's is the
+`title`, when it was `created`, its `schema`, and `base`, the full commit of
+the target it was proposed from, which propose writes from Grove's template.
+Either may add a one-line `description`, shown in lists. A change may add
+`depends_on`, the list of change IDs it waits on (see
+[Coordinating changes](coordinating.md)). The folder name gives the ID: a spec's is the
 whole name, a change's the start of it. A main document starts with the
 title as its heading, and `grove check` reports one whose first heading is
 not `# ` and the title. A change's other files have no metadata: their

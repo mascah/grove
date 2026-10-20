@@ -137,7 +137,7 @@ func TestCheck(t *testing.T) {
 	want = "grove/specs/record-editing/.grove.yaml:2: unknown field \"owner\"; this file takes title and description\n" +
 		"grove/specs/record-editing/.grove.yaml: title: required field is missing\n" +
 		"grove/changes/261015-k3m9q-no-proposal/proposal.md: missing; it is the change's main document in schema default\n" +
-		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created, schema and description\n" +
+		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created, schema, description, depends_on, cycle and base\n" +
 		"grove/changes/261015-q7r2s-drifted/proposal.md:1: the first heading should be \"# New title\", the title in .grove.yaml\n" +
 		"grove/changes/no-id/: the folder name must start with a change ID, such as 261015-k3m9q\n"
 	if code != 1 || stdout.String() != want || stderr.String() != "grove: 6 problems found\n" {
@@ -146,23 +146,23 @@ func TestCheck(t *testing.T) {
 }
 
 // propose plays a session that proposes a change on a new branch: it asks
-// for the propose instructions and writes the change folder they name.
-func propose(t *testing.T, dir string, args ...string) (changeID string) {
+// for the propose instructions and writes the change folder they name,
+// with meta's lines added to its .grove.yaml.
+func propose(t *testing.T, dir, branch, title, meta string, args ...string) (changeID, folder string) {
 	t.Helper()
-	git(t, dir, "switch", "-q", "-c", "older-edits")
+	git(t, dir, "switch", "-q", "-c", branch)
 	out := grove(t, append([]string{"instructions", "propose"}, args...)...)
 	m := regexp.MustCompile("### proposal: `grove/changes/([0-9]{6}-[0-9a-z]{5})-<slug>/proposal.md`").FindStringSubmatch(out)
 	if m == nil {
 		t.Fatalf("propose instructions name no new change:\n%.3000s", out)
 	}
-	id := m[1]
-	change := filepath.Join(dir, "grove", "changes", id+"-allow-editing-older-records")
-	os.MkdirAll(filepath.Join(change, "specs", "record-editing"), 0o755)
-	os.WriteFile(filepath.Join(change, ".grove.yaml"), []byte("title: Allow editing older records\ncreated: 2026-10-14T00:00:00Z\n"), 0o644)
-	os.WriteFile(filepath.Join(change, "proposal.md"), []byte("# Allow editing older records\n"), 0o644)
-	os.WriteFile(filepath.Join(change, "specs", "record-editing", "spec.md"), []byte("# Changes to record-editing\n\n## ADDED Requirements\n\n### Requirement: Edit older records\n"), 0o644)
-	os.WriteFile(filepath.Join(change, "tasks.md"), []byte("## T-01 — Edit older records\n"), 0o644)
-	return id
+	folder = filepath.Join(dir, "grove", "changes", m[1]+"-"+strings.ToLower(strings.ReplaceAll(title, " ", "-")))
+	os.MkdirAll(filepath.Join(folder, "specs", "record-editing"), 0o755)
+	os.WriteFile(filepath.Join(folder, ".grove.yaml"), []byte("title: "+title+"\ncreated: 2026-10-14T00:00:00Z\n"+meta), 0o644)
+	os.WriteFile(filepath.Join(folder, "proposal.md"), []byte("# "+title+"\n"), 0o644)
+	os.WriteFile(filepath.Join(folder, "specs", "record-editing", "spec.md"), []byte("# Changes to record-editing\n\n## ADDED Requirements\n\n### Requirement: Edit older records\n"), 0o644)
+	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte("## T-01 — "+title+"\n"), 0o644)
+	return m[1], folder
 }
 
 // setUp runs init on a fresh fixture and commits it, as getting started §1.
@@ -174,14 +174,15 @@ func setUp(t *testing.T) string {
 	return dir
 }
 
-// approve commits the proposed change on its branch and merges it into main.
-func approve(t *testing.T, dir string) (changeID string) {
+// approve proposes a change as propose does, commits it on its branch and
+// merges it into main.
+func approve(t *testing.T, dir, branch, title, meta string) (changeID, folder string) {
 	t.Helper()
-	cid := propose(t, dir)
-	commitAll(t, dir, "Propose allowing edits to older records")
+	cid, folder := propose(t, dir, branch, title, meta)
+	commitAll(t, dir, "Propose "+title)
 	git(t, dir, "switch", "-q", "main")
-	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve "+cid, "older-edits")
-	return cid
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve "+cid, branch)
+	return cid, folder
 }
 
 func TestExplore(t *testing.T) {
@@ -200,7 +201,7 @@ func TestExplore(t *testing.T) {
 
 func TestPropose(t *testing.T) {
 	dir := setUp(t)
-	cid := propose(t, dir)
+	cid, _ := propose(t, dir, "older-edits", "Allow editing older records", "")
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
 		t.Errorf("check printed %q", got)
 	}
@@ -230,7 +231,7 @@ func TestPropose(t *testing.T) {
 
 func TestApprove(t *testing.T) {
 	dir := setUp(t)
-	cid := propose(t, dir)
+	cid, _ := propose(t, dir, "older-edits", "Allow editing older records", "")
 	commitAll(t, dir, "Propose allowing edits to older records")
 	out := grove(t, "review")
 	for _, s := range []string{
@@ -259,7 +260,7 @@ func TestApplyInstructions(t *testing.T) {
 		t.Error("the skill does not run instructions apply")
 	}
 	commitAll(t, dir, "Set up Grove")
-	cid := propose(t, dir)
+	cid, _ := propose(t, dir, "older-edits", "Allow editing older records", "")
 	commitAll(t, dir, "Propose")
 
 	var stdout, stderr strings.Builder
@@ -278,7 +279,7 @@ func TestApplyInstructions(t *testing.T) {
 
 func TestDropChange(t *testing.T) {
 	dir := setUp(t)
-	cid := approve(t, dir)
+	cid, _ := approve(t, dir, "older-edits", "Allow editing older records", "")
 	folder := "grove/changes/" + cid + "-allow-editing-older-records"
 	os.WriteFile(filepath.Join(dir, folder, "implementation.md"), []byte("# Implementation\n\nStatus: dropped\n\nOwner: \"not needed\".\n"), 0o644)
 	grove(t, "archive", cid)
@@ -286,7 +287,7 @@ func TestDropChange(t *testing.T) {
 
 func TestArchive(t *testing.T) {
 	dir := setUp(t)
-	cid := approve(t, dir)
+	cid, _ := approve(t, dir, "older-edits", "Allow editing older records", "")
 	git(t, dir, "switch", "-q", "-c", "older-edits-impl")
 	folder := "grove/changes/" + cid + "-allow-editing-older-records"
 	os.WriteFile(filepath.Join(dir, folder, "implementation.md"), []byte("## T-01\n\nStatus: in progress\n"), 0o644)
@@ -366,7 +367,7 @@ func TestSchemas(t *testing.T) {
 	}
 	out := grove(t, "instructions", "propose", "--schema", "bugfix", "Editing a missing record crashes")
 	for _, s := range []string{", with change schema bugfix, from the owner's description", "## How to propose\n\n**Propose a bug fix.**", "/proposal.md\">\n# <title>\n\n## Observed\n",
-		"### change-spec: ", "### tasks: ", "/.grove.yaml\">\ntitle: <title>\ncreated: ", "schema: bugfix\n</file>"} {
+		"### change-spec: ", "### tasks: ", "/.grove.yaml\">\ntitle: <title>\ncreated: ", "schema: bugfix\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("bugfix propose instructions lack %q", s)
 		}
@@ -379,9 +380,7 @@ func TestSchemas(t *testing.T) {
 		t.Errorf("an unknown schema: status %d, %q", code, stderr.String())
 	}
 
-	cid := propose(t, dir)
-	folder := filepath.Join(dir, "grove/changes", cid+"-allow-editing-older-records")
-	os.WriteFile(filepath.Join(folder, ".grove.yaml"), []byte("title: Allow editing older records\ncreated: 2026-10-14T00:00:00Z\nschema: bugfix\n"), 0o644)
+	cid, folder := propose(t, dir, "older-edits", "Allow editing older records", "schema: bugfix\n")
 	stderr.Reset()
 	if code := run([]string{"instructions", "propose", "--schema", "default", cid}, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), "a change keeps its schema") {
 		t.Errorf("--schema with a change ID: status %d, %q", code, stderr.String())
@@ -427,5 +426,28 @@ func TestSchemas(t *testing.T) {
 	stderr.Reset()
 	if code := run([]string{"instructions", "propose", "--schema", "notasks"}, &stdout, &stderr); code != 1 || !strings.Contains(stderr.String(), "grove: grove/schemas/notasks/schema.yaml: ") {
 		t.Errorf("propose with a broken schema: status %d, %q", code, stderr.String())
+	}
+}
+
+// TestCoordinating follows the walkthrough's "Coordinating changes".
+func TestCoordinating(t *testing.T) {
+	dir := setUp(t)
+	unknown, _ := approve(t, dir, "unknown-id", "Editing an unknown ID prints an error", "")
+
+	// Propose records depends_on and base; lists show what waits.
+	main := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
+	out := grove(t, "instructions", "propose", "Add ledger delete ID")
+	for _, s := range []string{"ask the owner whether it needs another open change", "\nbase: " + main + "\n",
+		"- " + unknown + " \"Editing an unknown ID prints an error\": `grove/changes/" + unknown + "-editing-an-unknown-id-prints-an-error/`\n  - capabilities: record-editing\n"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("propose instructions lack %q:\n%s", s, out)
+		}
+	}
+	del, _ := approve(t, dir, "delete", "Add ledger delete ID", "depends_on: ["+unknown+"]\nbase: "+main+"\n")
+	if got := grove(t, "changes"); !strings.Contains(got, unknown+"  Editing an unknown ID prints an error  approved\n") || !strings.Contains(got, del+"  Add ledger delete ID  approved  waits on "+unknown+"\n") {
+		t.Errorf("changes printed %q", got)
+	}
+	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "  - waits on: "+unknown+", not archived as finished\n") {
+		t.Errorf("explore's index does not say what delete waits on:\n%s", out)
 	}
 }

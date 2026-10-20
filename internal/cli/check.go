@@ -30,7 +30,7 @@ func check(stdout io.Writer) error {
 	for _, u := range unknown {
 		fmt.Fprintln(stdout, u)
 	}
-	c, err := doc.Load(os.DirFS(filepath.Join(p.Top, p.Root)), ip.MainDocument)
+	c, err := doc.Load(os.DirFS(filepath.Join(p.Top, p.Root)), ip.Layout)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func unknownConfig(top string, ip instruct.Project) ([]string, error) {
 	fields := root.Content[0].Content
 	for i := 0; i+1 < len(fields); i += 2 {
 		key, value := fields[i], fields[i+1]
-		if _, problem := ip.MainDocument(value.Value); key.Value == "schema" && problem != "" {
+		if _, _, problem := ip.Layout(value.Value); key.Value == "schema" && problem != "" {
 			out = append(out, fmt.Sprintf("grove.yaml:%d: %s", value.Line, problem))
 		}
 		if !slices.Contains(configFields, key.Value) {

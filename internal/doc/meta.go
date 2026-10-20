@@ -27,6 +27,7 @@ func (d *Document) read(fsys fs.FS, required []string, optional ...string) (map[
 // parse reads the YAML mapping src of file into d.Meta, reporting every
 // field of required that is missing or empty, and every field that is
 // neither required nor optional, and returns the line of each field it set.
+// Every field is a scalar but depends_on, a list.
 func (d *Document) parse(file string, src []byte, required, optional []string) map[string]int {
 	var root yaml.Node
 	if err := yaml.NewDecoder(bytes.NewReader(src)).Decode(&root); err != nil && !errors.Is(err, io.EOF) {
@@ -38,7 +39,7 @@ func (d *Document) parse(file string, src []byte, required, optional []string) m
 		d.report(file, line, "invalid YAML: "+msg)
 		return nil
 	}
-	values, lines := map[string]string{}, map[string]int{}
+	values, lines, deps := map[string]string{}, map[string]int{}, []string(nil)
 	if len(root.Content) > 0 {
 		n := root.Content[0]
 		if n.Kind != yaml.MappingNode {
@@ -53,6 +54,12 @@ func (d *Document) parse(file string, src []byte, required, optional []string) m
 			case !slices.Contains(required, key.Value) && !slices.Contains(optional, key.Value):
 				all := slices.Concat(required, optional)
 				d.report(file, key.Line, fmt.Sprintf("unknown field %q; this file takes %s and %s", key.Value, strings.Join(all[:len(all)-1], ", "), all[len(all)-1]))
+			case key.Value == "depends_on":
+				if value.Decode(&deps) != nil || len(deps) == 0 || slices.Contains(deps, "") {
+					d.report(file, key.Line, "depends_on: expected a list of change IDs, such as [261015-k3m9q]")
+				} else {
+					lines[key.Value] = key.Line
+				}
 			case value.Kind != yaml.ScalarNode || strings.TrimSpace(value.Value) == "":
 				d.report(file, key.Line, key.Value+": expected a non-empty value")
 			default:
@@ -65,7 +72,8 @@ func (d *Document) parse(file string, src []byte, required, optional []string) m
 			d.report(file, 0, key+": required field is missing")
 		}
 	}
-	d.Meta = Meta{Title: values["title"], Created: values["created"], Description: values["description"], Schema: values["schema"]}
+	d.Meta = Meta{Title: values["title"], Created: values["created"], Description: values["description"], Schema: values["schema"],
+		DependsOn: deps, Cycle: values["cycle"], Base: values["base"]}
 	return lines
 }
 

@@ -132,5 +132,6 @@ read the specs and changes.
 ## Next
 
 A new `/grove-explore` now starts from the updated spec. See
+[Coordinating changes](coordinating.md) when one change waits on another,
 [Concepts](concepts.md) for what each document means, and
 [Reference](reference.md) for every command and setting.

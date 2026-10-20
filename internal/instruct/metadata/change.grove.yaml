@@ -2,3 +2,5 @@ title: <title>
 created: {{created}}
 # description: <one line, shown in lists; optional>
 schema: {{schema}}
+# depends_on: [<the IDs of the open changes to archive as finished first; optional>]
+base: {{commit}}
