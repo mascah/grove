@@ -50,6 +50,7 @@ The first run creates one issue per change, each labelled `grove`, its body
 the change's proposal ending with `<!-- grove:<id> -->`. The issues of
 archived and dropped changes are closed.
 
-Run the prompt again after each merge into your main branch. An issue whose
-change was archived since the last run closes, and the markers keep the
-agent from creating a second issue for a change it has seen.
+Run the prompt again after each merge into your main branch, or let a
+workflow do it on each push: see [Run Grove in CI](run-grove-in-ci.md). An
+issue whose change was archived since the last run closes, and the markers
+keep the agent from creating a second issue for a change it has seen.

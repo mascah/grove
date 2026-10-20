@@ -11,6 +11,7 @@ nav:
   - Coordinating changes: coordinating.md
   - Guides:
       - Push to a tracker: guides/push-to-a-tracker.md
+      - Run Grove in CI: guides/run-grove-in-ci.md
       - A glossary and decision records: guides/glossary-and-decisions.md
   - Reference: reference.md
 

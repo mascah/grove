@@ -44,6 +44,7 @@ Some agents type skills another way, such as `$grove-explore`; the
 - [Coordinating changes](coordinating.md): changes that wait on others,
   stale plans, and the project as data.
 - Guides: recipes others have tried, such as
-  [pushing changes to a tracker](guides/push-to-a-tracker.md) and
+  [pushing changes to a tracker](guides/push-to-a-tracker.md),
+  [running Grove in CI](guides/run-grove-in-ci.md) and
   [keeping a glossary and decision records](guides/glossary-and-decisions.md).
 - [Reference](reference.md): every command, skill and setting.
