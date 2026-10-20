@@ -19,10 +19,6 @@ With no command, open the reader on the maintained specs and approved changes.
                              print the instructions for proposing a new change
   instructions propose <change-id>
                              print the instructions for revising a drafted change
-  instructions plan ["<description>"]
-                             print the instructions for planning a new cycle
-  instructions plan <cycle-id>
-                             print the instructions for revising a cycle
   instructions apply <change-id>
                              print the instructions for applying an approved change
   instructions archive <change-id>
@@ -30,7 +26,7 @@ With no command, open the reader on the maintained specs and approved changes.
   archive <change-id>        move a change to changes/archive/
   review                     show what merging this branch into the target would approve
   specs                      list the maintained specs
-  changes [--json]           list the approved changes, or print them and the cycles as JSON
+  changes [--json]           list the approved changes, or print them as JSON
   check                      report problems in this working tree's Grove documents
 `
 
@@ -54,10 +50,6 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = instructionsPropose(stdout, "", args[2])
 	case len(args) >= 4 && len(args) <= 5 && args[0] == "instructions" && args[1] == "propose" && args[2] == "--schema":
 		err = instructionsPropose(stdout, args[3], strings.Join(args[4:], ""))
-	case len(args) == 2 && args[0] == "instructions" && args[1] == "plan":
-		err = instructionsPlan(stdout, "")
-	case len(args) == 3 && args[0] == "instructions" && args[1] == "plan":
-		err = instructionsPlan(stdout, args[2])
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "apply":
 		err = instructionsApply(stdout, args[2])
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "archive":

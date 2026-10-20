@@ -35,7 +35,7 @@ context: ""
 #       - Commit after each task, naming its task ID.
 # Kinds: proposal, change-spec, tasks, implementation, spec, and those of
 # the project's own schemas.
-# Skills: explore, propose, plan, apply, archive.
+# Skills: explore, propose, apply, archive.
 rules: {}
 `
 

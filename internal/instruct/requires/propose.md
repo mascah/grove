@@ -13,9 +13,6 @@
   same capabilities or code. Write each change the owner names in
   `depends_on`; leave the field out when there is none. Keep `base` as the
   template has it: the target commit the change is proposed from.
-- A new change: when the project index lists open cycles, ask the owner
-  which, if any, the change joins. Write the one named as `cycle`; leave the
-  field out otherwise.
 - Revising a drafted change: its files are below. Change what the owner asks
   for and leave the rest as it is. If the project index lists it as
   approved, tell the owner that editing it changes approved work before you

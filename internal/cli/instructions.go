@@ -54,47 +54,6 @@ func instructionsPropose(stdout io.Writer, schema, arg string) error {
 	return show(stdout)(instruct.Revise(ip, c, files))
 }
 
-// instructionsPlan prints the plan instructions: for a new cycle when arg
-// is empty or a description, or for revising the cycle whose ID arg is,
-// with its file and its changes' .grove.yaml from the working tree.
-func instructionsPlan(stdout io.Writer, arg string) error {
-	p, err := openProject()
-	if err != nil {
-		return err
-	}
-	ip, err := p.agreed()
-	if err != nil {
-		return err
-	}
-	if !doc.ValidID(arg) {
-		return show(stdout)(instruct.Plan(ip, nil, doc.NewID(time.Now()), arg, nil))
-	}
-	fsys := os.DirFS(filepath.Join(p.Top, p.Root))
-	all, err := doc.Load(fsys, ip.Layout)
-	if err != nil {
-		return err
-	}
-	cy := all.Cycle(arg)
-	if cy == nil {
-		return fmt.Errorf("no cycle %s in this working tree", arg)
-	}
-	names := []string{cy.Path}
-	for _, c := range all.Changes {
-		if c.Meta.Cycle == cy.ID {
-			names = append(names, c.Dir+"/.grove.yaml")
-		}
-	}
-	var files []instruct.File
-	for _, name := range names {
-		b, err := fs.ReadFile(fsys, name)
-		if err != nil {
-			return err
-		}
-		files = append(files, instruct.File{Path: p.Root + "/" + name, Content: string(b)})
-	}
-	return show(stdout)(instruct.Plan(ip, cy, arg, "", files))
-}
-
 // instructionsArchive prints the archive instructions for change id as the
 // working tree holds it.
 func instructionsArchive(stdout io.Writer, id string) error {

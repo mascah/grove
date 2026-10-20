@@ -43,17 +43,13 @@ type Meta struct {
 	Description string   `json:"description,omitempty"`
 	Schema      string   `json:"schema,omitempty"`
 	DependsOn   []string `json:"depends_on,omitempty"` // the changes this one waits on
-	Cycle       string   `json:"cycle,omitempty"`      // the cycle this change belongs to
 	Base        string   `json:"base,omitempty"`       // the target commit this change was proposed from
-	Goal        string   `json:"goal,omitempty"`       // a cycle's
-	Start       string   `json:"start,omitempty"`
-	End         string   `json:"end,omitempty"`
 }
 
-// Document is a maintained spec, a change or a cycle, with its metadata.
+// Document is a maintained spec or a change, with its metadata.
 type Document struct {
 	ID   string `json:"id"`
-	Dir  string `json:"-"`    // relative to the document root; empty for a cycle
+	Dir  string `json:"-"`    // relative to the document root
 	Path string `json:"path"` // the main document, relative to the document root
 	Meta
 	Diagnostics []Diagnostic   `json:"-"`
@@ -80,19 +76,11 @@ type Task struct {
 	Status string `json:"status,omitempty"`
 }
 
-// Cycle is one cycle file, cycles/<id>-<slug>.yaml. The changes that name
-// it in their cycle field are in it.
-type Cycle struct {
-	Document
-	Done bool `json:"done"` // every change in it is archived
-}
-
 // Collection is everything under one document root.
 type Collection struct {
 	Specs    []*Document
 	Changes  []*Change
 	Archived []*Change
-	Cycles   []*Cycle
 }
 
 // Layout returns where change schema schema puts a change's main document
@@ -136,23 +124,6 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 			}
 		}
 	}
-	cycles, err := fs.Glob(fsys, "cycles/*.yaml")
-	if err != nil {
-		return nil, err
-	}
-	for _, name := range cycles {
-		cy := &Cycle{Document: Document{ID: idOf(path.Base(name)), Path: name}}
-		if cy.ID == "" {
-			cy.report(name, 0, "the file name must start with a cycle ID, such as 261015-k3m9q")
-		}
-		b, err := fs.ReadFile(fsys, name)
-		if err != nil {
-			return nil, err
-		}
-		cy.lines = cy.parse(name, b, []string{"title"}, []string{"goal", "start", "end"})
-		cy.Done = !slices.ContainsFunc(c.Changes, func(ch *Change) bool { return ch.Meta.Cycle != "" && ch.Meta.Cycle == cy.ID })
-		c.Cycles = append(c.Cycles, cy)
-	}
 	finished := map[string]bool{}
 	for _, ch := range c.Archived {
 		finished[ch.ID] = !ch.Dropped
@@ -162,9 +133,6 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 			if !finished[id] {
 				ch.WaitsOn = append(ch.WaitsOn, id)
 			}
-		}
-		if ch.Meta.Cycle != "" && c.Cycle(ch.Meta.Cycle) == nil {
-			ch.report(ch.Dir+"/.grove.yaml", ch.lines["cycle"], "cycle: "+ch.Meta.Cycle+" names no file in cycles/")
 		}
 	}
 	c.dependencies()
@@ -218,7 +186,7 @@ func loadChange(fsys fs.FS, name string, layout Layout) (*Change, error) {
 	if ch.ID == "" {
 		ch.report(ch.Dir+"/", 0, "the folder name must start with a change ID, such as 261015-k3m9q")
 	}
-	lines, err := ch.read(fsys, []string{"title", "created"}, "schema", "description", "depends_on", "cycle", "base")
+	lines, err := ch.read(fsys, []string{"title", "created"}, "schema", "description", "depends_on", "base")
 	if err != nil {
 		return nil, err
 	}
@@ -296,22 +264,12 @@ func (ch *Change) tasks(fsys fs.FS) {
 	}
 }
 
-// idOf returns the ID a change folder or cycle file name starts with, or "".
+// idOf returns the ID a change folder name starts with, or "".
 func idOf(name string) string {
-	if len(name) >= 12 && ValidID(name[:12]) && (len(name) == 12 || name[12] == '-' || name[12] == '.') {
+	if len(name) >= 12 && ValidID(name[:12]) && (len(name) == 12 || name[12] == '-') {
 		return name[:12]
 	}
 	return ""
-}
-
-// Cycle returns the cycle whose ID is id, or nil.
-func (c *Collection) Cycle(id string) *Cycle {
-	for _, cy := range c.Cycles {
-		if cy.ID == id {
-			return cy
-		}
-	}
-	return nil
 }
 
 // Change returns the change whose ID is id, or nil.

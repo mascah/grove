@@ -8,9 +8,6 @@
 - name: propose
   description: Propose a change from this conversation or from a description, or revise a drafted change given its ID.
   args: '"<args>"'
-- name: plan
-  description: Plan a cycle of approved changes from a description, or revise a cycle given its ID, setting which changes it holds and their order.
-  args: '"<args>"'
 - name: apply
   description: Apply an approved change given its ID, building its tasks and recording progress in its implementation.md.
   args: <args>

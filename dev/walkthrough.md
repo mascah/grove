@@ -21,7 +21,7 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    > Wrote grove.yaml and the Grove skills for claude and codex; nothing is committed.
 
    `.claude/skills/` and `.agents/skills/` each hold `grove-explore`,
-   `grove-propose`, `grove-plan`, `grove-apply` and `grove-archive`. Under `context` in
+   `grove-propose`, `grove-apply` and `grove-archive`. Under `context` in
    `grove.yaml`, write "Python 3 standard library only; tests run with
    python3 -m unittest." Then `git add -A && git commit -m "Set up Grove"`.
    Running `grove init` again rewrites the skills and leaves `grove.yaml` as
@@ -114,28 +114,14 @@ It starts where the main line's step 6 ends: one archived change and the
    `/grove-apply <delete-id>`, on a new branch `delete-impl`, builds it.
    Leave that branch unmerged for now.
 
-3. **Plan a cycle** ("Plan a cycle"). From main, `git switch -c budgets`,
-   a fresh session, `/grove-propose Monthly budgets in report`; it waits on
-   nothing. Commit
-   and merge: two changes are approved, delete and budgets, the unknown-ID
-   change being archived. `git switch -c plan-04`, a fresh session,
-   `/grove-plan 0.4: the README's planned list`. The session reads the
-   approved changes from its index, says delete's dependency is archived
-   and budgets wait on nothing, so both can be built in parallel, and asks
-   for a title and goal. I answer "0.4" and "Everything the README plans
-   for 0.4". It tells me that setting `cycle` edits approved changes,
-   writes `grove/cycles/<id>-0-4.yaml` and `cycle: <id>` in both changes'
-   `.grove.yaml`, and runs `grove check` until clean. Commit; `grove review`
-   labels the cycle file `cycle`. Merge.
+3. **A change that waits on nothing** ("A change that waits"). From main,
+   `git switch -c budgets`, a fresh session, `/grove-propose Monthly
+   budgets in report`. It needs no other change first, and its
+   `.grove.yaml` has no `depends_on`. Commit and merge: two changes are
+   approved, delete and budgets, the unknown-ID change being archived.
+   `grove changes` lists both without `waits on`.
 
-4. **Lists by cycle** ("Plan a cycle"). `grove changes`:
-   > \<cycle-id>  0.4  0 of 2 archived
-
-   then both changes, indented under it. A fresh `/grove-propose Show the
-   total in list` asks which open cycle, if any, it joins; I end the session
-   there.
-
-5. **When the plan is stale** ("When the plan is stale"). From main,
+4. **When the plan is stale** ("When the plan is stale"). From main,
    `git switch -c recategorize`, a fresh session, `/grove-propose An older
    record's category can be changed, only to a current category`. When it
    offers a new requirement, I ask it to fold the rule into the main line's
@@ -155,17 +141,16 @@ It starts where the main line's step 6 ends: one archived change and the
    and sets `base` to main's commit. `grove check` is clean. Commit and
    merge.
 
-6. **The project as data** ("The project as data"). `grove changes --json`
-   shows the 0.4 cycle with `done: false`, the unknown-ID and recategorize
-   changes as `archived` with `T-01` `done`, and the delete change with no
+5. **The project as data** ("The project as data"). `grove changes --json`
+   shows the unknown-ID and recategorize changes as `archived` with `T-01` `done`, and the delete change with no
    `waits_on`, since the unknown-ID change is archived.
 
-7. **Push to a tracker** ("Push to a tracker"). On main,
+6. **Push to a tracker** ("Push to a tracker"). On main,
    `gh repo create <owner>/ledger-trial --private --source . --push`, then
    a fresh session given the page's prompt. Issues appear, one per change,
    each labelled `grove`, its body the proposal ending with
-   `<!-- grove:<id> -->`; the archived changes' issues are closed; the 0.4
-   milestone holds the delete and budgets issues. Archive another change
+   `<!-- grove:<id> -->`; the archived changes' issues are closed. Archive
+   another change
    (the delete change's `delete-impl` branch: `/grove-archive <delete-id>`,
    commit, merge, push), give a fresh session the same prompt, and that
    issue closes with no duplicate. Afterwards,
@@ -252,10 +237,6 @@ It starts where the main line's step 6 ends: one archived change and the
   > grove/changes/\<delete-id>-\<slug>/.grove.yaml:\<line>: depends_on: \<other-id> waits on this change in turn, so neither can be applied
 
   `grove changes` still works. Discard the edits.
-- **A cycle that is not there** (coordinating, "Plan a cycle"). After
-  coordinating step 4, set a change's `cycle` to `260101-zzzzz`. `grove
-  check` reports it and exits non-zero:
-  > grove/changes/\<change-id>-\<slug>/.grove.yaml:\<line>: cycle: 260101-zzzzz names no file in cycles/
 - **Commit as you go** (reference, `rules`). With
   `apply: [Commit after each task, naming its task ID.]` under
   `rules: skills:` in `grove.yaml`, `/grove-apply` commits T-01 with its ID in the
@@ -284,12 +265,8 @@ Owner, asked whether to add each:
 
 - Does the reader showing `implementation.md` count as reading it under rule
   3? Owner: "No, but im not certain." Until settled, the reader shows it.
-- Whether `check` reports a change that waits on an unarchived change in
-  another cycle or in none (D-66, open). Owner: "It depends on whether
-  cycles are sequential or can be parallel." Until settled, plan's
-  instructions tell the owner about such a change and `check` does not.
 - Whether to create a private GitHub repository from the fixture for
-  coordinating step 7. Owner's lean, from Remote Control, 2026-10-20: "Yes
+  coordinating step 6. Owner's lean, from Remote Control, 2026-10-20: "Yes
   you can do the GH run".
 - The wording of phase 3's `check` messages and the JSON's `root`-relative
   paths. Owner's lean, from Remote Control, 2026-10-20: "the wording is
@@ -351,19 +328,6 @@ Agent inference, not the owner's decisions (rule 25).
 - `check` looks for what `depends_on` names among the working tree's
   changes, open and archived, and not on the target; a branch holds the
   target's archive as of where it started.
-- Plan's guide is `skills/plan.md` of `grove.yaml`'s `schema`, overridable
-  file by file like explore's; plan writes no kind of a schema, and the
-  cycle file's template is Grove's own, `metadata/cycle.yaml`.
-- `instructions plan` with a cycle ID reads the cycle and its changes'
-  `.grove.yaml` from the working tree, as revising a change does.
-- The project index shows each approved change's `cycle`.
-- A cycle file's name starts with its ID, as a change folder's does, and
-  `check` reports one that does not.
-- A cycle with no change naming it counts as done.
-- `grove changes` writes a cycle as `<id>  <title>  [<start> to <end>]
-  N of M archived`, M counting its archived changes as well; a change whose
-  `cycle` names no file is listed with the changes in no cycle.
-- The project index lists open cycles only when there is one.
 - The stale check compares a requirement's text below its heading, trimmed,
   at `base` and on the target, by name; one missing on the target was
   removed. A requirement the maintained spec did not have at `base` is not

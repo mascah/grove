@@ -68,7 +68,7 @@ func TestInit(t *testing.T) {
 		t.Errorf("init said %q, want %q", got, want)
 	}
 	for _, h := range []string{".claude", ".agents"} {
-		for _, w := range []string{"explore", "propose", "plan", "apply", "archive"} {
+		for _, w := range []string{"explore", "propose", "apply", "archive"} {
 			if skill := read(t, filepath.Join(dir, h, "skills", "grove-"+w, "SKILL.md")); !strings.Contains(skill, "name: grove-"+w+"\n") || !strings.Contains(skill, " instructions "+w) {
 				t.Errorf("%s skill grove-%s:\n%s", h, w, skill)
 			}
@@ -138,7 +138,7 @@ func TestCheck(t *testing.T) {
 	want = "grove/specs/record-editing/.grove.yaml:2: unknown field \"owner\"; this file takes title and description\n" +
 		"grove/specs/record-editing/.grove.yaml: title: required field is missing\n" +
 		"grove/changes/261015-k3m9q-no-proposal/proposal.md: missing; it is the change's main document in schema default\n" +
-		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created, schema, description, depends_on, cycle and base\n" +
+		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created, schema, description, depends_on and base\n" +
 		"grove/changes/261015-q7r2s-drifted/proposal.md:1: the first heading should be \"# New title\", the title in .grove.yaml\n" +
 		"grove/changes/no-id/: the folder name must start with a change ID, such as 261015-k3m9q\n"
 	if code != 1 || stdout.String() != want || stderr.String() != "grove: 6 problems found\n" {
@@ -503,62 +503,15 @@ func TestCoordinating(t *testing.T) {
 	grove(t, "changes")
 	git(t, dir, "checkout", "--", ".")
 
-	// Cycles and /grove-plan.
+	// A change that waits on nothing.
 	budgetsMeta := filepath.Join(dir, "grove/changes", budgets+"-monthly-budgets-in-report/.grove.yaml")
 	os.WriteFile(budgetsMeta, []byte("title: Monthly budgets in report\ncreated: 2026-10-14T00:00:00Z\n"), 0o644)
 	commitAll(t, dir, "Propose monthly budgets")
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve budgets", "budgets")
-	out = grove(t, "instructions", "plan", "0.4: the README's planned list")
-	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.yaml`").FindStringSubmatch(out)
-	if m == nil || !strings.Contains(out, "## What Grove requires of plan\n\n- A cycle groups approved changes.") || !strings.Contains(out, "## How to plan\n\n**Plan groups") ||
-		!strings.Contains(out, "\">\ntitle: <title>\n") || !strings.Contains(out, "## Owner's description\n\n0.4: the README's planned list\n") {
-		t.Fatalf("plan instructions:\n%s", out)
-	}
-	cycle := m[1]
-	git(t, dir, "switch", "-q", "-c", "plan-04")
-	cycleFile := filepath.Join(dir, "grove/cycles", cycle+"-0-4.yaml")
-	os.MkdirAll(filepath.Dir(cycleFile), 0o755)
-	os.WriteFile(cycleFile, []byte("title: \"0.4\"\ngoal: The README's planned list.\n"), 0o644)
-	for _, meta := range []string{delMeta, budgetsMeta} {
-		os.WriteFile(meta, []byte(read(t, meta)+"cycle: "+cycle+"\n"), 0o644)
-	}
-	if got := grove(t, "check"); got != "No problems in grove/.\n" {
-		t.Errorf("check printed %q", got)
-	}
-	commitAll(t, dir, "Plan 0.4")
-	if out := grove(t, "review"); !strings.Contains(out, "  adds     cycle            grove/cycles/"+cycle+"-0-4.yaml\n") {
-		t.Errorf("review of the plan:\n%.1500s", out)
-	}
-	if out := grove(t, "instructions", "plan", cycle); !strings.Contains(out, "You are revising cycle "+cycle+", \"0.4\"") ||
-		!strings.Contains(out, "## The cycle\n\n<file path=\"grove/cycles/"+cycle+"-0-4.yaml\">\ntitle: \"0.4\"") || !strings.Contains(out, "<file path=\"grove/changes/"+filepath.Base(delDir)+"/.grove.yaml\">") {
-		t.Errorf("plan instructions for revising the cycle:\n%s", out)
-	}
-	os.WriteFile(cycleFile, []byte("goal: x\nowner: me\n"), 0o644)
-	stdout.Reset()
-	stderr.Reset()
-	code = run([]string{"check"}, &stdout, &stderr)
-	if want := "grove/cycles/" + cycle + "-0-4.yaml:2: unknown field \"owner\"; this file takes title, goal, start and end\ngrove/cycles/" + cycle + "-0-4.yaml: title: required field is missing\n"; code != 1 || stdout.String() != want {
-		t.Errorf("check of a cycle file: status %d\n%s", code, stdout.String())
-	}
-	git(t, dir, "checkout", "--", ".")
-	git(t, dir, "switch", "-q", "main")
-	git(t, dir, "merge", "-q", "--no-ff", "-m", "Accept the 0.4 plan", "plan-04")
-
-	// Lists by cycle; propose asks for a cycle.
-	if got := grove(t, "changes"); !strings.HasPrefix(got, cycle+"  0.4  0 of 2 archived\n  ") || !strings.Contains(got, "\n  "+del+"  Add ledger delete ID  approved\n") {
+	if got := grove(t, "changes"); got != del+"  Add ledger delete ID  approved\n"+budgets+"  Monthly budgets in report  approved\n" && got != budgets+"  Monthly budgets in report  approved\n"+del+"  Add ledger delete ID  approved\n" {
 		t.Errorf("changes printed %q", got)
 	}
-	if out := grove(t, "instructions", "propose", "x"); !strings.Contains(out, "Open cycles (planned work, not yet all archived):\n- "+cycle+" \"0.4\": `grove/cycles/"+cycle+"-0-4.yaml`\n  - goal: ") ||
-		!strings.Contains(out, "ask the owner\n  which, if any, the change joins") {
-		t.Errorf("propose instructions do not offer the cycle:\n%s", out)
-	}
-	os.WriteFile(budgetsMeta, []byte(strings.Replace(read(t, budgetsMeta), "cycle: "+cycle, "cycle: 260101-zzzzz", 1)), 0o644)
-	stdout.Reset()
-	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != "grove/changes/"+budgets+"-monthly-budgets-in-report/.grove.yaml:3: cycle: 260101-zzzzz names no file in cycles/\n" {
-		t.Errorf("check of a cycle naming no file: status %d\n%s", code, stdout.String())
-	}
-	git(t, dir, "checkout", "--", ".")
 
 	// The stale-plan check.
 	modify := func(folder, text string) {
@@ -595,11 +548,7 @@ func TestCoordinating(t *testing.T) {
 
 	// grove changes --json.
 	var v struct {
-		Commit string
-		Cycles []struct {
-			ID   string
-			Done bool
-		}
+		Commit  string
 		Changes []struct {
 			ID, State, Path string
 			WaitsOn         []string `json:"waits_on"`
@@ -616,7 +565,7 @@ func TestCoordinating(t *testing.T) {
 			t.Errorf("changes --json gives %s as %+v", c.ID, c)
 		}
 	}
-	if v.Commit != main || len(v.Cycles) != 1 || v.Cycles[0].ID != cycle || v.Cycles[0].Done || states[unknown] != "archived" || states[recat] != "archived" || states[del] != "approved" {
+	if v.Commit != main || states[unknown] != "archived" || states[recat] != "archived" || states[del] != "approved" {
 		t.Errorf("changes --json: %+v", v)
 	}
 }

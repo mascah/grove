@@ -45,9 +45,6 @@ func check(stdout io.Writer) error {
 	for _, ch := range c.Changes {
 		docs = append(docs, &ch.Document)
 	}
-	for _, cy := range c.Cycles {
-		docs = append(docs, &cy.Document)
-	}
 	n := len(unknown)
 	for _, d := range docs {
 		for _, diag := range d.Diagnostics {
@@ -175,8 +172,8 @@ func unknownConfig(top string, ip instruct.Project) ([]string, error) {
 	return out, nil
 }
 
-func problems(stdout io.Writer, indent string, ds []doc.Diagnostic) {
+func problems(stdout io.Writer, ds []doc.Diagnostic) {
 	for _, d := range ds {
-		fmt.Fprintf(stdout, "%sproblem: %s\n", indent, d)
+		fmt.Fprintf(stdout, "  problem: %s\n", d)
 	}
 }
