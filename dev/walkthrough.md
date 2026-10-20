@@ -24,8 +24,11 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 1. **Set up** (getting started §1). `grove init`
    > Wrote grove.yaml and the Grove skills for claude and codex; nothing is committed.
 
-   `.claude/skills/` and `.agents/skills/` each hold `grove-explore`,
-   `grove-propose`, `grove-apply` and `grove-archive`. Under `context` in
+   The fixture has no `.claude/`, `CLAUDE.md`, `AGENTS.md` or other sign of
+   an agent, so `grove.yaml` lists `claude: skills` and `codex: skills`
+   under `agents`. `.claude/skills/` and `.agents/skills/` each hold
+   `grove-explore`, `grove-propose`, `grove-apply` and `grove-archive`, and
+   every `SKILL.md` has the same body after its name. Under `context` in
    `grove.yaml`, write "Python 3 standard library only; tests run with
    python3 -m unittest." Then `git add -A && git commit -m "Set up Grove"`.
    Running `grove init` again rewrites the skills and leaves `grove.yaml` as
@@ -230,6 +233,36 @@ It starts where the main line's step 6 ends: one archived change and the
   > grove.yaml:<line>: unknown field "rule"; grove.yaml takes root, target, agents, schema, context and rules
 
   `grove changes` still works.
+- **Agents from the repository** (reference, "Harnesses"). On a fresh
+  fixture, `mkdir -p .claude .opencode .agents/skills/notes`, then
+  `grove init`:
+  > Wrote grove.yaml and the Grove skills for claude and opencode; nothing is committed.
+
+  `grove.yaml` lists `claude: skills` and `opencode: skills`;
+  `.claude/skills/` and `.agents/skills/` hold the four skills, the same
+  file in each.
+- **Commands** (reference, "Harnesses"). Continuing, add an `AGENTS.md`,
+  set `claude: commands` in `grove.yaml`, and run `grove init`. Later runs
+  read only `grove.yaml`, so codex stays out:
+  > Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore and grove-propose from .claude/skills; nothing is committed.
+
+  `.claude/commands/grove/` holds `explore.md`, `propose.md`, `apply.md` and
+  `archive.md`. In Claude Code, `/grove:propose Editing a missing record
+  should print an error` runs `grove instructions propose "Editing a
+  missing record should print an error"`.
+- **Drop a harness** (reference, "Harnesses"). Continuing, delete the
+  `opencode` line and run `grove init`:
+  > Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore and grove-propose from .agents/skills; nothing is committed.
+
+  A skill of my own, `.agents/skills/notes/`, is still there.
+- **A harness Grove does not have** (reference, "grove.yaml"). Set
+  `agents` to `codex: commands` and `zed: skills`. `grove check` reports
+  both and exits non-zero:
+  > grove.yaml:\<line>: harness "codex" has no form "commands"; it has skills
+
+  > grove.yaml:\<line>: unknown harness "zed"; agents takes claude, codex, cursor, hermes, opencode and pi
+
+  `grove init` stops at the first, writing nothing.
 - **A dependency that can never be met** (coordinating, "A change that
   waits"). After coordinating step 2, set the delete change's `depends_on`
   to `[260101-zzzzz]`, and `grove check` reports it and exits non-zero:
@@ -281,17 +314,29 @@ Owner, asked whether to add each:
 Agent inference, not the owner's decisions (`CLAUDE.md`).
 
 - `grove.yaml` fields and defaults: `root: grove`, `target: main`,
-  `agents: [claude, codex]`, `schema: default`, `context`, and `rules`, with `documents` keyed by
+  `agents` (left out, `claude` and `codex` as skills), `schema: default`, `context`, and `rules`, with `documents` keyed by
   `proposal`, `change-spec`, `tasks`, `implementation` and `spec`, and
   `skills` keyed by a skill.
 - `init` never overwrites `grove.yaml` and always rewrites the skills.
   Its second run says "Kept grove.yaml and wrote the Grove skills for claude
   and codex; nothing is committed." A field left out of `grove.yaml` takes
-  its default; an agent other than `claude` or `codex` stops `init`.
-- A skill runs `grove` from the PATH of the agent's shell. Claude
-  Code's skills pass the user's words as `$ARGUMENTS`; Codex has no such
-  substitution, so its skills name them `<args>` and say what that stands
-  for.
+  its default. A harness Grove has no row for, or a form it does not
+  have, stops `init` before it writes anything, with `check`'s words.
+- `init`'s message groups harnesses by form, skills first ("the Grove
+  skills for opencode and commands for claude"), and names what it removed
+  by folder ("grove-apply, … from .claude/skills"). It leaves a folder it
+  emptied, such as `.claude/commands/grove/`, in place; Git ignores it.
+- Detection looks only at the top of the repository, and a `CLAUDE.md` or
+  `AGENTS.md` there counts even when it is a link to the other.
+- A skill runs `grove` from the PATH of the agent's shell. Every
+  `SKILL.md` has one body: it names the user's words `<args>` and says
+  that is what the user typed after the skill's name, or nothing (Claude
+  Code appends them as `ARGUMENTS:`). A command passes them as
+  `$ARGUMENTS`, and its file has only a `description` above its body.
+- OpenCode's skills are not typed: Grove writes no `opencode/slash`
+  metadata, since the skill files are shared with other harnesses; typing
+  is what OpenCode's commands are for.
+- Pi's one-time step is trusting the project when Pi asks, or `/trust`.
 - `review` takes no argument and compares the current branch's last commit
   with the target, so uncommitted files are not shown. A change counts as
   approved by the merge when the target holds no change with its ID; with
