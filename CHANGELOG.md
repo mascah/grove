@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.2.0](https://github.com/mascah/grove/compare/v0.1.0...v0.2.0) (2026-10-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** grove.yaml no longer has context. grove check reports it as an unknown field; delete it and keep project facts in CLAUDE.md or AGENTS.md, or in rules.
+
+### Features
+
+* **cli:** drop context from grove.yaml ([#12](https://github.com/mascah/grove/issues/12)) ([e3826d0](https://github.com/mascah/grove/commit/e3826d0e8ee1cfd002c3366590129e2f0d80f4e7))
+
 ## 0.1.0 (2026-10-20)
 
 
