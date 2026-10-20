@@ -274,7 +274,7 @@ Owner, asked whether to add each:
 
 ## Assumptions to confirm
 
-Agent inference, not the owner's decisions (rule 25).
+Agent inference, not the owner's decisions (`CLAUDE.md`).
 
 - `grove.yaml` fields and defaults: `root: grove`, `target: main`,
   `agents: [claude, codex]`, `schema: default`, `context`, and `rules`, with `documents` keyed by

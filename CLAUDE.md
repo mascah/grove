@@ -1,8 +1,8 @@
 # Grove
 
-Read `CONSTITUTION.md` first. It is the only file that says what is in scope
-and how to work here; this file describes the code and never restates scope
-(rule 20). `AGENTS.md` is a symlink to this file.
+`CONSTITUTION.md` is the only file that says what is in scope. This file
+describes the code and how agents work here. `CONTRIBUTING.md` says how to
+build, test, commit and release. `AGENTS.md` is a symlink to this file.
 
 ## What it is
 
@@ -22,26 +22,27 @@ follow what it prints. What Grove does is specified by `docs/` (rule 8).
 | `internal/gitx` | The only place Git runs, by argv. `TreeFS` reads a commit's tree as an `fs.FS`. |
 | `internal/tui` | The reader (Bubble Tea, Glamour). Knows nothing about Git or Grove's documents. |
 | `docs/`, `README.md` | User documentation, and the specification. |
-| `dev/walkthrough.md` | The manual test script: every docs step run on the fixture, in Claude Code and in Codex. |
+| `dev/walkthrough.md` | The manual test script: every docs step run on the fixture. |
 | `dev/fixture.md`, `testdata/ledger/` | The ledger fixture, a small Python project. |
 | `dev/reuse.md` | Code copied from earlier repositories, with path and revision. |
 
-## Commands
+## How agents work here
 
-```sh
-just build                 # bin/grove
-eval "$(just dev-path)"    # build, and put this checkout's bin/ first on PATH
-just check                 # gofmt, vet, tests and the line budget; run before every commit
-just fixture ~/tmp/ledger  # a fresh fixture repository to walk through
-just install               # the owner's everyday grove, in ~/.local/bin
-```
-
-Guides, templates and schemas are embedded, so `just build` picks up an
-edit to them. After changing the skill text or a harness row (both in
-`internal/cli/init.go`), run `grove init` again in the fixture.
-
-## Tests
-
-`internal/cli/walkthrough_test.go` follows the walkthrough on real disposable
-Git repositories built from the fixture (rule 17). `internal/tui/tui_test.go`
-covers the reader.
+- Read `CONSTITUTION.md` first in every session and every sub-agent brief;
+  quote its rule number for anything called fixed or out of scope.
+- No fact is written in two of `CONSTITUTION.md`, `CLAUDE.md` and
+  `CONTRIBUTING.md`; one links to another instead. Scope lives only in the
+  constitution.
+- Questions about whether Grove should do something are asked in text and
+  name the rule they would cross. The agent may give its recommendation,
+  marked as the agent's. "How should it work" is asked only after "whether"
+  is answered.
+- An owner's answer from a phone or a tap is a lean, not a decision. A
+  decision is the owner's words written into the owner's decision register,
+  kept outside this repository, or into `CONSTITUTION.md`.
+- Adversarial review is run by the owner, by hand, after a real run. Agents
+  do not invoke it, and a finding gets a fix only with a fixture reproduction.
+- Harness behavior that varies by user settings, such as permission prompts,
+  is never a design input.
+- Decisions in documents are the owner's, in the owner's words, attributed.
+  Agent inference goes under open questions or assumptions to confirm.
