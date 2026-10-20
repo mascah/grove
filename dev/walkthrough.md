@@ -28,9 +28,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    an agent, so `grove.yaml` lists `claude: skills` and `codex: skills`
    under `agents`. `.claude/skills/` and `.agents/skills/` each hold
    `grove-explore`, `grove-propose`, `grove-apply` and `grove-archive`, and
-   every `SKILL.md` has the same body after its name. Under `context` in
-   `grove.yaml`, write "Python 3 standard library only; tests run with
-   python3 -m unittest." Then `git add -A && git commit -m "Set up Grove"`.
+   every `SKILL.md` has the same body after its name. Then
+   `git add -A && git commit -m "Set up Grove"`.
    Running `grove init` again rewrites the skills and leaves `grove.yaml` as
    edited.
 
@@ -219,7 +218,7 @@ It starts where the main line's step 6 ends: one archived change and the
 
   > grove.yaml:<line>: unknown rules.documents key "propsal"; kinds are proposal, change-spec, tasks, implementation, spec
 
-  > grove.yaml:<line>: unknown field "rule"; grove.yaml takes root, target, agents, schema, context and rules
+  > grove.yaml:<line>: unknown field "rule"; grove.yaml takes root, target, agents, schema and rules
 
   `grove changes` still works.
 - **Agents from the repository** (reference, "Harnesses"). On a fresh
@@ -300,7 +299,7 @@ Owner, asked whether to add each:
 Agent inference, not the owner's decisions (`CLAUDE.md`).
 
 - `grove.yaml` fields and defaults: `root: grove`, `target: main`,
-  `agents` (left out or empty, `claude` and `codex` as skills), `schema: default`, `context`, and `rules`, with `documents` keyed by
+  `agents` (left out or empty, `claude` and `codex` as skills), `schema: default` and `rules`, with `documents` keyed by
   `proposal`, `change-spec`, `tasks`, `implementation` and `spec`, and
   `skills` keyed by a skill.
 - `init` never overwrites `grove.yaml` and always rewrites the skills.

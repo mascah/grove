@@ -25,9 +25,8 @@ or `AGENTS.md`, and Claude Code and Codex when it finds none. `agents` in
 `grove.yaml` lists them; change it and run `grove init` again to add an
 agent, or to have Claude Code's as commands, `/grove:explore`.
 
-Open `grove.yaml` and describe your project under `context`: the language,
-how tests run, and anything an agent should always know. Keep it short; it is
-given to every skill. Then commit:
+Grove adds nothing about your project to what your agent already reads, such
+as `CLAUDE.md` or `AGENTS.md`; keep project facts there. Then commit:
 
 ```sh
 git add -A && git commit -m "Set up Grove"

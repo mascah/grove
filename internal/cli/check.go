@@ -121,7 +121,7 @@ func requirement(fsys fs.FS, file, name string) (string, bool) {
 }
 
 // configFields are grove.yaml's fields, as project reads them.
-var configFields = []string{"root", "target", "agents", "schema", "context", "rules"}
+var configFields = []string{"root", "target", "agents", "schema", "rules"}
 
 // unknownConfig returns a problem for each field and rules key of grove.yaml,
 // rules being keyed by documents and skills, then by kind and by skill,
@@ -148,7 +148,7 @@ func unknownConfig(top string, ip instruct.Project) ([]string, error) {
 			out = append(out, fmt.Sprintf("grove.yaml:%d: %s", value.Line, problem))
 		}
 		if !slices.Contains(configFields, key.Value) {
-			out = append(out, fmt.Sprintf("grove.yaml:%d: unknown field %q; grove.yaml takes %s and rules", key.Line, key.Value, strings.Join(configFields[:5], ", ")))
+			out = append(out, fmt.Sprintf("grove.yaml:%d: unknown field %q; grove.yaml takes %s", key.Line, key.Value, and(configFields)))
 			continue
 		}
 		for j := 0; key.Value == "agents" && j+1 < len(value.Content); j += 2 {

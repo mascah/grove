@@ -81,9 +81,6 @@ target: main
 agents:
   claude: commands
   codex: skills
-context: |
-  Go 1.24 service; tests with go test ./...
-  Every public API stays backwards compatible.
 rules:
   documents:
     proposal:
@@ -101,7 +98,6 @@ rules:
 | `target` | `main` | The branch whose contents count as agreed. Merging into it approves. |
 | `agents` | `claude` and `codex`, as `skills` | Each harness `init` writes Grove's skills for, and whether as `skills` or `commands` (see "Harnesses"). The first `init` chooses them. |
 | `schema` | `default` | The change schema a new change has unless the owner names another while proposing. See "Change schemas". |
-| `context` | empty | Facts about the project, given to every skill. Keep it to what an agent cannot read from the code. |
 | `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `propose`, `apply`, `archive`. |
 
 `grove check` reports a field or `rules` key that Grove does not know; other
@@ -109,7 +105,7 @@ commands ignore it. It also reports a harness under `agents` that Grove has
 no row for, or a form that harness does not have, and `init` stops at
 either.
 
-`context` and `rules` add to Grove's own instructions; they cannot remove or
+`rules` adds to Grove's own instructions; it cannot remove or
 replace them. Short rules work better than long ones.
 
 Grove's skills commit nothing unless you ask in the conversation or a rule
