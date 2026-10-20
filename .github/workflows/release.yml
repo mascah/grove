@@ -1,0 +1,54 @@
+name: Release
+
+# release-please keeps a release PR open from the Conventional Commits on main;
+# merging it tags the release and creates the GitHub Release. In the same run,
+# and only then, GoReleaser uploads the archives onto that release. One
+# workflow, because a tag pushed with GITHUB_TOKEN starts no other workflow.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@v5
+        with:
+          config-file: .github/release-please-config.json
+          manifest-file: .github/.release-please-manifest.json
+
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - if: ${{ steps.release.outputs.release_created }}
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Fails the release loudly if install.sh cannot install what was uploaded.
+      - name: Install the release and run it
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          dir=$(mktemp -d)
+          GROVE_INSTALL_DIR="$dir" sh install.sh "$TAG"
+          got=$("$dir/grove" version)
+          echo "$got"
+          test "$got" = "grove ${TAG#v}"
