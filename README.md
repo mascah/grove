@@ -19,6 +19,8 @@ commit.
 
 ## The short version
 
+[Install](docs/install.md) Grove, then:
+
 ```text
 terminal  grove init                            set up, then commit
 terminal  git switch -c my-change
@@ -34,6 +36,8 @@ In Codex, type `$grove-explore` instead of `/grove-explore`, and so on.
 
 ## Docs
 
+- [Install](docs/install.md): pinned per project with mise, the install
+  script, Go, or a download.
 - [Getting started](docs/getting-started.md): set up and take one change from
   idea to updated spec.
 - [Coordinating changes](docs/coordinating.md): changes that wait on

@@ -343,3 +343,8 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
 - `grove version` prints one line, `grove <version>`, without a leading
   `v`, as `grove 0.1.0`; a release build sets it, `go install` of a tag
   takes the tag, and a build with no version recorded says `dev`.
+- `install.sh` takes a tag as the release names it (`v0.1.0`), not a bare
+  version, and replaces a `grove` already in the folder without asking. It
+  says "Installed grove in <dir>." and, when that folder is not on PATH,
+  "<dir> is not on your PATH; add it to run grove."; each failure is one
+  line starting "grove: ".
