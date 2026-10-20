@@ -40,3 +40,7 @@ In Codex, type `$grove-explore` instead of `/grove-explore`, and so on.
   others, stale plans, and the project as data.
 - [Concepts](docs/concepts.md): specs, changes, approval and archive.
 - [Reference](docs/reference.md): every command, skill and setting.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
