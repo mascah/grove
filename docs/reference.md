@@ -19,17 +19,20 @@ Skills run these; you do not need to:
 | `grove instructions explore` | Interview the user about an idea, with the project's specs and changes listed. |
 | `grove instructions propose [--schema <name>] ["<description>"]` | Write a new change from the conversation or the description, with the project's change schema or the one named. |
 | `grove instructions propose <change-id>` | Revise a drafted change, with the schema it has. |
+| `grove instructions plan ["<description>"]` | Plan a new cycle of approved changes, from the conversation or the description. |
+| `grove instructions plan <cycle-id>` | Revise a cycle, with its file and its changes' `.grove.yaml`. |
 | `grove instructions apply <change-id>` | Build an approved change and record progress. Refuses a change that waits on one the target does not hold archived as finished. |
 | `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs, then run `grove archive`. |
 
 ## Skills
 
-`grove init` writes one skill for each of Grove's four skills, for each harness in `grove.yaml`.
+`grove init` writes one skill for each of Grove's five skills, for each harness in `grove.yaml`.
 
 | Skill | Claude Code | Codex |
 | --- | --- | --- |
 | explore | `/grove-explore` | `$grove-explore` |
 | propose | `/grove-propose` | `$grove-propose` |
+| plan | `/grove-plan` | `$grove-plan` |
 | apply | `/grove-apply` | `$grove-apply` |
 | archive | `/grove-archive` | `$grove-archive` |
 
@@ -64,7 +67,7 @@ rules:
 | `agents` | `[claude, codex]` | The harnesses `init` writes skills for. |
 | `schema` | `default` | The change schema a new change has unless the owner names another while proposing. See "Change schemas". |
 | `context` | empty | Facts about the project, given to every skill. Keep it to what an agent cannot read from the code. |
-| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `propose`, `apply`, `archive`. |
+| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `propose`, `plan`, `apply`, `archive`. |
 
 `grove check` reports a field or `rules` key that Grove does not know; other
 commands ignore it.
@@ -275,6 +278,7 @@ grove/
     tasks.md
     implementation.md
   changes/archive/<id>-<slug>/
+  cycles/<id>-<slug>.yaml
 ```
 
 A folder under `changes/` or `specs/` is a change or a maintained spec when
@@ -284,10 +288,13 @@ A maintained spec's `.grove.yaml` holds its `title`; a change's holds its
 `title`, when it was `created`, its `schema`, and `base`, the full commit of
 the target it was proposed from, which propose writes from Grove's template.
 Either may add a one-line `description`, shown in lists. A change may add
-`depends_on`, the list of change IDs it waits on (see
-[Coordinating changes](coordinating.md)). The folder name gives the ID: a spec's is the
+`depends_on`, the list of change IDs it waits on, and `cycle`, the ID of
+the cycle it is in (see [Coordinating changes](coordinating.md)). The folder name gives the ID: a spec's is the
 whole name, a change's the start of it. A main document starts with the
 title as its heading, and `grove check` reports one whose first heading is
 not `# ` and the title. A change's other files have no metadata: their
-folder names their change. The change folder above is `default`'s;
+folder names their change. A cycle file holds its `title` and optional
+`goal`, `start` and `end`; `grove check` reports one with an unknown field
+or no title (see [Coordinating changes](coordinating.md)). The change
+folder above is `default`'s;
 `schemas/` holds the project's own change schemas (see "Change schemas").

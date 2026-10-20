@@ -73,7 +73,7 @@ func (d *Document) parse(file string, src []byte, required, optional []string) m
 		}
 	}
 	d.Meta = Meta{Title: values["title"], Created: values["created"], Description: values["description"], Schema: values["schema"],
-		DependsOn: deps, Cycle: values["cycle"], Base: values["base"]}
+		DependsOn: deps, Cycle: values["cycle"], Base: values["base"], Goal: values["goal"], Start: values["start"], End: values["end"]}
 	return lines
 }
 

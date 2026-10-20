@@ -21,7 +21,7 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    > Wrote grove.yaml and the Grove skills for claude and codex; nothing is committed.
 
    `.claude/skills/` and `.agents/skills/` each hold `grove-explore`,
-   `grove-propose`, `grove-apply` and `grove-archive`. Under `context` in
+   `grove-propose`, `grove-plan`, `grove-apply` and `grove-archive`. Under `context` in
    `grove.yaml`, write "Python 3 standard library only; tests run with
    python3 -m unittest." Then `git add -A && git commit -m "Set up Grove"`.
    Running `grove init` again rewrites the skills and leaves `grove.yaml` as
@@ -113,6 +113,20 @@ It starts where the main line's step 6 ends: one archived change and the
    merge. `grove changes` lists the delete change without `waits on`, and
    `/grove-apply <delete-id>`, on a new branch `delete-impl`, builds it.
    Leave that branch unmerged for now.
+
+3. **Plan a cycle** ("Plan a cycle"). From main, `git switch -c budgets`,
+   a fresh session, `/grove-propose Monthly budgets in report`; it waits on
+   nothing. Commit
+   and merge: two changes are approved, delete and budgets, the unknown-ID
+   change being archived. `git switch -c plan-04`, a fresh session,
+   `/grove-plan 0.4: the README's planned list`. The session reads the
+   approved changes from its index, says delete's dependency is archived
+   and budgets wait on nothing, so both can be built in parallel, and asks
+   for a title and goal. I answer "0.4" and "Everything the README plans
+   for 0.4". It tells me that setting `cycle` edits approved changes,
+   writes `grove/cycles/<id>-0-4.yaml` and `cycle: <id>` in both changes'
+   `.grove.yaml`, and runs `grove check` until clean. Commit; `grove review`
+   labels the cycle file `cycle`. Merge.
 
 ## Other paths
 
@@ -280,3 +294,12 @@ Agent inference, not the owner's decisions (rule 25).
 - `check` looks for what `depends_on` names among the working tree's
   changes, open and archived, and not on the target; a branch holds the
   target's archive as of where it started.
+- Plan's guide is `skills/plan.md` of `grove.yaml`'s `schema`, overridable
+  file by file like explore's; plan writes no kind of a schema, and the
+  cycle file's template is Grove's own, `metadata/cycle.yaml`.
+- `instructions plan` with a cycle ID reads the cycle and its changes'
+  `.grove.yaml` from the working tree, as revising a change does.
+- The project index shows each approved change's `cycle`.
+- A cycle file's name starts with its ID, as a change folder's does, and
+  `check` reports one that does not.
+- A cycle with no change naming it counts as done.

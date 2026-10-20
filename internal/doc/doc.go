@@ -42,12 +42,14 @@ type Meta struct {
 	DependsOn                           []string // the changes this one waits on
 	Cycle                               string   // the cycle this change belongs to
 	Base                                string   // the target commit this change was proposed from
+	Goal, Start, End                    string   // a cycle's
 }
 
-// Document is a maintained spec or a change: a folder, with its metadata.
+// Document is a maintained spec, a change or a cycle, with its metadata.
 type Document struct {
 	ID          string
-	Dir         string // relative to the document root
+	Dir         string // relative to the document root; empty for a cycle
+	Path        string // the main document, relative to the document root
 	Meta        Meta
 	Diagnostics []Diagnostic
 	lines       map[string]int // the line of each field of its .grove.yaml
@@ -68,11 +70,19 @@ type Change struct {
 // implementation.md gives it, if any (rule 3).
 type Task struct{ ID, Title, Status string }
 
+// Cycle is one cycle file, cycles/<id>-<slug>.yaml. The changes that name
+// it in their cycle field are in it.
+type Cycle struct {
+	Document
+	Done bool // every change in it is archived
+}
+
 // Collection is everything under one document root.
 type Collection struct {
 	Specs    []*Document
 	Changes  []*Change
 	Archived []*Change
+	Cycles   []*Cycle
 }
 
 // Layout returns where change schema schema puts a change's main document
@@ -89,7 +99,7 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 		return nil, err
 	}
 	for _, name := range specs {
-		d := &Document{ID: path.Base(path.Dir(name)), Dir: path.Dir(name)}
+		d := &Document{ID: path.Base(path.Dir(name)), Dir: path.Dir(name), Path: path.Dir(name) + "/spec.md"}
 		if _, err := d.read(fsys, []string{"title"}, "description"); err != nil {
 			return nil, err
 		}
@@ -114,6 +124,23 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 				c.Changes = append(c.Changes, ch)
 			}
 		}
+	}
+	cycles, err := fs.Glob(fsys, "cycles/*.yaml")
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range cycles {
+		cy := &Cycle{Document: Document{ID: idOf(path.Base(name)), Path: name}}
+		if cy.ID == "" {
+			cy.report(name, 0, "the file name must start with a cycle ID, such as 261015-k3m9q")
+		}
+		b, err := fs.ReadFile(fsys, name)
+		if err != nil {
+			return nil, err
+		}
+		cy.lines = cy.parse(name, b, []string{"title"}, []string{"goal", "start", "end"})
+		cy.Done = !slices.ContainsFunc(c.Changes, func(ch *Change) bool { return ch.Meta.Cycle != "" && ch.Meta.Cycle == cy.ID })
+		c.Cycles = append(c.Cycles, cy)
 	}
 	finished := map[string]bool{}
 	for _, ch := range c.Archived {
@@ -173,10 +200,8 @@ func (c *Collection) dependencies() {
 }
 
 func loadChange(fsys fs.FS, name string, layout Layout) (*Change, error) {
-	ch := &Change{Document: Document{Dir: path.Dir(name)}, Touches: map[string]string{}}
-	if folder := path.Base(ch.Dir); len(folder) >= 12 && ValidID(folder[:12]) && (len(folder) == 12 || folder[12] == '-') {
-		ch.ID = folder[:12]
-	} else {
+	ch := &Change{Document: Document{ID: idOf(path.Base(path.Dir(name))), Dir: path.Dir(name)}, Touches: map[string]string{}}
+	if ch.ID == "" {
 		ch.report(ch.Dir+"/", 0, "the folder name must start with a change ID, such as 261015-k3m9q")
 	}
 	lines, err := ch.read(fsys, []string{"title", "created"}, "schema", "description", "depends_on", "cycle", "base")
@@ -190,6 +215,7 @@ func loadChange(fsys fs.FS, name string, layout Layout) (*Change, error) {
 	case problem != "":
 		ch.report(name, lines["schema"], problem)
 	case main != "":
+		ch.Path = ch.Dir + "/" + main
 		if err := ch.heading(fsys, ch.Dir+"/"+main, "missing; it is the change's main document in schema "+ch.Meta.Schema); err != nil {
 			return nil, err
 		}
@@ -254,6 +280,24 @@ func (ch *Change) tasks(fsys fs.FS) {
 			ch.Tasks = append(ch.Tasks, Task{ID: m[1], Title: m[2], Status: status[m[1]]})
 		}
 	}
+}
+
+// idOf returns the ID a change folder or cycle file name starts with, or "".
+func idOf(name string) string {
+	if len(name) >= 12 && ValidID(name[:12]) && (len(name) == 12 || name[12] == '-' || name[12] == '.') {
+		return name[:12]
+	}
+	return ""
+}
+
+// Cycle returns the cycle whose ID is id, or nil.
+func (c *Collection) Cycle(id string) *Cycle {
+	for _, cy := range c.Cycles {
+		if cy.ID == id {
+			return cy
+		}
+	}
+	return nil
 }
 
 // Change returns the change whose ID is id, or nil.

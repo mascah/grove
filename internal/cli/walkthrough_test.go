@@ -67,7 +67,7 @@ func TestInit(t *testing.T) {
 		t.Errorf("init said %q, want %q", got, want)
 	}
 	for _, h := range []string{".claude", ".agents"} {
-		for _, w := range []string{"explore", "propose", "apply", "archive"} {
+		for _, w := range []string{"explore", "propose", "plan", "apply", "archive"} {
 			if skill := read(t, filepath.Join(dir, h, "skills", "grove-"+w, "SKILL.md")); !strings.Contains(skill, "name: grove-"+w+"\n") || !strings.Contains(skill, " instructions "+w) {
 				t.Errorf("%s skill grove-%s:\n%s", h, w, skill)
 			}
@@ -493,4 +493,46 @@ func TestCoordinating(t *testing.T) {
 	}
 	grove(t, "changes")
 	git(t, dir, "checkout", "--", ".")
+
+	// Cycles and /grove-plan.
+	budgetsMeta := filepath.Join(dir, "grove/changes", budgets+"-monthly-budgets-in-report/.grove.yaml")
+	os.WriteFile(budgetsMeta, []byte("title: Monthly budgets in report\ncreated: 2026-10-14T00:00:00Z\n"), 0o644)
+	commitAll(t, dir, "Propose monthly budgets")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve budgets", "budgets")
+	out = grove(t, "instructions", "plan", "0.4: the README's planned list")
+	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.yaml`").FindStringSubmatch(out)
+	if m == nil || !strings.Contains(out, "## What Grove requires of plan\n\n- A cycle groups approved changes.") || !strings.Contains(out, "## How to plan\n\n**Plan groups") ||
+		!strings.Contains(out, "\">\ntitle: <title>\n") || !strings.Contains(out, "## Owner's description\n\n0.4: the README's planned list\n") {
+		t.Fatalf("plan instructions:\n%s", out)
+	}
+	cycle := m[1]
+	git(t, dir, "switch", "-q", "-c", "plan-04")
+	cycleFile := filepath.Join(dir, "grove/cycles", cycle+"-0-4.yaml")
+	os.MkdirAll(filepath.Dir(cycleFile), 0o755)
+	os.WriteFile(cycleFile, []byte("title: \"0.4\"\ngoal: The README's planned list.\n"), 0o644)
+	for _, meta := range []string{delMeta, budgetsMeta} {
+		os.WriteFile(meta, []byte(read(t, meta)+"cycle: "+cycle+"\n"), 0o644)
+	}
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check printed %q", got)
+	}
+	commitAll(t, dir, "Plan 0.4")
+	if out := grove(t, "review"); !strings.Contains(out, "  adds     cycle            grove/cycles/"+cycle+"-0-4.yaml\n") {
+		t.Errorf("review of the plan:\n%.1500s", out)
+	}
+	if out := grove(t, "instructions", "plan", cycle); !strings.Contains(out, "You are revising cycle "+cycle+", \"0.4\"") ||
+		!strings.Contains(out, "## The cycle\n\n<file path=\"grove/cycles/"+cycle+"-0-4.yaml\">\ntitle: \"0.4\"") || !strings.Contains(out, "<file path=\"grove/changes/"+filepath.Base(delDir)+"/.grove.yaml\">") {
+		t.Errorf("plan instructions for revising the cycle:\n%s", out)
+	}
+	os.WriteFile(cycleFile, []byte("goal: x\nowner: me\n"), 0o644)
+	stdout.Reset()
+	stderr.Reset()
+	code = run([]string{"check"}, &stdout, &stderr)
+	if want := "grove/cycles/" + cycle + "-0-4.yaml:2: unknown field \"owner\"; this file takes title, goal, start and end\ngrove/cycles/" + cycle + "-0-4.yaml: title: required field is missing\n"; code != 1 || stdout.String() != want {
+		t.Errorf("check of a cycle file: status %d\n%s", code, stdout.String())
+	}
+	git(t, dir, "checkout", "--", ".")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Accept the 0.4 plan", "plan-04")
 }

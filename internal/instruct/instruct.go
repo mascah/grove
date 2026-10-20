@@ -219,6 +219,7 @@ type Instructions struct {
 	Description string     // the owner's description, when given
 	Documents   []Document // the kinds of document the skill writes
 	Change      []File     // the change being worked on, in full
+	Cycle       []File     // the cycle being planned, its file and its changes' .grove.yaml, in full
 }
 
 // Document is one kind of document to write, with its paths and templates
@@ -460,6 +461,20 @@ func Propose(p Project, s, id, created, description string) (Instructions, error
 	return in, err
 }
 
+// Plan returns the instructions for planning new cycle id from description
+// when cy is nil, or for revising cycle cy, whose files are given.
+func Plan(p Project, cy *doc.Cycle, id, description string, files []File) (Instructions, error) {
+	task, file := fmt.Sprintf("You are planning new cycle %s, in the owner's own working tree.", id), p.Root+"/cycles/"+id+"-<slug>.yaml"
+	if cy != nil {
+		task, file = fmt.Sprintf("You are revising cycle %s, %q, in the owner's own working tree.", id, cy.Meta.Title), p.Root+"/"+cy.Path
+	}
+	in, err := build(p, p.Schema, "plan", task, strings.NewReplacer(), nil, nil)
+	in.Description, in.Cycle = description, files
+	in.Documents = append(in.Documents, Document{Kind: "cycle", Path: file, Template: embedded("metadata/cycle.yaml"),
+		Guide: "The cycle's own details. Which changes it holds, and their order, are in each change's `.grove.yaml`.\n"})
+	return in, err
+}
+
 // Revise returns the instructions for revising drafted change c, read from
 // the working tree; files are c.Files as read from there.
 func Revise(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
@@ -527,6 +542,12 @@ func (in Instructions) Markdown() string {
 	for _, f := range in.Change {
 		include(&b, f.Path, f.Content)
 	}
+	if len(in.Cycle) > 0 {
+		b.WriteString("## The cycle\n\n")
+	}
+	for _, f := range in.Cycle {
+		include(&b, f.Path, f.Content)
+	}
 	return b.String()
 }
 
@@ -564,6 +585,9 @@ func (p Project) index(b *strings.Builder) {
 		}
 		if len(c.WaitsOn) > 0 {
 			more = append(more, "waits on: "+strings.Join(c.WaitsOn, ", ")+", not archived as finished")
+		}
+		if c.Meta.Cycle != "" {
+			more = append(more, "cycle: "+c.Meta.Cycle)
 		}
 		entry(b, p.Root+"/"+c.Dir+"/", &c.Document, more...)
 	}

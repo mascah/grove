@@ -58,6 +58,9 @@ progress goes in `implementation.md`.
    and moves the change to `grove/changes/archive/`. You merge code, specs and
    archive together.
 
+When several changes are approved, `/grove-plan` groups them into a cycle
+and says their order (see [Coordinating changes](coordinating.md)).
+
 A change you decide not to build is archived too, without touching the
 specs; its `implementation.md` says `Status: dropped` and why.
 
@@ -94,6 +97,8 @@ capability's ID is a short lowercase name, such as `projects`.
 - **Change schema:** what a kind of change consists of and how each skill
   goes for it; Grove's is `default`.
 - **Context:** project facts in `grove.yaml` given to every skill.
+- **Cycle:** approved changes meant to be finished together, planned with
+  `/grove-plan`.
 - **Harness:** the agent you run, such as Claude Code or Codex.
 - **Maintained spec:** agreed behavior of one capability.
 - **Skill:** a chat command Grove installs for your harness.

@@ -38,6 +38,9 @@ func check(stdout io.Writer) error {
 	for _, ch := range c.Changes {
 		docs = append(docs, &ch.Document)
 	}
+	for _, cy := range c.Cycles {
+		docs = append(docs, &cy.Document)
+	}
 	n := len(unknown)
 	for _, d := range docs {
 		for _, diag := range d.Diagnostics {

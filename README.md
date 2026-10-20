@@ -11,7 +11,8 @@ Grove has two halves:
   checks specs and changes, shows what a merge would approve, and opens a
   reader.
 - **In your agent's chat** (Claude Code or Codex), Grove's skills explore an
-  idea, propose a change, apply it and archive it. Each skill asks `grove`
+  idea, propose a change, plan a cycle of changes, apply a change and
+  archive it. Each skill asks `grove`
   for instructions and follows them in the conversation you are already in.
 
 Grove never starts an agent and never commits. You run your agent and you
@@ -37,6 +38,6 @@ In Codex, type `$grove-explore` instead of `/grove-explore`, and so on.
 - [Getting started](docs/getting-started.md): set up and take one change from
   idea to updated spec.
 - [Coordinating changes](docs/coordinating.md): changes that wait on
-  others.
+  others, and cycles.
 - [Concepts](docs/concepts.md): specs, changes, approval and archive.
 - [Reference](docs/reference.md): every command, skill and setting.
