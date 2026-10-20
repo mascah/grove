@@ -103,6 +103,17 @@ It starts where the main line's step 6 ends: one archived change and the
 
    > \<delete-id>  Add ledger delete ID  approved  waits on \<unknown-id>
 
+2. **Apply waits** ("A change that waits"). `git switch -c delete-impl`, a
+   fresh session, `/grove-apply <delete-id>`. Grove prints
+   > grove: \<delete-id> waits on \<unknown-id>, which main has not archived as finished
+
+   The session tells me and builds nothing. `git switch main && git branch -D
+   delete-impl && git switch -c unknown-id-impl`, a fresh session,
+   `/grove-apply <unknown-id>`, then `/grove-archive <unknown-id>`. Commit and
+   merge. `grove changes` lists the delete change without `waits on`, and
+   `/grove-apply <delete-id>`, on a new branch `delete-impl`, builds it.
+   Leave that branch unmerged for now.
+
 ## Other paths
 
 - **Propose from a description** (§3). On a new branch, with no exploration,

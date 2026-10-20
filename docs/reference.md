@@ -19,7 +19,7 @@ Skills run these; you do not need to:
 | `grove instructions explore` | Interview the user about an idea, with the project's specs and changes listed. |
 | `grove instructions propose [--schema <name>] ["<description>"]` | Write a new change from the conversation or the description, with the project's change schema or the one named. |
 | `grove instructions propose <change-id>` | Revise a drafted change, with the schema it has. |
-| `grove instructions apply <change-id>` | Build an approved change and record progress. |
+| `grove instructions apply <change-id>` | Build an approved change and record progress. Refuses a change that waits on one the target does not hold archived as finished. |
 | `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs, then run `grove archive`. |
 
 ## Skills

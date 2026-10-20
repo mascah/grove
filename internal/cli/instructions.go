@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/mascah/grove/internal/doc"
@@ -99,7 +100,7 @@ func archive(stdout io.Writer, id string) error {
 }
 
 // instructionsApply prints the apply instructions for change id as the
-// target holds it.
+// target holds it, unless it waits on a change (D-56).
 func instructionsApply(stdout io.Writer, id string) error {
 	p, err := openProject()
 	if err != nil {
@@ -109,8 +110,11 @@ func instructionsApply(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
-	if ip.Agreed.Change(id) == nil {
+	switch c := ip.Agreed.Change(id); {
+	case c == nil:
 		return fmt.Errorf("%s holds no approved change %s", p.Target, id)
+	case len(c.WaitsOn) > 0:
+		return fmt.Errorf("%s waits on %s, which %s has not archived as finished", id, strings.Join(c.WaitsOn, " and "), p.Target)
 	}
 	fsys, err := gitx.TreeFS(p.Top, ip.Commit, p.Root)
 	if err != nil {

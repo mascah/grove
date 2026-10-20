@@ -33,6 +33,18 @@ grove changes
 > 261019-r2w7k  Add ledger delete ID  approved  waits on 261019-p4x8d
 
 A change waits on each change in its `depends_on` until your main branch
-holds that change archived as finished. A dropped change never finishes. To
-change what a change waits on after it is approved, edit `depends_on` on a
-branch and merge it, like any other edit.
+holds that change archived as finished. A dropped change never finishes.
+
+Applying a change that waits is refused. **Chat:**
+
+```text
+/grove-apply 261019-r2w7k
+```
+
+> grove: 261019-r2w7k waits on 261019-p4x8d, which main has not archived as finished
+
+The agent tells you and builds nothing. There are two ways past: apply and
+archive the change it waits on, and merge that; or, if it need not wait
+after all, remove the dependency from `depends_on` on a branch and merge
+that. Any field of an approved change's `.grove.yaml` but `created` can
+change this way.

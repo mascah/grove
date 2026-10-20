@@ -429,10 +429,22 @@ func TestSchemas(t *testing.T) {
 	}
 }
 
+// finish plays the sessions that apply and archive change id on a new
+// branch, then merges it.
+func finish(t *testing.T, dir, branch, id, folder string) {
+	t.Helper()
+	git(t, dir, "switch", "-q", "-c", branch)
+	os.WriteFile(filepath.Join(folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
+	grove(t, "archive", id)
+	commitAll(t, dir, "Implement and archive "+id)
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Merge "+branch, branch)
+}
+
 // TestCoordinating follows the walkthrough's "Coordinating changes".
 func TestCoordinating(t *testing.T) {
 	dir := setUp(t)
-	unknown, _ := approve(t, dir, "unknown-id", "Editing an unknown ID prints an error", "")
+	unknown, unknownDir := approve(t, dir, "unknown-id", "Editing an unknown ID prints an error", "")
 
 	// Propose records depends_on and base; lists show what waits.
 	main := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
@@ -450,4 +462,12 @@ func TestCoordinating(t *testing.T) {
 	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "  - waits on: "+unknown+", not archived as finished\n") {
 		t.Errorf("explore's index does not say what delete waits on:\n%s", out)
 	}
+
+	// Apply refuses an unmet dependency.
+	var stdout, stderr strings.Builder
+	if code := run([]string{"instructions", "apply", del}, &stdout, &stderr); code != 1 || stderr.String() != "grove: "+del+" waits on "+unknown+", which main has not archived as finished\n" {
+		t.Errorf("apply before its dependency is archived: status %d, %q", code, stderr.String())
+	}
+	finish(t, dir, "unknown-id-impl", unknown, unknownDir)
+	grove(t, "instructions", "apply", del)
 }
