@@ -27,9 +27,6 @@ agents:
 %s# The change schema a new change has unless the owner names another while
 # proposing: Grove's default, or one of the project's in <root>/schemas/.
 schema: default
-# Facts about this project given to every skill: the language, how tests
-# run, anything an agent cannot read from the code. Keep it short.
-context: ""
 # Extra lines for Grove's instructions: under documents, for one kind of
 # document, given when it is written; under skills, for one skill, given
 # with its guide. Such as

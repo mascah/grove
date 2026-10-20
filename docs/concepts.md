@@ -148,7 +148,6 @@ capability's ID is a short lowercase name, such as `projects`.
 - **Change:** a folder proposing future work.
 - **Change schema:** what a kind of change consists of and how each skill
   goes for it; Grove's is `default`.
-- **Context:** project facts in `grove.yaml` given to every skill.
 - **Harness:** the program you run your coding agent in. `grove init` writes
   skills for each harness `grove.yaml` lists.
 - **Maintained spec:** agreed behavior of one capability.

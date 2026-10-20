@@ -192,7 +192,6 @@ type Project struct {
 	Target  string          // target branch, such as "main"
 	Commit  string          // the target's commit
 	Agreed  *doc.Collection // the documents at Commit
-	Context string          // grove.yaml's context
 	Rules   Rules           // grove.yaml's rules
 	Schemas fs.FS           // <root>/schemas in the working tree, the project's own schema files
 	Schema  string          // grove.yaml's schema, for exploring and new changes
@@ -493,9 +492,6 @@ func fill(p Project, c *doc.Change) *strings.Replacer {
 func (in Instructions) Markdown() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# Grove instructions: %s\n\n%s Run Grove as `grove`.\n\n%s\n", in.Skill, in.Task, meanings)
-	if in.Context != "" {
-		fmt.Fprintf(&b, "## Project context\n\n%s\n\n", strings.TrimRight(in.Context, "\n"))
-	}
 	fmt.Fprintf(&b, "## What Grove requires of %s\n\n%s\n", in.Skill, in.Requires)
 	fmt.Fprintf(&b, "## How to %s\n\n%s\n", in.Skill, in.Guide)
 	rules(&b, "skill", in.Rules.Skills[in.Skill])
