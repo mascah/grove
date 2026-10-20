@@ -36,22 +36,27 @@ func (d Diagnostic) String() string {
 	return d.Path + ": " + d.Message
 }
 
-// Meta is a document's metadata.
+// Meta is a document's metadata. The JSON tags are for grove changes --json.
 type Meta struct {
-	Title, Created, Description, Schema string
-	DependsOn                           []string // the changes this one waits on
-	Cycle                               string   // the cycle this change belongs to
-	Base                                string   // the target commit this change was proposed from
-	Goal, Start, End                    string   // a cycle's
+	Title       string   `json:"title"`
+	Created     string   `json:"created,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Schema      string   `json:"schema,omitempty"`
+	DependsOn   []string `json:"depends_on,omitempty"` // the changes this one waits on
+	Cycle       string   `json:"cycle,omitempty"`      // the cycle this change belongs to
+	Base        string   `json:"base,omitempty"`       // the target commit this change was proposed from
+	Goal        string   `json:"goal,omitempty"`       // a cycle's
+	Start       string   `json:"start,omitempty"`
+	End         string   `json:"end,omitempty"`
 }
 
 // Document is a maintained spec, a change or a cycle, with its metadata.
 type Document struct {
-	ID          string
-	Dir         string // relative to the document root; empty for a cycle
-	Path        string // the main document, relative to the document root
-	Meta        Meta
-	Diagnostics []Diagnostic
+	ID   string `json:"id"`
+	Dir  string `json:"-"`    // relative to the document root; empty for a cycle
+	Path string `json:"path"` // the main document, relative to the document root
+	Meta
+	Diagnostics []Diagnostic   `json:"-"`
 	lines       map[string]int // the line of each field of its .grove.yaml
 }
 
@@ -59,22 +64,27 @@ type Document struct {
 // changes/archive/<id>-<slug>/.
 type Change struct {
 	Document
-	Files   []string          // every Markdown file in Dir and its .grove.yaml, relative to the root, sorted
-	Touches map[string]string // file → the capability it is about, for each file at a schema path with <capability>
-	Tasks   []Task            // from tasks.md, with their status from implementation.md
-	Dropped bool              // implementation.md says Status: dropped
-	WaitsOn []string          // what DependsOn names that is not archived as finished
+	State   string            `json:"state"`              // approved, or archived or dropped once archived
+	WaitsOn []string          `json:"waits_on,omitempty"` // what DependsOn names that is not archived as finished
+	Tasks   []Task            `json:"tasks,omitempty"`    // from tasks.md, with their status from implementation.md
+	Files   []string          `json:"-"`                  // every Markdown file in Dir and its .grove.yaml, relative to the root, sorted
+	Touches map[string]string `json:"-"`                  // file → the capability it is about, for each file at a schema path with <capability>
+	Dropped bool              `json:"-"`                  // implementation.md says Status: dropped
 }
 
 // Task is one T-NN heading of a change's tasks.md, with the status
 // implementation.md gives it, if any (rule 3).
-type Task struct{ ID, Title, Status string }
+type Task struct {
+	ID     string `json:"id"`
+	Title  string `json:"title"`
+	Status string `json:"status,omitempty"`
+}
 
 // Cycle is one cycle file, cycles/<id>-<slug>.yaml. The changes that name
 // it in their cycle field are in it.
 type Cycle struct {
 	Document
-	Done bool // every change in it is archived
+	Done bool `json:"done"` // every change in it is archived
 }
 
 // Collection is everything under one document root.
@@ -118,7 +128,8 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 			if err != nil {
 				return nil, err
 			}
-			if strings.HasPrefix(name, "changes/archive/") {
+			if ch.State = "approved"; strings.HasPrefix(name, "changes/archive/") {
+				ch.State = map[bool]string{false: "archived", true: "dropped"}[ch.Dropped]
 				c.Archived = append(c.Archived, ch)
 			} else {
 				c.Changes = append(c.Changes, ch)

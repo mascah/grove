@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
@@ -9,8 +10,9 @@ import (
 )
 
 // listChanges lists the target's approved changes under each cycle that is
-// not done, then those in no cycle.
-func listChanges(stdout io.Writer) error {
+// not done, then those in no cycle; as JSON, it prints its cycles and its
+// changes, archived ones included (D-64).
+func listChanges(stdout io.Writer, asJSON bool) error {
 	p, err := openProject()
 	if err != nil {
 		return err
@@ -18,6 +20,17 @@ func listChanges(stdout io.Writer) error {
 	ip, err := p.agreed()
 	if err != nil {
 		return err
+	}
+	if asJSON {
+		enc := json.NewEncoder(stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(struct {
+			Root    string        `json:"root"`
+			Target  string        `json:"target"`
+			Commit  string        `json:"commit"`
+			Cycles  []*doc.Cycle  `json:"cycles"`
+			Changes []*doc.Change `json:"changes"`
+		}{p.Root, p.Target, ip.Commit, append([]*doc.Cycle{}, ip.Agreed.Cycles...), append(append([]*doc.Change{}, ip.Agreed.Changes...), ip.Agreed.Archived...)})
 	}
 	listed := map[string]bool{}
 	for _, cy := range ip.Agreed.Cycles {

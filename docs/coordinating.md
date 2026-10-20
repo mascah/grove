@@ -4,7 +4,8 @@
 updated spec. When several changes are approved at once, some must land
 before others, and some belong to one piece of work, such as a release.
 This page shows how a change says what it waits on, how to plan a cycle,
-and what happens when two changes rewrite the same requirement.
+what happens when two changes rewrite the same requirement, and how to get
+the whole picture as data.
 
 ## A change that waits
 
@@ -143,3 +144,48 @@ report without bringing the change up to date.
 In a change spec, each REMOVED requirement keeps its heading,
 `### Requirement: <name>`, followed by why it goes, so `grove check` can
 find it.
+
+## The project as data
+
+**Terminal:**
+
+```sh
+grove changes --json
+```
+
+prints your main branch's cycles and changes as JSON, archived changes
+included, for your agent or a script to read:
+
+```json
+{
+  "root": "grove",
+  "target": "main",
+  "commit": "8f2d6c1a4b9e0f7d3c5a2b1e6f4d8c0a9b7e5f3d",
+  "cycles": [
+    {"id": "261019-j83h9", "path": "cycles/261019-j83h9-0-4.yaml",
+     "title": "0.4", "goal": "Everything the README plans for 0.4.",
+     "start": "2026-10-20", "end": "2026-11-06", "done": false}
+  ],
+  "changes": [
+    {"id": "261019-r2w7k", "path": "changes/261019-r2w7k-add-ledger-delete/proposal.md",
+     "title": "Add ledger delete ID", "created": "2026-10-19T14:02:11Z",
+     "schema": "default", "depends_on": ["261019-p4x8d"], "cycle": "261019-j83h9",
+     "base": "4f1c2a9e0b7d6c5e4f3a2b1c0d9e8f7a6b5c4d3e", "state": "approved",
+     "tasks": [{"id": "T-01", "title": "Add ledger delete ID"}]},
+    {"id": "261019-p4x8d", "path": "changes/archive/261019-p4x8d-editing-an-unknown-id/proposal.md",
+     "title": "Editing an unknown ID prints an error", "created": "2026-10-19T13:40:02Z",
+     "schema": "default", "base": "4f1c2a9e0b7d6c5e4f3a2b1c0d9e8f7a6b5c4d3e",
+     "state": "archived", "tasks": [{"id": "T-01", "title": "Report an unknown ID", "status": "done"}]}
+  ]
+}
+```
+
+- `path` is a cycle's file or a change's main document, under `root`.
+- `state` is `approved`, `archived`, or `dropped` for a change archived
+  without being built.
+- `waits_on` lists what `depends_on` names that is not archived as finished;
+  it is left out when the change waits on nothing.
+- A task's `status` is its `Status:` line in `implementation.md`. That file
+  usually reaches your main branch with the archive merge, so an approved
+  change's tasks mostly have none.
+- A field with no value is left out.

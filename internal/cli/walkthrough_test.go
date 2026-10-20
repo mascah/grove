@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -590,5 +591,32 @@ func TestCoordinating(t *testing.T) {
 	os.WriteFile(filepath.Join(showDir, ".grove.yaml"), []byte("title: Show what was saved\ncreated: 2026-10-14T00:00:00Z\nbase: "+main+"\n"), 0o644)
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
 		t.Errorf("check after revising printed %q", got)
+	}
+
+	// grove changes --json.
+	var v struct {
+		Commit string
+		Cycles []struct {
+			ID   string
+			Done bool
+		}
+		Changes []struct {
+			ID, State, Path string
+			WaitsOn         []string `json:"waits_on"`
+			Tasks           []struct{ ID, Status string }
+		}
+	}
+	if err := json.Unmarshal([]byte(grove(t, "changes", "--json")), &v); err != nil {
+		t.Fatal(err)
+	}
+	states := map[string]string{}
+	for _, c := range v.Changes {
+		states[c.ID] = c.State
+		if c.ID == del && (len(c.WaitsOn) > 0 || c.Path != "changes/"+filepath.Base(delDir)+"/proposal.md") || c.ID == unknown && (len(c.Tasks) != 1 || c.Tasks[0].Status != "done") {
+			t.Errorf("changes --json gives %s as %+v", c.ID, c)
+		}
+	}
+	if v.Commit != main || len(v.Cycles) != 1 || v.Cycles[0].ID != cycle || v.Cycles[0].Done || states[unknown] != "archived" || states[recat] != "archived" || states[del] != "approved" {
+		t.Errorf("changes --json: %+v", v)
 	}
 }

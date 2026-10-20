@@ -30,7 +30,7 @@ With no command, open the reader on the maintained specs and approved changes.
   archive <change-id>        move a change to changes/archive/
   review                     show what merging this branch into the target would approve
   specs                      list the maintained specs
-  changes                    list the approved changes
+  changes [--json]           list the approved changes, or print them and the cycles as JSON
   check                      report problems in this working tree's Grove documents
 `
 
@@ -67,7 +67,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case len(args) == 1 && args[0] == "review":
 		err = review(stdout)
 	case len(args) == 1 && args[0] == "changes":
-		err = listChanges(stdout)
+		err = listChanges(stdout, false)
+	case len(args) == 2 && args[0] == "changes" && args[1] == "--json":
+		err = listChanges(stdout, true)
 	case len(args) == 1 && args[0] == "check":
 		err = check(stdout)
 	default:

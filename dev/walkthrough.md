@@ -155,6 +155,11 @@ It starts where the main line's step 6 ends: one archived change and the
    and sets `base` to main's commit. `grove check` is clean. Commit and
    merge.
 
+6. **The project as data** ("The project as data"). `grove changes --json`
+   shows the 0.4 cycle with `done: false`, the unknown-ID and recategorize
+   changes as `archived` with `T-01` `done`, and the delete change with no
+   `waits_on`, since the unknown-ID change is archived.
+
 ## Other paths
 
 - **Propose from a description** (§3). On a new branch, with no exploration,
@@ -342,3 +347,7 @@ Agent inference, not the owner's decisions (rule 25).
   at `base` and on the target, by name; one missing on the target was
   removed. A requirement the maintained spec did not have at `base` is not
   compared. A `base` that is not a commit is reported.
+- `grove changes --json` gives paths under the root, with `root` at the
+  top, rather than from the repository's top; `state` is worked out when
+  the project is read; a field with no value is left out; a change's
+  capabilities and problems are not in it.
