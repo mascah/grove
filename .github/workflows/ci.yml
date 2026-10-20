@@ -21,6 +21,7 @@ jobs:
           go-version-file: go.mod
       - uses: extractions/setup-just@v4
       - run: just check
+      - run: shellcheck install.sh
 
   # The PR title becomes the squash commit's subject, which release-please reads.
   title:
