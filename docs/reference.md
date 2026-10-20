@@ -5,7 +5,7 @@
 | Command | Does |
 | --- | --- |
 | `grove` | Opens the reader on the maintained specs and approved changes. |
-| `grove init` | Writes `grove.yaml` if there is none, and the skills for each harness it lists. Safe to re-run: it rewrites the skills and leaves `grove.yaml` alone. Commits nothing. |
+| `grove init` | Writes `grove.yaml` if there is none, and Grove's skills or commands for each harness it lists. Safe to re-run: see "Harnesses". Commits nothing. |
 | `grove specs` | Lists the maintained specs on the target branch. |
 | `grove changes` | Lists the approved changes on the target branch that are not archived, and what each waits on. |
 | `grove changes --json` | Prints the target branch's changes, archived ones included, as JSON (see [Coordinating changes](coordinating.md), "The project as data"). |
@@ -24,27 +24,63 @@ Skills run these; you do not need to:
 | `grove instructions apply <change-id>` | Build an approved change and record progress. Refuses a change that waits on one the target does not hold archived as finished. |
 | `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs, then run `grove archive`. |
 
-## Skills
+## Harnesses
 
-`grove init` writes one skill for each of Grove's four skills, for each harness in `grove.yaml`.
+`grove init` writes a file for each of Grove's four skills, explore,
+propose, apply and archive, for each harness under `agents` in
+`grove.yaml`: as a skill, or as a command where the harness has commands.
+How you type apply, the others alike:
 
-| Skill | Claude Code | Codex |
+| Harness | `agents` key | As skills | As commands |
+| --- | --- | --- | --- |
+| Claude Code | `claude` | `/grove-apply` | `/grove:apply` |
+| Codex | `codex` | `$grove-apply` | none |
+| Cursor | `cursor` | `/grove-apply` | none |
+| OpenCode | `opencode` | not typed; ask for `grove-apply` by name | `/grove-apply` |
+| Pi | `pi` | `/skill:grove-apply` | `/grove-apply` |
+| Hermes | `hermes` | `/grove-apply` | none |
+
+Type the words a skill takes after its name, such as
+`/grove-apply 261015-k3m9q`.
+
+Where the files go, `<skill>` being the skill's name:
+
+| Harness | Skills | Commands |
 | --- | --- | --- |
-| explore | `/grove-explore` | `$grove-explore` |
-| propose | `/grove-propose` | `$grove-propose` |
-| apply | `/grove-apply` | `$grove-apply` |
-| archive | `/grove-archive` | `$grove-archive` |
+| `claude` | `.claude/skills/grove-<skill>/SKILL.md` | `.claude/commands/grove/<skill>.md` |
+| `codex`, `cursor`, `hermes` | `.agents/skills/grove-<skill>/SKILL.md` | none |
+| `opencode` | `.agents/skills/grove-<skill>/SKILL.md` | `.opencode/commands/grove-<skill>.md` |
+| `pi` | `.agents/skills/grove-<skill>/SKILL.md` | `.pi/prompts/grove-<skill>.md` |
 
-Claude Code reads them from `.claude/skills/grove-<skill>/SKILL.md`, Codex
-from `.agents/skills/grove-<skill>/SKILL.md`. Commit them with your
-project.
+Harnesses that share `.agents/skills/` share one copy of each skill. Commit
+the files with your project.
+
+Two harnesses read a project's files only once you trust it: in Hermes, run
+`hermes skills trust` in the repository; in Pi, trust the project when it
+asks, or with `/trust`.
+
+The first `grove init`, with no `grove.yaml`, chooses the harnesses from
+what the repository holds, each as skills: `.claude/` or `CLAUDE.md` gives
+`claude`, `.codex/` or `AGENTS.md` gives `codex`, `.cursor/` gives
+`cursor`, `.opencode/` or `opencode.json` gives `opencode`, `.pi/` gives
+`pi`, and `.hermes/` gives `hermes`. With none of these, it chooses `claude`
+and `codex`. It writes them under `agents`, and says which it chose.
+
+Later runs follow `agents` and nothing else. Each run writes every file the
+harnesses listed have, overwriting edits to them, and removes Grove's files
+that `agents` no longer gives: those of a harness taken out, of a form
+changed, or of a skill Grove no longer has. It looks only in the places in
+the table above, and removes only `grove-` folders and files, and files in
+`.claude/commands/grove/`. Its message names each one it removed.
 
 ## grove.yaml
 
 ```yaml
 root: grove
 target: main
-agents: [claude, codex]
+agents:
+  claude: commands
+  codex: skills
 context: |
   Go 1.24 service; tests with go test ./...
   Every public API stays backwards compatible.
@@ -63,13 +99,15 @@ rules:
 | --- | --- | --- |
 | `root` | `grove` | The folder that holds `specs/` and `changes/`. |
 | `target` | `main` | The branch whose contents count as agreed. Merging into it approves. |
-| `agents` | `[claude, codex]` | The harnesses `init` writes skills for. |
+| `agents` | `claude` and `codex`, as `skills` | Each harness `init` writes Grove's skills for, and whether as `skills` or `commands` (see "Harnesses"). The first `init` chooses them. |
 | `schema` | `default` | The change schema a new change has unless the owner names another while proposing. See "Change schemas". |
 | `context` | empty | Facts about the project, given to every skill. Keep it to what an agent cannot read from the code. |
 | `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `propose`, `apply`, `archive`. |
 
 `grove check` reports a field or `rules` key that Grove does not know; other
-commands ignore it.
+commands ignore it. It also reports a harness under `agents` that Grove has
+no row for, or a form that harness does not have, and `init` stops at
+either.
 
 `context` and `rules` add to Grove's own instructions; they cannot remove or
 replace them. Short rules work better than long ones.

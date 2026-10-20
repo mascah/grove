@@ -1,11 +1,14 @@
 # Getting started
 
 This page takes one change from an idea to a spec that describes the new
-behavior. You need Git, a repository, Claude Code or Codex, and Grove
+behavior. You need Git, a repository, a coding agent Grove has skills for
+(Claude Code, Codex, Cursor, OpenCode, Pi or Hermes), and Grove
 ([Install](install.md)).
 
 Commands marked **terminal** go in your shell. Commands marked **chat** go in
-your agent's conversation. In Codex, skills start with `$` instead of `/`.
+your agent's conversation. This page types skills as Claude Code does; the
+[Reference](reference.md), under "Harnesses", shows how your agent types
+them, such as `$grove-explore` in Codex.
 
 ## 1. Set up
 
@@ -16,6 +19,11 @@ grove init
 ```
 
 > Wrote grove.yaml and the Grove skills for claude and codex; nothing is committed.
+
+It chooses the agents from what your repository holds, such as `.claude/`
+or `AGENTS.md`, and Claude Code and Codex when it finds none. `agents` in
+`grove.yaml` lists them; change it and run `grove init` again to add an
+agent, or to have Claude Code's as commands, `/grove:explore`.
 
 Open `grove.yaml` and describe your project under `context`: the language,
 how tests run, and anything an agent should always know. Keep it short; it is

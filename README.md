@@ -10,9 +10,10 @@ Grove has two halves:
 - **In your terminal**, the `grove` command sets up a project, lists and
   checks specs and changes, shows what a merge would approve, and opens a
   reader.
-- **In your agent's chat** (Claude Code or Codex), Grove's skills explore an
-  idea, propose a change, apply it and archive it. Each skill asks `grove`
-  for instructions and follows them in the conversation you are already in.
+- **In your agent's chat** (Claude Code, Codex, Cursor, OpenCode, Pi or
+  Hermes), Grove's skills explore an idea, propose a change, apply it and
+  archive it. Each skill asks `grove` for instructions and follows them in
+  the conversation you are already in.
 
 Grove never starts an agent and never commits. You run your agent and you
 commit.
@@ -32,7 +33,8 @@ chat      /grove-archive <change-id>            updates the specs, files the cha
 terminal  merge
 ```
 
-In Codex, type `$grove-explore` instead of `/grove-explore`, and so on.
+In Codex, type `$grove-explore` instead of `/grove-explore`, and so on; the
+[Reference](docs/reference.md) shows each agent's way.
 
 ## Docs
 
