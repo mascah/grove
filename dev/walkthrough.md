@@ -68,15 +68,14 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 5. **Apply** (§5). `git switch -c older-edits-impl`, a fresh `claude`,
    `/grove-apply 261015-k3m9q`. The open question blocks no task, so the
    session asks nothing, works T-01 with a test, and writes `implementation.md` with
-   T-01's status and evidence. `python3 -m unittest` passes.
-
-6. **Archive** (§6). `/grove-archive 261015-k3m9q`. The session adds the
-   requirement to a new `grove/specs/record-editing/spec.md`, with
+   T-01's status and evidence. `python3 -m unittest` passes. With every task
+   done, the same session runs `grove instructions archive 261015-k3m9q`,
+   adds the requirement to a new `grove/specs/record-editing/spec.md`, with
    `grove/specs/record-editing/.grove.yaml` beside it, runs `grove check`,
    then `grove archive 261015-k3m9q`:
    > Archived 261015-k3m9q to grove/changes/archive/261015-k3m9q-allow-editing-older-records/; nothing is committed.
 
-   Commit, `git switch main && git merge --no-ff older-edits-impl`. `grove specs`:
+6. **Merge** (§6). Commit, `git switch main && git merge --no-ff older-edits-impl`. `grove specs`:
    > record-editing  Record editing  grove/specs/record-editing/spec.md
 
    The spec says "When a user edits an existing record and leaves its
@@ -111,14 +110,26 @@ It starts where the main line's step 6 ends: one archived change and the
 
 2. **Apply waits** ("A change that waits"). `git switch -c delete-impl`, a
    fresh session, `/grove-apply <delete-id>`. Grove prints
-   > grove: \<delete-id> waits on \<unknown-id>, which main has not archived as finished
+   > grove: \<delete-id> waits on \<unknown-id>, which this working tree has not archived as finished
 
    The session tells me and builds nothing. `git switch main && git branch -D
    delete-impl && git switch -c unknown-id-impl`, a fresh session,
-   `/grove-apply <unknown-id>`, then `/grove-archive <unknown-id>`. Commit and
+   `/grove-apply <unknown-id>`, which builds and archives it. Commit and
    merge. `grove changes` lists the delete change without `waits on`, and
    `/grove-apply <delete-id>`, on a new branch `delete-impl`, builds it.
    Leave that branch unmerged for now.
+
+   **Applying every approved change** ("Applying every approved change").
+   Before the merge above, from main with both changes approved,
+   `git switch -c apply-all`, a fresh session, `/grove-apply`. Its
+   instructions list the unknown-ID change first and the delete change
+   second. The session runs `grove instructions apply <unknown-id>`, builds
+   and archives it, then `grove instructions apply <delete-id>`, which Grove
+   now prints since the dependency is archived on this branch, and builds
+   and archives that. `grove instructions apply` on the branch then lists
+   nothing to build. One commit, one merge; `grove changes` lists neither.
+   `git switch main && git branch -D apply-all` to run the steps above
+   instead.
 
 3. **A change that waits on nothing** ("A change that waits"). From main,
    `git switch -c budgets`, a fresh session, `/grove-propose Monthly
@@ -135,12 +146,17 @@ It starts where the main line's step 6 ends: one archived change and the
    Commit and merge. Then
    `git switch main && git switch -c show-saved`, a fresh session,
    `/grove-propose Editing a record prints what was saved`, which MODIFIES
-   the same requirement from the same text. Commit and merge. Apply and
-   archive `recategorize` on `recategorize-impl`; `grove check` there is
-   clean. Commit and merge. `grove check` on main now reports and exits
-   non-zero:
-   > grove/changes/\<show-saved>/specs/record-editing/spec.md:\<line>: requirement "\<name>" was rewritten on main since base \<sha7>; revise the change with propose
+   the same requirement from the same text. Commit and merge. Apply
+   `recategorize` on `recategorize-impl`; the `grove check` its archive runs
+   after reconciling the spec reports show-saved, not recategorize, and
+   exits non-zero:
+   > grove/changes/\<show-saved>/specs/record-editing/spec.md:\<line>: requirement "\<name>" was rewritten since base \<sha7>; revise the change with propose
 
+   The session archives recategorize anyway, since the report is not about
+   it. Commit and merge; `grove check` on main reports the same line. Set
+   show-saved's `depends_on` to `[<recategorize-id>]` in the working tree:
+   `grove check` is clean, since show-saved then builds on the change that
+   rewrote the requirement. Discard that edit.
    `git switch -c show-saved-revise`, a fresh session,
    `/grove-propose <show-saved>`, asked to bring it up to date with main.
    The session adds recategorize's scenario to show-saved's MODIFIED text
@@ -262,6 +278,16 @@ It starts where the main line's step 6 ends: one archived change and the
   > grove/changes/\<delete-id>-\<slug>/.grove.yaml:\<line>: depends_on: \<other-id> waits on this change in turn, so neither can be applied
 
   `grove changes` still works. Discard the edits.
+- **A change left out of a batch** (coordinating, "Applying every approved
+  change"). With an approved change whose `depends_on` names
+  `260101-zzzzz`, `grove instructions apply` ends its list with
+  > Leave out \<id>, "\<title>": it waits on 260101-zzzzz, which is neither being built nor archived as finished. Grove's `check` says why.
+- **Apply unattended** (coordinating, "Applying every approved change").
+  From main with two changes approved, `claude -p "/grove-apply"` with
+  `apply: [Commit after each task, naming its task ID.]` under
+  `rules: skills:` in `grove.yaml`. It creates a branch, builds and
+  archives both, commits, asks nothing, and its last message says which
+  changes were archived.
 - **Commit as you go** (reference, `rules`). With
   `apply: [Commit after each task, naming its task ID.]` under
   `rules: skills:` in `grove.yaml`, `/grove-apply` commits T-01 with its ID in the
@@ -366,13 +392,22 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
 - `base` comes from `{{commit}}`, a placeholder only Grove's `.grove.yaml`
   template fills; `{{base}}` stays the short commit in schema templates.
 - The docs page for coordinating changes is `docs/coordinating.md`.
-- `check` looks for what `depends_on` names among the working tree's
-  changes, open and archived, and not on the target; a branch holds the
-  target's archive as of where it started.
+- `check` and `instructions apply` look for what `depends_on` names among
+  the working tree's changes, open and archived, and not on the target; a
+  branch holds the target's archive as of where it started. `changes` reads
+  the target.
 - The stale check compares a requirement's text below its heading, trimmed,
-  at `base` and on the target, by name; one missing on the target was
-  removed. A requirement the maintained spec did not have at `base` is not
-  compared. A `base` that is not a commit is reported.
+  by name: the working tree's maintained spec against what it was at
+  `base`, what the change itself gives it, and what each change it depends
+  on, directly or through others, gives it. One missing from the working
+  tree was removed. A requirement the maintained spec did not have at
+  `base` is not compared. A `base` that is not a commit is reported.
+- `instructions apply` with no ID orders the target's approved changes that
+  the working tree has not archived: each after its dependencies, otherwise
+  by `created`. It prints the list and the loop; each change's own
+  instructions come from `instructions apply <id>`, run by the session.
+- Apply ends by running the archive instructions; `/grove-archive` stays
+  for dropping a change and for archiving by hand.
 - `grove changes --json` gives paths under the root, with `root` at the
   top, rather than from the repository's top; `state` is worked out when
   the project is read; a field with no value is left out; a change's

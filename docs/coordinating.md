@@ -2,9 +2,10 @@
 
 [Getting started](getting-started.md) takes one change from an idea to an
 updated spec. When several changes are approved at once, some must land
-before others. This page shows how a change says what it waits on, what
-happens when two changes rewrite the same requirement, and how to get the
-whole picture as data.
+before others. This page shows how a change says what it waits on, how one
+session applies every approved change in order, what happens when two
+changes rewrite the same requirement, and how to get the whole picture as
+data.
 
 ## A change that waits
 
@@ -34,8 +35,10 @@ grove changes
 >
 > 261019-r2w7k  Add ledger delete ID  approved  waits on 261019-p4x8d
 
-A change waits on each change in its `depends_on` until your main branch
-holds that change archived as finished. A dropped change never finishes.
+A change waits on each change in its `depends_on` until it is archived as
+finished. `grove changes` reads your main branch; applying reads your
+working tree, which on a branch holds everything main held when the branch
+started, plus what you archived on it. A dropped change never finishes.
 
 Applying a change that waits is refused. **Chat:**
 
@@ -43,10 +46,11 @@ Applying a change that waits is refused. **Chat:**
 /grove-apply 261019-r2w7k
 ```
 
-> grove: 261019-r2w7k waits on 261019-p4x8d, which main has not archived as finished
+> grove: 261019-r2w7k waits on 261019-p4x8d, which this working tree has not archived as finished
 
-The agent tells you and builds nothing. There are two ways past: apply and
-archive the change it waits on, and merge that; or, if it need not wait
+The agent tells you and builds nothing. There are three ways past: apply the
+change it waits on, which archives it when every task is done; apply every
+approved change at once, as the next section shows; or, if it need not wait
 after all, remove the dependency from `depends_on` on a branch and merge
 that. Any field of an approved change's `.grove.yaml` but `created` and
 `base` can change this way; `base` changes only when the change is revised
@@ -62,19 +66,64 @@ The order comes from `depends_on`: a change can be applied once every
 change it waits on is archived as finished, and changes that do not wait on
 each other can be built in parallel, on separate branches.
 
+## Applying every approved change
+
+One session can build everything that is approved and not yet archived, on
+one branch, and you merge once. **Terminal:** `git switch -c apply-all`.
+**Chat:**
+
+```text
+/grove-apply
+```
+
+With no ID, Grove lists the approved changes your working tree has not
+archived, in build order: each after the changes it depends on, otherwise
+oldest first. The agent takes them in turn, each with its own apply
+instructions, and when a change's tasks are all done it archives the change
+on the branch, as `/grove-apply <change-id>` does. The next change in the
+list then finds its dependency archived as finished.
+
+A change that waits on a change that is neither in the list nor archived as
+finished, because it was dropped or does not exist, is left out and named;
+`grove check` says why. A change whose task is blocked by an open question
+stays open, with the question in its `implementation.md`; a change that
+waits on it is refused and stays as it is. The agent's report says which
+changes were archived, which are blocked and on what, and which were left
+out.
+
+The branch holds the code, the updated specs and each archived change.
+Review the pull request and merge once. A blocked change is finished by
+revising it with `/grove-propose <change-id>`, merging, and applying again: a
+task its `implementation.md` already marks done is not built twice.
+
+Nothing in the session needs you. It creates a branch if it is on your main
+branch, settles no question itself, and commits only when a rule in
+`grove.yaml` asks, such as `Commit after each task, naming its task ID.`
+under `rules.skills.apply` (see [Reference](reference.md), "grove.yaml"). A
+pipeline that runs your agent on each push to main, with `/grove-apply` as
+the prompt, builds whatever that push approved and opens one pull request.
+
 ## When the plan is stale
 
 A change's spec MODIFIES or REMOVES a maintained requirement as it read at
 the change's `base`. If another change rewrites or removes that requirement
-on your main branch first, the change was planned against text that is no
-longer there. `grove check` reports each such requirement:
+first, the change was planned against text that is no longer there. `grove
+check` reports each such requirement:
 
-> grove/changes/261019-s5v3m-show-what-was-saved/specs/record-editing/spec.md:5: requirement "Keep an unchanged category on edit" was rewritten on main since base 4f1c2a9; revise the change with propose
+> grove/changes/261019-s5v3m-show-what-was-saved/specs/record-editing/spec.md:5: requirement "Keep a category" was rewritten since base 4f1c2a9; revise the change with propose
 
-It compares `base` with your main branch, not with your working tree, so
-the branch that archives the first change does not report the second.
-`/grove-archive` runs `grove check` first, and stops if it reports the
-change being archived.
+The rule: a requirement is stale when the maintained spec in your working
+tree gives it a text that is neither what it was at `base`, nor what this
+change gives it, nor what a change it depends on gives it. So a change whose
+MODIFIED text has been reconciled into the spec is not reported, and a
+change that names the rewriting change in `depends_on` is not reported
+either: its author planned against that text. Only a rewrite the change did
+not plan for is.
+
+Because `grove check` reads your working tree, the branch that archives the
+first change is where the second is reported, before anything is merged,
+whether one session applies them both or not. `/grove-archive` runs `grove
+check` first, and stops if it reports the change being archived.
 
 To bring the change up to date, revise it on a branch. **Chat:**
 

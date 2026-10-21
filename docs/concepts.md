@@ -66,10 +66,10 @@ flowchart LR
 3. **Review and merge.** You read the change and merge it. Now it is
    approved.
 4. **Apply.** The agent builds the change on a branch and records
-   progress.
-5. **Archive.** The agent folds the change's specs into the maintained specs
-   and moves the change to `grove/changes/archive/`. You merge code, specs and
-   archive together.
+   progress. With no ID, it builds every approved change in order.
+5. **Archive.** When every task is done, the agent folds the change's specs
+   into the maintained specs and moves the change to
+   `grove/changes/archive/`. You merge code, specs and archive together.
 
 When one approved change must land before another, the later one names
 it in `depends_on` (see [Coordinating changes](coordinating.md)).

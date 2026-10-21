@@ -124,13 +124,9 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 			}
 		}
 	}
-	finished := map[string]bool{}
-	for _, ch := range c.Archived {
-		finished[ch.ID] = !ch.Dropped
-	}
 	for _, ch := range c.Changes {
 		for _, id := range ch.Meta.DependsOn {
-			if !finished[id] {
+			if !c.Finished(id) {
 				ch.WaitsOn = append(ch.WaitsOn, id)
 			}
 		}
@@ -270,6 +266,36 @@ func idOf(name string) string {
 		return name[:12]
 	}
 	return ""
+}
+
+// Finished reports whether c holds change id archived as finished.
+func (c *Collection) Finished(id string) bool {
+	for _, ch := range c.Archived {
+		if ch.ID == id {
+			return !ch.Dropped
+		}
+	}
+	return false
+}
+
+// Order returns changes in build order, each after the changes it depends
+// on and otherwise oldest first, a dependency being met when finished
+// reports it or an earlier change is it; then the changes that cannot be
+// ordered, each waiting on a change that is neither.
+func Order(changes []*Change, finished func(id string) bool) (ordered, waiting []*Change) {
+	done := map[string]bool{}
+	waiting = slices.SortedStableFunc(slices.Values(changes), func(a, b *Change) int { return cmp.Compare(a.Meta.Created, b.Meta.Created) })
+	for len(waiting) > 0 {
+		i := slices.IndexFunc(waiting, func(ch *Change) bool {
+			return !slices.ContainsFunc(ch.Meta.DependsOn, func(id string) bool { return !done[id] && !finished(id) })
+		})
+		if i < 0 {
+			break
+		}
+		ordered, done[waiting[i].ID] = append(ordered, waiting[i]), true
+		waiting = slices.Delete(waiting, i, i+1)
+	}
+	return ordered, waiting
 }
 
 // Change returns the change whose ID is id, or nil.
