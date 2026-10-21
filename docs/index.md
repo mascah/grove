@@ -26,10 +26,12 @@ terminal  git switch -c my-change
 chat      /grove-explore <what you want>        talk it through; nothing is written
 chat      /grove-propose                        writes the change
 terminal  grove review, then merge              the merge approves the change
-chat      /grove-apply <change-id>              builds it, on a new branch
-chat      /grove-archive <change-id>            updates the specs, files the change away
+chat      /grove-apply <change-id>              builds it, updates the specs, files it away
 terminal  merge
 ```
+
+Or, once several changes are approved, `/grove-apply` with no ID builds them
+all in order and you merge once.
 
 Some agents type skills another way, such as `$grove-explore`; the
 [Reference](reference.md) lists how each is typed.

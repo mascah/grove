@@ -1,6 +1,6 @@
 - First run Grove's `check`. If it reports a requirement of this change as
-  rewritten or removed on the target since its base, stop and tell the
-  owner: the change must be revised with propose and merged again first.
+  rewritten or removed since its base, stop and report it: the change must
+  be revised with propose and merged again first.
 - A change is finished when every task in `tasks.md` has `Status: done` in
   `implementation.md`. Otherwise ask the owner whether it is dropped. A
   dropped change gets `Status: dropped` under the title of

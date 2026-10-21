@@ -114,18 +114,16 @@ writes the question there, and builds the rest. To unblock it, answer the
 question with `/grove-propose 261015-k3m9q`, merge the revision, and apply
 again.
 
-## 6. Archive
+When every task is done, the agent archives the change: it merges the
+change's specs into the maintained specs in `grove/specs/`, then runs
+`grove archive`, which moves the change to `grove/changes/archive/`.
+`/grove-archive 261015-k3m9q` does the same by hand, and is how a change
+you will not build is dropped.
 
-**Chat**, when every task is done:
+## 6. Merge
 
-```text
-/grove-archive 261015-k3m9q
-```
-
-The agent merges the change's specs into the maintained specs in
-`grove/specs/`, then runs `grove archive`, which moves the change to
-`grove/changes/archive/`. **Terminal:** commit, and merge the branch. The
-code, the updated spec and the archived change land together.
+**Terminal:** commit, and merge the branch. The code, the updated spec and
+the archived change land together.
 
 ```sh
 grove specs

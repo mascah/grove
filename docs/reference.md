@@ -9,7 +9,7 @@
 | `grove specs` | Lists the maintained specs on the target branch. |
 | `grove changes` | Lists the approved changes on the target branch that are not archived, and what each waits on. |
 | `grove changes --json` | Prints the target branch's changes, archived ones included, as JSON (see [Coordinating changes](coordinating.md), "The project as data"). |
-| `grove check` | Reports each problem in the Grove documents of this working tree, each unknown field or `rules` key in `grove.yaml`, and each mistake in a change schema, as `path:line: message`, and exits non-zero if there is one. Among the problems: a `depends_on` naming no change, open or archived, or a dropped change, changes that wait on each other in a loop, and a requirement a change modifies or removes that the target has rewritten or removed since the change's `base`. |
+| `grove check` | Reports each problem in the Grove documents of this working tree, each unknown field or `rules` key in `grove.yaml`, and each mistake in a change schema, as `path:line: message`, and exits non-zero if there is one. Among the problems: a `depends_on` naming no change, open or archived, or a dropped change, changes that wait on each other in a loop, and a requirement a change modifies or removes whose text in the working tree's maintained spec is neither what it was at the change's `base` nor what the change or a change it depends on gives it. |
 | `grove review` | Shows what merging the current branch into the target would approve: each change, maintained spec or change schema file it adds or alters, and the diff. |
 | `grove archive <change-id>` | Moves the change's folder to `changes/archive/`. Refuses unless `implementation.md` marks every task in `tasks.md` `Status: done`, or says `Status: dropped`. Commits nothing. |
 | `grove version` | Prints the version of Grove, such as `grove 0.1.0`. A build from a checkout prints a Go pseudo-version naming its commit, and `dev` when Go recorded none. |
@@ -21,7 +21,8 @@ Skills run these; you do not need to:
 | `grove instructions explore` | Interview the user about an idea, with the project's specs and changes listed. |
 | `grove instructions propose [--schema <name>] ["<description>"]` | Write a new change from the conversation or the description, with the project's change schema or the one named. |
 | `grove instructions propose <change-id>` | Revise a drafted change, with the schema it has. |
-| `grove instructions apply <change-id>` | Build an approved change and record progress. Refuses a change that waits on one the target does not hold archived as finished. |
+| `grove instructions apply <change-id>` | Build an approved change, record progress, and archive it when every task is done. Refuses a change that waits on one this working tree does not hold archived as finished. |
+| `grove instructions apply` | Build every approved change this working tree has not archived, in dependency order, each with its own instructions (see [Coordinating changes](coordinating.md), "Applying every approved change"). |
 | `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs, then run `grove archive`. |
 
 ## Harnesses

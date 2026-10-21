@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -100,7 +101,8 @@ func archive(stdout io.Writer, id string) error {
 }
 
 // instructionsApply prints the apply instructions for change id as the
-// target holds it, unless it waits on a change (D-56).
+// target holds it, unless it waits on a change this working tree has not
+// archived as finished (D-56).
 func instructionsApply(stdout io.Writer, id string) error {
 	p, err := openProject()
 	if err != nil {
@@ -110,11 +112,16 @@ func instructionsApply(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
-	switch c := ip.Agreed.Change(id); {
-	case c == nil:
+	tree, err := doc.Load(os.DirFS(filepath.Join(p.Top, p.Root)), ip.Layout)
+	if err != nil {
+		return err
+	}
+	c := ip.Agreed.Change(id)
+	if c == nil {
 		return fmt.Errorf("%s holds no approved change %s", p.Target, id)
-	case len(c.WaitsOn) > 0:
-		return fmt.Errorf("%s waits on %s, which %s has not archived as finished", id, strings.Join(c.WaitsOn, " and "), p.Target)
+	}
+	if waits := slices.DeleteFunc(slices.Clone(c.Meta.DependsOn), tree.Finished); len(waits) > 0 {
+		return fmt.Errorf("%s waits on %s, which this working tree has not archived as finished", id, strings.Join(waits, " and "))
 	}
 	fsys, err := gitx.TreeFS(p.Top, ip.Commit, p.Root)
 	if err != nil {
@@ -125,6 +132,34 @@ func instructionsApply(stdout io.Writer, id string) error {
 		return err
 	}
 	return show(stdout)(instruct.Apply(ip, c, files))
+}
+
+// instructionsApplyAll prints the instructions for applying every approved
+// change this working tree has not archived, in dependency order.
+func instructionsApplyAll(stdout io.Writer) error {
+	p, err := openProject()
+	if err != nil {
+		return err
+	}
+	ip, err := p.agreed()
+	if err != nil {
+		return err
+	}
+	tree, err := doc.Load(os.DirFS(filepath.Join(p.Top, p.Root)), ip.Layout)
+	if err != nil {
+		return err
+	}
+	archived := func(id string) bool {
+		return slices.ContainsFunc(tree.Archived, func(ch *doc.Change) bool { return ch.ID == id })
+	}
+	open := slices.DeleteFunc(slices.Clone(ip.Agreed.Changes), func(ch *doc.Change) bool { return archived(ch.ID) })
+	ordered, waiting := doc.Order(open, tree.Finished)
+	for _, ch := range waiting { // what keeps it out: neither being built nor finished here
+		ch.WaitsOn = slices.DeleteFunc(slices.Clone(ch.Meta.DependsOn), func(id string) bool {
+			return tree.Finished(id) || slices.ContainsFunc(ordered, func(o *doc.Change) bool { return o.ID == id })
+		})
+	}
+	return show(stdout)(instruct.ApplyAll(ip, ordered, waiting))
 }
 
 // show returns a function printing instructions unless building them failed.

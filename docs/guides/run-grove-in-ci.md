@@ -16,8 +16,7 @@ Two jobs a workflow can do without an agent:
 ## What to copy
 
 Save this as `.github/workflows/grove.yml`. It assumes your target branch is
-`main`; if yours differs, change `main` under `branches` and in the
-`git branch` step.
+`main`; if yours differs, change `main` under `branches`.
 
 ```yaml
 name: Grove
@@ -40,9 +39,6 @@ jobs:
           fetch-depth: 0
       - run: curl -fsSL "https://raw.githubusercontent.com/mascah/grove/$GROVE_VERSION/install.sh" | sh -s -- "$GROVE_VERSION"
       - run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      # A pull request's checkout has no local main; grove check compares with it.
-      - if: github.event_name == 'pull_request'
-        run: git branch main origin/main
       - run: grove check
       - name: One issue per change
         if: github.event_name == 'push'
@@ -80,7 +76,7 @@ script cannot change what an old pin runs. If your project pins Grove in
 `- uses: jdx/mise-action@v5` and drop `GROVE_VERSION`.
 
 To only check, delete the last step and the `issues: write` permission. To
-only keep issues, delete the `git branch` and `grove check` steps.
+only keep issues, delete the `grove check` step.
 
 ## What to expect
 

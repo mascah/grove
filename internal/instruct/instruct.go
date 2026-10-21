@@ -476,6 +476,24 @@ func Apply(p Project, c *doc.Change, files map[string]string) (Instructions, err
 
 // Archive returns the instructions for archiving change c, read from the
 // working tree; files are c.Files as read from there.
+// ApplyAll returns the instructions for applying the approved changes
+// ordered, in that order, and names what each change in waiting waits on.
+func ApplyAll(p Project, ordered, waiting []*doc.Change) (Instructions, error) {
+	var b strings.Builder
+	b.WriteString("Build these changes in this order, each after the changes it depends on. For each, run Grove's `instructions apply <change-id>` and follow what it prints to the end; then the next.\n\n")
+	for i, c := range ordered {
+		fmt.Fprintf(&b, "%d. %s %q%s\n", i+1, c.ID, c.Meta.Title, with(c.Meta.Schema))
+	}
+	if len(ordered) == 0 {
+		b.WriteString("- None: every approved change is archived in this working tree. There is nothing to build.\n")
+	}
+	for _, c := range waiting {
+		fmt.Fprintf(&b, "\nLeave out %s, %q: it waits on %s, which is neither being built nor archived as finished. Grove's `check` says why.\n", c.ID, c.Meta.Title, strings.Join(c.WaitsOn, " and "))
+	}
+	task := fmt.Sprintf("You are applying every approved change %s@%s holds that this working tree has not archived, in your own working tree.", p.Target, short(p.Commit))
+	return Instructions{Project: p, Skill: "apply", Task: task, Requires: embedded("requires/apply-all.md"), Guide: b.String()}, nil
+}
+
 func Archive(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
 	task := fmt.Sprintf("You are archiving change %s, %q%s, in the owner's own working tree.", c.ID, c.Meta.Title, with(c.Meta.Schema))
 	return build(p, c.Meta.Schema, "archive", task, fill(p, c), c, files)

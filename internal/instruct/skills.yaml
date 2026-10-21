@@ -9,7 +9,7 @@
   description: Propose a change from this conversation or from a description, or revise a drafted change given its ID.
   args: '"<args>"'
 - name: apply
-  description: Apply an approved change given its ID, building its tasks and recording progress in its implementation.md.
+  description: Apply an approved change given its ID, or every approved change not yet archived given none, building its tasks, recording progress in its implementation.md and archiving it when every task is done.
   args: <args>
 - name: archive
   description: Archive a finished or dropped change given its ID, first folding a finished change's specs into the maintained specs.

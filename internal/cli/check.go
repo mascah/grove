@@ -60,23 +60,15 @@ func check(stdout io.Writer) error {
 }
 
 // stale reports each requirement a change in c modifies or removes that the
-// target rewrote or removed since the change's base. It compares with the
-// target, not this working tree, so archiving a change that rewrites a spec
-// does not report the change being archived.
+// maintained spec in root gives a text that is neither what it was at the
+// change's base, nor what the change itself or a change it depends on gives
+// it. Reading root rather than the target, it sees a dependency archived on
+// this branch; allowing the change's own text, it stays quiet after archive
+// has reconciled the spec.
 func stale(p project, root fs.FS, c *doc.Collection) error {
-	var target fs.FS
 	for _, ch := range c.Changes {
 		if ch.Meta.Base == "" {
 			continue
-		}
-		if target == nil {
-			commit, err := gitx.ResolveBranch(p.Top, p.Target)
-			if err != nil {
-				return err
-			}
-			if target, err = gitx.TreeFS(p.Top, commit, p.Root); err != nil {
-				return err
-			}
 		}
 		base, err := gitx.TreeFS(p.Top, ch.Meta.Base, p.Root)
 		if err != nil {
@@ -91,21 +83,62 @@ func stale(p project, root fs.FS, c *doc.Collection) error {
 				if (r.Section != "MODIFIED" && r.Section != "REMOVED") || !ok {
 					continue
 				}
-				what := ""
-				switch now, ok := requirement(target, spec, r.Name); {
-				case !ok:
-					what = "removed"
-				case now != was:
-					what = "rewritten"
+				now, present := requirement(root, spec, r.Name)
+				fine := present && now == was
+				for _, g := range gives(root, behind(c, ch), ch.Touches[file], r.Name) {
+					fine = fine || g.Section == "REMOVED" && !present || g.Section != "REMOVED" && present && g.Text == now
 				}
-				if what != "" {
+				if !fine {
 					ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: file, Line: r.Line,
-						Message: fmt.Sprintf("requirement %q was %s on %s since base %s; revise the change with propose", r.Name, what, p.Target, ch.Meta.Base[:min(7, len(ch.Meta.Base))])})
+						Message: fmt.Sprintf("requirement %q was %s since base %s; revise the change with propose", r.Name, map[bool]string{true: "rewritten", false: "removed"}[present], ch.Meta.Base[:min(7, len(ch.Meta.Base))])})
 				}
 			}
 		}
 	}
 	return nil
+}
+
+// behind returns ch and every change it depends on, directly or through
+// others, open or archived in c.
+func behind(c *doc.Collection, ch *doc.Change) []*doc.Change {
+	all := map[string]*doc.Change{}
+	for _, x := range slices.Concat(c.Changes, c.Archived) {
+		all[x.ID] = x
+	}
+	var out []*doc.Change
+	var walk func(x *doc.Change)
+	walk = func(x *doc.Change) {
+		if x == nil || slices.Contains(out, x) {
+			return
+		}
+		out = append(out, x)
+		for _, id := range x.Meta.DependsOn {
+			walk(all[id])
+		}
+	}
+	walk(ch)
+	return out
+}
+
+// gives returns what the change specs of changes about capability say
+// requirement name becomes: each ADDED, MODIFIED or REMOVED block of that
+// name.
+func gives(root fs.FS, changes []*doc.Change, capability, name string) []doc.Requirement {
+	var out []doc.Requirement
+	for _, ch := range changes {
+		for _, file := range slices.Sorted(maps.Keys(ch.Touches)) {
+			if ch.Touches[file] != capability {
+				continue
+			}
+			b, _ := fs.ReadFile(root, file)
+			for _, r := range doc.Requirements(string(b)) {
+				if r.Name == name && r.Section != "" {
+					out = append(out, r)
+				}
+			}
+		}
+	}
+	return out
 }
 
 // requirement returns the text of requirement name in the spec file of

@@ -479,21 +479,22 @@ func TestSchemas(t *testing.T) {
 
 // finish plays the sessions that apply and archive change id on a new
 // branch, archiving writing spec as the record-editing maintained spec, then
-// merges it.
-func finish(t *testing.T, dir, branch, id, folder, spec string) {
+// merges it. It returns what check printed on the branch, before archive
+// moved the change.
+func finish(t *testing.T, dir, branch, id, folder, spec string) string {
 	t.Helper()
 	git(t, dir, "switch", "-q", "-c", branch)
 	os.WriteFile(filepath.Join(folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
 	os.MkdirAll(filepath.Join(dir, "grove/specs/record-editing"), 0o755)
 	os.WriteFile(filepath.Join(dir, "grove/specs/record-editing/.grove.yaml"), []byte("title: Record editing\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "grove/specs/record-editing/spec.md"), []byte("# Record editing\n\n## Requirements\n\n"+spec), 0o644)
-	if out := grove(t, "check"); out != "No problems in grove/.\n" {
-		t.Errorf("check on %s printed %q", branch, out)
-	}
+	var stdout, stderr strings.Builder
+	run([]string{"check"}, &stdout, &stderr)
 	grove(t, "archive", id)
 	commitAll(t, dir, "Implement and archive "+id)
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Merge "+branch, branch)
+	return stdout.String()
 }
 
 // TestCoordinating follows the walkthrough's "Coordinating changes".
@@ -520,11 +521,38 @@ func TestCoordinating(t *testing.T) {
 
 	// Apply refuses an unmet dependency.
 	var stdout, stderr strings.Builder
-	if code := run([]string{"instructions", "apply", del}, &stdout, &stderr); code != 1 || stderr.String() != "grove: "+del+" waits on "+unknown+", which main has not archived as finished\n" {
+	if code := run([]string{"instructions", "apply", del}, &stdout, &stderr); code != 1 || stderr.String() != "grove: "+del+" waits on "+unknown+", which this working tree has not archived as finished\n" {
 		t.Errorf("apply before its dependency is archived: status %d, %q", code, stderr.String())
 	}
+
+	// Applying every approved change lists them in dependency order
+	// ("Applying every approved change").
+	out = grove(t, "instructions", "apply")
+	for _, s := range []string{"## What Grove requires of apply\n\n- Work in this working tree on a branch other than the target",
+		"## How to apply\n\nBuild these changes in this order", "\n1. " + unknown + " \"Editing an unknown ID prints an error\"\n2. " + del + " \"Add ledger delete ID\"\n"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("apply-all instructions lack %q:\n%s", s, out)
+		}
+	}
+
+	// A dependency archived on this branch, not yet on main, is met.
 	keep := "### Requirement: Keep a category\n\nWhen a user edits a record and leaves its category unchanged, the system shall save the edit.\n"
-	finish(t, dir, "unknown-id-impl", unknown, unknownDir, keep)
+	git(t, dir, "switch", "-q", "-c", "batch")
+	os.WriteFile(filepath.Join(unknownDir, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
+	grove(t, "archive", unknown)
+	if out := grove(t, "instructions", "apply", del); !strings.Contains(out, "You are applying approved change "+del) {
+		t.Errorf("apply after its dependency is archived on the branch:\n%s", out)
+	}
+	if out := grove(t, "instructions", "apply"); !strings.Contains(out, "\n1. "+del+" \"Add ledger delete ID\"\n\n## Project index") {
+		t.Errorf("apply-all after archiving on the branch:\n%s", out)
+	}
+	git(t, dir, "checkout", "-q", "--", ".")
+	git(t, dir, "clean", "-qfd")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "branch", "-q", "-D", "batch")
+	if out := finish(t, dir, "unknown-id-impl", unknown, unknownDir, keep); out != "No problems in grove/.\n" {
+		t.Errorf("check on unknown-id-impl printed %q", out)
+	}
 	grove(t, "instructions", "apply", del)
 
 	// check reports broken dependencies (Other paths).
@@ -576,12 +604,20 @@ func TestCoordinating(t *testing.T) {
 	commitAll(t, dir, "Propose showing what was saved")
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve showing what was saved", "show-saved")
-	finish(t, dir, "recategorize-impl", recat, recatDir, "### Requirement: Keep a category\n\n"+recatText)
+	want := "grove/changes/" + filepath.Base(showDir) + "/specs/record-editing/spec.md:5: requirement \"Keep a category\" was rewritten since base " + base[:7] + "; revise the change with propose\n"
+	if out := finish(t, dir, "recategorize-impl", recat, recatDir, "### Requirement: Keep a category\n\n"+recatText); out != want {
+		t.Errorf("check while archiving recategorize printed %q", out)
+	}
 	stdout.Reset()
-	want := "grove/changes/" + filepath.Base(showDir) + "/specs/record-editing/spec.md:5: requirement \"Keep a category\" was rewritten on main since base " + base[:7] + "; revise the change with propose\n"
 	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != want {
 		t.Errorf("check of a stale change: status %d\n%s", code, stdout.String())
 	}
+	// Had show-saved depended on recategorize, its text would be expected.
+	os.WriteFile(filepath.Join(showDir, ".grove.yaml"), []byte("title: Show what was saved\ncreated: 2026-10-14T00:00:00Z\ndepends_on: ["+recat+"]\nbase: "+base+"\n"), 0o644)
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check with depends_on on the rewriting change printed %q", got)
+	}
+	git(t, dir, "checkout", "-q", "--", ".")
 	main = strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	git(t, dir, "switch", "-q", "-c", "show-saved-revise")
 	if out := grove(t, "instructions", "propose", show); !strings.Contains(out, "\nbase: "+main+"\n") || !strings.Contains(out, "never clear the report by hand") {
@@ -614,5 +650,12 @@ func TestCoordinating(t *testing.T) {
 	}
 	if v.Commit != main || states[unknown] != "archived" || states[recat] != "archived" || states[del] != "approved" {
 		t.Errorf("changes --json: %+v", v)
+	}
+
+	// Applying every approved change leaves out one that waits on a change
+	// that is neither being built nor finished.
+	imports, _ := approve(t, dir, "imports", "Import a CSV", "depends_on: [260101-zzzzz]\n")
+	if out := grove(t, "instructions", "apply"); !strings.Contains(out, "\nLeave out "+imports+", \"Import a CSV\": it waits on 260101-zzzzz, which is neither being built nor archived as finished.") || !strings.Contains(out, " "+del+" ") || !strings.Contains(out, " "+budgets+" ") || !strings.Contains(out, " "+show+" ") {
+		t.Errorf("apply-all with a change that cannot be built:\n%s", out)
 	}
 }
