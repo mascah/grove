@@ -23,17 +23,21 @@ type project struct {
 }
 
 func openProject() (project, error) {
-	p := project{Root: "grove", Target: "main", Schema: "default"} // the documented defaults
 	top, err := gitx.TopLevel(".")
 	if err != nil {
-		return p, err
+		return project{}, err
 	}
-	p.Top = top
 	b, err := os.ReadFile(filepath.Join(top, "grove.yaml"))
 	if err != nil {
-		return p, err
+		return project{}, err
 	}
-	err = yaml.Unmarshal(b, &p)
+	return parseProject(top, b)
+}
+
+// parseProject reads grove.yaml's contents b for the working tree at top.
+func parseProject(top string, b []byte) (project, error) {
+	p := project{Top: top, Root: "grove", Target: "main", Schema: "default"} // the documented defaults
+	err := yaml.Unmarshal(b, &p)
 	if len(p.Agents) == 0 { // set after reading, which would add to a default map rather than replace it
 		p.Agents = defaultAgents
 	}
@@ -49,11 +53,17 @@ func (p project) instruct() instruct.Project {
 
 // agreed returns the target's commit and the documents it holds.
 func (p project) agreed() (instruct.Project, error) {
-	ip := p.instruct()
-	var err error
-	if ip.Commit, err = gitx.ResolveBranch(p.Top, p.Target); err != nil {
-		return ip, err
+	commit, err := gitx.ResolveBranch(p.Top, p.Target)
+	if err != nil {
+		return p.instruct(), err
 	}
+	return p.at(commit)
+}
+
+// at returns commit and the documents it holds.
+func (p project) at(commit string) (instruct.Project, error) {
+	ip := p.instruct()
+	ip.Commit = commit
 	fsys, err := gitx.TreeFS(p.Top, ip.Commit, p.Root)
 	if err != nil {
 		return ip, err

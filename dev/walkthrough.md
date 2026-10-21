@@ -167,6 +167,67 @@ It starts where the main line's step 6 ends: one archived change and the
    shows the unknown-ID and recategorize changes as `archived` with `T-01` `done`, and the delete change with no
    `waits_on`, since the unknown-ID change is archived.
 
+## Running apply unattended
+
+Each step names the section of
+[Running apply unattended](../docs/running.md) it tests. Claude Code only.
+
+1. **Set up a checkout** ("Set up a checkout", "Tell the agent to commit and
+   open a pull request"). `just fixture ~/tmp/ledger`, `grove init`, add
+   the two `rules.skills.apply` lines from the page to `grove.yaml`, commit.
+   Create a private, disposable GitHub repository, add it as `origin` and
+   push `main`. `git clone` it to `~/tmp/ledger-run`, the operator's
+   checkout, and in it write `.claude/settings.local.json` and the
+   `.git/info/exclude` line from the page. In `~/tmp/ledger-run`,
+   `grove run`:
+   > Nothing to apply on main at \<sha7>.
+
+2. **An ordinary run** ("An ordinary run"). In `~/tmp/ledger`, approve two
+   changes as coordinating step 1 does, the delete change waiting on the
+   unknown-ID change, and push `main`. In `~/tmp/ledger-run`, `grove run`.
+   While it runs, `grove run` in a second shell there says
+   > grove: a run is in progress in this checkout
+
+   and `grove run` in another project's checkout proceeds. The first ends
+   > Attempt \<attempt> ended: exit status 0; its output is \<checkout>/.git/grove/\<attempt>.log.
+
+   The checkout is on `grove/run-<attempt>`, whose commits build and archive
+   both changes, the unknown-ID one first, each task with its ID. The pull
+   request lists both. `.git/grove/<attempt>.json` names both changes and
+   `main`'s commit, and `git status` shows nothing.
+
+3. **The pause** ("The pause"). `grove run` says
+   > grove: the project is paused after attempt \<attempt>, whose output is \<checkout>/.git/grove/\<attempt>.log; once you have dealt with it, run grove run --retry
+
+   In `~/tmp/ledger`, approve the budgets change and push: still paused.
+   Merge the pull request: `grove run` starts an attempt that selects only
+   budgets. Let it finish and close its pull request unmerged.
+
+4. **When a session is stopped** ("When a session is stopped").
+   `grove run --retry`, and once the output shows an edit to a file, press
+   Ctrl-C:
+   > grove: attempt \<attempt> ended: cancelled; its output is \<checkout>/.git/grove/\<attempt>.log
+
+   `ps -o pid,pgid,command -g <pid of that claude -p>` lists nothing, and
+   the branch, the edit and the output are there. `grove run --retry` says
+   > grove: the checkout has uncommitted changes; commit, stash or discard them first
+
+   and the edit is untouched. Discard it as the page shows, then
+   `grove run --retry --timeout 1m`: after a minute it ends `timed out`,
+   leaving no process of the session.
+
+5. **Refusals and failures** ("An ordinary run", "Retry"). Commit a file
+   on the operator's `main` and `grove run` from it:
+   > grove: the local main has commits origin's does not, so it cannot be fast-forwarded
+
+   Reset it. With `agents` holding only `codex` on `origin`'s `main`,
+   `grove run --retry` says
+   > grove: run needs Claude Code listed under agents in grove.yaml, as skills or commands
+
+   Put `claude` back. With `PATH` missing `claude`, `grove run --retry`
+   ends `failed to start`, the reason in its output, and the next
+   `grove run` says the project is paused.
+
 ## Other paths
 
 - **Propose from a description** (§3). On a new branch, with no exploration,

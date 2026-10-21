@@ -12,6 +12,9 @@
 | `grove check` | Reports each problem in the Grove documents of this working tree, each unknown field or `rules` key in `grove.yaml`, and each mistake in a change schema, as `path:line: message`, and exits non-zero if there is one. Among the problems: a `depends_on` naming no change, open or archived, or a dropped change, changes that wait on each other in a loop, and a requirement a change modifies or removes whose text in the working tree's maintained spec is neither what it was at the change's `base` nor what the change or a change it depends on gives it. |
 | `grove review` | Shows what merging the current branch into the target would approve: each change, maintained spec or change schema file it adds or alters, and the diff. |
 | `grove archive <change-id>` | Moves the change's folder to `changes/archive/`. Refuses unless `implementation.md` marks every task in `tasks.md` `Status: done`, or says `Status: dropped`. Commits nothing. |
+| `grove run` | In a clean checkout with `origin`, fetches the target, selects what `grove instructions apply` would build there, and starts one Claude Code session on the apply skill on a new branch, `grove/run-<attempt>`. Keeps a record and the output in `.git/grove/`, then starts nothing until every change it selected is archived on the target. See [Running apply unattended](running.md). |
+| `grove run --retry` | Starts a new attempt even though the latest one's changes are not archived. |
+| `grove run --timeout <duration>` | Stops the session after `<duration>`, such as `30m` or `1h30m`, rather than 2 hours. Goes with `--retry`. |
 | `grove version` | Prints the version of Grove, such as `grove 0.1.0`. A build from a checkout prints a Go pseudo-version naming its commit, and `dev` when Go recorded none. |
 
 Skills run these; you do not need to:

@@ -6,8 +6,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
 
 // fixture creates the ledger fixture as a fresh repository, as `just fixture`
@@ -658,4 +661,130 @@ func TestCoordinating(t *testing.T) {
 	if out := grove(t, "instructions", "apply"); !strings.Contains(out, "\nLeave out "+imports+", \"Import a CSV\": it waits on 260101-zzzzz, which is neither being built nor archived as finished.") || !strings.Contains(out, " "+del+" ") || !strings.Contains(out, " "+budgets+" ") || !strings.Contains(out, " "+show+" ") {
 		t.Errorf("apply-all with a change that cannot be built:\n%s", out)
 	}
+}
+
+// TestRun follows the walkthrough's "Running apply unattended" with a
+// stand-in claude on PATH, in an operator's clone of the fixture's remote.
+func TestRun(t *testing.T) {
+	owner := setUp(t)
+	remote, checkout, stub := filepath.Join(t.TempDir(), "remote.git"), filepath.Join(t.TempDir(), "checkout"), t.TempDir()
+	git(t, owner, "clone", "-q", "--bare", owner, remote)
+	git(t, owner, "remote", "add", "origin", remote)
+	git(t, owner, "clone", "-q", remote, checkout)
+	t.Setenv("PATH", stub+":/usr/bin:/bin")
+	// standIn writes claude to record its arguments and process group, then run body.
+	standIn := func(body string) {
+		os.WriteFile(filepath.Join(stub, "claude"), []byte("#!/bin/sh\necho \"$@\" > "+stub+"/args\necho $$ > "+stub+"/pgid\n"+body+"\n"), 0o755)
+	}
+	gone := func(when string) { // no process is left in the session's group
+		pgid, _ := strconv.Atoi(strings.TrimSpace(read(t, filepath.Join(stub, "pgid"))))
+		if err := syscall.Kill(-pgid, 0); err != syscall.ESRCH {
+			t.Errorf("%s, the session's process group is still running: %v", when, err)
+		}
+	}
+	runs := func(want string, args ...string) {
+		t.Helper()
+		t.Chdir(checkout)
+		var stdout, stderr strings.Builder
+		run(append([]string{"run"}, args...), &stdout, &stderr)
+		if got := stdout.String() + stderr.String(); !regexp.MustCompile(want).MatchString(got) {
+			t.Errorf("grove run %v printed %q, want %s", args, got, want)
+		}
+	}
+	runs(`^Nothing to apply on main at [0-9a-f]{7}\.\n$`)
+
+	t.Chdir(owner)
+	a, aDir := approve(t, owner, "a", "Editing an unknown ID prints an error", "")
+	b, bDir := approve(t, owner, "b", "Add ledger delete ID", "depends_on: ["+a+"]\n")
+	config := read(t, filepath.Join(owner, "grove.yaml"))
+	os.WriteFile(filepath.Join(owner, "grove.yaml"), []byte(strings.Replace(config, "  claude: skills\n", "", 1)), 0o644)
+	commitAll(t, owner, "Codex only")
+	git(t, owner, "push", "-q", "origin", "main")
+	runs(`^grove: run needs Claude Code listed under agents in grove.yaml, as skills or commands\n$`)
+	os.WriteFile(filepath.Join(owner, "grove.yaml"), []byte(config), 0o644)
+	commitAll(t, owner, "Claude Code again")
+	git(t, owner, "push", "-q", "origin", "main")
+
+	// Refusals: a local target of its own, an unclean checkout.
+	os.WriteFile(filepath.Join(checkout, "notes.txt"), []byte("mine\n"), 0o644)
+	commitAll(t, checkout, "A note of the operator's")
+	runs(`^grove: the local main has commits origin's does not, so it cannot be fast-forwarded\n$`)
+	git(t, checkout, "reset", "-q", "--hard", "HEAD~1")
+	os.WriteFile(filepath.Join(checkout, "README.md"), []byte("edited\n"), 0o644)
+	runs(`^grove: the checkout has uncommitted changes; commit, stash or discard them first\n$`)
+	git(t, checkout, "checkout", "-q", "--", ".")
+
+	// An ordinary run, with a second run while it goes, its session leaving a child behind.
+	standIn("sleep 30 &\ntouch " + stub + "/started\nwhile [ ! -f " + stub + "/release ]; do sleep 0.05; done")
+	first := make(chan string)
+	go func() {
+		var stdout, stderr strings.Builder
+		run([]string{"run"}, &stdout, &stderr)
+		first <- stdout.String() + stderr.String()
+	}()
+	for _, err := os.Stat(filepath.Join(stub, "started")); err != nil; _, err = os.Stat(filepath.Join(stub, "started")) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	runs(`^grove: a run is in progress in this checkout\n$`)
+	os.WriteFile(filepath.Join(stub, "release"), nil, 0o644)
+	if got := <-first; !regexp.MustCompile(`^Attempt [0-9]{6}-[0-9a-z]{5} ended: exit status 0; its output is .*/\.git/grove/[0-9]{6}-[0-9a-z]{5}\.log\.\n$`).MatchString(got) {
+		t.Errorf("the first run printed %q", got)
+	}
+	gone("after the session exited")
+	main := strings.TrimSpace(git(t, owner, "rev-parse", "main"))
+	var rec attempt
+	recs, _ := filepath.Glob(filepath.Join(checkout, ".git/grove/*.json"))
+	json.Unmarshal([]byte(read(t, recs[0])), &rec)
+	if read(t, filepath.Join(stub, "args")) != "-p /grove-apply\n" || strings.Join(rec.Changes, " ") != a+" "+b || rec.Commit != main || rec.Outcome != "exit status 0" ||
+		strings.TrimSpace(git(t, checkout, "branch", "--show-current")) != rec.Branch || strings.TrimSpace(git(t, checkout, "rev-parse", "main")) != main || git(t, checkout, "status", "--porcelain") != "" {
+		t.Errorf("after the first run: %+v, %s", rec, git(t, checkout, "status"))
+	}
+
+	// Paused, unrelated work merged meanwhile included, until the batch is archived.
+	runs(`^grove: the project is paused after attempt ` + rec.ID + `, whose output is ` + regexp.QuoteMeta(rec.Output) + `; once you have dealt with it, run grove run --retry\n$`)
+	c, _ := approve(t, owner, "c", "Monthly budgets in report", "")
+	git(t, owner, "push", "-q", "origin", "main")
+	runs(`paused after attempt ` + rec.ID)
+	t.Chdir(owner)
+	os.WriteFile(filepath.Join(aDir, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
+	os.WriteFile(filepath.Join(bDir, "implementation.md"), []byte("Status: dropped\n"), 0o644)
+	grove(t, "archive", a)
+	grove(t, "archive", b)
+	commitAll(t, owner, "Archive the batch")
+	git(t, owner, "push", "-q", "origin", "main")
+	standIn("")
+	runs(`^Attempt .* ended: exit status 0;`)
+	if recs, _ = filepath.Glob(filepath.Join(checkout, ".git/grove/*.json")); len(recs) != 2 {
+		t.Fatalf("records: %v", recs)
+	}
+	if l, _ := latest(filepath.Join(checkout, ".git/grove")); strings.Join(l.Changes, " ") != c {
+		t.Errorf("the run after the merge selected %v, want %s", l.Changes, c)
+	}
+
+	// Failed to start, then paused.
+	os.Remove(filepath.Join(stub, "claude"))
+	runs(`^grove: attempt .* ended: failed to start;`, "--retry")
+	runs(`^grove: the project is paused after attempt `)
+
+	// Cancelled after a visible edit; retry refuses until it is dealt with.
+	standIn("echo edit >> README.md\ntouch " + stub + "/started\nsleep 30")
+	os.Remove(filepath.Join(stub, "started"))
+	go func() {
+		for _, err := os.Stat(filepath.Join(stub, "started")); err != nil; _, err = os.Stat(filepath.Join(stub, "started")) {
+			time.Sleep(20 * time.Millisecond)
+		}
+		syscall.Kill(os.Getpid(), syscall.SIGINT)
+	}()
+	runs(`^grove: attempt .* ended: cancelled;`, "--retry")
+	gone("after cancelling")
+	runs(`^grove: the checkout has uncommitted changes;`, "--retry")
+	if !strings.HasSuffix(read(t, filepath.Join(checkout, "README.md")), "edit\n") {
+		t.Error("the interrupted edit is gone")
+	}
+	git(t, checkout, "checkout", "-q", "--", ".")
+
+	// Timed out, with a child that ignores the request to stop.
+	standIn("sh -c 'trap \"\" TERM; sleep 30' &\nsleep 30")
+	runs(`^grove: attempt .* ended: timed out;`, "--retry", "--timeout", "1s")
+	gone("after the time limit")
 }

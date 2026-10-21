@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -24,6 +25,9 @@ With no command, open the reader on the maintained specs and approved changes.
                              or every approved change with none
   instructions archive <change-id>
                              print the instructions for archiving a change
+  run [--retry] [--timeout <duration>]
+                             apply every approved change in one Claude Code session
+                             on a new branch, then pause until they are archived
   archive <change-id>        move a change to changes/archive/
   review                     show what merging this branch into the target would approve
   specs                      list the maintained specs
@@ -58,6 +62,15 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = instructionsApply(stdout, args[2])
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "archive":
 		err = instructionsArchive(stdout, args[2])
+	case len(args) > 0 && args[0] == "run":
+		f := flag.NewFlagSet("run", flag.ContinueOnError)
+		f.SetOutput(io.Discard)
+		retry, timeout := f.Bool("retry", false, ""), f.Duration("timeout", defaultTimeout, "")
+		if f.Parse(args[1:]) != nil || f.NArg() > 0 {
+			fmt.Fprint(stderr, usage)
+			return 2
+		}
+		err = runAttempt(stdout, *retry, *timeout)
 	case len(args) == 2 && args[0] == "archive":
 		err = archive(stdout, args[1])
 	case len(args) == 1 && args[0] == "review":

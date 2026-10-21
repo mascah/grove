@@ -1,0 +1,220 @@
+package cli
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"os/signal"
+	"path/filepath"
+	"strings"
+	"syscall"
+	"time"
+
+	"github.com/mascah/grove/internal/doc"
+	"github.com/mascah/grove/internal/gitx"
+)
+
+const defaultTimeout = 2 * time.Hour
+
+// stopGrace is how long a stopped session's processes have to exit before
+// they are killed.
+const stopGrace = 5 * time.Second
+
+// attempt is the record of one run, kept as <ID>.json in .git/grove/.
+type attempt struct {
+	ID       string    `json:"id"`
+	Started  time.Time `json:"started"`
+	Ended    time.Time `json:"ended,omitzero"`
+	Outcome  string    `json:"outcome,omitempty"` // exit status N, timed out, cancelled or failed to start
+	Changes  []string  `json:"changes"`
+	Commit   string    `json:"commit"`
+	Checkout string    `json:"checkout"`
+	Branch   string    `json:"branch"`
+	Output   string    `json:"output"`
+}
+
+// runAttempt starts one attempt: it updates the target from origin and,
+// unless the latest attempt's changes are still open or retry is set,
+// launches one Claude Code session on the apply skill for every change it
+// would build, on a new branch, within timeout.
+func runAttempt(stdout io.Writer, retry bool, timeout time.Duration) error {
+	p, err := openProject()
+	if err != nil {
+		return err
+	}
+	gitDir, err := gitx.Run(p.Top, "rev-parse", "--absolute-git-dir")
+	if err != nil {
+		return err
+	}
+	dir := filepath.Join(strings.TrimSpace(gitDir), "grove")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	lock, err := os.OpenFile(filepath.Join(dir, "lock"), os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return err
+	}
+	defer lock.Close() // the lock goes with the file, so a killed run leaves none
+	if syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) != nil {
+		return errors.New("a run is in progress in this checkout")
+	}
+	if out, err := gitx.Run(p.Top, "status", "--porcelain"); err != nil {
+		return err
+	} else if out != "" {
+		return errors.New("the checkout has uncommitted changes; commit, stash or discard them first")
+	}
+	if _, err := gitx.Run(p.Top, "fetch", "-q", "origin", p.Target); err != nil {
+		return err
+	}
+	commit, err := gitx.Run(p.Top, "rev-parse", "--verify", "FETCH_HEAD^{commit}")
+	if err != nil {
+		return err
+	}
+	commit = strings.TrimSpace(commit)
+	local, err := gitx.ResolveBranch(p.Top, p.Target)
+	if err != nil {
+		return err
+	}
+	if _, err := gitx.Run(p.Top, "merge-base", "--is-ancestor", local, commit); err != nil {
+		return fmt.Errorf("the local %s has commits origin's does not, so it cannot be fast-forwarded", p.Target)
+	}
+	config, err := gitx.Run(p.Top, "show", commit+":grove.yaml")
+	if err != nil {
+		return err
+	}
+	if p, err = parseProject(p.Top, []byte(config)); err != nil {
+		return err
+	}
+	skill := map[string]string{"skills": "/grove-apply", "commands": "/grove:apply"}[p.Agents["claude"]]
+	if skill == "" {
+		return errors.New("run needs Claude Code listed under agents in grove.yaml, as skills or commands")
+	}
+	ip, err := p.at(commit)
+	if err != nil {
+		return err
+	}
+	last, err := latest(dir)
+	if err != nil {
+		return err
+	}
+	for _, id := range last.Changes {
+		if !retry && !archived(ip.Agreed, id) {
+			return fmt.Errorf("the project is paused after attempt %s, whose output is %s; once you have dealt with it, run grove run --retry", last.ID, last.Output)
+		}
+	}
+	ordered, _ := buildable(ip.Agreed, ip.Agreed)
+	if len(ordered) == 0 {
+		fmt.Fprintf(stdout, "Nothing to apply on %s at %s.\n", p.Target, commit[:7])
+		return nil
+	}
+
+	now := time.Now()
+	a := attempt{ID: doc.NewID(now), Started: now, Commit: commit, Checkout: p.Top}
+	a.Branch, a.Output = "grove/run-"+a.ID, filepath.Join(dir, a.ID+".log")
+	for _, ch := range ordered {
+		a.Changes = append(a.Changes, ch.ID)
+	}
+	if _, err := gitx.Run(p.Top, "switch", "-q", "-c", a.Branch, commit); err != nil {
+		return err
+	}
+	// The apply instructions read the local target, so it moves too.
+	if _, err := gitx.Run(p.Top, "update-ref", "refs/heads/"+p.Target, commit, local); err != nil {
+		return err
+	}
+	if err := a.save(dir); err != nil {
+		return err
+	}
+	out, err := os.Create(a.Output)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	a.Outcome = session(out, p.Top, skill, timeout)
+	a.Ended = time.Now()
+	if err := a.save(dir); err != nil {
+		return err
+	}
+	ended := fmt.Sprintf("%s ended: %s; its output is %s", a.ID, a.Outcome, a.Output)
+	if a.Outcome != "exit status 0" {
+		return errors.New("attempt " + ended)
+	}
+	fmt.Fprintf(stdout, "Attempt %s.\n", ended)
+	return nil
+}
+
+// session runs skill in Claude Code in dir, its output going to out, and
+// returns how it ended. Whichever way it ends, its process group is stopped.
+func session(out *os.File, dir, skill string, timeout time.Duration) string {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
+	defer signal.Stop(signals)
+	cmd := exec.Command("claude", "-p", skill)
+	cmd.Dir, cmd.Stdout, cmd.Stderr = dir, out, out
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // its own group, so it can be stopped whole
+	if err := cmd.Start(); err != nil {
+		fmt.Fprintln(out, err)
+		return "failed to start"
+	}
+	done := make(chan struct{})
+	go func() { cmd.Wait(); close(done) }()
+	outcome := ""
+	select {
+	case <-done:
+		outcome = cmd.ProcessState.String()
+	case <-time.After(timeout):
+		outcome = "timed out"
+	case <-signals:
+		outcome = "cancelled"
+	}
+	stop(cmd.Process.Pid)
+	<-done
+	return outcome
+}
+
+// stop asks every process in group pgid to exit, kills those left after
+// stopGrace, and returns once none is left.
+func stop(pgid int) {
+	syscall.Kill(-pgid, syscall.SIGTERM)
+	kill := time.Now().Add(stopGrace)
+	for syscall.Kill(-pgid, 0) == nil {
+		if time.Now().After(kill) {
+			syscall.Kill(-pgid, syscall.SIGKILL)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+}
+
+func (a attempt) save(dir string) error {
+	b, err := json.MarshalIndent(a, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp := filepath.Join(dir, a.ID+".json.tmp")
+	if err := os.WriteFile(tmp, append(b, '\n'), 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, filepath.Join(dir, a.ID+".json")) // whole, even if the run is killed while saving
+}
+
+// latest returns the most recently started attempt in dir, or an empty one.
+func latest(dir string) (attempt, error) {
+	var last attempt
+	names, err := filepath.Glob(filepath.Join(dir, "*.json"))
+	for _, name := range names {
+		b, err := os.ReadFile(name)
+		if err != nil {
+			return last, err
+		}
+		var a attempt
+		if err := json.Unmarshal(b, &a); err != nil {
+			return last, fmt.Errorf("%s: %w", name, err)
+		}
+		if a.Started.After(last.Started) {
+			last = a
+		}
+	}
+	return last, err
+}
