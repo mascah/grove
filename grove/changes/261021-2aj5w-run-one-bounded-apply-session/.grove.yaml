@@ -1,0 +1,5 @@
+title: Run one bounded apply session
+created: 2026-10-21T17:48:08Z
+description: grove run launches one time-limited Claude Code session on the apply skill in a prepared checkout, then pauses the project.
+schema: default
+base: dca5543a51b1bcfaa03a16440a003c584b6b74d4
