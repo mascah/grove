@@ -8,15 +8,16 @@ is what approves it.
 Grove has two halves:
 
 - **In your terminal**, the `grove` command sets up a project, lists and
-  checks specs and changes, shows what a merge would approve, and opens a
-  reader.
+  checks specs and changes, shows what a merge would approve, opens a
+  reader, and can run apply unattended.
 - **In your agent's chat** (Claude Code, Codex, Cursor, OpenCode, Pi or
   Hermes), Grove's skills explore an idea, propose a change, apply it and
   archive it. Each skill asks `grove` for instructions and follows them in
   the conversation you are already in.
 
-Grove never starts an agent and never commits. You run your agent and you
-commit.
+Grove never commits. It starts an agent only when you run `grove run`,
+which launches one Claude Code session to build what is approved; otherwise
+you run your agent. You commit, or your agent does when a rule asks.
 
 ## The short version
 
@@ -45,8 +46,11 @@ Some agents type skills another way, such as `$grove-explore`; the
   changes, approval and archive mean.
 - [Coordinating changes](coordinating.md): changes that wait on others,
   stale plans, and the project as data.
+- [Running apply unattended](running.md): `grove run` builds approved
+  changes in one Claude Code session, on its own or from a timer.
 - Guides: recipes others have tried, such as
   [pushing changes to a tracker](guides/push-to-a-tracker.md),
-  [running Grove in CI](guides/run-grove-in-ci.md) and
+  [running Grove in CI](guides/run-grove-in-ci.md),
+  [running apply on a timer](guides/run-apply-on-a-timer.md) and
   [keeping a glossary and decision records](guides/glossary-and-decisions.md).
 - [Reference](reference.md): every command, skill and setting.

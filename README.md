@@ -5,6 +5,12 @@ and your coding agent agree on a change before it is built. Specs and changes
 are Markdown files in your repository; merging a change into your main branch
 approves it.
 
+Your agent builds an approved change when you type `/grove-apply` in its
+chat. Or `grove run` does it unattended: in a checkout you keep for the
+project, it starts one time-limited Claude Code session that builds every
+approved change on a new branch, then waits until you merge. See
+[Running apply unattended](docs/running.md).
+
 To install the `grove` command, see [Install](docs/install.md).
 
 The documentation is at <https://mascah.github.io/grove/>, built from

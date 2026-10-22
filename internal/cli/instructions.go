@@ -149,17 +149,27 @@ func instructionsApplyAll(stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	archived := func(id string) bool {
-		return slices.ContainsFunc(tree.Archived, func(ch *doc.Change) bool { return ch.ID == id })
-	}
-	open := slices.DeleteFunc(slices.Clone(ip.Agreed.Changes), func(ch *doc.Change) bool { return archived(ch.ID) })
-	ordered, waiting := doc.Order(open, tree.Finished)
+	ordered, waiting := buildable(ip.Agreed, tree)
+	return show(stdout)(instruct.ApplyAll(ip, ordered, waiting))
+}
+
+// buildable returns the changes agreed approves that tree has not
+// archived, in build order, then those that wait on a change neither being
+// built nor finished in tree.
+func buildable(agreed, tree *doc.Collection) (ordered, waiting []*doc.Change) {
+	open := slices.DeleteFunc(slices.Clone(agreed.Changes), func(ch *doc.Change) bool { return archived(tree, ch.ID) })
+	ordered, waiting = doc.Order(open, tree.Finished)
 	for _, ch := range waiting { // what keeps it out: neither being built nor finished here
 		ch.WaitsOn = slices.DeleteFunc(slices.Clone(ch.Meta.DependsOn), func(id string) bool {
 			return tree.Finished(id) || slices.ContainsFunc(ordered, func(o *doc.Change) bool { return o.ID == id })
 		})
 	}
-	return show(stdout)(instruct.ApplyAll(ip, ordered, waiting))
+	return ordered, waiting
+}
+
+// archived reports whether tree holds change id archived, finished or dropped.
+func archived(tree *doc.Collection, id string) bool {
+	return slices.ContainsFunc(tree.Archived, func(ch *doc.Change) bool { return ch.ID == id })
 }
 
 // show returns a function printing instructions unless building them failed.
