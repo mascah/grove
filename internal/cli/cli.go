@@ -8,6 +8,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/mascah/grove/internal/instruct"
 )
 
 const usage = `usage: grove [command]
@@ -20,6 +22,9 @@ With no command, open the reader on the maintained specs and approved changes.
                              print the instructions for proposing a new change
   instructions propose <change-id>
                              print the instructions for revising a drafted change
+  instructions implement <change-id>
+                             print the instructions for implementing an approved change
+                             with the owner
   instructions apply [<change-id>]
                              print the instructions for applying an approved change,
                              or every approved change with none
@@ -59,7 +64,9 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case len(args) == 2 && args[0] == "instructions" && args[1] == "apply":
 		err = instructionsApplyAll(stdout)
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "apply":
-		err = instructionsApply(stdout, args[2])
+		err = instructionsApply(stdout, args[2], instruct.Apply)
+	case len(args) == 3 && args[0] == "instructions" && args[1] == "implement":
+		err = instructionsApply(stdout, args[2], instruct.Implement)
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "archive":
 		err = instructionsArchive(stdout, args[2])
 	case len(args) > 0 && args[0] == "run":

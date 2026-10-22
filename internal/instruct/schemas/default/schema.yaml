@@ -35,6 +35,9 @@ skills:
   propose:
     guide: skills/propose.md
     writes: [proposal, change-spec, tasks]
+  implement:
+    guide: skills/implement.md
+    writes: [proposal, change-spec, tasks, implementation]
   apply:
     guide: skills/apply.md
     writes: [implementation]

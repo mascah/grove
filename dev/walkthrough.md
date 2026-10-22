@@ -27,7 +27,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    The fixture has no `.claude/`, `CLAUDE.md`, `AGENTS.md` or other sign of
    an agent, so `grove.yaml` lists `claude: skills` and `codex: skills`
    under `agents`. `.claude/skills/` and `.agents/skills/` each hold
-   `grove-explore`, `grove-propose`, `grove-apply` and `grove-archive`, and
+   `grove-explore`, `grove-propose`, `grove-implement`, `grove-apply` and
+   `grove-archive`, and
    every `SKILL.md` has the same body after its name. Then
    `git add -A && git commit -m "Set up Grove"`.
    Running `grove init` again rewrites the skills and leaves `grove.yaml` as
@@ -65,9 +66,12 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    `git switch main && git merge --no-ff older-edits`, then `grove changes`:
    > 261015-k3m9q  Allow editing older records  approved
 
-5. **Apply** (§5). `git switch -c older-edits-impl`, a fresh `claude`,
-   `/grove-apply 261015-k3m9q`. The open question blocks no task, so the
-   session asks nothing, works T-01 with a test, and writes `implementation.md` with
+5. **Implement** (§5). `git switch -c older-edits-impl`, a fresh `claude`,
+   `/grove-implement 261015-k3m9q`. Its instructions,
+   `grove instructions implement 261015-k3m9q`, give
+   `## What Grove requires of implement` before `## How to implement`. The
+   open question blocks no task, so the session asks nothing, works T-01
+   with a test, tells me how to try it, and writes `implementation.md` with
    T-01's status and evidence. `python3 -m unittest` passes. With every task
    done, the same session runs `grove instructions archive 261015-k3m9q`,
    adds the requirement to a new `grove/specs/record-editing/spec.md`, with
@@ -112,6 +116,8 @@ It starts where the main line's step 6 ends: one archived change and the
    fresh session, `/grove-apply <delete-id>`. Grove prints
    > grove: \<delete-id> waits on \<unknown-id>, which this working tree has not archived as finished
 
+   `grove instructions implement <delete-id>` prints the same (reference,
+   "Terminal commands").
    The session tells me and builds nothing. `git switch main && git branch -D
    delete-impl && git switch -c unknown-id-impl`, a fresh session,
    `/grove-apply <unknown-id>`, which builds and archives it. Commit and
@@ -243,6 +249,21 @@ Each step names the section of
   nothing, `implementation.md` says `Status: blocked` under T-01 with the
   question, and its last message names the question. `grove archive
   <change-id>` refuses.
+- **Implement asks, and revises with the owner** (§5). Continuing, on
+  another branch, a fresh `claude`, `/grove-implement <change-id>`. Before
+  building T-01 the session asks whether a missing record should exit 2. I
+  answer yes; it says it would edit the change spec's requirement and its
+  scenario, and the open question in the proposal, to say exit 2, and
+  waits. I agree: it edits them, runs `grove check` until
+  > No problems in grove/.
+
+  builds T-01 to exit 2 with a test, and archives the change. Commit, then
+  `grove review` shows the edited change spec beside the code. Had I
+  declined, the change's files would stay as they are. Had I said to leave
+  it, T-01 would be `Status: blocked` with the question.
+- **Implement refuses a draft** (§5). `grove instructions implement
+  <change-id>` for a change only on the current branch:
+  > grove: main holds no approved change \<change-id>
 - **A title that drifted** (reference, "Files"). Change `title` in a
   change's `.grove.yaml` and run `grove check`:
   > grove/changes/<change-id>-<slug>/proposal.md:1: the first heading should be "# <new title>", the title in .grove.yaml
@@ -304,20 +325,20 @@ Each step names the section of
   > Wrote grove.yaml and the Grove skills for claude and opencode; nothing is committed.
 
   `grove.yaml` lists `claude: skills` and `opencode: skills`;
-  `.claude/skills/` and `.agents/skills/` hold the four skills, the same
+  `.claude/skills/` and `.agents/skills/` hold the five skills, the same
   file in each.
 - **Commands** (reference, "Harnesses"). Continuing, add an `AGENTS.md`,
   set `claude: commands` in `grove.yaml`, and run `grove init`. Later runs
   read only `grove.yaml`, so codex stays out:
-  > Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore and grove-propose from .claude/skills; nothing is committed.
+  > Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement and grove-propose from .claude/skills; nothing is committed.
 
-  `.claude/commands/grove/` holds `explore.md`, `propose.md`, `apply.md` and
-  `archive.md`. In Claude Code, `/grove:propose Editing a missing record
+  `.claude/commands/grove/` holds `explore.md`, `propose.md`,
+  `implement.md`, `apply.md` and `archive.md`. In Claude Code, `/grove:propose Editing a missing record
   should print an error` runs `grove instructions propose "Editing a
   missing record should print an error"`.
 - **Drop a harness** (reference, "Harnesses"). Continuing, delete the
   `opencode` line and run `grove init`:
-  > Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore and grove-propose from .agents/skills; nothing is committed.
+  > Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement and grove-propose from .agents/skills; nothing is committed.
 
   A skill of my own, `.agents/skills/notes/`, is still there.
 - **A harness Grove does not have** (reference, "grove.yaml"). Set

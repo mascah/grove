@@ -24,14 +24,15 @@ Skills run these; you do not need to:
 | `grove instructions explore` | Interview the user about an idea, with the project's specs and changes listed. |
 | `grove instructions propose [--schema <name>] ["<description>"]` | Write a new change from the conversation or the description, with the project's change schema or the one named. |
 | `grove instructions propose <change-id>` | Revise a drafted change, with the schema it has. |
-| `grove instructions apply <change-id>` | Build an approved change, record progress, and archive it when every task is done. Refuses a change that waits on one this working tree does not hold archived as finished. |
+| `grove instructions implement <change-id>` | Build an approved change with the owner, asking them what the change leaves open and, with their agreement, revising it on the branch; record progress, and archive it when every task is done. Refuses a change that waits on one this working tree does not hold archived as finished. |
+| `grove instructions apply <change-id>` | Build an approved change without asking anyone, marking a task an open question decides blocked, record progress, and archive it when every task is done. Refuses a change that waits on one this working tree does not hold archived as finished. |
 | `grove instructions apply` | Build every approved change this working tree has not archived, in dependency order, each with its own instructions (see [Coordinating changes](coordinating.md), "Applying every approved change"). |
 | `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs, then run `grove archive`. |
 
 ## Harnesses
 
-`grove init` writes a file for each of Grove's four skills, explore,
-propose, apply and archive, for each harness under `agents` in
+`grove init` writes a file for each of Grove's five skills, explore,
+propose, implement, apply and archive, for each harness under `agents` in
 `grove.yaml`: as a skill, or as a command where the harness has commands.
 How you type apply, the others alike:
 
@@ -102,7 +103,7 @@ rules:
 | `target` | `main` | The branch whose contents count as agreed. Merging into it approves. |
 | `agents` | `claude` and `codex`, as `skills` | Each harness `init` writes Grove's skills for, and whether as `skills` or `commands` (see "Harnesses"). The first `init` chooses them. |
 | `schema` | `default` | The change schema a new change has unless the owner names another while proposing. See "Change schemas". |
-| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `propose`, `apply`, `archive`. |
+| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `propose`, `implement`, `apply`, `archive`. |
 
 `grove check` reports a field or `rules` key that Grove does not know; other
 commands ignore it. It also reports a harness under `agents` that Grove has
@@ -124,10 +125,10 @@ is `default`, the software change [Concepts](concepts.md) describes:
 
 | Kind | Path, under the root | Written by |
 | --- | --- | --- |
-| `proposal` | `changes/<change>/proposal.md`, the change's main document | propose |
-| `change-spec` | `changes/<change>/specs/<capability>/spec.md` | propose |
-| `tasks` | `changes/<change>/tasks.md` | propose |
-| `implementation` | `changes/<change>/implementation.md` | apply, archive |
+| `proposal` | `changes/<change>/proposal.md`, the change's main document | propose, implement |
+| `change-spec` | `changes/<change>/specs/<capability>/spec.md` | propose, implement |
+| `tasks` | `changes/<change>/tasks.md` | propose, implement |
+| `implementation` | `changes/<change>/implementation.md` | implement, apply, archive |
 | `spec` | `specs/<capability>/spec.md`, a maintained spec | archive |
 
 A schema's folder holds `schema.yaml`, a folder for each kind of document,
@@ -174,7 +175,7 @@ Each file the schema needs comes from `grove/schemas/<name>/`, else from
 for `default` is so your other schemas' too, unless they have their own.
 
 A change has a schema, which its `.grove.yaml` names as `schema`, and keeps
-it: revising, applying and archiving the change use it. A change without
+it: revising, implementing, applying and archiving the change use it. A change without
 one has `default`. A new change has `grove.yaml`'s `schema`, unless the owner
 says which kind of work it is while exploring or proposing: when the project
 has schemas other than `default`, the instructions list them, and the agent
