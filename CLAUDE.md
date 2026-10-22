@@ -34,16 +34,3 @@ follow what it prints. What Grove does is specified by `docs/` (rule 8).
 - No fact is written in two of `CONSTITUTION.md`, `CLAUDE.md` and
   `CONTRIBUTING.md`; one links to another instead. Scope lives only in the
   constitution.
-- Questions about whether Grove should do something are asked in text and
-  name the rule they would cross. The agent may give its recommendation,
-  marked as the agent's. "How should it work" is asked only after "whether"
-  is answered.
-- An owner's answer from a phone or a tap is a lean, not a decision. A
-  decision is the owner's words written into the owner's decision register,
-  kept outside this repository, or into `CONSTITUTION.md`.
-- Adversarial review is run by the owner, by hand, after a real run. Agents
-  do not invoke it, and a finding gets a fix only with a fixture reproduction.
-- Harness behavior that varies by user settings, such as permission prompts,
-  is never a design input.
-- Decisions in documents are the owner's, in the owner's words, attributed.
-  Agent inference goes under open questions or assumptions to confirm.
