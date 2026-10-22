@@ -99,20 +99,28 @@ grove changes
 
 The merge is the approval. Approved means agreed future work, not built.
 
-## 5. Apply
+## 5. Implement
 
 **Terminal:** `git switch -c rename-projects-impl`. **Chat:**
 
 ```text
-/grove-apply 261015-k3m9q
+/grove-implement 261015-k3m9q
 ```
 
-The agent works through the tasks with tests and records each task's status
-and evidence in the change's `implementation.md`. If an open question decides
-how a task is built, the agent does not guess: it marks that task blocked,
-writes the question there, and builds the rest. To unblock it, answer the
-question with `/grove-propose 261015-k3m9q`, merge the revision, and apply
-again.
+The agent works through the tasks with tests, tells you how to try each one,
+and records each task's status and evidence in the change's
+`implementation.md`. If an open question decides how a task is built, the
+agent does not guess: it asks you. If you say to leave it, it marks that
+task blocked, writes the question there, and builds the rest.
+
+When your answer or your feedback changes what the change says, the agent
+tells you which of its proposal, specs and tasks it would edit and how. Once
+you agree, it edits them on this branch and builds to them. Merging the
+branch approves the revision with the code, and `grove review` shows it.
+
+`/grove-apply 261015-k3m9q` builds the change without you: it asks no one,
+marks a task an open question decides blocked, and never edits the change.
+`grove run` uses it (see [Running apply unattended](running.md)).
 
 When every task is done, the agent archives the change: it merges the
 change's specs into the maintained specs in `grove/specs/`, then runs

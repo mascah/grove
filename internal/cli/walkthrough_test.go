@@ -71,7 +71,7 @@ func TestInit(t *testing.T) {
 		t.Errorf("init said %q, want %q", got, want)
 	}
 	for _, h := range []string{".claude", ".agents"} {
-		for _, w := range []string{"explore", "propose", "apply", "archive"} {
+		for _, w := range []string{"explore", "propose", "implement", "apply", "archive"} {
 			if skill := read(t, filepath.Join(dir, h, "skills", "grove-"+w, "SKILL.md")); !strings.Contains(skill, "name: grove-"+w+"\n") || !strings.Contains(skill, " instructions "+w) {
 				t.Errorf("%s skill grove-%s:\n%s", h, w, skill)
 			}
@@ -116,7 +116,7 @@ func TestHarnesses(t *testing.T) {
 
 	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Agents\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "claude: skills", "claude: commands", 1)), 0o644)
-	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore and grove-propose from .claude/skills; nothing is committed.\n"; got != want {
+	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement and grove-propose from .claude/skills; nothing is committed.\n"; got != want {
 		t.Errorf("init with claude's commands said %q, want %q", got, want)
 	}
 	if cmd := read(t, filepath.Join(dir, ".claude/commands/grove/propose.md")); !strings.HasPrefix(cmd, "---\ndescription: ") || !strings.Contains(cmd, "Run `grove instructions propose \"$ARGUMENTS\"` and follow what it prints, in this conversation.\n") {
@@ -124,7 +124,7 @@ func TestHarnesses(t *testing.T) {
 	}
 
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "  claude: skills\n  opencode: skills\n", "  claude: commands\n", 1)), 0o644)
-	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore and grove-propose from .agents/skills; nothing is committed.\n"; got != want {
+	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement and grove-propose from .agents/skills; nothing is committed.\n"; got != want {
 		t.Errorf("init without opencode said %q, want %q", got, want)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".agents/skills/notes")); err != nil {
@@ -314,16 +314,24 @@ func TestApplyInstructions(t *testing.T) {
 	cid, _ := propose(t, dir, "older-edits", "Allow editing older records", "")
 	commitAll(t, dir, "Propose")
 
-	var stdout, stderr strings.Builder
-	if code := run([]string{"instructions", "apply", cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove: main holds no approved change "+cid+"\n" {
-		t.Errorf("before the merge: status %d, %q", code, stderr.String())
+	for _, skill := range []string{"apply", "implement"} {
+		var stdout, stderr strings.Builder
+		if code := run([]string{"instructions", skill, cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove: main holds no approved change "+cid+"\n" {
+			t.Errorf("%s before the merge: status %d, %q", skill, code, stderr.String())
+		}
 	}
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
 	out := grove(t, "instructions", "apply", cid)
-	for _, s := range []string{"/implementation.md\">\n# Implementation: Allow editing older records", "### Requirement: Edit older records"} {
+	for _, s := range []string{"/implementation.md\">\n# Implementation: Allow editing older records", "### Requirement: Edit older records", "even if you could\n  ask"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("apply instructions lack %q", s)
+		}
+	}
+	out = grove(t, "instructions", "implement", cid)
+	for _, s := range []string{"You are implementing approved change " + cid, "## What Grove requires of implement\n", "ask the owner and\n  wait", "### change-spec: ", "### Requirement: Edit older records"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("implement instructions lack %q", s)
 		}
 	}
 }
@@ -522,10 +530,13 @@ func TestCoordinating(t *testing.T) {
 		t.Errorf("explore's index does not say what delete waits on:\n%s", out)
 	}
 
-	// Apply refuses an unmet dependency.
+	// Apply and implement refuse an unmet dependency.
 	var stdout, stderr strings.Builder
-	if code := run([]string{"instructions", "apply", del}, &stdout, &stderr); code != 1 || stderr.String() != "grove: "+del+" waits on "+unknown+", which this working tree has not archived as finished\n" {
-		t.Errorf("apply before its dependency is archived: status %d, %q", code, stderr.String())
+	for _, skill := range []string{"apply", "implement"} {
+		stderr.Reset()
+		if code := run([]string{"instructions", skill, del}, &stdout, &stderr); code != 1 || stderr.String() != "grove: "+del+" waits on "+unknown+", which this working tree has not archived as finished\n" {
+			t.Errorf("%s before its dependency is archived: status %d, %q", skill, code, stderr.String())
+		}
 	}
 
 	// Applying every approved change lists them in dependency order

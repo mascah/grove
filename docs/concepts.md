@@ -53,8 +53,8 @@ before you merge it.
 flowchart LR
     explore["Explore<br/>(a conversation)"] --> propose["Propose<br/>(writes a change)"]
     propose --> merge1["Review and merge<br/>(approves it)"]
-    merge1 --> apply["Apply<br/>(builds it)"]
-    apply --> archive["Archive and merge<br/>(updates the specs)"]
+    merge1 --> implement["Implement<br/>(builds it)"]
+    implement --> archive["Archive and merge<br/>(updates the specs)"]
     archive --> specs[("Maintained specs")]
     specs --> explore
 ```
@@ -65,8 +65,13 @@ flowchart LR
    description.
 3. **Review and merge.** You read the change and merge it. Now it is
    approved.
-4. **Apply.** The agent builds the change on a branch and records
-   progress. With no ID, it builds every approved change in order.
+4. **Implement.** The agent builds the change on a branch with you and
+   records progress. It asks you what the change leaves open and, with
+   your agreement, revises the change on that branch; your merge then
+   approves the revision with the code. **Apply** builds the change without
+   you: it asks no one, marks a task an open question decides blocked, and
+   never edits the change. With no ID, apply builds every approved change in
+   order.
 5. **Archive.** When every task is done, the agent folds the change's specs
    into the maintained specs and moves the change to
    `grove/changes/archive/`. You merge code, specs and archive together.
@@ -78,8 +83,9 @@ A change you decide not to build is archived too, without touching the
 specs; its `implementation.md` says `Status: dropped` and why.
 
 What Grove requires at each step is the same in every project: exploring
-writes nothing unless you ask, only your merge approves a change, applying
-builds the change as your main branch holds it and records each task's
+writes nothing unless you ask, only your merge approves a change,
+implementing and applying build the change as your main branch holds it,
+or as you agreed to revise it while implementing, and record each task's
 status in `implementation.md`, and archiving refuses a change that is
 neither finished nor dropped.
 
@@ -104,13 +110,14 @@ A `default` change folder holds:
 | File | Written by | Says |
 | --- | --- | --- |
 | `.grove.yaml` | propose | Title, when it was created, its schema, the commit it was proposed from, the changes it waits on if any, and an optional one-line description. |
-| `proposal.md` | propose | Why, what changes, decisions with who made them, open questions. |
-| `specs/<capability>/spec.md` | propose | Requirements the change adds, changes or removes, for one capability each. |
-| `tasks.md` | propose | The work as numbered tasks, each with how to check it is done. |
-| `implementation.md` | apply, archive | Each task's status and evidence, and which specs were updated. |
+| `proposal.md` | propose, implement | Why, what changes, decisions with who made them, open questions. |
+| `specs/<capability>/spec.md` | propose, implement | Requirements the change adds, changes or removes, for one capability each. |
+| `tasks.md` | propose, implement | The work as numbered tasks, each with how to check it is done. |
+| `implementation.md` | implement, apply, archive | Each task's status and evidence, and which specs were updated. |
 
-`tasks.md` is part of what was approved, so applying it never edits it;
-progress goes in `implementation.md`.
+`tasks.md` is part of what was approved, so building it never edits it
+except in a revision you agree to while implementing; progress goes in
+`implementation.md`.
 
 ## Change schemas
 

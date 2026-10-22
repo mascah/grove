@@ -100,10 +100,10 @@ func archive(stdout io.Writer, id string) error {
 	return nil
 }
 
-// instructionsApply prints the apply instructions for change id as the
-// target holds it, unless it waits on a change this working tree has not
-// archived as finished (D-56).
-func instructionsApply(stdout io.Writer, id string) error {
+// instructionsApply prints the instructions skill builds, apply's or
+// implement's, for change id as the target holds it, unless it waits on a
+// change this working tree has not archived as finished (D-56).
+func instructionsApply(stdout io.Writer, id string, skill func(instruct.Project, *doc.Change, map[string]string) (instruct.Instructions, error)) error {
 	p, err := openProject()
 	if err != nil {
 		return err
@@ -131,7 +131,7 @@ func instructionsApply(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
-	return show(stdout)(instruct.Apply(ip, c, files))
+	return show(stdout)(skill(ip, c, files))
 }
 
 // instructionsApplyAll prints the instructions for applying every approved

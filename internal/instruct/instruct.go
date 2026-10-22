@@ -474,8 +474,14 @@ func Apply(p Project, c *doc.Change, files map[string]string) (Instructions, err
 	return build(p, c.Meta.Schema, "apply", task, fill(p, c), c, files)
 }
 
-// Archive returns the instructions for archiving change c, read from the
-// working tree; files are c.Files as read from there.
+// Implement returns the instructions for implementing change c, which the
+// target holds, with the owner; files are c.Files as read from there.
+func Implement(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
+	task := fmt.Sprintf("You are implementing approved change %s, %q%s, as %s@%s holds it, with the owner, in their own working tree.",
+		c.ID, c.Meta.Title, with(c.Meta.Schema), p.Target, short(p.Commit))
+	return build(p, c.Meta.Schema, "implement", task, fill(p, c), c, files)
+}
+
 // ApplyAll returns the instructions for applying the approved changes
 // ordered, in that order, and names what each change in waiting waits on.
 func ApplyAll(p Project, ordered, waiting []*doc.Change) (Instructions, error) {
@@ -494,6 +500,8 @@ func ApplyAll(p Project, ordered, waiting []*doc.Change) (Instructions, error) {
 	return Instructions{Project: p, Skill: "apply", Task: task, Requires: embedded("requires/apply-all.md"), Guide: b.String()}, nil
 }
 
+// Archive returns the instructions for archiving change c, read from the
+// working tree; files are c.Files as read from there.
 func Archive(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
 	task := fmt.Sprintf("You are archiving change %s, %q%s, in the owner's own working tree.", c.ID, c.Meta.Title, with(c.Meta.Schema))
 	return build(p, c.Meta.Schema, "archive", task, fill(p, c), c, files)
