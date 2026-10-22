@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/mascah/grove/compare/v0.2.0...v0.3.0) (2026-10-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** `grove check` reports a change that rewrites a requirement another change in the same working tree has rewritten, where it compared with the target before; the stale message no longer names the target. The apply skill archives a finished change instead of handing off to `/grove-archive`.
+
+### Features
+
+* **cli:** apply every approved change in one session, archiving each ([#15](https://github.com/mascah/grove/issues/15)) ([1e3e819](https://github.com/mascah/grove/commit/1e3e8192651562fc06073fdf9e32038a3b22f80c))
+* **cli:** grove run launches one bounded apply session ([#18](https://github.com/mascah/grove/issues/18)) ([e80aa4e](https://github.com/mascah/grove/commit/e80aa4e4db78736470da793b22a9123c79ed6218))
+
 ## [0.2.0](https://github.com/mascah/grove/compare/v0.1.0...v0.2.0) (2026-10-20)
 
 
