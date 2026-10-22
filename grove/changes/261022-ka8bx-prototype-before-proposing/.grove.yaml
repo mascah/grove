@@ -1,0 +1,5 @@
+title: Prototype before proposing
+created: 2026-10-22T17:12:59Z
+description: /grove-prototype builds a throwaway experiment on a prototype branch to answer a question before a change is proposed; explore suggests one when it would change the proposal.
+schema: default
+base: 7ce7b9119716117a6890dcc11876a2397d422048

@@ -1,0 +1,5 @@
+title: Implement a change with the owner
+created: 2026-10-22T17:10:05Z
+description: /grove-implement builds an approved change in the owner's session, asking the owner instead of blocking, and may revise the change on its branch with their agreement.
+schema: default
+base: 7ce7b9119716117a6890dcc11876a2397d422048
