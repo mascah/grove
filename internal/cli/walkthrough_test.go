@@ -71,7 +71,7 @@ func TestInit(t *testing.T) {
 		t.Errorf("init said %q, want %q", got, want)
 	}
 	for _, h := range []string{".claude", ".agents"} {
-		for _, w := range []string{"explore", "propose", "implement", "apply", "archive"} {
+		for _, w := range []string{"explore", "prototype", "propose", "implement", "apply", "archive"} {
 			if skill := read(t, filepath.Join(dir, h, "skills", "grove-"+w, "SKILL.md")); !strings.Contains(skill, "name: grove-"+w+"\n") || !strings.Contains(skill, " instructions "+w) {
 				t.Errorf("%s skill grove-%s:\n%s", h, w, skill)
 			}
@@ -116,7 +116,7 @@ func TestHarnesses(t *testing.T) {
 
 	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Agents\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "claude: skills", "claude: commands", 1)), 0o644)
-	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement and grove-propose from .claude/skills; nothing is committed.\n"; got != want {
+	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement, grove-propose and grove-prototype from .claude/skills; nothing is committed.\n"; got != want {
 		t.Errorf("init with claude's commands said %q, want %q", got, want)
 	}
 	if cmd := read(t, filepath.Join(dir, ".claude/commands/grove/propose.md")); !strings.HasPrefix(cmd, "---\ndescription: ") || !strings.Contains(cmd, "Run `grove instructions propose \"$ARGUMENTS\"` and follow what it prints, in this conversation.\n") {
@@ -124,7 +124,7 @@ func TestHarnesses(t *testing.T) {
 	}
 
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "  claude: skills\n  opencode: skills\n", "  claude: commands\n", 1)), 0o644)
-	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement and grove-propose from .agents/skills; nothing is committed.\n"; got != want {
+	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement, grove-propose and grove-prototype from .agents/skills; nothing is committed.\n"; got != want {
 		t.Errorf("init without opencode said %q, want %q", got, want)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".agents/skills/notes")); err != nil {
@@ -240,13 +240,30 @@ func TestExplore(t *testing.T) {
 	setUp(t)
 	out := grove(t, "instructions", "explore")
 	for _, s := range []string{"# Grove instructions: explore", "Interview before you conclude anything",
-		"Maintained specs (agreed behavior):\n- None."} {
+		"Maintained specs (agreed behavior):\n- None.", "`instructions prototype \"<question>\"`"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("explore instructions lack %q", s)
 		}
 	}
 	if strings.Contains(out, "## Documents") {
 		t.Error("explore instructions offer a document to fill in")
+	}
+}
+
+func TestPrototype(t *testing.T) {
+	setUp(t)
+	out := grove(t, "instructions", "prototype", "Does a budget line read clearly?")
+	for _, s := range []string{"You are prototyping the owner's question below", "## What Grove requires of prototype\n", "branch `prototype/<slug>`",
+		"## Owner's description\n\nDoes a budget line read clearly?\n", "Maintained specs (agreed behavior):"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("prototype instructions lack %q", s)
+		}
+	}
+	if strings.Contains(out, "## Documents") {
+		t.Error("prototype instructions offer a document to fill in")
+	}
+	if out := grove(t, "instructions", "propose"); !strings.Contains(out, "citing the prototype branch and the commit") {
+		t.Error("propose instructions do not say to cite a prototype")
 	}
 }
 

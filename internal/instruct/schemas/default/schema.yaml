@@ -32,6 +32,8 @@ documents:
 skills:
   explore:
     guide: skills/explore.md
+  prototype:
+    guide: skills/prototype.md
   propose:
     guide: skills/propose.md
     writes: [proposal, change-spec, tasks]

@@ -29,6 +29,18 @@ func instructionsExplore(stdout io.Writer) error {
 	return show(stdout)(instruct.Explore(ip))
 }
 
+func instructionsPrototype(stdout io.Writer, question string) error {
+	p, err := openProject()
+	if err != nil {
+		return err
+	}
+	ip, err := p.agreed()
+	if err != nil {
+		return err
+	}
+	return show(stdout)(instruct.Prototype(ip, question))
+}
+
 // instructionsPropose prints the propose instructions: for a new change in
 // change schema schema, or grove.yaml's when it is empty, when arg is empty
 // or a description, or for revising the drafted change whose ID arg is.

@@ -5,6 +5,9 @@
 # it goes is the change schema's.
 - name: explore
   description: Explore an idea with the owner before proposing a change, in an interview that writes nothing unless asked.
+- name: prototype
+  description: Prototype a question with the owner before proposing a change, in a throwaway experiment on a prototype branch that writes no Grove document.
+  args: '"<args>"'
 - name: propose
   description: Propose a change from this conversation or from a description, or revise a drafted change given its ID.
   args: '"<args>"'

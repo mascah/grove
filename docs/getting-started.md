@@ -54,6 +54,27 @@ you, one question at a time. It keeps apart what is agreed, what is approved
 and what the code merely does. Exploring writes nothing; when you want
 something kept, ask, or go on to propose.
 
+### Try it first
+
+When a question's answer could change what you propose, such as how a new
+screen feels or whether a library can do what you need, the agent names the
+question and asks whether to prototype it. Say yes, or ask yourself:
+
+```text
+/grove-prototype Should renaming happen inline in the project list?
+```
+
+The agent agrees the question and its limits with you, builds the simplest
+throwaway experiment on a branch such as `prototype/inline-rename`, runs
+it, and reports how to run it, what it observed, a verdict and what it
+cannot show. It writes no Grove document. When it asks, let it commit the
+experiment there, so the proposal can cite it. That branch is never merged;
+push it if you want to keep it.
+
+When you go on to propose, the agent switches back to `rename-projects` and
+writes the findings into the proposal, citing the prototype's branch and
+commit. A prototype that kills the idea leaves only its branch.
+
 ## 3. Propose
 
 **Chat**, in the same conversation:

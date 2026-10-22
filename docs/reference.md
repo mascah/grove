@@ -22,6 +22,7 @@ Skills run these; you do not need to:
 | Command | Prints the instructions to |
 | --- | --- |
 | `grove instructions explore` | Interview the user about an idea, with the project's specs and changes listed. |
+| `grove instructions prototype "<question>"` | Answer the question, or one from the conversation, with a throwaway experiment on a `prototype/<slug>` branch that is never merged, writing no Grove document; a proposal cites its findings. |
 | `grove instructions propose [--schema <name>] ["<description>"]` | Write a new change from the conversation or the description, with the project's change schema or the one named. |
 | `grove instructions propose <change-id>` | Revise a drafted change, with the schema it has. |
 | `grove instructions implement <change-id>` | Build an approved change with the owner, asking them what the change leaves open and, with their agreement, revising it on the branch; record progress, and archive it when every task is done. Refuses a change that waits on one this working tree does not hold archived as finished. |
@@ -31,8 +32,8 @@ Skills run these; you do not need to:
 
 ## Harnesses
 
-`grove init` writes a file for each of Grove's five skills, explore,
-propose, implement, apply and archive, for each harness under `agents` in
+`grove init` writes a file for each of Grove's six skills, explore,
+prototype, propose, implement, apply and archive, for each harness under `agents` in
 `grove.yaml`: as a skill, or as a command where the harness has commands.
 How you type apply, the others alike:
 
@@ -103,7 +104,7 @@ rules:
 | `target` | `main` | The branch whose contents count as agreed. Merging into it approves. |
 | `agents` | `claude` and `codex`, as `skills` | Each harness `init` writes Grove's skills for, and whether as `skills` or `commands` (see "Harnesses"). The first `init` chooses them. |
 | `schema` | `default` | The change schema a new change has unless the owner names another while proposing. See "Change schemas". |
-| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `propose`, `implement`, `apply`, `archive`. |
+| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `prototype`, `propose`, `implement`, `apply`, `archive`. |
 
 `grove check` reports a field or `rules` key that Grove does not know; other
 commands ignore it. It also reports a harness under `agents` that Grove has

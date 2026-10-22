@@ -52,6 +52,7 @@ before you merge it.
 ```mermaid
 flowchart LR
     explore["Explore<br/>(a conversation)"] --> propose["Propose<br/>(writes a change)"]
+    explore -.-> prototype["Prototype<br/>(optional, throwaway)"] -.-> propose
     propose --> merge1["Review and merge<br/>(approves it)"]
     merge1 --> implement["Implement<br/>(builds it)"]
     implement --> archive["Archive and merge<br/>(updates the specs)"]
@@ -61,18 +62,24 @@ flowchart LR
 
 1. **Explore.** A conversation with your agent about what you want and what
    is true today. It writes nothing unless you ask.
-2. **Propose.** The agent writes a change from the conversation or from a
+2. **Prototype**, when it helps. When a question's answer could change
+   what you propose, such as how something feels or whether it is
+   feasible, the agent builds a throwaway experiment on a
+   `prototype/<slug>` branch that is never merged, and reports a verdict.
+   It writes no Grove document; its findings reach the main branch only in
+   a proposal, which cites the branch and commit.
+3. **Propose.** The agent writes a change from the conversation or from a
    description.
-3. **Review and merge.** You read the change and merge it. Now it is
+4. **Review and merge.** You read the change and merge it. Now it is
    approved.
-4. **Implement.** The agent builds the change on a branch with you and
+5. **Implement.** The agent builds the change on a branch with you and
    records progress. It asks you what the change leaves open and, with
    your agreement, revises the change on that branch; your merge then
    approves the revision with the code. **Apply** builds the change without
    you: it asks no one, marks a task an open question decides blocked, and
    never edits the change. With no ID, apply builds every approved change in
    order.
-5. **Archive.** When every task is done, the agent folds the change's specs
+6. **Archive.** When every task is done, the agent folds the change's specs
    into the maintained specs and moves the change to
    `grove/changes/archive/`. You merge code, specs and archive together.
 
@@ -83,7 +90,8 @@ A change you decide not to build is archived too, without touching the
 specs; its `implementation.md` says `Status: dropped` and why.
 
 What Grove requires at each step is the same in every project: exploring
-writes nothing unless you ask, only your merge approves a change,
+writes nothing unless you ask, prototyping writes no Grove document and
+never merges its branch, only your merge approves a change,
 implementing and applying build the change as your main branch holds it,
 or as you agreed to revise it while implementing, and record each task's
 status in `implementation.md`, and archiving refuses a change that is

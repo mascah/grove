@@ -25,6 +25,10 @@
 - A question the owner defers is not answered by guess. It goes into the
   change's open questions, naming the task it blocks when it decides how
   that task is built.
+- When this conversation holds a prototype's findings, write them into the
+  proposal, citing the prototype branch and the commit that holds the
+  experiment. Link no file outside the change and the target branch: the
+  prototype branch is never merged.
 - Change no code.
 - Finish: run Grove's `check` and fix what it reports in the files you
   wrote. Tell the owner which files you wrote, the qualified task IDs (such

@@ -27,8 +27,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    The fixture has no `.claude/`, `CLAUDE.md`, `AGENTS.md` or other sign of
    an agent, so `grove.yaml` lists `claude: skills` and `codex: skills`
    under `agents`. `.claude/skills/` and `.agents/skills/` each hold
-   `grove-explore`, `grove-propose`, `grove-implement`, `grove-apply` and
-   `grove-archive`, and
+   `grove-explore`, `grove-prototype`, `grove-propose`, `grove-implement`,
+   `grove-apply` and `grove-archive`, and
    every `SKILL.md` has the same body after its name. Then
    `git add -A && git commit -m "Set up Grove"`.
    Running `grove init` again rewrites the skills and leaves `grove.yaml` as
@@ -42,8 +42,9 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    asks one question at a time. It notices that the README ("every record")
    and the CHANGELOG ("new records") disagree, and asks which is intended. I
    answer that older records keep their category when it is unchanged, and
-   leave open what happens if the category is changed. `git status` shows
-   nothing new: exploring wrote no file.
+   leave open what happens if the category is changed. It suggests no
+   prototype: no open question is one an experiment would answer.
+   `git status` shows nothing new: exploring wrote no file.
 
 3. **Propose** (§3). `/grove-propose` in the same conversation. The session
    creates `grove/changes/261015-k3m9q-allow-editing-older-records/` with
@@ -239,6 +240,21 @@ Each step names the section of
 - **Propose from a description** (§3). On a new branch, with no exploration,
   `/grove-propose Editing a missing record should print an error` writes a
   change.
+- **Prototype before proposing** (§2, "Try it first"; concepts, "The
+  loop"). After the main line, from main, `git switch -c budgets`, start
+  `claude`, and type `/grove-explore Monthly budgets in report, from the
+  README's planned list`. When I say I do not know how a budget should read
+  beside each category's total, the session names that question and asks
+  whether to prototype it, building nothing. I say yes; it runs
+  `grove instructions prototype "<question>"`, creates
+  `prototype/<slug>` from `budgets`, builds a throwaway script that prints
+  the report with budgets for cases under, at and over budget, runs it, and
+  reports the command, what it showed, a verdict and its limits. It asks
+  whether to commit; I say yes, and it commits on `prototype/<slug>` only.
+  Asked to propose, it switches back to `budgets` and the proposal states
+  the finding and cites `prototype/<slug>` at that commit, linking no
+  prototype file. `git diff main prototype/<slug> -- grove` is empty, and
+  main is unchanged.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
   is given that change's files in full and edits them.
 - **A question that blocks a task** (§5). On a new branch,
@@ -325,20 +341,20 @@ Each step names the section of
   > Wrote grove.yaml and the Grove skills for claude and opencode; nothing is committed.
 
   `grove.yaml` lists `claude: skills` and `opencode: skills`;
-  `.claude/skills/` and `.agents/skills/` hold the five skills, the same
+  `.claude/skills/` and `.agents/skills/` hold the six skills, the same
   file in each.
 - **Commands** (reference, "Harnesses"). Continuing, add an `AGENTS.md`,
   set `claude: commands` in `grove.yaml`, and run `grove init`. Later runs
   read only `grove.yaml`, so codex stays out:
-  > Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement and grove-propose from .claude/skills; nothing is committed.
+  > Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement, grove-propose and grove-prototype from .claude/skills; nothing is committed.
 
-  `.claude/commands/grove/` holds `explore.md`, `propose.md`,
-  `implement.md`, `apply.md` and `archive.md`. In Claude Code, `/grove:propose Editing a missing record
+  `.claude/commands/grove/` holds `explore.md`, `prototype.md`,
+  `propose.md`, `implement.md`, `apply.md` and `archive.md`. In Claude Code, `/grove:propose Editing a missing record
   should print an error` runs `grove instructions propose "Editing a
   missing record should print an error"`.
 - **Drop a harness** (reference, "Harnesses"). Continuing, delete the
   `opencode` line and run `grove init`:
-  > Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement and grove-propose from .agents/skills; nothing is committed.
+  > Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement, grove-propose and grove-prototype from .agents/skills; nothing is committed.
 
   A skill of my own, `.agents/skills/notes/`, is still there.
 - **A harness Grove does not have** (reference, "grove.yaml"). Set

@@ -18,6 +18,9 @@ With no command, open the reader on the maintained specs and approved changes.
 
   init                       set up Grove in this repository
   instructions explore       print the instructions for exploring an idea
+  instructions prototype "<question>"
+                             print the instructions for answering a question with a
+                             throwaway experiment
   instructions propose [--schema <name>] ["<description>"]
                              print the instructions for proposing a new change
   instructions propose <change-id>
@@ -55,6 +58,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = initProject(stdout)
 	case len(args) == 2 && args[0] == "instructions" && args[1] == "explore":
 		err = instructionsExplore(stdout)
+	case len(args) == 3 && args[0] == "instructions" && args[1] == "prototype":
+		err = instructionsPrototype(stdout, args[2])
 	case len(args) == 2 && args[0] == "instructions" && args[1] == "propose":
 		err = instructionsPropose(stdout, "", "")
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "propose":

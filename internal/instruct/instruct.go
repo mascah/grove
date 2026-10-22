@@ -445,6 +445,18 @@ func Explore(p Project) (Instructions, error) {
 	return in, err
 }
 
+// Prototype returns the instructions for answering question, or one from
+// the conversation when it is empty, with a throwaway experiment.
+func Prototype(p Project, question string) (Instructions, error) {
+	from := "a question from this conversation"
+	if question != "" {
+		from = "the owner's question below"
+	}
+	in, err := build(p, p.Schema, "prototype", "You are prototyping "+from+" with the owner, in their own working tree.", strings.NewReplacer(), nil, nil)
+	in.Description = question
+	return in, err
+}
+
 // Propose returns the instructions for writing new change id in change
 // schema s, created at created, from the conversation or from description
 // when it is not empty.
