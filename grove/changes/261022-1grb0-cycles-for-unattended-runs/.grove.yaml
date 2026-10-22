@@ -1,0 +1,6 @@
+title: Cycles planned for unattended runs
+created: 2026-10-22T17:12:59Z
+description: grove run builds only cycles that /grove-plan checked and the owner marked unattended; apply takes a cycle ID.
+schema: default
+depends_on: [261022-d1y6d]
+base: 7ce7b9119716117a6890dcc11876a2397d422048
