@@ -1,6 +1,8 @@
 # Changes to implement
 
 The maintained spec is [grove/specs/implement/spec.md](../../../../specs/implement/spec.md).
+`/grove-implement --unattended` is added to it by change 261023-g0a3h,
+which this change depends on.
 
 ## ADDED Requirements
 
@@ -41,3 +43,20 @@ only if the owner agrees; it suggests at most one line per change.
   which would apply to future work
 - WHEN the agent finishes C
 - THEN it suggests one line, not two
+
+### Requirement: Name a rules line unattended
+
+When the agent, building a change with `/grove-implement <id>
+--unattended`, found something that would apply to future work, the
+unattended instructions shall let its report name at most one suggested
+line per change for `context`, or for a key under `rules`, in
+`grove.yaml`, with what it found, and shall have it add no such line to
+`grove.yaml`.
+
+#### Scenario: A test command nobody wrote down
+
+- GIVEN cycle K lists change A, and A's tests run only with a command
+  that `context` in `grove.yaml` does not name
+- WHEN `/grove-implement K --unattended` builds A and finishes
+- THEN its report names a `context` line giving that command, nobody is
+  asked, and `grove.yaml` on the branch is unchanged

@@ -4,7 +4,7 @@ Result: `/grove-implement` behaves as
 [specs/implement/spec.md](specs/implement/spec.md) "Suggest a rules line"
 says.
 
-Files: `internal/instruct/requires/implement.md`, `docs/reference.md`,
+Files: `internal/instruct/requires/implement-owner.md`, `docs/reference.md`,
 `docs/getting-started.md`, `dev/walkthrough.md`,
 `internal/cli/walkthrough_test.go`
 
@@ -24,24 +24,28 @@ Acceptance:
   "No problems in grove/."; when I decline, `grove.yaml` is unchanged.
 - On the ledger fixture, the main line's `/grove-implement`, with no
   correction, suggests no line.
-- `walkthrough_test.go` checks that `instructions implement` prints the
-  rule.
+- `walkthrough_test.go` checks that `instructions implement <change-id>`
+  prints the rule, and `instructions implement <change-id> --unattended`
+  does not.
 
-## T-02 — Apply names a line, never writes it
+## T-02 — Unattended names a line, never writes it
 
-Result: `/grove-apply` behaves as
-[specs/apply/spec.md](specs/apply/spec.md) "Name a rules line, never
-write it" says.
+Result: `/grove-implement --unattended` behaves as
+[specs/implement/spec.md](specs/implement/spec.md) "Name a rules line
+unattended" says.
 
-Files: `internal/instruct/requires/apply.md`, `docs/getting-started.md`,
-`dev/walkthrough.md`, `internal/cli/walkthrough_test.go`
+Files: `internal/instruct/requires/implement-unattended.md`,
+`docs/getting-started.md`, `dev/walkthrough.md`,
+`internal/cli/walkthrough_test.go`
 
 Interfaces: none; it is instruction text.
 
 Acceptance:
-- `docs/getting-started.md`, step 5, says apply never edits `grove.yaml`
-  but may name a line in its report (rule 8).
-- On the ledger fixture, `claude -p "/grove-apply <cycle-id>"` leaves
-  `grove.yaml` unchanged, and any line it suggests is in its last message.
-- `walkthrough_test.go` checks that `instructions apply <cycle-id>
-  <change-id>` prints the rule.
+- `docs/getting-started.md`, step 5, says `/grove-implement --unattended`
+  never edits `grove.yaml` but may name a line in its report (rule 8).
+- On the ledger fixture, `claude -p "/grove-implement <cycle-id>
+  --unattended"` leaves `grove.yaml` unchanged, and any line it suggests
+  is in its last message.
+- `walkthrough_test.go` checks that `instructions implement <change-id>
+  --unattended` prints the rule, and `instructions implement <change-id>`
+  does not.

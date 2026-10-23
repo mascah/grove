@@ -24,21 +24,23 @@ writes the line on the implementation branch only if the owner agrees, so
 the merge brings it in with the code. It suggests at most one per change,
 and nothing when there was no such correction.
 
-Apply, with nobody in the session, never edits `grove.yaml` for this; its
-report may name a suggested line for the owner to read.
+`/grove-implement --unattended`, with nobody in the session, never edits
+`grove.yaml` for this; its report may name a suggested line for the owner
+to read.
 
-The rules are in [specs/implement/spec.md](specs/implement/spec.md) and
-[specs/apply/spec.md](specs/apply/spec.md).
+This change is built on change 261023-g0a3h (B1), which folds apply into
+`/grove-implement --unattended` and splits implement's requires text into
+a shared file and a part for each mode.
+
+The rules are in [specs/implement/spec.md](specs/implement/spec.md).
 
 ## Scope
 
 ### In scope
 
-- Implement's requires text: the suggestion, and adding the agreed line
-  to `grove.yaml` on the branch.
-- Apply's requires text: a suggested line only in the report. Change
-  261023-g0a3h (B1) folds apply into `/grove-implement --unattended`, and
-  carries this rule into that mode.
+- The owner's part of implement's requires text, as B1 leaves it: the
+  suggestion, and adding the agreed line to `grove.yaml` on the branch.
+- The unattended part: a suggested line only in the report.
 - `docs/reference.md` ("grove.yaml": `context` and `rules`),
   `docs/getting-started.md` (step 5) and `dev/walkthrough.md`.
 
@@ -50,7 +52,7 @@ The rules are in [specs/implement/spec.md](specs/implement/spec.md) and
 - A change to `grove/specs/config/spec.md`. It covers how Grove reads
   `context` and shows it in every skill's instructions; this change has
   the agent suggest a line at the end of building, and Grove reads
-  nothing new, so the rules belong with implement and apply.
+  nothing new, so the rules belong with implement.
 
 ## Decisions
 
@@ -66,23 +68,19 @@ every answer below in one round ("yes to C & D").
   "Could a skill propose a rules line at the end of a run, with the owner
   deciding?".
 - **Unattended never edits `grove.yaml`, but may name a suggested line in
-  its report.** Today that is the apply skill; B1 makes it
-  `/grove-implement --unattended`.
+  its report.** B1 makes unattended `/grove-implement --unattended`,
+  which replaces the apply skill.
 
 ## Open questions
 
-None must be answered before review. Two can wait:
+None must be answered before review. One can wait:
 
 - Blocks T-01: implement's rule "Change only the files the tasks name"
   covers `grove.yaml`. Is the agreed line an exception beside the tasks,
   or added to a task's `Files:` line as a file no task names? Recommended:
   an exception, since the line is about future work, not this change.
-- Blocks T-02 only if B1 (261023-g0a3h) is archived first: then apply's
-  rule goes to implement's unattended mode instead, in the files B1
-  leaves. Recommended: yes.
 
 ## Related documents
 
-- Requirements: [specs/implement/spec.md](specs/implement/spec.md),
-  [specs/apply/spec.md](specs/apply/spec.md)
+- Requirements: [specs/implement/spec.md](specs/implement/spec.md)
 - Tasks: [tasks.md](tasks.md)
