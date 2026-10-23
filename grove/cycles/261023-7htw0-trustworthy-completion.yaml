@@ -1,0 +1,5 @@
+title: Trustworthy completion
+created: 2026-10-23T21:58:02Z
+goal: Archive refuses a fold that does not match, and every scenario names the check that shows it
+changes: [261023-bfwp5, 261023-m2she]
+planned: e3173bb8ab18d3a6fb76b41b7f5af8c33d0eb53d
