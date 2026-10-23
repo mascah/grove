@@ -302,7 +302,7 @@ func TestPropose(t *testing.T) {
 	req, how := strings.Index(out, "## What Grove requires of propose\n\n- A change describes future work."), strings.Index(out, "## How to propose\n\n**Propose says")
 	if !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") || req < 0 || how < req ||
 		!strings.Contains(out, "on a `Files:` line after `Result:`") || !strings.Contains(out, "\nFiles: [`path/to/file`") || strings.Contains(out, "file-by-file") ||
-		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || strings.Contains(out, "Assumptions to confirm") {
+		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 5. Check the change") || strings.Contains(out, "Assumptions to confirm") {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
 
@@ -376,7 +376,7 @@ func TestApplyInstructions(t *testing.T) {
 		}
 	}
 	out = grove(t, "instructions", "apply", k, cid)
-	for _, s := range []string{"/implementation.md\">\n# Implementation: Allow editing older records", "### Requirement: Edit older records", "even if you could\n  ask", "A file no\n  task names stays as it is",
+	for _, s := range []string{"/implementation.md\">\n# Implementation: Allow editing older records", "### Requirement: Edit older records", "even if you could\n  ask", "A file no\n  task names stays as it is", "Before you finish, run the project's tests, re-read each done task's", "and why. Ask no one.", "## Scenarios\n",
 		", change 1 of 1 in cycle " + k + ".", "## The cycle\n\nCycle " + k + ", \"Cycle " + k + "\", in build order:\n\n1. " + cid + " \"Allow editing older records\" — this change\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("apply instructions for a member lack %q:\n%s", s, out)
@@ -387,7 +387,7 @@ func TestApplyInstructions(t *testing.T) {
 		t.Errorf("apply of a change outside the cycle: status %d, %q", code, stderr.String())
 	}
 	out = grove(t, "instructions", "implement", cid)
-	for _, s := range []string{"You are implementing approved change " + cid, "## What Grove requires of implement\n", "ask the owner and\n  wait", "with their agreement add it to that task's `Files:` line", "### change-spec: ", "### Requirement: Edit older records"} {
+	for _, s := range []string{"You are implementing approved change " + cid, "## What Grove requires of implement\n", "ask the owner and\n  wait", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. Commit", "with their agreement add it to that task's `Files:` line", "### change-spec: ", "### Requirement: Edit older records"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("implement instructions lack %q", s)
 		}
@@ -420,7 +420,7 @@ func TestArchive(t *testing.T) {
 	// The session reconciles the change spec into a new maintained spec,
 	// from the template its instructions give, then archives the change.
 	out := grove(t, "instructions", "archive", cid)
-	for _, s := range []string{"Reconcile the specs", "word for word", "run `archive` again", "Status: done", "### Requirement: Edit older records"} {
+	for _, s := range []string{"Reconcile the specs", "word for word", "run `archive` again", "marks `unverified`; it does\n  not stop the archive", "Status: done", "### Requirement: Edit older records"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("archive instructions lack %q", s)
 		}

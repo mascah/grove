@@ -103,7 +103,10 @@ The agent writes a change folder, such as
 Before writing, it lists every decision it would otherwise assume, each
 with a recommended answer, and waits for yours. It keeps anything you leave
 undecided as an open question, and says which task, if any, that question
-blocks. It runs
+blocks. Before showing you the change, it checks that every requirement
+has an outcome you can observe and a task whose acceptance covers it, and
+that the scope, specs and tasks agree; it fixes what it can, tells you what
+it changed, and asks you about the rest. It runs
 `grove check` until the folder has no problems. You can
 also propose without exploring: `/grove-propose <description>`. To revise a
 drafted change later, run `/grove-propose <change-id>`.
@@ -143,7 +146,12 @@ The agent works through the tasks with tests, tells you how to try each one,
 and records each task's status and evidence in the change's
 `implementation.md`. If an open question decides how a task is built, the
 agent does not guess: it asks you. If you say to leave it, it marks that
-task blocked, writes the question there, and builds the rest.
+task blocked, writes the question there, and builds the rest. Before it
+finishes, it runs the tests, rechecks each done task's evidence against the
+code as it now is, putting a task it no longer holds for back in progress,
+and lists each scenario of the change's specs under `## Scenarios` in
+`implementation.md` with the test that shows it, or `unverified` and why.
+Its report, and archiving, name each unverified scenario.
 
 When your answer or your feedback changes what the change says, the agent
 tells you which of its proposal, specs and tasks it would edit and how. Once

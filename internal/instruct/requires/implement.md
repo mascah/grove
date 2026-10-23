@@ -12,7 +12,8 @@
   you are on the target.
 - Record each task's status in `implementation.md` with the `Status:` lines
   its template shows, kept exactly. A task it marks done when you start is
-  done; do not build it again.
+  done; do not build it again unless the check before you finish finds its
+  evidence no longer holds.
 - The owner is in this session. Where an open question in the change decides
   a task, or a task cannot be built as the change says, ask the owner and
   wait for the answer; do not settle it yourself. If the owner says to leave
@@ -31,8 +32,14 @@
   rewritten or removed since its base, stop and tell the owner: the change
   must be revised with propose and merged again first. Merging this branch
   approves the revision with the code, and Grove's `review` shows it.
-- Finish: report what was done, what is left, and the question that blocks
-  each blocked task. Commit only when the owner or the project's rules ask.
+- Before you finish, run the project's tests, re-read each done task's
+  evidence against the code as it now is, and set a task whose evidence no
+  longer holds back to `Status: in progress`. Then write the `## Scenarios`
+  section of `implementation.md`: one line per scenario of the change
+  specs, naming the check that shows it and its result, or `unverified`
+  and why.
+- Finish: report what was done, what is left, the question that blocks
+  each blocked task, and each unverified scenario. Commit only when the owner or the project's rules ask.
   When every task is done, run Grove's `instructions archive <change-id>`
   and follow what it prints: archiving brings the maintained specs up to
   date on this branch.
