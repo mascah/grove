@@ -1,0 +1,6 @@
+title: One merge for small changes
+created: 2026-10-23T21:36:28Z
+description: /grove-implement builds a drafted change with the owner on the branch that proposed it, so one merge approves the change with its code.
+schema: default
+depends_on: [261023-g0a3h]
+base: 57af2e3f2f9e00484fd1984de15898613917e3be
