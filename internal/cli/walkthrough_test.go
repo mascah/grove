@@ -173,7 +173,8 @@ func TestCheck(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(config), 0o644)
 
 	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
-	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte("# Record editing\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte("# Record editing\n\n## ADDED Requirements\n\n"+
+		"### Requirement: Keep a category\n\nThe system shall keep it.\n\n### Requirement: Delete a record\n\nUsers can delete a record.\n\n#### Scenario: Delete\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", ".grove.yaml"), []byte("description: Editing records.\nowner: me\n"), 0o644)
 	for folder, meta := range map[string]string{"261015-k3m9q-no-proposal": "title: T\ncreated: x\n", "261015-p4x8d-extra-field": "title: T\ncreated: x\nowner: me\n",
 		"261015-q7r2s-drifted": "title: New title\ncreated: x\n", "no-id": "title: T\ncreated: x\n"} {
@@ -183,16 +184,26 @@ func TestCheck(t *testing.T) {
 			os.WriteFile(filepath.Join(dir, "grove", "changes", folder, "proposal.md"), []byte("# T\n"), 0o644)
 		}
 	}
+	for _, folder := range []string{"261015-p4x8d-extra-field", "archive/261014-a0000-old"} {
+		os.MkdirAll(filepath.Join(dir, "grove", "changes", folder, "specs", "record-editing"), 0o755)
+		os.WriteFile(filepath.Join(dir, "grove", "changes", folder, "specs", "record-editing", "spec.md"), []byte("## REMOVED Requirements\n\n### Requirement: Old rule\n\nNot wanted.\n"), 0o644)
+	}
+	os.WriteFile(filepath.Join(dir, "grove", "changes", "archive/261014-a0000-old", ".grove.yaml"), []byte("title: Old\ncreated: x\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove", "changes", "archive/261014-a0000-old", "proposal.md"), []byte("# Old\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove", "changes", "archive/261014-a0000-old", "specs", "record-editing", "spec.md"), []byte("## ADDED Requirements\n\n### Requirement: Old rule\n\nNot wanted.\n"), 0o644)
 	stdout.Reset()
 	stderr.Reset()
 	code = run([]string{"check"}, &stdout, &stderr)
 	want = "grove/specs/record-editing/.grove.yaml:2: unknown field \"owner\"; this file takes title and description\n" +
 		"grove/specs/record-editing/.grove.yaml: title: required field is missing\n" +
+		"grove/specs/record-editing/spec.md:5: requirement \"Keep a category\" has no scenario\n" +
+		"grove/specs/record-editing/spec.md:9: requirement \"Delete a record\" has no \"shall\"\n" +
+		"grove/specs/record-editing/spec.md:3: this heading belongs in a change spec; a maintained spec lists its requirements under ## Requirements\n" +
 		"grove/changes/261015-k3m9q-no-proposal/proposal.md: missing; it is the change's main document in schema default\n" +
 		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created, schema, description, depends_on and base\n" +
 		"grove/changes/261015-q7r2s-drifted/proposal.md:1: the first heading should be \"# New title\", the title in .grove.yaml\n" +
 		"grove/changes/no-id/: the folder name must start with a change ID, such as 261015-k3m9q\n"
-	if code != 1 || stdout.String() != want || stderr.String() != "grove: 6 problems found\n" {
+	if code != 1 || stdout.String() != want || stderr.String() != "grove: 9 problems found\n" {
 		t.Errorf("check: status %d\n%s%s", code, stdout.String(), stderr.String())
 	}
 }
@@ -212,10 +223,13 @@ func propose(t *testing.T, dir, branch, title, meta string, args ...string) (cha
 	os.MkdirAll(filepath.Join(folder, "specs", "record-editing"), 0o755)
 	os.WriteFile(filepath.Join(folder, ".grove.yaml"), []byte("title: "+title+"\ncreated: 2026-10-14T00:00:00Z\n"+meta), 0o644)
 	os.WriteFile(filepath.Join(folder, "proposal.md"), []byte("# "+title+"\n"), 0o644)
-	os.WriteFile(filepath.Join(folder, "specs", "record-editing", "spec.md"), []byte("# Changes to record-editing\n\n## ADDED Requirements\n\n### Requirement: Edit older records\n"), 0o644)
+	os.WriteFile(filepath.Join(folder, "specs", "record-editing", "spec.md"), []byte("# Changes to record-editing\n\n## ADDED Requirements\n\n"+olderEdits), 0o644)
 	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte("## T-01 — "+title+"\n"), 0o644)
 	return m[1], folder
 }
+
+// olderEdits is the requirement propose writes.
+const olderEdits = "### Requirement: Edit older records\n\nWhen a user edits a record made before the current categories, the system shall save the edit.\n\n#### Scenario: A legacy record\n\n- THEN the edit is saved\n"
 
 // setUp runs init on a fresh fixture and commits it, as getting started §1.
 func setUp(t *testing.T) string {
@@ -600,7 +614,7 @@ func TestCoordinating(t *testing.T) {
 	}
 
 	// A dependency archived on this branch, not yet on main, is met.
-	keep := "### Requirement: Keep a category\n\nWhen a user edits a record and leaves its category unchanged, the system shall save the edit.\n"
+	keep := "### Requirement: Keep a category\n\nWhen a user edits a record and leaves its category unchanged, the system shall save the edit.\n\n#### Scenario: A note\n"
 	git(t, dir, "switch", "-q", "-c", "batch")
 	os.WriteFile(filepath.Join(unknownDir, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
 	grove(t, "archive", unknown)
@@ -665,7 +679,7 @@ func TestCoordinating(t *testing.T) {
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve recategorizing", "recategorize")
 	show, showDir := propose(t, dir, "show-saved", "Show what was saved", "base: "+base+"\n")
-	modify(showDir, "When a user edits a record and leaves its category unchanged, the system shall save the edit and print what was saved.\n")
+	modify(showDir, "When a user edits a record and leaves its category unchanged, the system shall save the edit and print what was saved.\n\n#### Scenario: A note\n")
 	commitAll(t, dir, "Propose showing what was saved")
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve showing what was saved", "show-saved")
