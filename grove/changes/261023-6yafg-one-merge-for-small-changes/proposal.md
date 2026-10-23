@@ -95,11 +95,10 @@ every answer below in one round ("yes").
 
 None must be answered before review. None blocks a task.
 
-Change 261023-g0a3h, which this change waits on, may also modify
-"Implement an approved change". If it does, `grove check` will report
-this change's MODIFIED requirement as rewritten since base once that
-change is archived, and this change is revised with propose to keep its
-text and drop only the draft scenario. This can wait until then.
+Change 261023-g0a3h, which this change waits on, also modifies
+"Implement an approved change". This change's MODIFIED requirement is
+written on that change's text and drops only its draft scenario, so
+archiving this change after it keeps what it gives.
 
 ## Related documents
 

@@ -1,6 +1,10 @@
 # Changes to implement
 
 The maintained spec is [grove/specs/implement/spec.md](../../../../specs/implement/spec.md).
+"Implement an approved change" is modified by change 261023-g0a3h, which
+this change depends on; it is modified here as that change gives it, with
+only its draft scenario dropped, since "Implement a draft with the owner"
+now covers a draft.
 
 ## ADDED Requirements
 
@@ -27,7 +31,7 @@ the owner's agreement, as when revising a change on its branch.
 #### Scenario: Unattended refuses a draft
 
 - GIVEN change D exists in the working tree but not in the target
-- WHEN `/grove-implement --unattended D` runs
+- WHEN `/grove-implement D --unattended` is run
 - THEN nothing is built, and Grove says the target holds no approved
   change D
 
@@ -89,12 +93,12 @@ instead of as future work.
 
 ### Requirement: Implement an approved change
 
-When the owner runs `/grove-implement <change-id>` for a change the target
-approves and that waits on nothing the working tree has not archived as
-finished, the system shall print instructions for building its tasks in
-the owner's session, on a branch other than the target, recording each
-task's status in `implementation.md` and archiving the change when every
-task is done.
+When the owner runs `/grove-implement <change-id>`, without
+`--unattended`, for a change the target approves and that waits on
+nothing the working tree has not archived as finished, the system shall
+print instructions for building its tasks in the owner's session, on a
+branch other than the target, recording each task's status in
+`implementation.md` and archiving the change when every task is done.
 
 #### Scenario: A change with two tasks
 
