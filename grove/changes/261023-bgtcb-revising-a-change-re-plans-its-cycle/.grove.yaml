@@ -1,0 +1,6 @@
+title: Revising a change re-plans its cycle
+created: 2026-10-23T21:36:32Z
+description: /grove-propose on a member of a cycle re-plans the cycle on the same branch, so one merge gets a paused run past a blocked change.
+schema: default
+depends_on: [261023-g0a3h]
+base: 57af2e3f2f9e00484fd1984de15898613917e3be
