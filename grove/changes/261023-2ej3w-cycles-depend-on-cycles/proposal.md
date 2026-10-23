@@ -54,7 +54,8 @@ The rules are in [specs/cycles/spec.md](specs/cycles/spec.md) and
 - `grove run`'s selection of a marked cycle and its refusal of a given
   one.
 - The stale-plan check shared by `grove check` and `grove run`.
-- `grove changes`' line for a change whose cycle waits on a cycle.
+- `grove changes`' line for a change whose cycle waits on a cycle, and
+  the instructions' project index naming the cycles a cycle follows.
 - The plan instructions: the question for a new cycle, and the finish
   naming a cycle it waits on as an obstacle, as the maintained "Say
   whether the cycle can run unattended" already asks for each obstacle.
@@ -125,18 +126,23 @@ to every answer below in one round ("Yes"), 2026-10-23.
    `internal/cli/walkthrough_test.go`. Reason: the documentation is the
    specification (rule 8).
 
+The owner answered the proposal's two open questions on PR #62 ("yes do
+both", 2026-10-23):
+
+8. **A cycle `depends_on` naming no cycle is reported by `grove check`,
+   and `grove run` treats the cycle as waiting,** as a change's
+   `depends_on` naming no change keeps it waiting at ab885af
+   (`Change.WaitsOn`, `internal/doc/doc.go`). Reason: one rule for both
+   kinds of `depends_on`, and a typo stops the run instead of skipping
+   the wait.
+9. **The instructions' project index shows a cycle's `depends_on`,** as
+   "follows <cycle-id>" under the cycle. Reason: `/grove-plan` and the
+   other skills see the order the owner set without opening each cycle
+   file.
+
 ## Open questions
 
-None must be answered before review.
-
-- A `depends_on` naming no cycle: the cycles spec has `grove run` treat
-  the cycle as waiting, since the target holds no such cycle done, as a
-  change's `depends_on` naming no change keeps it waiting at ab885af
-  (`Change.WaitsOn`, `internal/doc/doc.go`); `grove check` reports it
-  either way. Can wait; an answer otherwise changes T-02 only.
-- Whether the project index lists a cycle's `depends_on` beside its
-  changes and goal. Can wait; it blocks no task, and this change leaves
-  the index as it is.
+None must be answered before review. None blocks a task.
 
 ## Related documents
 

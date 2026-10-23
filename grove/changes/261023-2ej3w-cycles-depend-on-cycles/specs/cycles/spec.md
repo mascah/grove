@@ -240,8 +240,10 @@ depends on it in turn, directly or through other cycles.
 
 When the owner runs `grove changes`, the system shall show, with each
 approved change not archived that a cycle not yet done lists, that cycle's
-ID, whether it is marked `unattended`, and each cycle it waits on; and
-`grove review` shall label a cycle file as a cycle.
+ID, whether it is marked `unattended`, and each cycle it waits on; the
+instructions' project index shall name, under each cycle not yet done,
+each cycle its `depends_on` names; and `grove review` shall label a cycle
+file as a cycle.
 
 #### Scenario: One marked, one not
 
@@ -255,3 +257,9 @@ ID, whether it is marked `unattended`, and each cycle it waits on; and
   is not done
 - WHEN the owner runs `grove changes`
 - THEN A's line names K and says it waits on cycle L
+
+#### Scenario: The index names the cycle followed
+
+- GIVEN cycle K, not done, whose `depends_on` names cycle L
+- WHEN the owner runs `grove instructions plan "0.5 release"`
+- THEN the project index lists, under K, `follows L`

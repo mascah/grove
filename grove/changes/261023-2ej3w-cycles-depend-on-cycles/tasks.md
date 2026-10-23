@@ -1,11 +1,12 @@
 ## T-01 — Read a cycle's depends_on and check it
 
-Result: a cycle file may hold `depends_on`, and `grove check` and
-`grove changes` treat it as [specs/cycles/spec.md](specs/cycles/spec.md)
-"Report a malformed cycle" and "Show cycles" say.
+Result: a cycle file may hold `depends_on`, and `grove check`,
+`grove changes` and the instructions' project index treat it as
+[specs/cycles/spec.md](specs/cycles/spec.md) "Report a malformed cycle"
+and "Show cycles" say.
 
 Files: `internal/doc/doc.go`, `internal/cli/changes.go`,
-`internal/cli/walkthrough_test.go`
+`internal/instruct/instruct.go`, `internal/cli/walkthrough_test.go`
 
 Interfaces: `doc.Load` reads a cycle's optional `depends_on` into
 `Meta.DependsOn`, as for a change; `doc.Cycle` gains `WaitsOn`, the
@@ -21,6 +22,9 @@ Acceptance:
   `depends_on` among the fields a cycle file takes.
 - `grove changes` adds `waits on cycle <id>` to a change whose cycle
   waits on a cycle not done, and nothing once that cycle is done.
+- In `internal/cli/walkthrough_test.go` (`TestCycles`): the project index
+  any skill's instructions print lists `follows <cycle-id>` under a cycle
+  not done whose `depends_on` names that cycle.
 
 ## T-02 — Run waits on the cycles a cycle depends on
 
