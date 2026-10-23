@@ -344,7 +344,21 @@ Each step names the section of
    ends `failed to start`, the reason in its output, and the next
    `grove run` says the project is paused.
 
-6. **Without a remote** ("Without a remote"). `just fixture
+6. **Run a cycle you name** ("Run a cycle you name"). In `~/tmp/ledger`,
+   approve `/grove-propose Editing a record prints what was saved`
+   (show-saved), plan it as a cycle of one, merge and push, without
+   marking it. Approve `/grove-propose Export the ledger as CSV` (export),
+   plan it as a cycle of one, telling the session export needs a person to
+   judge the file, merge and push. In
+   `~/tmp/ledger-run`, `grove run --retry <export-cycle-id>`:
+   > grove: \<export-id> needs a person, as cycle \<export-cycle-id>'s needs_human says; build the cycle with /grove-implement \<export-cycle-id>
+
+   and `git branch` lists no new branch. `grove run --retry 261099-zzzzz`
+   says `main` holds no such cycle. `grove run --retry <show-saved-cycle-id>`
+   starts a session on `/grove-apply <show-saved-cycle-id>` though the
+   budgets cycle is marked, and its record names the show-saved cycle.
+
+7. **Without a remote** ("Without a remote"). `just fixture
    ~/tmp/ledger-local`, `grove init`, commit, approve the unknown-ID
    change, plan it as a cycle of one, mark it `unattended` and merge, with
    `Commit after each task, naming its task ID.` and the page's

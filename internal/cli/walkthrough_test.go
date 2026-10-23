@@ -983,6 +983,29 @@ func TestRun(t *testing.T) {
 	runs(`^grove: attempt .* ended: timed out;`, "--retry", "--timeout", "1s")
 	gone("after the time limit")
 
+	// A cycle given: built though not marked while l is, and refused, naming
+	// why, when there is no such cycle or a member needs a person.
+	t.Chdir(owner)
+	d, _ := approve(t, owner, "d", "Show saved records", "")
+	e, _ := approve(t, owner, "e", "Export records", "")
+	m, n := "261023-m0000", "261023-n0000"
+	planCycle(t, owner, m, "2026-10-23T09:00:00Z", false, d)
+	planCycle(t, owner, n, "2026-10-23T10:00:00Z", false, e)
+	nFile := filepath.Join(owner, "grove/cycles", n+"-cycle.yaml")
+	os.WriteFile(nFile, []byte(read(t, nFile)+"needs_human:\n  "+e+": judging the export\n"), 0o644)
+	commitAll(t, owner, "Export needs a person")
+	git(t, owner, "push", "-q", "origin", "main")
+	branches := git(t, checkout, "branch")
+	runs(`^grove: main at [0-9a-f]{7} holds no cycle 261099-zzzzz\n$`, "--retry", "261099-zzzzz")
+	runs(`^grove: `+e+` needs a person, as cycle `+n+`'s needs_human says; build the cycle with /grove-implement `+n+`\n$`, "--retry", n)
+	if got := git(t, checkout, "branch"); got != branches {
+		t.Errorf("a refused run left branches %q, want %q", got, branches)
+	}
+	runs(`^Attempt .* ended: exit status 0;`, "--retry", m)
+	if last, _ := latest(filepath.Join(checkout, ".git/grove")); last.Cycle != m || read(t, filepath.Join(stub, "args")) != "-p /grove-apply "+m+" --output-format stream-json --verbose\n" {
+		t.Errorf("the run given %s selected %s", m, last.Cycle)
+	}
+
 	// No remote: the local target, commits of its own and all, is the fetched
 	// one, and merging the attempt's branch into it ends the pause.
 	git(t, checkout, "remote", "remove", "origin")

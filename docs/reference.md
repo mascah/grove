@@ -13,6 +13,7 @@
 | `grove review` | Shows what merging the current branch into the target would approve: each change, maintained spec, cycle or change schema file it adds or alters, and the diff. |
 | `grove archive <change-id>` | Moves the change's folder to `changes/archive/`. Refuses unless `implementation.md` marks every task in `tasks.md` `Status: done`, or says `Status: dropped`. Commits nothing. |
 | `grove run` | In a clean checkout, fetches the target from `origin` if there is one, else uses the local target, selects the cycle there with the earliest `created` that is marked `unattended` and can be built unattended, and starts one Claude Code session on the apply skill for it on a new branch, `grove/run-<attempt>`. Keeps a record and the output in `.git/grove/`, then starts nothing until every change of that cycle is archived on the target. See [Running apply unattended](running.md). |
+| `grove run <cycle-id>` | As `grove run`, but builds the cycle given, whether or not it is marked `unattended`, and says why when it cannot be built. See [Running apply unattended](running.md), "Run a cycle you name". |
 | `grove run --retry` | Starts a new attempt even though the latest one's cycle is not archived. |
 | `grove run --timeout <duration>` | Stops the session after `<duration>`, such as `30m` or `1h30m`, rather than 2 hours. Goes with `--retry`. |
 | `grove version` | Prints the version of Grove, such as `grove 0.1.0`. A build from a checkout prints a Go pseudo-version naming its commit, and `dev` when Go recorded none. |

@@ -35,9 +35,10 @@ With no command, open the reader on the maintained specs and approved changes.
                              or one change of it
   instructions archive <change-id>
                              print the instructions for archiving a change
-  run [--retry] [--timeout <duration>]
-                             apply the oldest cycle marked unattended in one Claude Code
-                             session on a new branch, then pause until it is archived
+  run [--retry] [--timeout <duration>] [<cycle-id>]
+                             apply the cycle given, or else the oldest marked unattended,
+                             in one Claude Code session on a new branch, then pause until
+                             it is archived
   archive <change-id>        move a change to changes/archive/
   review                     show what merging this branch into the target would approve
   specs                      list the maintained specs
@@ -82,11 +83,11 @@ func run(args []string, stdout, stderr io.Writer) int {
 		f := flag.NewFlagSet("run", flag.ContinueOnError)
 		f.SetOutput(io.Discard)
 		retry, timeout := f.Bool("retry", false, ""), f.Duration("timeout", defaultTimeout, "")
-		if f.Parse(args[1:]) != nil || f.NArg() > 0 {
+		if f.Parse(args[1:]) != nil || f.NArg() > 1 {
 			fmt.Fprint(stderr, usage)
 			return 2
 		}
-		err = runAttempt(stdout, *retry, *timeout)
+		err = runAttempt(stdout, f.Arg(0), *retry, *timeout)
 	case len(args) == 2 && args[0] == "archive":
 		err = archive(stdout, args[1])
 	case len(args) == 1 && args[0] == "review":
