@@ -276,7 +276,7 @@ func requirement(fsys fs.FS, file, name string) (string, bool) {
 }
 
 // configFields are grove.yaml's fields, as project reads them.
-var configFields = []string{"root", "target", "agents", "schema", "rules"}
+var configFields = []string{"root", "target", "agents", "schema", "context", "rules"}
 
 // unknownConfig returns a problem for each field and rules key of grove.yaml,
 // rules being keyed by documents and skills, then by kind and by skill,

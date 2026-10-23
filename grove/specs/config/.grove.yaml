@@ -1,0 +1,2 @@
+title: Config
+description: "grove.yaml's context is given to every skill's instructions, so it reaches agents working through Grove and no other session."

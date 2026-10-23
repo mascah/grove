@@ -25,8 +25,16 @@ or `AGENTS.md`, and Claude Code and Codex when it finds none. `agents` in
 `grove.yaml` lists them; change it and run `grove init` again to add an
 agent, or to have Claude Code's as commands, `/grove:explore`.
 
-Grove adds nothing about your project to what your agent already reads, such
-as `CLAUDE.md` or `AGENTS.md`; keep project facts there. Then commit:
+Open `grove.yaml` and write, under `context`, what an agent working through
+Grove should always do, such as how to show a task is done. It is given to
+every skill, and to no other session; project facts every session needs
+stay in `CLAUDE.md` or `AGENTS.md`. Keep it short:
+
+```yaml
+context: Run python3 -m unittest before saying a task is done.
+```
+
+Then commit:
 
 ```sh
 git add -A && git commit -m "Set up Grove"
