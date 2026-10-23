@@ -1,0 +1,5 @@
+title: Verify before done
+created: 2026-10-23T21:27:49Z
+description: Propose checks its documents agree before presenting them; implement and apply list each scenario's check and recheck done tasks before finishing.
+schema: default
+base: 57af2e3f2f9e00484fd1984de15898613917e3be
