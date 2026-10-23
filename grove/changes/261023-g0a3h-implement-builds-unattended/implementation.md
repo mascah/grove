@@ -58,3 +58,19 @@ Status: in progress
   `rules.skills.apply` report; `TestCoordinating` refuses a waiting change
   and builds the second member and a cycle unattended; `TestMovedFiles`
   names the moved file in both modes.
+
+### T-02 — `grove run` launches implement unattended
+
+Status: in progress
+
+- `internal/cli/run.go`: the session's prompt is `/grove-implement
+  <cycle-id> --unattended` where Claude Code is listed as skills and
+  `/grove:implement <cycle-id> --unattended` as commands; comments name the
+  implement skill. "Nothing to apply" stays, as the runs spec's "Nothing to
+  apply" says.
+- `internal/cli/cli.go`: `run`'s usage line says it implements the cycle
+  asking no one, naming no apply skill.
+- `internal/cli/walkthrough_test.go`: `TestRun` checks the stub `claude`
+  given `-p /grove-implement <k> --unattended` for skills, and, after the
+  owner lists Claude Code as commands, `-p /grove:implement <m>
+  --unattended`.

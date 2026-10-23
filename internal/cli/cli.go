@@ -33,9 +33,9 @@ With no command, open the reader on the maintained specs and approved changes.
   instructions archive <change-id>
                              print the instructions for archiving a change
   run [--retry] [--timeout <duration>] [<cycle-id>]
-                             apply the cycle given, or else the oldest marked unattended,
-                             in one Claude Code session on a new branch, then pause until
-                             it is archived
+                             implement the cycle given, or else the oldest marked
+                             unattended, in one Claude Code session asking no one on a new
+                             branch, then pause until it is archived
   archive <change-id>        move a change to changes/archive/
   review                     show what merging this branch into the target would approve
   specs                      list the maintained specs

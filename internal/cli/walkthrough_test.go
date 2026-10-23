@@ -990,8 +990,8 @@ func TestRun(t *testing.T) {
 	// An ordinary run, with a second run while it goes, its session leaving a
 	// child behind and emitting events, which the log holds before it ends.
 	events := `{"type":"system","subtype":"init","model":"claude-opus"}
-{"type":"assistant","message":{"content":[{"type":"text","text":"Building the cycle.\nFirst A."},{"type":"tool_use","name":"Bash","input":{"description":"Read","command":"grove instructions apply\necho"}}]}}
-{"type":"user","message":{"content":[{"type":"tool_result","content":"# Grove instructions: apply\nmore"}]}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"Building the cycle.\nFirst A."},{"type":"tool_use","name":"Bash","input":{"description":"Read","command":"grove instructions implement x --unattended\necho"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","content":"# Grove instructions: implement\nmore"}]}}
 {"type":"assistant","message":{"content":[{"type":"thinking","thinking":"a"}]}}
 {"type":"assistant","message":{"content":[{"type":"thinking","thinking":"b"}]}}
 {"type":"assistant","message":{"content":[{"type":"thinking","thinking":"c"}]}}
@@ -1025,7 +1025,7 @@ func TestRun(t *testing.T) {
 		t.Errorf("while the session ran, its log held %q", got)
 	}
 	os.WriteFile(filepath.Join(stub, "release"), nil, 0o644)
-	if got := <-first; !regexp.MustCompile(`^[0-9:]{8} ▶ started: model claude-opus\n[0-9:]{8} • Building the cycle\.\n[0-9:]{8} › Bash grove instructions apply\n` +
+	if got := <-first; !regexp.MustCompile(`^[0-9:]{8} ▶ started: model claude-opus\n[0-9:]{8} • Building the cycle\.\n[0-9:]{8} › Bash grove instructions implement x --unattended\n` +
 		`[0-9:]{8} · thinking \(×3\)\n[0-9:]{8} › Read ledger\.py\n[0-9:]{8} ✗ File does not exist\.\n[0-9:]{8} ■ result: success, 3 turns, \$0\.42\nAttempt [0-9]{6}-[0-9a-z]{5} ended: exit status 0; its output is .*/\.git/grove/[0-9]{6}-[0-9a-z]{5}\.log\.\n$`).MatchString(got) {
 		t.Errorf("the first run printed %q", got)
 	}
@@ -1034,7 +1034,7 @@ func TestRun(t *testing.T) {
 	var rec attempt
 	recs, _ := filepath.Glob(filepath.Join(checkout, ".git/grove/*.json"))
 	json.Unmarshal([]byte(read(t, recs[0])), &rec)
-	if read(t, filepath.Join(stub, "args")) != "-p /grove-apply "+k+" --output-format stream-json --verbose\n" || logged() != events || rec.Cycle != k || strings.Join(rec.Changes, " ") != a+" "+b || rec.Commit != main || rec.Outcome != "exit status 0" ||
+	if read(t, filepath.Join(stub, "args")) != "-p /grove-implement "+k+" --unattended --output-format stream-json --verbose\n" || logged() != events || rec.Cycle != k || strings.Join(rec.Changes, " ") != a+" "+b || rec.Commit != main || rec.Outcome != "exit status 0" ||
 		strings.TrimSpace(git(t, checkout, "branch", "--show-current")) != rec.Branch || strings.TrimSpace(git(t, checkout, "rev-parse", "main")) != main || git(t, checkout, "status", "--porcelain") != "" {
 		t.Errorf("after the first run: %+v, %s", rec, git(t, checkout, "status"))
 	}
@@ -1095,7 +1095,8 @@ func TestRun(t *testing.T) {
 	planCycle(t, owner, n, "2026-10-23T10:00:00Z", false, e)
 	nFile := filepath.Join(owner, "grove/cycles", n+"-cycle.yaml")
 	os.WriteFile(nFile, []byte(read(t, nFile)+"needs_human:\n  "+e+": judging the export\n"), 0o644)
-	commitAll(t, owner, "Export needs a person")
+	os.WriteFile(filepath.Join(owner, "grove.yaml"), []byte(strings.Replace(config, "claude: skills", "claude: commands", 1)), 0o644)
+	commitAll(t, owner, "Export needs a person, and Claude Code as commands")
 	git(t, owner, "push", "-q", "origin", "main")
 	branches := git(t, checkout, "branch")
 	runs(`^grove: main at [0-9a-f]{7} holds no cycle 261099-zzzzz\n$`, "--retry", "261099-zzzzz")
@@ -1104,7 +1105,7 @@ func TestRun(t *testing.T) {
 		t.Errorf("a refused run left branches %q, want %q", got, branches)
 	}
 	runs(`^Attempt .* ended: exit status 0;`, "--retry", m)
-	if last, _ := latest(filepath.Join(checkout, ".git/grove")); last.Cycle != m || read(t, filepath.Join(stub, "args")) != "-p /grove-apply "+m+" --output-format stream-json --verbose\n" {
+	if last, _ := latest(filepath.Join(checkout, ".git/grove")); last.Cycle != m || read(t, filepath.Join(stub, "args")) != "-p /grove:implement "+m+" --unattended --output-format stream-json --verbose\n" {
 		t.Errorf("the run given %s selected %s", m, last.Cycle)
 	}
 
