@@ -1,7 +1,7 @@
 <!-- Each task is a section headed "## T-NN — title". One task is usually
-enough. A task says what result is wanted and how to tell it was achieved; it
-refers to requirements instead of repeating them, and leaves ordering and
-execution plans out.
+enough. A task says what result is wanted, the files it touches and how to
+tell it was achieved; it refers to requirements instead of repeating them,
+and leaves ordering and execution plans out.
 
 IDs are allocated in order and never renumbered or reused. This change's first
 task is selected as {{change}}:T-01. Example:
@@ -10,6 +10,10 @@ task is selected as {{change}}:T-01. Example:
 
     Result: existing records can be edited without forcing the new-record rule.
 
+    Files: `src/records/rules.py`, `tests/test_rules.py`
+
+    Interfaces: `validate` takes the record's previous values, if any.
+
     Constraints: new records must still meet the current rule.
 
     Acceptance:
@@ -17,12 +21,17 @@ task is selected as {{change}}:T-01. Example:
     - A newly created record violating the current rule is rejected.
     - The affected behavior and its checks are identified for later reconciliation.
 
+"Interfaces:" is optional when a task produces nothing others use, and
 "Constraints:" is optional. A finished task is not a checked box: do not add
 status here. -->
 
 ## T-01 — [title]
 
 Result: [what is true once this task is done, in one sentence]
+
+Files: [`path/to/file`, `path/to/its_test`]
+
+Interfaces: [the functions, types or commands it produces that others use]
 
 Acceptance:
 - [a check someone else could carry out]

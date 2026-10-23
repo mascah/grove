@@ -90,6 +90,11 @@ branch. The next change in the list then finds its dependency archived as
 finished. Apply builds a cycle whether or not it is marked `unattended`;
 only `grove run` reads the mark.
 
+Apply changes only the files a change's tasks name on their `Files:` lines.
+A file it finds should change too is left as it is and named in that
+task's evidence in `implementation.md`; implementing with you, the agent
+asks to add it to the task instead.
+
 `/grove-implement 261020-m4k8t` builds the same cycle with you, each
 change as `/grove-implement <change-id>` does.
 

@@ -2,6 +2,11 @@
   delivered and accepted on its own.
 - A task states the result wanted and the acceptance expectations someone else
   could check. It refers to requirements instead of repeating them.
+- A task names, on a `Files:` line after `Result:`, the repo-relative paths it
+  creates, modifies or tests, each in backticks, comma-separated; Grove reads
+  this line. On an `Interfaces:` line it names the functions, types or
+  commands it produces that other tasks or callers use. A task says what and
+  where, not how: no code, commands or steps.
 - Never renumber or reuse a task ID. A renamed or reordered task keeps its ID,
   a new task takes the next unused number, and a split task gets new IDs with
   a note naming the one it replaces.

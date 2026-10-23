@@ -120,7 +120,7 @@ A `default` change folder holds:
 | `.grove.yaml` | propose | Title, when it was created, its schema, the commit it was proposed from, the changes it waits on if any, and an optional one-line description. |
 | `proposal.md` | propose, implement | Why, what changes, decisions with who made them, open questions. |
 | `specs/<capability>/spec.md` | propose, implement | Requirements the change adds, changes or removes, for one capability each. |
-| `tasks.md` | propose, implement | The work as numbered tasks, each with how to check it is done. |
+| `tasks.md` | propose, implement | The work as numbered tasks, each with the files it touches, the interfaces it produces and how to check it is done. |
 | `implementation.md` | implement, apply, archive | Each task's status and evidence, and which specs were updated. |
 
 `tasks.md` is part of what was approved, so building it never edits it

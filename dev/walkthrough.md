@@ -51,8 +51,10 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    `.grove.yaml` (its title and created time), `proposal.md` (my decision quoted, the category question open and
    blocking no task, since T-01 leaves the category unchanged),
    `specs/record-editing/spec.md` (an ADDED requirement as an EARS sentence
-   with scenarios), and `tasks.md` (T-01 with its acceptance). It runs
-   `grove check` until:
+   with scenarios), and `tasks.md` (T-01 with its acceptance, a `Files:`
+   line naming `ledger/cli.py`, the file under fix, and `tests/test_cli.py`,
+   which the session said in the conversation it would touch, and an
+   `Interfaces:` line, with no code or steps). It runs `grove check` until:
    > No problems in grove/.
 
    Its instructions, `grove instructions propose`, give
@@ -72,7 +74,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    `grove instructions implement 261015-k3m9q`, give
    `## What Grove requires of implement` before `## How to implement`. The
    open question blocks no task, so the session asks nothing, works T-01
-   with a test, tells me how to try it, and writes `implementation.md` with
+   with a test, editing no file but the two T-01 names without asking me,
+   tells me how to try it, and writes `implementation.md` with
    T-01's status and evidence. `python3 -m unittest` passes. With every task
    done, the same session runs `grove instructions archive 261015-k3m9q`,
    adds the requirement to a new `grove/specs/record-editing/spec.md`, with

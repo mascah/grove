@@ -1,5 +1,9 @@
 - The change below is approved as the target branch holds it. Build what it
   says, nothing more, unless the owner agrees to revise it as below.
+- Change only the files the tasks name on their `Files:` lines. When a file
+  no task names needs a change, tell the owner what the task makes false in
+  it; with their agreement add it to that task's `Files:` line and edit it,
+  otherwise leave it as it is.
 - Work in this working tree on a branch other than the target; create one if
   you are on the target.
 - Record each task's status in `implementation.md` with the `Status:` lines

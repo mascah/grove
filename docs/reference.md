@@ -143,8 +143,9 @@ each skill, `skills/<skill>.md`.
 A schema cannot change Grove's skills or what Grove requires of each, which
 its instructions give first; that a merge approves a change; a change's
 `.grove.yaml`; or how progress is recorded: each task is a `T-NN` heading in
-`tasks.md`, and its status a `Status:` line in `implementation.md`, which
-`grove archive` reads. So every schema has `tasks` and `implementation` at
+`tasks.md`, naming the files it touches on a `Files:` line and the
+interfaces it produces on an `Interfaces:` line, and its status a `Status:`
+line in `implementation.md`, which `grove archive` reads. So every schema has `tasks` and `implementation` at
 those paths, keeps the `Status:` lines of Grove's implementation template,
 and has one kind with `metadata: changes/<change>/.grove.yaml`, the change's
 main document. Its other kinds are in the change folder, except `spec`.
@@ -241,9 +242,10 @@ Tell the owner which of these it is:
 ### 3. Write the change
 
 - The first task adds a test that reproduces the bug and fails before the
-  fix. A simple fix is that one task.
-- No implementation planning: no file-by-file plan, no sequencing, no
-  estimates.
+  fix. A simple fix is that one task: its `Files:` line names the test and
+  the file under fix, and its `Interfaces:` line what the fix changes that
+  callers see.
+- No code, commands or steps, no sequencing, no estimates.
 ```
 
 `grove/schemas/bugfix/documents/proposal/template.md`:

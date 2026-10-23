@@ -23,5 +23,7 @@ describes future work. It does not plan or perform the implementation.
 ### 3. Write the change
 
 Write `design.md` only when a decision needs more room than the proposal's
-decisions section. No implementation planning: no file-by-file plan, no
-sequencing, no estimates.
+decisions section. Each task names the files it touches and the interfaces
+it produces, as the tasks guide says, so where the change goes in the code
+is settled here, not left to whoever builds it. No code, commands or steps,
+no sequencing, no estimates.
