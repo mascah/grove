@@ -5,8 +5,9 @@ in one merge.
 ### Reconcile the specs
 
 Apply each change spec to its maintained spec, `specs/<capability>/spec.md`
-under the document root. ADDED requirements become requirements, MODIFIED
-ones replace the requirement of the same name, REMOVED ones are deleted; the
+under the document root. Copy each ADDED requirement in, and each MODIFIED
+one over the requirement of the same name, word for word, scenarios and
+all; delete each REMOVED one; change no other requirement. The
 ADDED/MODIFIED/REMOVED headings never appear in a maintained spec. Remove the
 known discrepancies the work resolved. Where there is no maintained spec,
 create it, and its `.grove.yaml`, from the templates under "Documents" below.

@@ -537,6 +537,17 @@ Each step names the section of
   `apply: [Commit after each task, naming its task ID.]` under
   `rules: skills:` in `grove.yaml`, `/grove-apply <cycle-id>` commits T-01
   with its ID in the message.
+- **Archive checks the fold** (reference, `grove archive`). After the main
+  line, propose and merge a change that MODIFIES the requirement the main
+  line added, and on `fold-impl` mark its task done and paste the
+  requirement into `grove/specs/record-editing/spec.md` with one word
+  changed. `grove archive <change-id>` says
+  > grove/specs/record-editing/spec.md:\<line>: requirement "\<name>" is not as \<change-id> gives it
+
+  and leaves the folder where it is. Copy the requirement word for word,
+  wrapped at other places, and `grove archive <change-id>` archives it.
+  Paste `## ADDED Requirements` above it, or delete its scenario, and
+  `grove check` reports that line.
 - **Drop a change** (concepts, "The loop"). `/grove-archive <change-id>` on
   an approved change nobody will build asks why, writes `Status: dropped`
   and the reason in `implementation.md`, and moves it without touching the
@@ -607,8 +618,8 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
   change."
 - `instructions propose` tells a change ID (`YYMMDD-xxxxx`) from a
   description by its form.
-- `archive` only moves the folder; the agent does the reconciliation, from
-  `instructions archive`. Both read the change from the working tree, where
+- `archive` moves the folder, refusing a fold that does not match; the
+  agent does the reconciliation, from `instructions archive`. Both read the change from the working tree, where
   `implementation.md` is, and neither checks that the change is approved.
 - Every skill commits only when the owner or its `rules` ask; otherwise
   the owner commits after archiving (getting started §6).

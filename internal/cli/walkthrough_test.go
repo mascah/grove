@@ -420,7 +420,7 @@ func TestArchive(t *testing.T) {
 	// The session reconciles the change spec into a new maintained spec,
 	// from the template its instructions give, then archives the change.
 	out := grove(t, "instructions", "archive", cid)
-	for _, s := range []string{"Reconcile the specs", "Status: done", "### Requirement: Edit older records"} {
+	for _, s := range []string{"Reconcile the specs", "word for word", "run `archive` again", "Status: done", "### Requirement: Edit older records"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("archive instructions lack %q", s)
 		}

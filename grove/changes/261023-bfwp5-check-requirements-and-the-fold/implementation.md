@@ -55,7 +55,24 @@ Status: done
 
 ### T-03 — Document the checks
 
-Status: not started
+Status: done
+
+- `internal/instruct/schemas/default/skills/archive.md`: copy each ADDED
+  and MODIFIED requirement word for word, scenarios and all, delete each
+  REMOVED one, change no other requirement.
+- `internal/instruct/requires/archive.md`: archive refuses a fold that does
+  not match, printing `path:line: message`; fix the spec and run it again.
+- `docs/reference.md`: `grove check` lists both new problems; `grove
+  archive` its new refusal; `grove instructions archive` the word-for-word
+  copy. `docs/concepts.md`: what Grove requires at each step names the
+  refusal (rule 8).
+- `dev/walkthrough.md`: "Archive checks the fold" under Other paths, where
+  archive refuses a reworded requirement and accepts it copied; the
+  Decided line on `archive` says it refuses a fold that does not match.
+- `internal/cli/walkthrough_test.go` (named by T-02): `TestArchive` checks
+  that `grove instructions archive` prints "word for word" and "run
+  `archive` again".
+- `just check` passes; `grove check` is clean.
 
 ## Reconciliation
 
