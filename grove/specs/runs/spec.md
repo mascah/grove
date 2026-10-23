@@ -7,8 +7,9 @@ typing `/grove-apply`: in a checkout an operator prepared for one project,
 it starts one bounded Claude Code session on the apply skill for that
 cycle, records the attempt, and then pauses the project until the cycle is
 archived. "The checkout" is the Git checkout `grove run` is run in. "The
-fetched target" is the target branch as just fetched from `origin`, with
-the `grove.yaml` it holds. "An eligible cycle" is a cycle on the fetched
+fetched target" is the target branch as just fetched from `origin`, or,
+in a checkout with no remote named `origin`, the local target branch; in
+both, with the `grove.yaml` it holds. "An eligible cycle" is a cycle on the fetched
 target that holds `unattended: true`, is not done, is not
 stale, has no member `needs_human` names, and has no member that waits on
 a change neither in the cycle nor archived as finished
@@ -30,9 +31,10 @@ or cron calls `grove run`.
 ### Requirement: Start one attempt
 
 When the operator runs `grove run` in a clean checkout that is not paused,
-and the fetched target holds an eligible cycle, the system shall
-fast-forward the local target branch to the fetched target, create the
-attempt's branch from it, record the attempt for the oldest eligible
+and the fetched target holds an eligible cycle, the system shall, when the
+checkout has a remote named `origin`, fetch the target from it and
+fast-forward the local target branch to it; then create the attempt's
+branch from the fetched target, record the attempt for the oldest eligible
 cycle, the one whose `created` is earliest, launch one Claude Code session
 on the apply skill with that cycle's ID, and wait for the session to end.
 
@@ -65,6 +67,22 @@ on the apply skill with that cycle's ID, and wait for the session to end.
 - WHEN the operator runs `grove run`
 - THEN no session is launched, and Grove says `run` needs Claude Code
   listed under `agents`
+
+#### Scenario: A checkout with no remote
+
+- GIVEN the checkout has no remote named `origin`, and its local target
+  branch holds eligible cycle K
+- WHEN the operator runs `grove run`
+- THEN nothing is fetched, the checkout is on a new branch from the local
+  target, one session is launched on the apply skill with K's ID, and the
+  attempt's record holds the local target's commit
+
+#### Scenario: The branch merged locally
+
+- GIVEN the latest attempt, in a checkout with no remote, built cycle K on
+  its branch, and the owner merged that branch into the local target
+- WHEN the operator runs `grove run`
+- THEN the project is not paused
 
 ### Requirement: Nothing to apply
 
@@ -160,6 +178,34 @@ group before the run ends. Processes that left the group are not stopped.
 - GIVEN the session started a child in its process group and then exited
 - WHEN `grove run` records the attempt
 - THEN the child is no longer running
+
+### Requirement: Show the session as it runs
+
+While the session runs, the system shall write every event the session
+emits to the attempt's output file as JSON Lines, and print to standard
+output one line for each assistant message, each tool call and each tool
+result, as it happens.
+
+#### Scenario: Watching a run
+
+- GIVEN `grove run` launched a session on an eligible cycle
+- WHEN the agent runs a tool
+- THEN, before the session ends, standard output shows a line naming the
+  tool and the first line of its input, and then a line with the first
+  line of its result
+
+#### Scenario: A stopped session
+
+- GIVEN a session that made several tool calls was stopped at the time
+  limit
+- WHEN the operator reads the attempt's output file
+- THEN it holds each event up to the stop, one JSON object per line
+
+#### Scenario: Started by a timer
+
+- GIVEN launchd started `grove run` with standard output sent to a file
+- WHEN the session runs
+- THEN that file receives the same lines a terminal would
 
 ### Requirement: Record the attempt
 

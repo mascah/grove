@@ -68,3 +68,6 @@ Status: done
 - `just check` passes.
 
 ## Reconciliation
+
+- cycles: applied to specs/cycles/spec.md
+- runs: applied to specs/runs/spec.md
