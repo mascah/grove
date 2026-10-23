@@ -1,0 +1,5 @@
+title: Propose asks a round
+created: 2026-10-23T16:17:18Z
+description: After confirming the scope, propose asks every decision it would otherwise assume in one numbered round with recommended answers, and the proposal carries no assumptions.
+schema: default
+base: b143991a83a9e9452c62a09a65f761998c8bb4d5

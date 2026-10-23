@@ -1,0 +1,5 @@
+title: Tasks name their files
+created: 2026-10-23T16:17:18Z
+description: Each task names the files it touches and the interfaces it produces; grove check reports a named file that changed on the target since the change's base, or since its cycle's planned commit.
+schema: default
+base: b143991a83a9e9452c62a09a65f761998c8bb4d5
