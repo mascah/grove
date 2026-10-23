@@ -1,0 +1,5 @@
+title: The apply scenario builds a cycle
+created: 2026-10-23T15:30:51Z
+description: The implement spec's "Apply asks no one" scenario types /grove-apply with a change ID, which apply refuses; it builds C as a member of a cycle instead.
+schema: default
+base: 5383ad8e5df51d5b953ecc735fb74c51129c69b8
