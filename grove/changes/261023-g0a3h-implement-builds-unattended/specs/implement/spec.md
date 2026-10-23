@@ -13,6 +13,9 @@ approves or a cycle the target holds, the system shall print instructions
 that have the agent build it as `/grove-implement <id>` would but ask no
 one: a task an open question decides, or that cannot be built as the
 change says, is marked `Status: blocked` with the question or the reason;
+in a change in no cycle that is not done, a task naming a file the target
+changed since the change's `base` is marked `Status: blocked` with the
+file and is not built on it;
 a file no task names is left as it is and named in that task's evidence;
 the change's files other than `implementation.md` are not edited; and a
 cycle is built whether or not it is marked `unattended` and whatever its
@@ -34,6 +37,15 @@ cycle is built whether or not it is marked `unattended` and whatever its
   T-02
 - THEN T-02 is marked `Status: blocked` with the question, nobody is
   asked, and C's proposal, change specs and tasks are unchanged
+
+#### Scenario: A named file moved since base
+
+- GIVEN the target approves change C, in no cycle, whose T-02 names
+  `internal/cli/run.go`, which the target changed after C's `base`
+- WHEN `/grove-implement C --unattended` is run
+- THEN Grove's instructions name T-02 and `internal/cli/run.go` as changed
+  since base, T-01 is built, and T-02 is marked `Status: blocked` naming
+  that file, unbuilt, with nobody asked
 
 #### Scenario: Two members, one waiting on the other
 

@@ -68,6 +68,10 @@ Acceptance:
 - On the ledger fixture, in Claude Code, `/grove-implement <change-id>
   --unattended` builds a change whose open question decides a task,
   marking that task blocked without asking.
+- `walkthrough_test.go`: `instructions implement <change-id> --unattended`
+  for a change in no cycle whose task names a file moved since base names
+  that task and file, and its unattended part says to mark the task
+  blocked with the reason and not build on the file.
 - Archiving this change deletes `grove/specs/apply/` and points the
   Purpose and Boundaries of the maintained `implement`, `runs`, `cycles`
   and `propose` specs that name apply at implement.
@@ -105,13 +109,17 @@ the implement skill, and tells no reader to use apply (rule 8).
 Files: `README.md`, `docs/index.md`, `docs/concepts.md`,
 `docs/getting-started.md`, `docs/coordinating.md`, `docs/planning.md`,
 `docs/running.md`, `docs/reference.md`,
-`docs/guides/run-apply-on-a-timer.md`,
+`docs/guides/run-apply-on-a-timer.md`, `docs/guides/run-on-a-timer.md`,
 `docs/guides/glossary-and-decisions.md`, `mkdocs.yml`,
 `dev/walkthrough.md`
 
 Interfaces: none.
 
 Acceptance:
+- `docs/guides/run-apply-on-a-timer.md` is moved to
+  `docs/guides/run-on-a-timer.md`, and `mkdocs.yml`, `docs/index.md`,
+  `docs/running.md` and any other page link the new path; no page or nav
+  entry names the old one.
 - No page or walkthrough step tells the reader to type `/grove-apply`, run
   `grove instructions apply` or write lines under `rules.skills.apply`.
 - `docs/reference.md` has `--unattended` in the `instructions implement`

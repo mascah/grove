@@ -124,21 +124,22 @@ every answer below in one round ("yes").
   Reason: `CONTRIBUTING.md` counts a removed skill and a removed
   `grove.yaml` key as breaking.
 
+The owner answered two later questions on 2026-10-23:
+
+- **A moved file under `--unattended` blocks its task.** For a change in
+  no cycle, a task naming a file the target changed since the change's
+  `base` is marked `Status: blocked` with the reason, and not built on the
+  moved file. The owner: "Lets try this strictness for now". Reason: with
+  the owner, implement asks before building on a moved file ("Tell the
+  owner of a moved file"); with no one to ask, the agent builds nothing on
+  text the change was not written against.
+- **The timer guide moves to `docs/guides/run-on-a-timer.md`,** from
+  `docs/guides/run-apply-on-a-timer.md`, and the links to it follow. The
+  owner: "yes". Reason: its path should not name a skill that is gone.
+
 ## Open questions
 
-None must be answered before review.
-
-- **A moved file under `--unattended`.** When `/grove-implement <change-id>
-  --unattended` is run for a change in no cycle and a task names a file
-  the target changed since the change's `base`, implement's instructions
-  today have the agent ask the owner ("Tell the owner of a moved file").
-  Does the unattended agent mark that task `Status: blocked`, naming the
-  file, or build on the file as it is now? Recommended: blocked. It
-  decides the unattended part of the requires text in T-01; until it is
-  answered, T-01 leaves that line unwritten.
-- **The guide's path.** Does `docs/guides/run-apply-on-a-timer.md` keep
-  its path, with only its text changed, or move to a path without
-  "apply"? It can wait; it decides T-03's `mkdocs.yml` and link edits.
+None must be answered before review. None blocks a task.
 
 ## Related documents
 
