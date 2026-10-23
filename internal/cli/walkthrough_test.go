@@ -888,8 +888,17 @@ func TestRun(t *testing.T) {
 	runs(`^grove: the checkout has uncommitted changes; commit, stash or discard them first\n$`)
 	git(t, checkout, "checkout", "-q", "--", ".")
 
-	// An ordinary run, with a second run while it goes, its session leaving a child behind.
-	standIn("sleep 30 &\ntouch " + stub + "/started\nwhile [ ! -f " + stub + "/release ]; do sleep 0.05; done")
+	// An ordinary run, with a second run while it goes, its session leaving a
+	// child behind and emitting events, which the log holds before it ends.
+	events := `{"type":"system","subtype":"init"}
+{"type":"assistant","message":{"content":[{"type":"text","text":"Building the cycle.\nFirst A."},{"type":"tool_use","name":"Bash","input":{"description":"Read","command":"grove instructions apply\necho"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","content":"# Grove instructions: apply\nmore"}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"ledger.py"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","content":[{"type":"text","text":"import csv\n"}]}]}}
+{"type":"result","subtype":"success","result":"Done."}
+`
+	os.WriteFile(filepath.Join(stub, "events"), []byte(events), 0o644)
+	standIn("sleep 30 &\ncat " + stub + "/events\ntouch " + stub + "/started\nwhile [ ! -f " + stub + "/release ]; do sleep 0.05; done")
 	first := make(chan string)
 	go func() {
 		var stdout, stderr strings.Builder
@@ -900,8 +909,21 @@ func TestRun(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	runs(`^grove: a run is in progress in this checkout\n$`)
+	logged := func() string {
+		logs, _ := filepath.Glob(filepath.Join(checkout, ".git/grove/*.log"))
+		if len(logs) == 0 {
+			return ""
+		}
+		return read(t, logs[0])
+	}
+	for end := time.Now().Add(5 * time.Second); logged() != events && time.Now().Before(end); {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if got := logged(); got != events {
+		t.Errorf("while the session ran, its log held %q", got)
+	}
 	os.WriteFile(filepath.Join(stub, "release"), nil, 0o644)
-	if got := <-first; !regexp.MustCompile(`^Attempt [0-9]{6}-[0-9a-z]{5} ended: exit status 0; its output is .*/\.git/grove/[0-9]{6}-[0-9a-z]{5}\.log\.\n$`).MatchString(got) {
+	if got := <-first; !regexp.MustCompile(`^Building the cycle\.\nBash: grove instructions apply\n  # Grove instructions: apply\nRead: ledger\.py\n  import csv\nAttempt [0-9]{6}-[0-9a-z]{5} ended: exit status 0; its output is .*/\.git/grove/[0-9]{6}-[0-9a-z]{5}\.log\.\n$`).MatchString(got) {
 		t.Errorf("the first run printed %q", got)
 	}
 	gone("after the session exited")
@@ -909,7 +931,7 @@ func TestRun(t *testing.T) {
 	var rec attempt
 	recs, _ := filepath.Glob(filepath.Join(checkout, ".git/grove/*.json"))
 	json.Unmarshal([]byte(read(t, recs[0])), &rec)
-	if read(t, filepath.Join(stub, "args")) != "-p /grove-apply "+k+"\n" || rec.Cycle != k || strings.Join(rec.Changes, " ") != a+" "+b || rec.Commit != main || rec.Outcome != "exit status 0" ||
+	if read(t, filepath.Join(stub, "args")) != "-p /grove-apply "+k+" --output-format stream-json --verbose\n" || logged() != events || rec.Cycle != k || strings.Join(rec.Changes, " ") != a+" "+b || rec.Commit != main || rec.Outcome != "exit status 0" ||
 		strings.TrimSpace(git(t, checkout, "branch", "--show-current")) != rec.Branch || strings.TrimSpace(git(t, checkout, "rev-parse", "main")) != main || git(t, checkout, "status", "--porcelain") != "" {
 		t.Errorf("after the first run: %+v, %s", rec, git(t, checkout, "status"))
 	}

@@ -39,6 +39,32 @@ Status: done
 
 ### T-03 — Show the session as it runs
 
-Status: not started
+Status: done
+
+- `internal/cli/run.go`: the session is started with `--output-format
+  stream-json --verbose`, its standard output through a pipe; `relay`
+  writes every line to the attempt's log as it comes and prints the first
+  line of each assistant text, each tool call (name and the first of its
+  `command`, `file_path`, `pattern`, `url` or `description`) and each tool
+  result, indented. Standard error still goes to the log. Once the group
+  is stopped, reading waits at most 5 seconds for a process that left the
+  group and holds the pipe.
+- `docs/running.md` shows the lines and the JSON Lines log and no longer
+  says a stopped session's output is usually empty;
+  `docs/guides/run-apply-on-a-timer.md` says the launchd log receives the
+  same lines; `dev/walkthrough.md` running steps 2 and 4 run them.
+- `TestRun`: the stand-in `claude` emits stream-json events (text, tool
+  calls, string and array results, system and result events); the test
+  checks the log holds them before the session ends, the lines on
+  standard output, the log's content after, and the new flags.
+- On the ledger fixture, 2026-10-23, with no remote and Claude Code: `grove
+  run` on a marked cycle of one change printed a line per message, tool
+  call and result, ended `exit status 0`, and its 45-line log parsed as
+  JSON on every line. The same run showed T-02: the record held local
+  `main`'s commit, the project was paused, and merging the branch into
+  `main` gave "Nothing to apply". The agent left the archive uncommitted,
+  its rules asking only for a commit per task, so "Without a remote" in
+  `docs/running.md` now suggests a rule to commit what is left.
+- `just check` passes.
 
 ## Reconciliation

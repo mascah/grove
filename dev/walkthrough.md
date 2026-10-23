@@ -266,8 +266,14 @@ Each step names the section of
    While it runs, `grove run` in a second shell there says
    > grove: a run is in progress in this checkout
 
-   and `grove run` in another project's checkout proceeds. The first ends
+   and `grove run` in another project's checkout proceeds. While the first
+   runs, it prints the agent's messages as they come, each tool call with
+   the first line of its input, such as
+   `Bash: grove instructions apply <cycle-id> <change-id>`, and, indented,
+   the first line of its result. It ends
    > Attempt \<attempt> ended: exit status 0; its output is \<checkout>/.git/grove/\<attempt>.log.
+
+   `head -1` of that log is a JSON object, as is every line after it.
 
    The checkout is on `grove/run-<attempt>`, whose commits build and archive
    both changes, the unknown-ID one first, each task with its ID. The
@@ -286,12 +292,13 @@ Each step names the section of
    pull request unmerged.
 
 4. **When a session is stopped** ("When a session is stopped").
-   `grove run --retry`, and once the output shows an edit to a file, press
-   Ctrl-C:
+   `grove run --retry`, and once it prints an `Edit:` or `Write:` line,
+   press Ctrl-C:
    > grove: attempt \<attempt> ended: cancelled; its output is \<checkout>/.git/grove/\<attempt>.log
 
    `ps -o pid,pgid,command -g <pid of that claude -p>` lists nothing, and
-   the branch, the edit and the output are there. `grove run --retry` says
+   the branch, the edit and the output are there; the log holds each event
+   up to the stop, one JSON object per line, the edit's tool call among them. `grove run --retry` says
    > grove: the checkout has uncommitted changes; commit, stash or discard them first
 
    and the edit is untouched. Discard it as the page shows, then
@@ -313,8 +320,8 @@ Each step names the section of
 6. **Without a remote** ("Without a remote"). `just fixture
    ~/tmp/ledger-local`, `grove init`, commit, approve the unknown-ID
    change, plan it as a cycle of one, mark it `unattended` and merge, with
-   only `Commit after each task, naming its task ID.` under
-   `rules.skills.apply`; write `.claude/settings.local.json` and the
+   `Commit after each task, naming its task ID.` and the page's
+   commit-what-is-left line under `rules.skills.apply`; write `.claude/settings.local.json` and the
    `.git/info/exclude` line from the page. `git remote` lists nothing.
    `grove run` fetches nothing, ends `exit status 0`, and its record holds
    `main`'s commit. `grove run` says the project is paused. Merge

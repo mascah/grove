@@ -95,11 +95,25 @@ it has uncommitted changes. Then it:
 3. Creates the branch `grove/run-<attempt>` from the fetched target,
    `<attempt>` being a new ID such as `261021-6jbj1`, fast-forwards the
    local target branch to it, and starts
-   `claude -p "/grove-apply 261020-m4k8t"` on the new branch.
+   `claude -p "/grove-apply 261020-m4k8t" --output-format stream-json --verbose`
+   on the new branch.
 
 The agent builds the cycle's changes in turn, as "Applying a cycle" in
 [Coordinating changes](coordinating.md) says, archives each one it finishes,
-commits, pushes and opens the pull request, as the rules say. When the
+commits, pushes and opens the pull request, as the rules say. While it
+works, Grove prints a line for each message the agent writes, each tool
+it calls, with the first line of its input, such as a command or a file
+path, and, indented, the first line of each tool's result:
+
+```text
+I'll build cycle 261020-m4k8t, starting with 261019-p4x8d.
+Bash: grove instructions apply 261020-m4k8t 261019-p4x8d
+  # Grove instructions: apply
+Read: /Users/you/grove-runs/ledger/ledger.py
+  1	import csv
+```
+
+These go to standard output whether or not it is a terminal. When the
 session ends, Grove says
 > Attempt 261021-6jbj1 ended: exit status 0; its output is /Users/you/grove-runs/ledger/.git/grove/261021-6jbj1.log.
 
@@ -108,7 +122,8 @@ done; `implementation.md` and the pull request say that. Grove keeps two
 files per attempt in the checkout's `.git/grove/`, which `git status` does
 not show and nobody commits:
 
-- `<attempt>.log`, everything the session printed.
+- `<attempt>.log`, every event the session emitted, one JSON object per
+  line, as Claude Code's `stream-json` gives them, written as they come.
 - `<attempt>.json`, the record: when it started and `ended`, the `cycle`
   it selected and its `changes` in build order, the target `commit`, the
   `checkout`, the `branch`, the `output` file and the `outcome`, one of `exit status <n>`, `timed out`,
@@ -119,9 +134,15 @@ not show and nobody commits:
 In a checkout with no remote named `origin`, `grove run` fetches nothing:
 the local target branch is the fetched target. It selects a cycle there
 and creates the attempt's branch from it, and the record holds the local
-target's commit. Nobody opens a pull request, so leave the push and
-`gh pr create` rule out of `grove.yaml`, and merge the attempt's branch
-into the target yourself:
+target's commit. Nobody opens a pull request, so in place of the push and
+`gh pr create` rule, have the agent commit what it leaves, such as the
+archive:
+
+```yaml
+      - When you are done, commit everything left uncommitted.
+```
+
+and merge the attempt's branch into the target yourself:
 
 ```sh
 git switch main
@@ -163,8 +184,8 @@ session of its own, keeps running. If `grove run` itself is killed
 outright, it stops nothing: check with `ps` that no `claude -p` from it is
 still running before you start another.
 
-`claude -p` prints only its last message, so a stopped session's output is
-usually empty; the branch and its files show what it did.
+A stopped session's log holds each event up to the stop, so it shows what
+the session did, beside the branch and its files.
 
 Grove does not recover an attempt. Look at the branch and the output, then
 commit what is worth keeping and open its pull request yourself, or
