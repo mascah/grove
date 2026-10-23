@@ -1,0 +1,5 @@
+title: Styled grove run output
+created: 2026-10-23T18:40:00Z
+description: grove run shows the session as one marked, timed row per event, stacking repeats such as thinking, and tool results only on error.
+schema: default
+base: 2f8f44d2235aaace8c783c60edbf0e2588c11096
