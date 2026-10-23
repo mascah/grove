@@ -896,12 +896,15 @@ func TestRun(t *testing.T) {
 
 	// An ordinary run, with a second run while it goes, its session leaving a
 	// child behind and emitting events, which the log holds before it ends.
-	events := `{"type":"system","subtype":"init"}
+	events := `{"type":"system","subtype":"init","model":"claude-opus"}
 {"type":"assistant","message":{"content":[{"type":"text","text":"Building the cycle.\nFirst A."},{"type":"tool_use","name":"Bash","input":{"description":"Read","command":"grove instructions apply\necho"}}]}}
 {"type":"user","message":{"content":[{"type":"tool_result","content":"# Grove instructions: apply\nmore"}]}}
+{"type":"assistant","message":{"content":[{"type":"thinking","thinking":"a"}]}}
+{"type":"assistant","message":{"content":[{"type":"thinking","thinking":"b"}]}}
+{"type":"assistant","message":{"content":[{"type":"thinking","thinking":"c"}]}}
 {"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"ledger.py"}}]}}
-{"type":"user","message":{"content":[{"type":"tool_result","content":[{"type":"text","text":"import csv\n"}]}]}}
-{"type":"result","subtype":"success","result":"Done."}
+{"type":"user","message":{"content":[{"type":"tool_result","is_error":true,"content":[{"type":"text","text":"File does not exist.\n"}]}]}}
+{"type":"result","subtype":"success","result":"Done.","num_turns":3,"total_cost_usd":0.4213}
 `
 	os.WriteFile(filepath.Join(stub, "events"), []byte(events), 0o644)
 	standIn("sleep 30 &\ncat " + stub + "/events\ntouch " + stub + "/started\nwhile [ ! -f " + stub + "/release ]; do sleep 0.05; done")
@@ -929,7 +932,8 @@ func TestRun(t *testing.T) {
 		t.Errorf("while the session ran, its log held %q", got)
 	}
 	os.WriteFile(filepath.Join(stub, "release"), nil, 0o644)
-	if got := <-first; !regexp.MustCompile(`^Building the cycle\.\nBash: grove instructions apply\n  # Grove instructions: apply\nRead: ledger\.py\n  import csv\nAttempt [0-9]{6}-[0-9a-z]{5} ended: exit status 0; its output is .*/\.git/grove/[0-9]{6}-[0-9a-z]{5}\.log\.\n$`).MatchString(got) {
+	if got := <-first; !regexp.MustCompile(`^[0-9:]{8} ▶ started: model claude-opus\n[0-9:]{8} • Building the cycle\.\n[0-9:]{8} › Bash grove instructions apply\n` +
+		`[0-9:]{8} · thinking \(×3\)\n[0-9:]{8} › Read ledger\.py\n[0-9:]{8} ✗ File does not exist\.\n[0-9:]{8} ■ result: success, 3 turns, \$0\.42\nAttempt [0-9]{6}-[0-9a-z]{5} ended: exit status 0; its output is .*/\.git/grove/[0-9]{6}-[0-9a-z]{5}\.log\.\n$`).MatchString(got) {
 		t.Errorf("the first run printed %q", got)
 	}
 	gone("after the session exited")

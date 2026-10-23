@@ -14,7 +14,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unsafe"
 
+	"charm.land/lipgloss/v2"
 	"github.com/mascah/grove/internal/doc"
 	"github.com/mascah/grove/internal/gitx"
 	"github.com/mascah/grove/internal/instruct"
@@ -208,8 +210,8 @@ func runnable(p project, ip instruct.Project, cy *doc.Cycle) ([]*doc.Change, err
 }
 
 // session runs skill in Claude Code in dir, writing every event it emits
-// to out and printing a line to stdout for each message, tool call and
-// result, and returns how it ended. Whichever way it ends, its process
+// to out and showing them on stdout as relay does, and returns how it
+// ended. Whichever way it ends, its process
 // group is stopped.
 func session(stdout io.Writer, out *os.File, dir, skill string, timeout time.Duration) string {
 	signals := make(chan os.Signal, 1)
@@ -232,7 +234,8 @@ func session(stdout io.Writer, out *os.File, dir, skill string, timeout time.Dur
 		return "failed to start"
 	}
 	shown := make(chan struct{})
-	go func() { relay(stdout, out, r); close(shown) }()
+	tty, width := terminal(stdout)
+	go func() { relay(stdout, out, r, tty, width); close(shown) }()
 	done := make(chan struct{})
 	go func() { cmd.Wait(); close(done) }()
 	outcome := ""
@@ -252,9 +255,38 @@ func session(stdout io.Writer, out *os.File, dir, skill string, timeout time.Dur
 }
 
 // relay copies each line of r, one stream-json event, to out, and prints to
-// stdout the first line of each assistant message, each tool call with its
-// input, and each tool result.
-func relay(stdout, out io.Writer, r io.Reader) {
+// stdout one row per shown event: its time, a mark for its kind and its
+// first line. A row like the one before it is counted on that row instead.
+// On a terminal of width cells, rows are colored and cut to it, and a
+// count updates in place; elsewhere a row is printed once the next differs.
+func relay(stdout, out io.Writer, r io.Reader, tty bool, width int) {
+	var last row
+	show := func() {
+		if tty {
+			fmt.Fprint(stdout, "\r"+last.render(width)+"\x1b[K")
+		} else if last.n > 0 {
+			fmt.Fprintln(stdout, last.plain())
+		}
+	}
+	end := func() { // the cursor is left at the end of a terminal's last row
+		if !tty {
+			show()
+		} else if last.n > 0 {
+			fmt.Fprintln(stdout)
+		}
+	}
+	add := func(mark, text string, tone lipgloss.Style) {
+		if text = firstLine(text); last.n > 0 && last.mark == mark && last.text == text {
+			last.n++
+		} else {
+			end()
+			last = row{time.Now(), mark, text, tone, 1}
+		}
+		if tty {
+			show()
+		}
+	}
+	defer end()
 	br := bufio.NewReader(r)
 	for {
 		line, err := br.ReadBytes('\n')
@@ -263,33 +295,53 @@ func relay(stdout, out io.Writer, r io.Reader) {
 			return
 		}
 		var e struct {
-			Type    string
-			Message struct {
+			Type, Subtype, Model string
+			IsError              bool    `json:"is_error"`
+			Turns                int     `json:"num_turns"`
+			Cost                 float64 `json:"total_cost_usd"`
+			Message              struct {
 				Content []struct {
 					Type, Text, Name string
 					Input            map[string]any
 					Content          json.RawMessage
+					IsError          bool `json:"is_error"`
 				}
 			}
 		}
 		if json.Unmarshal(line, &e) != nil {
 			continue
 		}
+		switch e.Type {
+		case "system":
+			if e.Subtype == "init" {
+				add("▶", "started: model "+e.Model, green)
+			} else {
+				add("·", "system: "+e.Subtype, faint)
+			}
+		case "result":
+			tone := green
+			if e.Subtype != "success" || e.IsError {
+				tone = red
+			}
+			add("■", fmt.Sprintf("result: %s, %d turns, $%.2f", e.Subtype, e.Turns, e.Cost), tone)
+		}
 		for _, c := range e.Message.Content {
 			switch {
-			case e.Type == "assistant" && c.Type == "text":
-				fmt.Fprintln(stdout, firstLine(c.Text))
+			case e.Type == "assistant" && c.Type == "text" && firstLine(c.Text) != "":
+				add("•", c.Text, lipgloss.NewStyle())
+			case e.Type == "assistant" && c.Type == "thinking":
+				add("·", "thinking", faint)
 			case e.Type == "assistant" && c.Type == "tool_use":
 				input := ""
 				// ponytail: the usual tools' main argument; add a key when a tool shows only its name.
 				for _, k := range []string{"command", "file_path", "pattern", "url", "description"} {
 					if v, ok := c.Input[k].(string); ok {
-						input = v
+						input = " " + firstLine(v)
 						break
 					}
 				}
-				fmt.Fprintln(stdout, c.Name+": "+firstLine(input))
-			case e.Type == "user" && c.Type == "tool_result":
+				add("›", c.Name+input, cyan)
+			case e.Type == "user" && c.Type == "tool_result" && c.IsError:
 				var text string
 				if json.Unmarshal(c.Content, &text) != nil {
 					var parts []struct{ Text string }
@@ -298,10 +350,53 @@ func relay(stdout, out io.Writer, r io.Reader) {
 						text += p.Text
 					}
 				}
-				fmt.Fprintln(stdout, "  "+firstLine(text))
+				add("✗", text, red)
 			}
 		}
 	}
+}
+
+var (
+	faint = lipgloss.NewStyle().Faint(true)
+	green = lipgloss.NewStyle().Foreground(lipgloss.Green)
+	red   = lipgloss.NewStyle().Foreground(lipgloss.Red)
+	cyan  = lipgloss.NewStyle().Foreground(lipgloss.Cyan)
+)
+
+// row is one event relay shows, n times in a row.
+type row struct {
+	at         time.Time
+	mark, text string
+	tone       lipgloss.Style
+	n          int
+}
+
+func (r row) times() string {
+	if r.n < 2 {
+		return ""
+	}
+	return fmt.Sprintf(" (×%d)", r.n)
+}
+
+func (r row) plain() string { return r.at.Format("15:04:05") + " " + r.mark + " " + r.text + r.times() }
+
+// render is the row colored and cut to width cells, its count kept whole.
+func (r row) render(width int) string {
+	text := lipgloss.NewStyle().MaxWidth(max(width-9-lipgloss.Width(r.times()), 1)).Render(r.mark + " " + r.text)
+	return faint.Render(r.at.Format("15:04:05")) + " " + r.tone.Render(text) + faint.Render(r.times())
+}
+
+// terminal reports whether w is a terminal, and its width.
+func terminal(w io.Writer) (bool, int) {
+	f, ok := w.(*os.File)
+	if !ok {
+		return false, 0
+	}
+	var size struct{ rows, cols, x, y uint16 }
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), syscall.TIOCGWINSZ, uintptr(unsafe.Pointer(&size))); errno != 0 {
+		return false, 0
+	}
+	return true, int(size.cols)
 }
 
 func firstLine(s string) string {
