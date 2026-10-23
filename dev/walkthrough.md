@@ -180,6 +180,11 @@ show-saved changes approved. Each step names the section of
    `grove check`:
    > No problems in grove/.
 
+   It ends by saying `grove run` would skip the cycle if marked, because
+   budgets needs a person, and that revising budgets with
+   `/grove-propose <budgets-id>` so its acceptance can be checked without
+   a person, merging it and re-planning the cycle removes that.
+
 2. **Merge the plan** ("Merge the plan"). Commit, then `grove review`:
    > adds     cycle            grove/cycles/\<cycle-id>-\<slug>.yaml
 
@@ -189,7 +194,9 @@ show-saved changes approved. Each step names the section of
 3. **A cycle of one** ("Plan a cycle"). `git switch -c plan-show-saved`, a
    fresh session, `/grove-plan <show-saved>`. It asks whether to keep the
    change's title for the cycle and, finding nothing that needs a person,
-   writes a cycle listing only show-saved. Commit and merge.
+   writes a cycle listing only show-saved. It ends by saying `grove run`
+   would build the cycle once `unattended: true` is added to its file in a
+   merge of its own. Commit and merge.
 
 4. **Mark it unattended** ("Mark it unattended"). `git switch -c mark`, add
    `unattended: true` to the show-saved cycle, `grove check` is clean;

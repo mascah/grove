@@ -746,7 +746,7 @@ func TestCycles(t *testing.T) {
 	main := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	out := grove(t, "instructions", "plan", "0.4 release")
 	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.yaml`").FindStringSubmatch(out)
-	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
+	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "say whether `grove run` would build the cycle once it\n  is marked `unattended` and, for each obstacle, what removes it", "## How to plan\n",
 		"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n"} {
 		if m == nil || !strings.Contains(out, s) {
 			t.Errorf("plan instructions lack %q:\n%s", s, out)

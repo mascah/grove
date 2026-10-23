@@ -41,6 +41,19 @@ planned: 8f2d6c1a4b9e0f7d3c5a2b1e6f4d8c0a9b7e5f3d
 `created` is when the plan started, and `planned` the commit of your main
 branch it read. Grove's template writes both, so you never type them.
 
+It ends by saying whether `grove run` would build the cycle once you mark
+it `unattended`, and what removes each obstacle. For this one:
+
+> grove run would skip this cycle if marked: 261019-r2w7k needs a person. To remove that, revise it with `/grove-propose 261019-r2w7k` so its acceptance can be checked without a person, merge it, and re-plan with `/grove-plan 261020-m4k8t`.
+
+For a cycle with nothing in the way:
+
+> grove run would build this cycle once `unattended: true` is added to its file in a merge of its own.
+
+A change that waits on one outside the cycle keeps `grove run` from the
+cycle until that one is archived as finished, and the agent names what the
+runner's checkout must have, such as a login you said the runner has.
+
 To send one change on its own, plan a cycle of one from its ID:
 
 ```text
