@@ -1,0 +1,6 @@
+title: Implement suggests a rules line
+created: 2026-10-23T21:42:55Z
+description: After building with the owner, implement suggests one context or rules line for grove.yaml from a correction, written only if the owner agrees; unattended only names one.
+schema: default
+depends_on: [261023-g0a3h]
+base: 0c6f419dab8187d31dd526c0a60754fbbdeeb688
