@@ -152,6 +152,20 @@ your main branch's commit. `grove check` is clean again. Merge it, and the
 revised change is approved. Do not edit `base` by hand: that hides the
 report without bringing the change up to date.
 
+The code can move too. Each task names the files it touches on its
+`Files:` line, and `grove check` reports a file that changed on your main
+branch since the change's `base`:
+
+> grove/changes/261019-s5v3m-show-what-was-saved/tasks.md: T-01's ledger/cli.py changed on main since base 4f1c2a9; revise the change with propose
+
+Only main counts: a branch building the change, which edits that file, is
+not reported. `/grove-implement 261019-s5v3m` names the task and file, and
+the agent tells you what changed and asks before building that task. A
+change in a cycle that is not done is not reported against its `base`: a
+moved file makes its cycle stale instead, and re-planning the cycle is
+enough to build on the new text (see [Planning cycles](planning.md),
+"Mark it unattended").
+
 In a change spec, each REMOVED requirement keeps its heading,
 `### Requirement: <name>`, followed by why it goes, so `grove check` can
 find it.

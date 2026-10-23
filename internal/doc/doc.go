@@ -78,9 +78,10 @@ type Change struct {
 // Task is one T-NN heading of a change's tasks.md, with the status
 // implementation.md gives it, if any (rule 3).
 type Task struct {
-	ID     string `json:"id"`
-	Title  string `json:"title"`
-	Status string `json:"status,omitempty"`
+	ID     string   `json:"id"`
+	Title  string   `json:"title"`
+	Status string   `json:"status,omitempty"`
+	Files  []string `json:"-"` // the repo-relative paths its Files: line names
 }
 
 // Cycle is one cycle file: approved changes the owner means to build
@@ -293,10 +294,16 @@ func (ch *Change) Capabilities() []string {
 	return slices.Compact(slices.Sorted(maps.Values(ch.Touches)))
 }
 
-var taskHeading = regexp.MustCompile(`^#+ (T-\d+)\b[\s—–:-]*(.*)$`)
+var (
+	taskHeading = regexp.MustCompile(`^#+ (T-\d+)\b[\s—–:-]*(.*)$`)
+	filesLine   = regexp.MustCompile("^`[^`]+`(\\s*,\\s*`[^`]+`)*$")
+	quoted      = regexp.MustCompile("`([^`]+)`")
+	field       = regexp.MustCompile(`^[A-Z]\w*:`)
+)
 
-// tasks reads ch's tasks from tasks.md and their status from
-// implementation.md, files Grove's contract names in every schema (rule 3).
+// tasks reads ch's tasks from tasks.md, with the files each names, and
+// their status from implementation.md, files Grove's contract names in
+// every schema (rule 3).
 func (ch *Change) tasks(fsys fs.FS) {
 	tasks, _ := fs.ReadFile(fsys, ch.Dir+"/tasks.md")
 	impl, _ := fs.ReadFile(fsys, ch.Dir+"/implementation.md")
@@ -310,9 +317,26 @@ func (ch *Change) tasks(fsys fs.FS) {
 			ch.Dropped = ch.Dropped || status[task] == "dropped"
 		}
 	}
-	for _, l := range strings.Split(string(tasks), "\n") {
+	lines := strings.Split(string(tasks), "\n")
+	for i, l := range lines {
 		if m := taskHeading.FindStringSubmatch(l); m != nil {
 			ch.Tasks = append(ch.Tasks, Task{ID: m[1], Title: m[2], Status: status[m[1]]})
+		}
+		files, ok := strings.CutPrefix(l, "Files:")
+		if !ok || len(ch.Tasks) == 0 {
+			continue
+		}
+		for j := i + 1; j < len(lines) && strings.TrimSpace(lines[j]) != "" && !field.MatchString(lines[j]); j++ { // it wraps until a blank line or the next field
+			files += " " + lines[j]
+		}
+		t := &ch.Tasks[len(ch.Tasks)-1]
+		files = strings.TrimSpace(files)
+		for _, m := range quoted.FindAllStringSubmatch(files, -1) {
+			t.Files = append(t.Files, m[1])
+		}
+		if !filesLine.MatchString(files) || slices.ContainsFunc(t.Files, func(f string) bool { return !fs.ValidPath(f) || f == "." }) {
+			ch.report(ch.Dir+"/tasks.md", i+1, t.ID+"'s Files: line should list repo-relative paths in backticks, separated by commas")
+			t.Files = nil
 		}
 	}
 }

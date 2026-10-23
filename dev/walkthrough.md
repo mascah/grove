@@ -159,7 +159,20 @@ It starts where the main line's step 6 ends: one archived change and the
    and sets `base` to main's commit. `grove check` is clean. Commit and
    merge.
 
-5. **The project as data** ("The project as data"). `grove changes --json`
+5. **A file that moved** ("When the plan is stale"). The budgets change's
+   T-01 names `ledger/report.py` on its `Files:` line. On a branch, add a
+   comment to `ledger/report.py`: `grove check` there is clean, since only
+   the branch changed it. Commit and merge; on main, `grove check` reports
+   > grove/changes/\<budgets>/tasks.md: T-01's ledger/report.py changed on main since base \<sha7>; revise the change with propose
+
+   `grove instructions implement <budgets-id>` names T-01 and
+   `ledger/report.py` as changed since base, and a fresh session's
+   `/grove-implement <budgets-id>`, reaching T-01, tells me what changed
+   and asks before building; I stop it there. Write `Files: ledger/report.py`
+   without backticks in a task: `grove check` reports the line and exits
+   non-zero. Discard that edit.
+
+6. **The project as data** ("The project as data"). `grove changes --json`
    shows the unknown-ID and recategorize changes as `archived` with `T-01` `done`, and the delete change with no
    `waits_on`, since the unknown-ID change is archived.
 
@@ -219,6 +232,12 @@ show-saved changes approved. Each step names the section of
    It reads show-saved as main holds it, asks nothing new, keeps
    `unattended`, and sets `planned` to main's commit. `grove check` is
    clean. Commit and merge.
+
+   Then add a comment to a file show-saved's T-01 names on its `Files:`
+   line, commit and merge: `grove check` on main reports the same
+   `planned:` line, and nothing against show-saved's `base`. Re-plan it
+   again as above: `grove check` is clean, and show-saved's files are
+   unchanged.
 
 6. **One change in two cycles** ("Re-plan a cycle"). Copy the 0.4 cycle to
    `grove/cycles/261099-zzzzz-later.yaml`. `grove check` reports

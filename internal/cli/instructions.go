@@ -202,7 +202,8 @@ func instructionsImplement(stdout io.Writer, id string) error {
 // instructionsChange prints the instructions skill builds, apply's or
 // implement's, for change id as the target holds it, with cycle cy's plan
 // when it is not nil, unless it waits on a change tree has not archived as
-// finished (D-56).
+// finished (D-56). For a change in no cycle that is not done, they name
+// each task's file that changed on the target since the change's base.
 func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *doc.Collection, id string,
 	skill func(instruct.Project, *doc.Change, map[string]string) (instruct.Instructions, error), cy *doc.Cycle) error {
 	c := ip.Agreed.Change(id)
@@ -221,6 +222,19 @@ func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *
 		return err
 	}
 	in, err := skill(ip, c, files)
+	if err == nil && cy == nil && !inOpenCycle(tree, id) && c.Meta.Base != "" {
+		var tasks []doc.Task
+		tasks, err = moved(p, ip.Commit, c)
+		var named []string
+		for _, t := range tasks {
+			for _, f := range t.Files {
+				named = append(named, fmt.Sprintf("%s's `%s`", t.ID, f))
+			}
+		}
+		if len(named) > 0 {
+			in.Requires += fmt.Sprintf("- Changed on %s since base %s: %s.\n", p.Target, c.Meta.Base[:min(7, len(c.Meta.Base))], strings.Join(named, ", "))
+		}
+	}
 	if err == nil && cy != nil {
 		var b []byte
 		if b, err = fs.ReadFile(fsys, cy.Path); err == nil {

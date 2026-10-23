@@ -39,7 +39,39 @@ Status: done
 
 ### T-02 — Check reports a named file that moved
 
-Status: not started
+Status: done
+
+- `internal/doc/doc.go`: `doc.Task` gains `Files`, read from the task's
+  `Files:` line, which may wrap until a blank line or the next field; a
+  line that is not backticked paths separated by commas, or names a path
+  that is not repo-relative (`fs.ValidPath`), is a diagnostic on
+  `tasks.md` at its line.
+- `internal/cli/check.go`: `movedSinceBase` reports, for each change in no
+  cycle that is not done, each task's named file that `git diff
+  --name-only <base> <target> -- <files>` lists, one Git call per change:
+  "T-01's ledger/cli.py changed on main since base abc1234; revise the
+  change with propose". `changedSincePlan` adds each open member's named
+  files to its one diff, so the cycle report keeps its words and `grove
+  run`'s `eligible`, which calls it, skips the cycle; `run.go` needed no
+  edit.
+- `internal/cli/instructions.go`: `instructions implement` for a change in
+  no cycle that is not done appends "Changed on main since base …: T-01's
+  `file`." to what Grove requires; `requires/implement.md` says to tell the
+  owner what changed and ask before building that task.
+- Docs: `docs/coordinating.md` ("When the plan is stale"),
+  `docs/planning.md` (stale cycle, re-plan), `docs/reference.md`
+  (`grove check` row), `dev/walkthrough.md` (coordinating step 5, planning
+  step 5).
+- `internal/cli/walkthrough_test.go`, `TestMovedFiles`: unreported when
+  unchanged and when only the branch changed the file; reported against
+  base once main changed it; `instructions implement` names T-01 and the
+  file; as a member of a marked cycle, unreported against base while the
+  cycle is reported stale, `eligible` (grove run) selects no cycle, and
+  implement names nothing; an unreadable `Files:` line reported at its
+  line. Removing the cycle condition from `movedSinceBase` fails the test.
+  `just check` passes (3396 Go lines, 1139 test lines); `grove check` on
+  this repository is clean.
+- Not run: the walkthrough's hand steps in Claude Code.
 
 ## Reconciliation
 

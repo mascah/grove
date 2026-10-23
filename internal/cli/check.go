@@ -44,6 +44,9 @@ func check(stdout io.Writer) error {
 	if err := stalePlans(p, c); err != nil {
 		return err
 	}
+	if err := movedSinceBase(p, c); err != nil {
+		return err
+	}
 	docs := append([]*doc.Document{}, c.Specs...)
 	for _, ch := range c.Changes {
 		docs = append(docs, &ch.Document)
@@ -131,9 +134,70 @@ func stalePlans(p project, c *doc.Collection) error {
 	return nil
 }
 
+// movedSinceBase reports each task of a change in c, in no cycle that is
+// not done, whose named file differs on the target from the change's base.
+// A member of such a cycle is its plan's to report instead (stalePlans).
+func movedSinceBase(p project, c *doc.Collection) error {
+	commit := ""
+	for _, ch := range c.Changes {
+		if inOpenCycle(c, ch.ID) || ch.Meta.Base == "" || !slices.ContainsFunc(ch.Tasks, func(t doc.Task) bool { return len(t.Files) > 0 }) {
+			continue
+		}
+		if commit == "" {
+			var err error
+			if commit, err = gitx.ResolveBranch(p.Top, p.Target); err != nil {
+				return err
+			}
+		}
+		tasks, err := moved(p, commit, ch)
+		if err != nil { // stale reports a base that is no commit
+			continue
+		}
+		for _, t := range tasks {
+			for _, f := range t.Files {
+				ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: ch.Dir + "/tasks.md",
+					Message: fmt.Sprintf("%s's %s changed on %s since base %s; revise the change with propose", t.ID, f, p.Target, ch.Meta.Base[:min(7, len(ch.Meta.Base))])})
+			}
+		}
+	}
+	return nil
+}
+
+// inOpenCycle reports whether a cycle in c that is not done lists change id.
+func inOpenCycle(c *doc.Collection, id string) bool {
+	return slices.ContainsFunc(c.Cycles, func(cy *doc.Cycle) bool { return !cy.Done && slices.Contains(cy.Meta.Changes, id) })
+}
+
+// moved returns ch's tasks that name a file differing at commit from it at
+// ch's base, each with only those files.
+func moved(p project, commit string, ch *doc.Change) ([]doc.Task, error) {
+	diff, err := gitx.Run(p.Top, append([]string{"diff", "--name-only", "--end-of-options", ch.Meta.Base, commit, "--"}, named(ch)...)...)
+	if err != nil {
+		return nil, err
+	}
+	changed := strings.Split(diff, "\n")
+	var out []doc.Task
+	for _, t := range ch.Tasks {
+		t.Files = slices.DeleteFunc(slices.Clone(t.Files), func(f string) bool { return !slices.Contains(changed, f) })
+		if len(t.Files) > 0 {
+			out = append(out, t)
+		}
+	}
+	return out, nil
+}
+
+// named returns every file ch's tasks name.
+func named(ch *doc.Change) []string {
+	var out []string
+	for _, t := range ch.Tasks {
+		out = append(out, t.Files...)
+	}
+	return out
+}
+
 // changedSincePlan returns each member of cy that at, the documents at
-// commit, holds open with a folder that differs from it at cy's planned
-// commit.
+// commit, holds open with a folder, or a file its tasks name, that differs
+// from it at cy's planned commit.
 func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]string, error) {
 	planned, err := gitx.Run(p.Top, "rev-parse", "--verify", "--end-of-options", cy.Meta.Planned+"^{commit}")
 	if err != nil {
@@ -145,7 +209,7 @@ func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycl
 		if ch == nil {
 			continue
 		}
-		diff, err := gitx.Run(p.Top, "diff", "--name-only", strings.TrimSpace(planned), commit, "--", p.Root+"/"+ch.Dir)
+		diff, err := gitx.Run(p.Top, append([]string{"diff", "--name-only", strings.TrimSpace(planned), commit, "--", p.Root + "/" + ch.Dir}, named(ch)...)...)
 		if err != nil {
 			return nil, err
 		}
