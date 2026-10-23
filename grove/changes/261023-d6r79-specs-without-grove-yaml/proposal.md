@@ -58,7 +58,7 @@ their `.grove.yaml`. The rules are in
   `depends_on`; it stays as it is.
 - `design.md` as a document kind; it is dropped, not added.
 - Showing a description in `grove specs` or the reader, which show none
-  at 0c6f419 (see Open questions).
+  at 0c6f419 (see Decisions).
 - Any requirement of Grove's own specs: only their Purpose sections are
   reworded.
 
@@ -72,6 +72,12 @@ every answer below in one round ("yes to C & D").
   sentence of its `## Purpose` section.** Reason: the spec's `.grove.yaml`
   holds only a title that must repeat the heading, plus an optional
   description.
+- **The description shows only in the instructions' project index, as
+  descriptions do today; `grove specs` and the reader are unchanged.**
+  Decision 1 as first worded said "in lists (`grove specs`, the reader)",
+  but at 0c6f419 neither shows any description
+  (`internal/cli/specs.go`, `internal/tui/tui.go`). This corrects that
+  wording, and the owner confirmed it on 2026-10-23 ("yes").
 - **`grove check` reports a spec folder's leftover `.grove.yaml` as no
   longer read, in one sentence saying to delete it.** It is a new `check`
   problem on documents that were clean and removes a `.grove.yaml`, so
@@ -87,13 +93,7 @@ every answer below in one round ("yes to C & D").
 
 ## Open questions
 
-- Can wait: decision 1 speaks of the description "in lists (`grove
-  specs`, the reader)", but at 0c6f419 neither shows any description,
-  a spec's or a change's (`internal/cli/specs.go`, `internal/tui/tui.go`);
-  only the instructions' project index does. This change keeps the
-  description where Grove shows it today, the index. If the owner wants
-  `grove specs` and the reader to show it too, that is a new task here or
-  a later change. It blocks no task.
+None must be answered before review. None blocks a task.
 
 ## Related documents
 
