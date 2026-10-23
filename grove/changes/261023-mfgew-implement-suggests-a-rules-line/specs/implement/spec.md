@@ -13,7 +13,8 @@ owner corrected it in that session in a way that would apply to future
 work, the implement instructions shall have it suggest one line for
 `context`, or for a key under `rules`, in `grove.yaml`, quoting the
 correction, and add the line to `grove.yaml` on the implementation branch
-only if the owner agrees; it suggests at most one line per change.
+only if the owner agrees, without adding `grove.yaml` to any task's
+`Files:` line; it suggests at most one line per change.
 
 #### Scenario: The owner agrees
 
@@ -21,8 +22,8 @@ only if the owner agrees; it suggests at most one line per change.
   after the requirement it checks"
 - WHEN the agent finishes C and the owner agrees to the line it suggests
   under `rules: skills: implement:`, quoting that correction
-- THEN `grove.yaml` on the branch holds that line, and Grove's `check`
-  reports no problem in it
+- THEN `grove.yaml` on the branch holds that line, no task's `Files:`
+  line names `grove.yaml`, and Grove's `check` reports no problem in it
 
 #### Scenario: The owner declines
 

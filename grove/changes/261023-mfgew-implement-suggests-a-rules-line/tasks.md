@@ -20,7 +20,8 @@ Acceptance:
 - On the ledger fixture, in Claude Code, after I correct the agent twice,
   in ways that would apply to future work, while it builds a change, it
   quotes a correction and suggests one line, not two; when
-  I agree, `grove.yaml` on the branch holds it and `grove check` prints
+  I agree, `grove.yaml` on the branch holds it, no task's `Files:` line
+  names `grove.yaml`, and `grove check` prints
   "No problems in grove/."; when I decline, `grove.yaml` is unchanged.
 - On the ledger fixture, the main line's `/grove-implement`, with no
   correction, suggests no line.

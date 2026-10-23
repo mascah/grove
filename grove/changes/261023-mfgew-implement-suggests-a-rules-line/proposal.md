@@ -71,14 +71,13 @@ every answer below in one round ("yes to C & D").
   its report.** B1 makes unattended `/grove-implement --unattended`,
   which replaces the apply skill.
 
+- **The agreed line is an exception beside the tasks' `Files:` lines,
+  not added to a task.** The owner answered "yes" to this on 2026-10-23.
+  Reason: the line is about future work, not this change.
+
 ## Open questions
 
-None must be answered before review. One can wait:
-
-- Blocks T-01: implement's rule "Change only the files the tasks name"
-  covers `grove.yaml`. Is the agreed line an exception beside the tasks,
-  or added to a task's `Files:` line as a file no task names? Recommended:
-  an exception, since the line is about future work, not this change.
+None must be answered before review. None blocks a task.
 
 ## Related documents
 
