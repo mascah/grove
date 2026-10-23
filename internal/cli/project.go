@@ -14,12 +14,13 @@ import (
 
 // project is the repository Grove was run in.
 type project struct {
-	Top    string            `yaml:"-"` // the top of the working tree
-	Root   string            `yaml:"root"`
-	Target string            `yaml:"target"`
-	Agents map[string]string `yaml:"agents"` // harness to form, skills or commands
-	Schema string            `yaml:"schema"`
-	Rules  instruct.Rules    `yaml:"rules"`
+	Top     string            `yaml:"-"` // the top of the working tree
+	Root    string            `yaml:"root"`
+	Target  string            `yaml:"target"`
+	Agents  map[string]string `yaml:"agents"` // harness to form, skills or commands
+	Schema  string            `yaml:"schema"`
+	Context string            `yaml:"context"`
+	Rules   instruct.Rules    `yaml:"rules"`
 }
 
 func openProject() (project, error) {
@@ -47,7 +48,7 @@ func parseProject(top string, b []byte) (project, error) {
 // instruct returns what instructions say about the project, without the
 // target's documents.
 func (p project) instruct() instruct.Project {
-	return instruct.Project{Root: p.Root, Target: p.Target, Rules: p.Rules,
+	return instruct.Project{Root: p.Root, Target: p.Target, Context: p.Context, Rules: p.Rules,
 		Schemas: os.DirFS(filepath.Join(p.Top, p.Root, "schemas")), Schema: p.Schema}
 }
 

@@ -80,7 +80,8 @@ func TestInit(t *testing.T) {
 	if skill := read(t, filepath.Join(dir, ".agents/skills/grove-propose/SKILL.md")); !strings.Contains(skill, ` instructions propose "<args>"`+"`") || skill != read(t, filepath.Join(dir, ".claude/skills/grove-propose/SKILL.md")) {
 		t.Errorf("propose skill, which should be one body for every harness:\n%s", skill)
 	}
-	yaml := strings.Replace(read(t, filepath.Join(dir, "grove.yaml")), "rules: {}", "rules:\n  documents:\n    proposal:\n      - Name the owner for every decision.\n  skills:\n    propose:\n      - Commit the change folder when check passes.", 1)
+	yaml := strings.Replace(read(t, filepath.Join(dir, "grove.yaml")), `context: ""`, "context: Run python3 -m unittest before saying a task is done.", 1)
+	yaml = strings.Replace(yaml, "rules: {}", "rules:\n  documents:\n    proposal:\n      - Name the owner for every decision.\n  skills:\n    propose:\n      - Commit the change folder when check passes.", 1)
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(yaml), 0o644)
 	os.WriteFile(filepath.Join(dir, ".claude/skills/grove-explore/SKILL.md"), []byte("edited"), 0o644)
 	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove skills for claude and codex; nothing is committed.\n"; got != want {
@@ -91,7 +92,7 @@ func TestInit(t *testing.T) {
 	}
 	commitAll(t, dir, "Set up Grove")
 	out := grove(t, "instructions", "propose")
-	for _, s := range []string{"The project's own rules for this document:\n\n- Name the owner for every decision.\n",
+	for _, s := range []string{"## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of propose\n", "The project's own rules for this document:\n\n- Name the owner for every decision.\n",
 		"The project's own rules for this skill:\n\n- Commit the change folder when check passes.\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("propose instructions lack %q", s)
@@ -162,9 +163,9 @@ func TestCheck(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(config, "rules: {}", "rules:\n  derp: [x]\n  documents:\n    propsal: [x]\nrule: {}", 1)), 0o644)
 	var stdout, stderr strings.Builder
 	code := run([]string{"check"}, &stdout, &stderr)
-	want := "grove.yaml:27: unknown rules key \"derp\"; rules takes documents and skills\n" +
-		"grove.yaml:29: unknown rules.documents key \"propsal\"; kinds are proposal, change-spec, tasks, implementation, spec\n" +
-		"grove.yaml:30: unknown field \"rule\"; grove.yaml takes root, target, agents, schema and rules\n"
+	want := "grove.yaml:30: unknown rules key \"derp\"; rules takes documents and skills\n" +
+		"grove.yaml:32: unknown rules.documents key \"propsal\"; kinds are proposal, change-spec, tasks, implementation, spec\n" +
+		"grove.yaml:33: unknown field \"rule\"; grove.yaml takes root, target, agents, schema, context and rules\n"
 	if code != 1 || stdout.String() != want || stderr.String() != "grove: 3 problems found\n" {
 		t.Errorf("check of grove.yaml: status %d\n%s%s", code, stdout.String(), stderr.String())
 	}
