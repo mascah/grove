@@ -42,33 +42,35 @@ Acceptance:
   problem on a task with a `Delegated:` line right after its `Files:`
   line, and no moved file for a path only that line names.
 
-## T-02 — Implement honors delegation and stops on a discovery; apply ignores delegation
+## T-02 — Implement honors delegation and stops on a discovery, and ignores delegation unattended
 
 Result: implement behaves as
 [specs/implement/spec.md](specs/implement/spec.md) "Honor a task's
-delegation" and "Stop on a discovery that breaks the approach" say, and
-apply as [specs/apply/spec.md](specs/apply/spec.md) "Ignore a task's
-delegation" says.
+delegation", "Stop on a discovery that breaks the approach" and "Ignore a
+task's delegation unattended" say.
 
-Files: `internal/instruct/requires/implement.md`,
-`internal/instruct/requires/apply.md`, `docs/getting-started.md`,
-`dev/walkthrough.md`, `internal/cli/walkthrough_test.go`
+Files: `internal/instruct/requires/implement-owner.md`,
+`internal/instruct/requires/implement-unattended.md`,
+`docs/getting-started.md`, `dev/walkthrough.md`,
+`internal/cli/walkthrough_test.go`
 
 Interfaces: none; it is instruction text.
 
-Constraints: apply's rule is written against today's apply skill;
-change 261023-g0a3h carries it into implement's unattended mode.
+Constraints: the owner's rules go in the owner's part and the unattended
+rule in the unattended part, the files change 261023-g0a3h creates; the
+shared `requires/implement.md` is left as that change leaves it.
 
 Acceptance:
 - `docs/getting-started.md`, step 5, says implement makes the choices and
   changes the paths a task delegates without asking, stops a task when it
   finds the approach wrong and says what revision the change needs, and
-  that `/grove-apply` ignores `Delegated:` (rule 8).
+  that `/grove-implement --unattended` ignores `Delegated:` (rule 8).
 - On the ledger fixture, in Claude Code: a change whose T-01 delegates
   `tests/test_records.py` is built by `/grove-implement`, which creates
-  that file without asking, and by `/grove-apply` on a cycle of it, which
-  leaves the file uncreated and names it in T-01's evidence.
-  `dev/walkthrough.md` records both.
+  that file without asking, and by `/grove-implement <cycle-id>
+  --unattended` on a cycle of it, which leaves the file uncreated and
+  names it in T-01's evidence. `dev/walkthrough.md` records both.
 - `internal/cli/walkthrough_test.go` checks that `instructions implement`
-  prints the delegation rule and the stop, and `instructions apply` the
-  rule to ignore `Delegated:`.
+  prints the delegation rule and the stop and not the rule to ignore
+  `Delegated:`, and that `instructions implement --unattended` prints the
+  rule to ignore it and not the other two.

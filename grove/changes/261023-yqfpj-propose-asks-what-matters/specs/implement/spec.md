@@ -1,13 +1,15 @@
 # Changes to implement
 
 The maintained spec is [grove/specs/implement/spec.md](../../../../specs/implement/spec.md).
+`/grove-implement --unattended` is added to it by change 261023-g0a3h
+("Build unattended"), which this change depends on.
 
 ## ADDED Requirements
 
 ### Requirement: Honor a task's delegation
 
-When a task the owner is building has a `Delegated:` line, the implement
-instructions shall have the agent make the choices it names and change the
+When a task the owner is building with `/grove-implement` has a
+`Delegated:` line, the implement instructions shall have the agent make the choices it names and change the
 paths it names without asking the owner, and ask, as for any other, about
 a choice or a file neither the task's `Files:` line nor its `Delegated:`
 line names.
@@ -46,3 +48,22 @@ tasks it would edit and how.
 - THEN it stops T-01, tells the owner what it found and which of C's
   documents it would edit and how, and builds nothing more of T-01 until
   the owner answers
+
+### Requirement: Ignore a task's delegation unattended
+
+When a task built with `/grove-implement <id> --unattended` has a
+`Delegated:` line, the implement instructions shall have the agent ignore
+it: change only the files the tasks' `Files:` lines name, and leave a path
+only a `Delegated:` line names as it is, as it does any file no task
+names: when the task would have changed it, naming it, and why, in that
+task's evidence in `implementation.md`.
+
+#### Scenario: A delegated path, unattended
+
+- GIVEN cycle K lists change C, whose T-01 names `ledger/records.py` and
+  `tests/test_cli.py` on its `Files:` line and `tests/test_records.py` on
+  its `Delegated:` line
+- WHEN `/grove-implement K --unattended` builds T-01
+- THEN `tests/test_records.py` is not created, `find`'s tests go in
+  `tests/test_cli.py`, and T-01's evidence names `tests/test_records.py`
+  and why it was left

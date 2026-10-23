@@ -1,6 +1,8 @@
 # Changes to propose
 
 The maintained spec is [grove/specs/propose/spec.md](../../../../specs/propose/spec.md).
+"Ask a round before writing" is modified by change 261023-g0a3h, which
+this change depends on; it is modified here as that change gives it.
 
 ## ADDED Requirements
 
@@ -108,8 +110,8 @@ make is recorded as an open question naming the task it blocks.
 - GIVEN the round lists where the check goes
 - WHEN the owner says to leave that one open
 - THEN the proposal lists it under open questions, naming the task it
-  decides, and `/grove-apply` leaves that task blocked while
-  `/grove-implement` asks
+  decides, and `/grove-implement --unattended` leaves that task blocked
+  while `/grove-implement` asks
 
 #### Scenario: Nothing to assume
 

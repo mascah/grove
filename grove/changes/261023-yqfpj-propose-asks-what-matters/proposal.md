@@ -47,16 +47,21 @@ agrees, it writes several changes on the same branch, each from its own
 A task may carry a `Delegated:` line, written only when the owner agrees
 in the round, naming choices the implementer may make without asking and
 paths it may change beyond `Files:`. Implement with the owner honors it.
-Apply, which builds without the owner, ignores it and keeps to `Files:`.
-Grove reads none of it.
+`/grove-implement --unattended`, which builds without the owner, ignores
+it and keeps to `Files:`. Grove reads none of it.
 
 While implementing, a discovery that makes the agreed approach wrong stops
 that task, and the agent tells the owner what it found and the revision
 the change needs.
 
-The rules are in [specs/propose/spec.md](specs/propose/spec.md),
-[specs/implement/spec.md](specs/implement/spec.md) and
-[specs/apply/spec.md](specs/apply/spec.md).
+The rules are in [specs/propose/spec.md](specs/propose/spec.md) and
+[specs/implement/spec.md](specs/implement/spec.md).
+
+This change builds on change 261023-g0a3h, "Implement builds unattended,
+and apply goes", and depends on it: that change folds apply into
+`/grove-implement --unattended`, splits implement's requires text into a
+shared part, the owner's part and the unattended part, and modifies
+"Ask a round before writing", which this change modifies as it gives it.
 
 ## Scope
 
@@ -65,8 +70,9 @@ The rules are in [specs/propose/spec.md](specs/propose/spec.md),
 - The order and batching of propose's round, and offering to split, in
   propose's requires text and the default schema's propose guide.
 - The `Delegated:` line in the default schema's tasks guide and template.
-- Implement honoring a task's delegation and stopping on a discovery,
-  and apply ignoring the delegation, in their requires text.
+- Implement honoring a task's delegation and stopping on a discovery, in
+  the owner's part of its requires text, and ignoring the delegation, in
+  the unattended part, as change 261023-g0a3h names those parts.
 - `docs/concepts.md`, `docs/getting-started.md`, `docs/reference.md`,
   `dev/walkthrough.md` and `internal/cli/walkthrough_test.go`.
 
@@ -77,11 +83,10 @@ The rules are in [specs/propose/spec.md](specs/propose/spec.md),
   a `Files:` line names, never for a delegated path.
 - A cap on the number of questions in the round: every decision is still
   asked; the round is ordered and batched, not shortened.
-- A stop on a discovery under apply: apply already marks blocked, and
-  says why, a task that cannot be built as the change says
-  (`requires/apply.md`).
-- Folding apply into `implement --unattended`: change 261023-g0a3h. It
-  carries apply's rule here into implement's unattended mode.
+- A stop on a discovery in an unattended build: change 261023-g0a3h's
+  "Build unattended" already marks blocked, with the reason, a task that
+  cannot be built as the change says.
+- Folding apply into `/grove-implement --unattended`: change 261023-g0a3h.
 - Propose checking its documents before presenting them: change
   261023-m2she, which also edits propose's requires text and guide. The
   two add separate requirements and neither needs the other first.
@@ -104,8 +109,10 @@ every answer below in one round ("yes").
   implementer may make without asking, such as private helpers or test
   layout, and paths it may change beyond `Files:`. Propose writes it only
   when the owner agrees in the round. Implement with the owner honors it;
-  an unattended build ignores it and keeps to `Files:`. Today that is
-  apply; change 261023-g0a3h carries it into implement's unattended mode.
+  an unattended build ignores it and keeps to `Files:`. The owner's brief
+  named today's apply and said change 261023-g0a3h carries it into
+  implement's unattended mode; building on that change, this one writes
+  it there directly.
   Reason: the owner settles once, while proposing, what is not worth a
   question later, and nobody widens what an unattended build may touch.
 - **A discovery that invalidates the agreed approach stops the task.**
@@ -129,6 +136,6 @@ None must be answered before review. None blocks a task.
 ## Related documents
 
 - Requirements: [specs/propose/spec.md](specs/propose/spec.md),
-  [specs/implement/spec.md](specs/implement/spec.md),
-  [specs/apply/spec.md](specs/apply/spec.md)
+  [specs/implement/spec.md](specs/implement/spec.md)
 - Tasks: [tasks.md](tasks.md)
+- Builds on: change 261023-g0a3h
