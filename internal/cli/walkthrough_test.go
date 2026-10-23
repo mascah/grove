@@ -748,11 +748,15 @@ func TestCycles(t *testing.T) {
 	main := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	out := grove(t, "instructions", "plan", "0.4 release")
 	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.yaml`").FindStringSubmatch(out)
-	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "say whether `grove run` would build the cycle once it\n  is marked `unattended` and, for each obstacle, what removes it", "## How to plan\n",
+	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
 		"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n"} {
 		if m == nil || !strings.Contains(out, s) {
 			t.Errorf("plan instructions lack %q:\n%s", s, out)
 		}
+	}
+	// The finish names implement, then run given the cycle, then the mark.
+	if i, r, u := strings.Index(out, "say `/grove-implement <cycle-id>`"), strings.Index(out, "say whether `grove run <cycle-id>`"), strings.Index(out, "say `unattended: true`"); i < 0 || i > r || r > u {
+		t.Errorf("plan's finish is not in order:\n%s", out)
 	}
 	if out := grove(t, "instructions", "plan", a); !strings.Contains(out, "with approved change "+a+", \"Editing an unknown ID prints an error\", as its only member") {
 		t.Errorf("plan of one change:\n%.1000s", out)
@@ -982,6 +986,29 @@ func TestRun(t *testing.T) {
 	standIn("sh -c 'trap \"\" TERM; sleep 30' &\nsleep 30")
 	runs(`^grove: attempt .* ended: timed out;`, "--retry", "--timeout", "1s")
 	gone("after the time limit")
+
+	// A cycle given: built though not marked while l is, and refused, naming
+	// why, when there is no such cycle or a member needs a person.
+	t.Chdir(owner)
+	d, _ := approve(t, owner, "d", "Show saved records", "")
+	e, _ := approve(t, owner, "e", "Export records", "")
+	m, n := "261023-m0000", "261023-n0000"
+	planCycle(t, owner, m, "2026-10-23T09:00:00Z", false, d)
+	planCycle(t, owner, n, "2026-10-23T10:00:00Z", false, e)
+	nFile := filepath.Join(owner, "grove/cycles", n+"-cycle.yaml")
+	os.WriteFile(nFile, []byte(read(t, nFile)+"needs_human:\n  "+e+": judging the export\n"), 0o644)
+	commitAll(t, owner, "Export needs a person")
+	git(t, owner, "push", "-q", "origin", "main")
+	branches := git(t, checkout, "branch")
+	runs(`^grove: main at [0-9a-f]{7} holds no cycle 261099-zzzzz\n$`, "--retry", "261099-zzzzz")
+	runs(`^grove: `+e+` needs a person, as cycle `+n+`'s needs_human says; build the cycle with /grove-implement `+n+`\n$`, "--retry", n)
+	if got := git(t, checkout, "branch"); got != branches {
+		t.Errorf("a refused run left branches %q, want %q", got, branches)
+	}
+	runs(`^Attempt .* ended: exit status 0;`, "--retry", m)
+	if last, _ := latest(filepath.Join(checkout, ".git/grove")); last.Cycle != m || read(t, filepath.Join(stub, "args")) != "-p /grove-apply "+m+" --output-format stream-json --verbose\n" {
+		t.Errorf("the run given %s selected %s", m, last.Cycle)
+	}
 
 	// No remote: the local target, commits of its own and all, is the fetched
 	// one, and merging the attempt's branch into it ends the pause.

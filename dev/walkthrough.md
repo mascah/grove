@@ -201,8 +201,9 @@ show-saved changes approved. Each step names the section of
    `grove check`:
    > No problems in grove/.
 
-   It ends by saying `grove run` would skip the cycle if marked, because
-   budgets needs a person, and that revising budgets with
+   It ends by naming `/grove-implement <cycle-id>` first, then saying
+   `grove run` would refuse the cycle, given or marked, because budgets
+   needs a person, and that revising budgets with
    `/grove-propose <budgets-id>` so its acceptance can be checked without
    a person, merging it and re-planning the cycle removes that.
 
@@ -215,9 +216,11 @@ show-saved changes approved. Each step names the section of
 3. **A cycle of one** ("Plan a cycle"). `git switch -c plan-show-saved`, a
    fresh session, `/grove-plan <show-saved>`. It asks whether to keep the
    change's title for the cycle and, finding nothing that needs a person,
-   writes a cycle listing only show-saved. It ends by saying `grove run`
-   would build the cycle once `unattended: true` is added to its file in a
-   merge of its own. Commit and merge.
+   writes a cycle listing only show-saved. It ends by naming
+   `/grove-implement <cycle-id>`, then saying `grove run <cycle-id>` would
+   build the cycle, then that `unattended: true`, added to its file in a
+   merge of its own, hands it to a `grove run` given no cycle. Commit and
+   merge.
 
 4. **Mark it unattended** ("Mark it unattended"). `git switch -c mark`, add
    `unattended: true` to the show-saved cycle, `grove check` is clean;
@@ -344,7 +347,21 @@ Each step names the section of
    ends `failed to start`, the reason in its output, and the next
    `grove run` says the project is paused.
 
-6. **Without a remote** ("Without a remote"). `just fixture
+6. **Run a cycle you name** ("Run a cycle you name"). In `~/tmp/ledger`,
+   approve `/grove-propose Editing a record prints what was saved`
+   (show-saved), plan it as a cycle of one, merge and push, without
+   marking it. Approve `/grove-propose Export the ledger as CSV` (export),
+   plan it as a cycle of one, telling the session export needs a person to
+   judge the file, merge and push. In
+   `~/tmp/ledger-run`, `grove run --retry <export-cycle-id>`:
+   > grove: \<export-id> needs a person, as cycle \<export-cycle-id>'s needs_human says; build the cycle with /grove-implement \<export-cycle-id>
+
+   and `git branch` lists no new branch. `grove run --retry 261099-zzzzz`
+   says `main` holds no such cycle. `grove run --retry <show-saved-cycle-id>`
+   starts a session on `/grove-apply <show-saved-cycle-id>` though the
+   budgets cycle is marked, and its record names the show-saved cycle.
+
+7. **Without a remote** ("Without a remote"). `just fixture
    ~/tmp/ledger-local`, `grove init`, commit, approve the unknown-ID
    change, plan it as a cycle of one, mark it `unattended` and merge, with
    `Commit after each task, naming its task ID.` and the page's

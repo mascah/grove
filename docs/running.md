@@ -1,11 +1,11 @@
 # Running apply unattended
 
-`grove run` builds a cycle you have marked `unattended` without anyone
-typing `/grove-apply`. In a checkout you set up for one project, it starts
-one Claude Code session on the apply skill for that cycle, waits for it
-within a time limit, and then pauses the project until the cycle is merged
-or dropped. It builds nothing else: an approved change in no cycle, or in a
-cycle you have not marked, is yours to build with `/grove-implement`. To
+`grove run` builds a cycle you name, or else one you have marked
+`unattended`, without anyone typing `/grove-apply`. In a checkout you set
+up for one project, it starts one Claude Code session on the apply skill
+for that cycle, waits for it within a time limit, and then pauses the
+project until the cycle is merged or dropped. It builds nothing else: an
+approved change in no cycle is yours to build with `/grove-implement`. To
 send it one change, plan a cycle of one (see
 [Planning cycles](planning.md)). Grove does not
 schedule itself: run it by hand, or from a timer as in
@@ -128,6 +128,27 @@ not show and nobody commits:
   it selected and its `changes` in build order, the target `commit`, the
   `checkout`, the `branch`, the `output` file and the `outcome`, one of `exit status <n>`, `timed out`,
   `cancelled` or `failed to start`.
+
+## Run a cycle you name
+
+To build a planned cycle once, without marking it, name it:
+
+```sh
+grove run 261020-m4k8t
+```
+
+Grove builds that cycle whether or not it is marked `unattended`, as an
+ordinary run does in every other way: it refuses while the project is
+paused, unless you add `--retry`, records the attempt and pauses after it.
+A `grove run` given no cycle, such as a timer's, still builds only marked
+ones.
+
+If the cycle cannot be built, Grove starts nothing, creates no branch and
+says why: there is no such cycle on the target, it is done, a change in
+it waits on one neither in the cycle nor archived as finished, its plan is
+stale, or a change in it needs a person:
+
+> grove: 261019-p4x8d needs a person, as cycle 261020-m4k8t's needs_human says; build the cycle with /grove-implement 261020-m4k8t
 
 ## Without a remote
 

@@ -102,25 +102,30 @@ reason only when the owner says it does.
 ### Requirement: Say whether the cycle can run unattended
 
 When the cycle file is written, the plan instructions shall have the agent
-tell the owner whether `grove run` would build the cycle once it is marked
-`unattended` and, for each obstacle, what removes it.
+tell the owner that `/grove-implement <cycle-id>` builds the cycle with
+them, then whether `grove run <cycle-id>` would build it, and that
+`unattended: true`, merged on its own, hands it to a `grove run` given no
+cycle, such as a timer's; and, for each obstacle, what removes it.
 
 #### Scenario: Nothing in the way
 
 - GIVEN members A and B, neither of which the owner said needs a person,
   and neither waits on a change outside the cycle
 - WHEN the agent finishes the plan
-- THEN it says `grove run` would build the cycle once `unattended: true`
-  is merged in, and how that mark is added
+- THEN it names `/grove-implement <cycle-id>` first, says
+  `grove run <cycle-id>` would build the cycle, and says a `grove run`
+  given no cycle would build it once `unattended: true` is merged in, and
+  how that mark is added
 
 #### Scenario: A member needs a person
 
 - GIVEN the owner said member C needs a person, for judging how a new
   screen looks
 - WHEN the agent finishes the plan
-- THEN it says `grove run` would skip the cycle if marked, and that
-  revising C with `/grove-propose C` so that its acceptance can be checked
-  without a person, merging it, and re-planning the cycle removes that
+- THEN it names `/grove-implement <cycle-id>`, says `grove run` would
+  refuse the cycle, given or marked, and that revising C with
+  `/grove-propose C` so that its acceptance can be checked without a
+  person, merging it, and re-planning the cycle removes that
 
 #### Scenario: A member waits on a change outside the cycle
 

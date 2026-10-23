@@ -1,2 +1,2 @@
 title: Runs
-description: grove run starts one bounded Claude Code session on the apply skill for the oldest cycle marked unattended, in a prepared checkout, then pauses the project.
+description: grove run starts one bounded Claude Code session on the apply skill for the cycle it is given, or else the oldest marked unattended, in a prepared checkout, then pauses the project.

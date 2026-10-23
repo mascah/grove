@@ -43,9 +43,10 @@ type attempt struct {
 // runAttempt starts one attempt: it updates the target from origin, if the
 // checkout has one, and,
 // unless the latest attempt's changes are still open or retry is set,
-// launches one Claude Code session on the apply skill for the oldest
-// eligible cycle, on a new branch, within timeout.
-func runAttempt(stdout io.Writer, retry bool, timeout time.Duration) error {
+// launches one Claude Code session on the apply skill for cycle id, or,
+// when id is empty, the oldest eligible cycle, on a new branch, within
+// timeout.
+func runAttempt(stdout io.Writer, id string, retry bool, timeout time.Duration) error {
 	p, err := openProject()
 	if err != nil {
 		return err
@@ -117,6 +118,14 @@ func runAttempt(stdout io.Writer, retry bool, timeout time.Duration) error {
 		}
 	}
 	cy, ordered := eligible(p, ip)
+	if id != "" {
+		if cy = ip.Agreed.Cycle(id); cy == nil {
+			return fmt.Errorf("%s at %s holds no cycle %s", p.Target, commit[:7], id)
+		}
+		if ordered, err = runnable(p, ip, cy); err != nil {
+			return err
+		}
+	}
 	if cy == nil {
 		fmt.Fprintf(stdout, "Nothing to apply on %s at %s.\n", p.Target, commit[:7])
 		return nil
@@ -157,22 +166,45 @@ func runAttempt(stdout io.Writer, retry bool, timeout time.Duration) error {
 }
 
 // eligible returns the oldest cycle the target ip holds that is marked
-// unattended, is not done, names no member in needs_human, has no member
-// waiting on a change neither in it nor archived as finished, and whose
-// members are as its plan read them; and its members in build order.
+// unattended and runnable, and its members in build order.
 func eligible(p project, ip instruct.Project) (*doc.Cycle, []*doc.Change) {
 	for _, cy := range ip.Agreed.Cycles {
-		ordered, waiting := buildable(ip.Agreed, ip.Agreed, cy)
-		if !cy.Meta.Unattended || len(ordered) == 0 || len(waiting) > 0 ||
-			slices.ContainsFunc(cy.Meta.Changes, func(id string) bool { _, ok := cy.Meta.NeedsHuman[id]; return ok }) {
+		if !cy.Meta.Unattended {
 			continue
 		}
 		// A planned that is no commit is check's to report; the cycle is skipped.
-		if changed, err := changedSincePlan(p, ip.Commit, ip.Agreed, cy); err == nil && len(changed) == 0 {
+		if ordered, err := runnable(p, ip, cy); err == nil {
 			return cy, ordered
 		}
 	}
 	return nil, nil
+}
+
+// runnable returns cycle cy's members in build order, or why grove run
+// cannot build it: it is done, names a member in needs_human, has a member
+// waiting on a change neither in it nor archived as finished, or has a
+// member that is not as its plan read it.
+func runnable(p project, ip instruct.Project, cy *doc.Cycle) ([]*doc.Change, error) {
+	ordered, waiting := buildable(ip.Agreed, ip.Agreed, cy)
+	if len(ordered)+len(waiting) == 0 {
+		return nil, fmt.Errorf("cycle %s is done", cy.ID)
+	}
+	for _, id := range cy.Meta.Changes {
+		if _, ok := cy.Meta.NeedsHuman[id]; ok {
+			return nil, fmt.Errorf("%s needs a person, as cycle %s's needs_human says; build the cycle with /grove-implement %s", id, cy.ID, cy.ID)
+		}
+	}
+	if len(waiting) > 0 {
+		return nil, fmt.Errorf("%s waits on %s, neither in cycle %s nor archived as finished", waiting[0].ID, strings.Join(waiting[0].WaitsOn, " and "), cy.ID)
+	}
+	changed, err := changedSincePlan(p, ip.Commit, ip.Agreed, cy)
+	if err != nil {
+		return nil, err
+	}
+	if len(changed) > 0 {
+		return nil, fmt.Errorf("cycle %s's plan is stale, since %s changed on %s after it; re-plan it with /grove-plan %s", cy.ID, strings.Join(changed, " and "), p.Target, cy.ID)
+	}
+	return ordered, nil
 }
 
 // session runs skill in Claude Code in dir, writing every event it emits
