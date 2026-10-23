@@ -55,7 +55,7 @@ instruction text and the `justfile`.
   `internal/instruct/instruct.go`.
 - Lines in both a requires file in `internal/instruct/requires/` and its
   schema guide in `internal/instruct/schemas/default/skills/`, as cycle B
-  leaves them.
+  leaves them, and in the built-in `bugfix` schema's propose guide.
 - The word count and budget in `justfile`, and the `just check` line of
   `CONTRIBUTING.md`.
 - Measuring each skill's instructions on the fixture, and running the
@@ -93,18 +93,23 @@ every answer below in one round ("yes to C & D").
   run before and after. Reason: fewer words must not change what the
   agent does.
 
+The owner answered the proposal's two open questions with "yes"
+(2026-10-23):
+
+- **The built-in `bugfix` schema's propose guide follows the same rule.**
+  `internal/instruct/schemas/bugfix/skills/propose.md` (261023-vqsrt)
+  repeats no line already in a requires file. Reason: it replaces the
+  default propose guide, so the same repetition would come back there.
+- **Over 7,000 words, cut further; else stop and ask.** If
+  `internal/instruct` still holds more than 7,000 words once cycle B has
+  landed and T-01 is done, the implementer makes more cuts first; failing
+  that, it stops and asks the owner. Only a constitution amendment raises
+  the budget (rule 12). Reason: the budget is the constitution's, not the
+  implementer's, to change.
+
 ## Open questions
 
-None must be answered before review.
-
-- Built-in `bugfix` schema (261023-vqsrt) has its own propose guide,
-  `internal/instruct/schemas/bugfix/skills/propose.md`. Decision 1 names
-  the default schema's guides. Is the bugfix guide held to the same rule?
-  Blocks only that file in T-01; T-01 leaves it as it is until answered.
-- If, once cycle B has landed and T-01 has removed the repetition,
-  `internal/instruct` still holds more than 7,000 words, does the owner
-  raise the budget (a change to the constitution, rule 12) or ask for
-  further cuts in a change of their own? Blocks T-02 only in that case.
+None must be answered before review. None blocks a task.
 
 ## Related documents
 

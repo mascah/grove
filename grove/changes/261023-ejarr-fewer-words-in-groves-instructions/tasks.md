@@ -20,6 +20,7 @@ Files: `internal/instruct/instruct.go`,
 `internal/instruct/schemas/default/skills/explore.md`,
 `internal/instruct/schemas/default/skills/prototype.md`,
 `internal/instruct/schemas/default/skills/implement.md`,
+`internal/instruct/schemas/bugfix/skills/propose.md`,
 `internal/cli/walkthrough_test.go`
 
 Interfaces: none; it is instruction text.
@@ -36,7 +37,8 @@ Acceptance:
   the file where its rule still lives; for example, "archiving brings the
   maintained specs up to date" stays in `requires/implement.md` only.
 - No rule a file in `requires/` states is stated again in the schema
-  guide of the same skill in `schemas/default/skills/`.
+  guide of the same skill in `schemas/default/skills/`, or in
+  `schemas/bugfix/skills/propose.md`.
 - The opening text, printed before "What Grove requires of", is shorter
   and still says what a maintained spec, a change, observed behavior and
   a draft are, that Grove commits nothing and that merging is the only
@@ -62,7 +64,9 @@ Interfaces: none.
 
 Constraints: the number 7,000 is written in rule 12 and the `justfile`
 only; `CONTRIBUTING.md` says `just check` checks the budgets and names no
-number.
+number. If `internal/instruct` holds more than 7,000 words once T-01 is
+done, make more cuts first; failing that, stop and ask the owner. Only a
+constitution amendment raises the budget (rule 12).
 
 Acceptance:
 - `just check` prints the word count beside the line counts and passes.
