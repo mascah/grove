@@ -26,9 +26,9 @@ schema: default
 rules:
   skills:
     implement: 
+      - Make changes in a git worktree to avoid conflicting with other work
       - Commit after each task, naming its task ID.
       - When you are done, push the branch to origin and open a pull request with gh pr create
-
     apply:
       - Commit after each task, naming its task ID.
       - When you are done, push the branch to origin and open a pull request with gh pr create, listing the changes archived and each blocked task with its question.
