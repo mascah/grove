@@ -87,7 +87,11 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    open question blocks no task, so the session asks nothing, works T-01
    with a test, editing no file but the two T-01 names without asking me,
    tells me how to try it, and writes `implementation.md` with
-   T-01's status and evidence. `python3 -m unittest` passes. With every task
+   T-01's status and evidence. Before finishing it runs the tests, rechecks
+   T-01's evidence, and writes `## Scenarios` there, naming each scenario's
+   test and "passed", or `unverified` and why; its report names each
+   unverified one, and so does the archive before it folds the spec.
+   `python3 -m unittest` passes. With every task
    done, the same session runs `grove instructions archive 261015-k3m9q`,
    adds the requirement to a new `grove/specs/record-editing/spec.md`, with
    `grove/specs/record-editing/.grove.yaml` beside it, runs `grove check`,

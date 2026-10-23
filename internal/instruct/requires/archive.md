@@ -6,7 +6,9 @@
   dropped change gets `Status: dropped` under the title of
   `implementation.md`, created from its template below if there is none,
   with the owner's reason in their words; it skips the finishing work.
-- For a finished change, first do the finishing work "How to archive"
+- For a finished change, first tell the owner each scenario the
+  `## Scenarios` section of `implementation.md` marks `unverified`; it does
+  not stop the archive. Then do the finishing work "How to archive"
   describes.
 - Then run Grove's `archive <change-id>`. It moves the change's folder to
   `changes/archive/`, commits nothing, and refuses a change that is neither
