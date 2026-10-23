@@ -9,7 +9,7 @@ build, test, commit and release. `AGENTS.md` is a symlink to this file.
 A Go CLI. The `grove` command sets up a project, lists, checks, reviews and
 archives Markdown specs and changes, and opens a reader. Skills and commands
 that `grove init` writes for each harness run `grove instructions <skill>` and
-follow what it prints. What Grove does is specified by `docs/` (rule 8).
+follow what it prints. What Grove does is specified by the maintained specs in `grove/specs/`, explained by `docs/` (rule 8).
 
 ## Layout
 
@@ -21,7 +21,8 @@ follow what it prints. What Grove does is specified by `docs/` (rule 8).
 | `internal/doc` | Reads Grove's documents: `.grove.yaml`, diagnostics, IDs, the folder layout. |
 | `internal/gitx` | The only place Git runs, by argv. `TreeFS` reads a commit's tree as an `fs.FS`. |
 | `internal/tui` | The reader (Bubble Tea, Glamour). Knows nothing about Git or Grove's documents. |
-| `docs/`, `README.md` | User documentation, and the specification. |
+| `docs/`, `README.md` | User documentation, explaining the specs in `grove/specs/`. |
+| `grove/` | Grove's own specs, changes and cycles: the specification (rule 8). |
 | `mkdocs.yml`, `.github/`, `.goreleaser.yaml`, `install.sh` | The docs site, CI, the release pipeline and the install script. |
 | `dev/walkthrough.md` | The manual test script: every docs step run on the fixture. |
 | `dev/fixture.md`, `testdata/ledger/` | The ledger fixture, a small Python project. |
