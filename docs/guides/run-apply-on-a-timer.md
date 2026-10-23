@@ -78,8 +78,10 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.you.grove-run.ledger
 ## Where to look
 
 - `/Users/you/grove-runs/ledger.log` gets one line per firing from Grove:
-  the attempt and how it ended, that the project is paused or a run is in
-  progress, that there is nothing to apply, or what went wrong.
+  that the project is paused or a run is in progress, that there is
+  nothing to apply, or what went wrong. A firing that starts an attempt
+  adds the lines a terminal would show while the session runs, one per
+  message, tool call and result, then the attempt and how it ended.
 - Each attempt's record and the session's output are in the checkout's
   `.git/grove/`, named by the attempt, as the log line says.
 - `launchctl print gui/$(id -u)/com.you.grove-run.ledger` shows whether

@@ -180,6 +180,11 @@ show-saved changes approved. Each step names the section of
    `grove check`:
    > No problems in grove/.
 
+   It ends by saying `grove run` would skip the cycle if marked, because
+   budgets needs a person, and that revising budgets with
+   `/grove-propose <budgets-id>` so its acceptance can be checked without
+   a person, merging it and re-planning the cycle removes that.
+
 2. **Merge the plan** ("Merge the plan"). Commit, then `grove review`:
    > adds     cycle            grove/cycles/\<cycle-id>-\<slug>.yaml
 
@@ -189,7 +194,9 @@ show-saved changes approved. Each step names the section of
 3. **A cycle of one** ("Plan a cycle"). `git switch -c plan-show-saved`, a
    fresh session, `/grove-plan <show-saved>`. It asks whether to keep the
    change's title for the cycle and, finding nothing that needs a person,
-   writes a cycle listing only show-saved. Commit and merge.
+   writes a cycle listing only show-saved. It ends by saying `grove run`
+   would build the cycle once `unattended: true` is added to its file in a
+   merge of its own. Commit and merge.
 
 4. **Mark it unattended** ("Mark it unattended"). `git switch -c mark`, add
    `unattended: true` to the show-saved cycle, `grove check` is clean;
@@ -259,8 +266,14 @@ Each step names the section of
    While it runs, `grove run` in a second shell there says
    > grove: a run is in progress in this checkout
 
-   and `grove run` in another project's checkout proceeds. The first ends
+   and `grove run` in another project's checkout proceeds. While the first
+   runs, it prints the agent's messages as they come, each tool call with
+   the first line of its input, such as
+   `Bash: grove instructions apply <cycle-id> <change-id>`, and, indented,
+   the first line of its result. It ends
    > Attempt \<attempt> ended: exit status 0; its output is \<checkout>/.git/grove/\<attempt>.log.
+
+   `head -1` of that log is a JSON object, as is every line after it.
 
    The checkout is on `grove/run-<attempt>`, whose commits build and archive
    both changes, the unknown-ID one first, each task with its ID. The
@@ -279,12 +292,13 @@ Each step names the section of
    pull request unmerged.
 
 4. **When a session is stopped** ("When a session is stopped").
-   `grove run --retry`, and once the output shows an edit to a file, press
-   Ctrl-C:
+   `grove run --retry`, and once it prints an `Edit:` or `Write:` line,
+   press Ctrl-C:
    > grove: attempt \<attempt> ended: cancelled; its output is \<checkout>/.git/grove/\<attempt>.log
 
    `ps -o pid,pgid,command -g <pid of that claude -p>` lists nothing, and
-   the branch, the edit and the output are there. `grove run --retry` says
+   the branch, the edit and the output are there; the log holds each event
+   up to the stop, one JSON object per line, the edit's tool call among them. `grove run --retry` says
    > grove: the checkout has uncommitted changes; commit, stash or discard them first
 
    and the edit is untouched. Discard it as the page shows, then
@@ -302,6 +316,17 @@ Each step names the section of
    Put `claude` back. With `PATH` missing `claude`, `grove run --retry`
    ends `failed to start`, the reason in its output, and the next
    `grove run` says the project is paused.
+
+6. **Without a remote** ("Without a remote"). `just fixture
+   ~/tmp/ledger-local`, `grove init`, commit, approve the unknown-ID
+   change, plan it as a cycle of one, mark it `unattended` and merge, with
+   `Commit after each task, naming its task ID.` and the page's
+   commit-what-is-left line under `rules.skills.apply`; write `.claude/settings.local.json` and the
+   `.git/info/exclude` line from the page. `git remote` lists nothing.
+   `grove run` fetches nothing, ends `exit status 0`, and its record holds
+   `main`'s commit. `grove run` says the project is paused. Merge
+   `grove/run-<attempt>` into `main`: `grove run` says there is nothing to
+   apply.
 
 ## Other paths
 

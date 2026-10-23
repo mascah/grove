@@ -28,6 +28,18 @@
   branch; nothing you do makes it.
 - Finish: run Grove's `check` and fix what it reports in the cycle file.
   Tell the owner the members in build order, which need a person, and which
-  wait on what. Commit only when the owner or the project's rules ask. The
+  wait on what. Then say whether `grove run` would build the cycle once it
+  is marked `unattended` and, for each obstacle, what removes it:
+  - A member `needs_human` names: revise it with `/grove-propose
+    <change-id>` so that its acceptance can be checked without a person,
+    merge that, and re-plan the cycle with `/grove-plan <cycle-id>`.
+  - A member waiting on a change neither in the cycle nor archived as
+    finished: `grove run` builds nothing of the cycle until that change is
+    archived as finished.
+  - Something the runner's checkout must have, such as a login the owner
+    said the runner has: name it.
+  With no obstacle, say `grove run` would build the cycle once
+  `unattended: true` is added to the cycle file in a merge of its own.
+  Commit only when the owner or the project's rules ask. The
   next step is the owner's: commit, read what Grove's `review` shows, and
   merge it into the target branch.

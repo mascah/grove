@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,7 +40,8 @@ type attempt struct {
 	Output   string    `json:"output"`
 }
 
-// runAttempt starts one attempt: it updates the target from origin and,
+// runAttempt starts one attempt: it updates the target from origin, if the
+// checkout has one, and,
 // unless the latest attempt's changes are still open or retry is set,
 // launches one Claude Code session on the apply skill for the oldest
 // eligible cycle, on a new branch, within timeout.
@@ -69,20 +71,26 @@ func runAttempt(stdout io.Writer, retry bool, timeout time.Duration) error {
 	} else if out != "" {
 		return errors.New("the checkout has uncommitted changes; commit, stash or discard them first")
 	}
-	if _, err := gitx.Run(p.Top, "fetch", "-q", "origin", p.Target); err != nil {
-		return err
-	}
-	commit, err := gitx.Run(p.Top, "rev-parse", "--verify", "FETCH_HEAD^{commit}")
-	if err != nil {
-		return err
-	}
-	commit = strings.TrimSpace(commit)
 	local, err := gitx.ResolveBranch(p.Top, p.Target)
 	if err != nil {
 		return err
 	}
-	if _, err := gitx.Run(p.Top, "merge-base", "--is-ancestor", local, commit); err != nil {
-		return fmt.Errorf("the local %s has commits origin's does not, so it cannot be fast-forwarded", p.Target)
+	remotes, err := gitx.Run(p.Top, "remote")
+	if err != nil {
+		return err
+	}
+	commit := local // with no origin, the local target is the fetched one
+	if slices.Contains(strings.Fields(remotes), "origin") {
+		if _, err := gitx.Run(p.Top, "fetch", "-q", "origin", p.Target); err != nil {
+			return err
+		}
+		if commit, err = gitx.Run(p.Top, "rev-parse", "--verify", "FETCH_HEAD^{commit}"); err != nil {
+			return err
+		}
+		commit = strings.TrimSpace(commit)
+		if _, err := gitx.Run(p.Top, "merge-base", "--is-ancestor", local, commit); err != nil {
+			return fmt.Errorf("the local %s has commits origin's does not, so it cannot be fast-forwarded", p.Target)
+		}
 	}
 	config, err := gitx.Run(p.Top, "show", commit+":grove.yaml")
 	if err != nil {
@@ -135,7 +143,7 @@ func runAttempt(stdout io.Writer, retry bool, timeout time.Duration) error {
 		return err
 	}
 	defer out.Close()
-	a.Outcome = session(out, p.Top, skill+" "+cy.ID, timeout)
+	a.Outcome = session(stdout, out, p.Top, skill+" "+cy.ID, timeout)
 	a.Ended = time.Now()
 	if err := a.save(dir); err != nil {
 		return err
@@ -167,19 +175,32 @@ func eligible(p project, ip instruct.Project) (*doc.Cycle, []*doc.Change) {
 	return nil, nil
 }
 
-// session runs skill in Claude Code in dir, its output going to out, and
-// returns how it ended. Whichever way it ends, its process group is stopped.
-func session(out *os.File, dir, skill string, timeout time.Duration) string {
+// session runs skill in Claude Code in dir, writing every event it emits
+// to out and printing a line to stdout for each message, tool call and
+// result, and returns how it ended. Whichever way it ends, its process
+// group is stopped.
+func session(stdout io.Writer, out *os.File, dir, skill string, timeout time.Duration) string {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(signals)
-	cmd := exec.Command("claude", "-p", skill)
-	cmd.Dir, cmd.Stdout, cmd.Stderr = dir, out, out
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // its own group, so it can be stopped whole
-	if err := cmd.Start(); err != nil {
+	r, w, err := os.Pipe()
+	if err != nil {
 		fmt.Fprintln(out, err)
 		return "failed to start"
 	}
+	defer r.Close()
+	cmd := exec.Command("claude", "-p", skill, "--output-format", "stream-json", "--verbose")
+	// A file, not a writer, so Wait returns when claude exits, not when the last child closes it.
+	cmd.Dir, cmd.Stdout, cmd.Stderr = dir, w, out
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // its own group, so it can be stopped whole
+	err = cmd.Start()
+	w.Close()
+	if err != nil {
+		fmt.Fprintln(out, err)
+		return "failed to start"
+	}
+	shown := make(chan struct{})
+	go func() { relay(stdout, out, r); close(shown) }()
 	done := make(chan struct{})
 	go func() { cmd.Wait(); close(done) }()
 	outcome := ""
@@ -193,7 +214,67 @@ func session(out *os.File, dir, skill string, timeout time.Duration) string {
 	}
 	stop(cmd.Process.Pid)
 	<-done
+	r.SetReadDeadline(time.Now().Add(stopGrace)) // a process that left the group may hold the pipe open
+	<-shown
 	return outcome
+}
+
+// relay copies each line of r, one stream-json event, to out, and prints to
+// stdout the first line of each assistant message, each tool call with its
+// input, and each tool result.
+func relay(stdout, out io.Writer, r io.Reader) {
+	br := bufio.NewReader(r)
+	for {
+		line, err := br.ReadBytes('\n')
+		out.Write(line)
+		if err != nil {
+			return
+		}
+		var e struct {
+			Type    string
+			Message struct {
+				Content []struct {
+					Type, Text, Name string
+					Input            map[string]any
+					Content          json.RawMessage
+				}
+			}
+		}
+		if json.Unmarshal(line, &e) != nil {
+			continue
+		}
+		for _, c := range e.Message.Content {
+			switch {
+			case e.Type == "assistant" && c.Type == "text":
+				fmt.Fprintln(stdout, firstLine(c.Text))
+			case e.Type == "assistant" && c.Type == "tool_use":
+				input := ""
+				// ponytail: the usual tools' main argument; add a key when a tool shows only its name.
+				for _, k := range []string{"command", "file_path", "pattern", "url", "description"} {
+					if v, ok := c.Input[k].(string); ok {
+						input = v
+						break
+					}
+				}
+				fmt.Fprintln(stdout, c.Name+": "+firstLine(input))
+			case e.Type == "user" && c.Type == "tool_result":
+				var text string
+				if json.Unmarshal(c.Content, &text) != nil {
+					var parts []struct{ Text string }
+					json.Unmarshal(c.Content, &parts)
+					for _, p := range parts {
+						text += p.Text
+					}
+				}
+				fmt.Fprintln(stdout, "  "+firstLine(text))
+			}
+		}
+	}
+}
+
+func firstLine(s string) string {
+	line, _, _ := strings.Cut(strings.TrimSpace(s), "\n")
+	return line
 }
 
 // stop asks every process in group pgid to exit, kills those left after
