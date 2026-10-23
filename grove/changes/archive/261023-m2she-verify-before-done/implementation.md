@@ -102,3 +102,7 @@ Status: done
 
     - record-editing: applied to specs/record-editing/spec.md
 -->
+
+- apply: applied to specs/apply/spec.md
+- implement: applied to specs/implement/spec.md
+- propose: applied to specs/propose/spec.md
