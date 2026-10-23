@@ -2,23 +2,23 @@
 
 ## Purpose
 
-`grove run` builds a cycle the owner marked `unattended` without anyone
-typing `/grove-apply`: in a checkout an operator prepared for one project,
-it starts one bounded Claude Code session on the apply skill for that
-cycle, records the attempt, and then pauses the project until the cycle is
-archived. "The checkout" is the Git checkout `grove run` is run in. "The
+`grove run` builds a cycle the operator gives it, or else one the owner
+marked `unattended`, without anyone typing `/grove-apply`: in a checkout
+an operator prepared for one project, it starts one bounded Claude Code
+session on the apply skill for that cycle, records the attempt, and then
+pauses the project until the cycle is archived. "The checkout" is the Git checkout `grove run` is run in. "The
 fetched target" is the target branch as just fetched from `origin`, or,
 in a checkout with no remote named `origin`, the local target branch; in
-both, with the `grove.yaml` it holds. "An eligible cycle" is a cycle on the fetched
-target that holds `unattended: true`, is not done, is not
-stale, has no member `needs_human` names, and has no member that waits on
-a change neither in the cycle nor archived as finished
-(`grove/specs/cycles/spec.md`).
+both, with the `grove.yaml` it holds. "A buildable cycle" is a cycle on
+the fetched target that is not done, is not stale, has no member
+`needs_human` names, and has no member that waits on a change neither in
+the cycle nor archived as finished (`grove/specs/cycles/spec.md`); "an
+eligible cycle" is a buildable cycle that holds `unattended: true`.
 
 ## Boundaries
 
-This covers `grove run`, `--retry` and `--timeout`: starting, refusing,
-stopping, recording and pausing attempts. What the session builds, and how
+This covers `grove run`, its cycle argument, `--retry` and `--timeout`:
+starting, refusing, stopping, recording and pausing attempts. What the session builds, and how
 task progress is recorded, belong to the apply instructions and
 `implementation.md`. Recovering an interrupted attempt, creating checkouts,
 pushing, opening pull requests, scheduling and harnesses other than Claude
@@ -31,12 +31,14 @@ or cron calls `grove run`.
 ### Requirement: Start one attempt
 
 When the operator runs `grove run` in a clean checkout that is not paused,
-and the fetched target holds an eligible cycle, the system shall, when the
-checkout has a remote named `origin`, fetch the target from it and
-fast-forward the local target branch to it; then create the attempt's
-branch from the fetched target, record the attempt for the oldest eligible
-cycle, the one whose `created` is earliest, launch one Claude Code session
-on the apply skill with that cycle's ID, and wait for the session to end.
+and either gives a cycle ID that is a buildable cycle on the fetched target
+or gives none and the fetched target holds an eligible cycle, the system
+shall, when the checkout has a remote named `origin`, fetch the target from
+it and fast-forward the local target branch to it; then create the
+attempt's branch from the fetched target, record the attempt for the given
+cycle, or else for the oldest eligible cycle, the one whose `created` is
+earliest, launch one Claude Code session on the apply skill with that
+cycle's ID, and wait for the session to end.
 
 #### Scenario: Local target has commits of its own
 
@@ -61,6 +63,22 @@ on the apply skill with that cycle's ID, and wait for the session to end.
 - WHEN the operator runs `grove run`
 - THEN the attempt selects K only
 
+#### Scenario: A given cycle not marked
+
+- GIVEN `origin`'s target holds buildable cycle K without `unattended`,
+  and eligible cycle L
+- WHEN the operator runs `grove run K`
+- THEN one session is launched on the apply skill with K's ID, and the
+  attempt's record names K
+
+#### Scenario: A given cycle while paused
+
+- GIVEN the latest attempt selected cycle L, whose members are not
+  archived on the target, and K is buildable
+- WHEN the operator runs `grove run K`
+- THEN no session is launched and Grove says the project is paused; with
+  `--retry`, an attempt starts and selects K
+
 #### Scenario: A project that does not list Claude Code
 
 - GIVEN the fetched target's `grove.yaml` has `agents` without `claude`
@@ -83,6 +101,34 @@ on the apply skill with that cycle's ID, and wait for the session to end.
   its branch, and the owner merged that branch into the local target
 - WHEN the operator runs `grove run`
 - THEN the project is not paused
+
+### Requirement: Refuse a given cycle that cannot be built
+
+If the operator gives `grove run` a cycle ID that is not a buildable cycle
+on the fetched target, then the system shall launch no session, create no
+branch, and say in one sentence why: there is no such cycle, it is done, a
+member is under `needs_human`, its plan is stale, or a member waits on a
+change neither in the cycle nor archived as finished.
+
+#### Scenario: A member needs a person
+
+- GIVEN `origin`'s target holds cycle K whose `needs_human` names member C
+- WHEN the operator runs `grove run K`
+- THEN no branch is created and no session is launched, and Grove says C
+  needs a person
+
+#### Scenario: A stale plan
+
+- GIVEN `origin`'s target holds cycle K, and member A was revised on the
+  target after K's `planned` commit
+- WHEN the operator runs `grove run K`
+- THEN no session is launched, and Grove says K's plan is stale
+
+#### Scenario: No such cycle
+
+- GIVEN `origin`'s target holds no cycle with ID Z
+- WHEN the operator runs `grove run Z`
+- THEN no session is launched, and Grove says there is no cycle Z
 
 ### Requirement: Nothing to apply
 
