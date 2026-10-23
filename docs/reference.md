@@ -141,7 +141,8 @@ A schema's folder holds `schema.yaml`, a folder for each kind of document,
 each skill, `skills/<skill>.md`.
 
 A schema cannot change Grove's skills or what Grove requires of each, which
-its instructions give first; that a merge approves a change; a change's
+its instructions give first, such as propose asking one round of every
+decision it would otherwise assume before it writes; that a merge approves a change; a change's
 `.grove.yaml`; or how progress is recorded: each task is a `T-NN` heading in
 `tasks.md`, naming the files it touches on a `Files:` line and the
 interfaces it produces on an `Interfaces:` line, and its status a `Status:`
@@ -231,8 +232,8 @@ Tell the owner which of these it is:
 - A maintained requirement says what should happen, and the code breaks it.
   Cite the requirement in the proposal. Write no change spec: what is agreed
   does not change.
-- No maintained requirement covers the behavior. Ask the owner whether the
-  corrected behavior should become agreed. If yes, write a change spec that
+- No maintained requirement covers the behavior. Ask, in the round before
+  writing, whether the corrected behavior should become agreed. If yes, write a change spec that
   ADDs it; archiving folds it into the maintained spec. If no, write none,
   and the fix stays observed behavior.
 - The maintained spec itself is wrong. That is not a bug: tell the owner it

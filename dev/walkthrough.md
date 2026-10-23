@@ -47,9 +47,14 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    `git status` shows nothing new: exploring wrote no file.
 
 3. **Propose** (§3). `/grove-propose` in the same conversation. The session
-   creates `grove/changes/261015-k3m9q-allow-editing-older-records/` with
-   `.grove.yaml` (its title and created time), `proposal.md` (my decision quoted, the category question open and
-   blocking no task, since T-01 leaves the category unchanged),
+   states the scope and I confirm it. Before writing, it lists, numbered,
+   each decision it would otherwise assume, such as which file the fix goes
+   in and whether the README changes, each with a recommended answer; I
+   say "yes". It then creates `grove/changes/261015-k3m9q-allow-editing-older-records/` with
+   `.grove.yaml` (its title and created time), `proposal.md` (my decision
+   and my "yes" to the round quoted, no assumptions section, the category
+   question open and blocking no task, since T-01 leaves the category
+   unchanged),
    `specs/record-editing/spec.md` (an ADDED requirement as an EARS sentence
    with scenarios), and `tasks.md` (T-01 with its acceptance, a `Files:`
    line naming `ledger/cli.py`, the file under fix, and `tests/test_cli.py`,

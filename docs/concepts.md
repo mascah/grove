@@ -69,7 +69,9 @@ flowchart LR
    It writes no Grove document; its findings reach the main branch only in
    a proposal, which cites the branch and commit.
 3. **Propose.** The agent writes a change from the conversation or from a
-   description.
+   description. First it asks you, in one numbered round with a
+   recommended answer to each, every decision it would otherwise assume;
+   what you leave open becomes an open question, never an assumption.
 4. **Review and merge.** You read the change and merge it. Now it is
    approved.
 5. **Implement.** The agent builds the change on a branch with you and

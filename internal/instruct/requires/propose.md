@@ -22,9 +22,14 @@
   the target's maintained spec, keeping what this change alters, then set
   `base` to the commit the `.grove.yaml` template below shows. Change `base`
   only so; never clear the report by hand.
+- A new change: once the owner has confirmed its scope, and before you
+  write any document, ask one round: every decision you would otherwise
+  assume, numbered, each with your recommended answer worded so that "yes"
+  accepts it. Wait for the owner. If there is nothing to assume, say so and
+  write. Each answer is a decision in the proposal, quoting the owner.
 - A question the owner defers is not answered by guess. It goes into the
   change's open questions, naming the task it blocks when it decides how
-  that task is built.
+  that task is built. Write nothing you inferred as an assumption.
 - When this conversation holds a prototype's findings, write them into the
   proposal, citing the prototype branch and the commit that holds the
   experiment. Link no file outside the change and the target branch: the
