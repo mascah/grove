@@ -103,8 +103,8 @@ decides, or that cannot be built as the change says, is marked
 
 #### Scenario: The same open question under apply
 
-- GIVEN change C's open question decides T-02
-- WHEN C is built with `/grove-apply C`
+- GIVEN cycle K lists change C, whose open question decides T-02
+- WHEN K is built with `/grove-apply K` and the agent reaches C's T-02
 - THEN T-02 is marked `Status: blocked` with the question, nobody is asked,
   and C's proposal, change specs and tasks are unchanged
 
@@ -125,9 +125,4 @@ in the owner's session.
 
 ## Known discrepancies
 
-- "Apply asks no one", scenario "The same open question under apply",
-  builds C with `/grove-apply C`. Since change 261022-1grb0, apply takes
-  only a cycle ID and refuses a change ID
-  (`grove/specs/apply/spec.md`, "Apply takes only a cycle";
-  `internal/cli/instructions.go`, `instructionsApply`); the scenario holds
-  for C built as a member of a cycle with `/grove-apply <cycle-id>`.
+None recorded.
