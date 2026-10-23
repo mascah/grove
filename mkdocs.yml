@@ -9,6 +9,7 @@ nav:
   - Getting started: getting-started.md
   - Concepts: concepts.md
   - Coordinating changes: coordinating.md
+  - Planning cycles: planning.md
   - Running apply unattended: running.md
   - Guides:
       - Push to a tracker: guides/push-to-a-tracker.md

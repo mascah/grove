@@ -3,7 +3,7 @@
 //
 // Under the root are maintained specs (specs/<id>/) and changes
 // (changes/<id>-<slug>/, archived in changes/archive/), each folder found by
-// its .grove.yaml. Problems inside a document
+// its .grove.yaml, and cycles (cycles/<id>-<slug>.yaml). Problems inside a document
 // are Diagnostics, never errors, so one broken document does not hide the
 // others.
 package doc
@@ -44,12 +44,19 @@ type Meta struct {
 	Schema      string   `json:"schema,omitempty"`
 	DependsOn   []string `json:"depends_on,omitempty"` // the changes this one waits on
 	Base        string   `json:"base,omitempty"`       // the target commit this change was proposed from
+
+	// A cycle's, which grove changes --json does not print.
+	Goal       string            `json:"-"`
+	Changes    []string          `json:"-"` // its members
+	Planned    string            `json:"-"` // the target commit its plan checked
+	NeedsHuman map[string]string `json:"-"` // member to the owner's reason it needs a person
+	Unattended bool              `json:"-"` // handed to grove run
 }
 
-// Document is a maintained spec or a change, with its metadata.
+// Document is a maintained spec, a change or a cycle, with its metadata.
 type Document struct {
 	ID   string `json:"id"`
-	Dir  string `json:"-"`    // relative to the document root
+	Dir  string `json:"-"`    // relative to the document root; empty for a cycle
 	Path string `json:"path"` // the main document, relative to the document root
 	Meta
 	Diagnostics []Diagnostic   `json:"-"`
@@ -76,11 +83,19 @@ type Task struct {
 	Status string `json:"status,omitempty"`
 }
 
+// Cycle is one cycle file: approved changes the owner means to build
+// together, listed in its changes field.
+type Cycle struct {
+	Document
+	Done bool // every member is archived, finished or dropped
+}
+
 // Collection is everything under one document root.
 type Collection struct {
 	Specs    []*Document
 	Changes  []*Change
 	Archived []*Change
+	Cycles   []*Cycle // oldest first, by created
 }
 
 // Layout returns where change schema schema puts a change's main document
@@ -132,7 +147,49 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 		}
 	}
 	c.dependencies()
+	cycles, err := fs.Glob(fsys, "cycles/*.yaml")
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range cycles {
+		cy := &Cycle{Document: Document{ID: idOf(strings.TrimSuffix(path.Base(name), ".yaml")), Path: name}}
+		b, err := fs.ReadFile(fsys, name)
+		if err != nil {
+			return nil, err
+		}
+		cy.lines = cy.parse(name, b, []string{"title", "created", "changes", "planned"}, []string{"goal", "needs_human", "unattended"})
+		cy.Done = !slices.ContainsFunc(cy.Meta.Changes, func(id string) bool { return !c.InArchive(id) })
+		c.Cycles = append(c.Cycles, cy)
+	}
+	slices.SortStableFunc(c.Cycles, func(a, b *Cycle) int { return cmp.Compare(a.Meta.Created, b.Meta.Created) })
+	c.members()
 	return c, nil
+}
+
+// members reports each cycle's member that is no change, or that a cycle
+// not done before it lists too, and each member needs_human names while the
+// cycle is marked unattended.
+func (c *Collection) members() {
+	all, in := map[string]bool{}, map[string]string{} // in: change → the first cycle not done to list it
+	for _, ch := range slices.Concat(c.Changes, c.Archived) {
+		all[ch.ID] = true
+	}
+	for _, cy := range c.Cycles {
+		for _, id := range cy.Meta.Changes {
+			switch {
+			case !all[id]:
+				cy.report(cy.Path, cy.lines["changes"], "changes: "+id+" is no change, open or archived")
+			case cy.Done:
+			case in[id] != "":
+				cy.report(cy.Path, cy.lines["changes"], "changes: "+id+" is also in cycle "+in[id]+", which is not done")
+			default:
+				in[id] = cy.ID
+			}
+			if _, ok := cy.Meta.NeedsHuman[id]; ok && cy.Meta.Unattended {
+				cy.report(cy.Path, cy.lines["unattended"], "unattended: "+id+" needs a person, as needs_human says, so grove run skips this cycle; remove unattended, or build the cycle with /grove-implement "+cy.ID)
+			}
+		}
+	}
 }
 
 // dependencies reports each open change's depends_on that names no change,
@@ -296,6 +353,21 @@ func Order(changes []*Change, finished func(id string) bool) (ordered, waiting [
 		waiting = slices.Delete(waiting, i, i+1)
 	}
 	return ordered, waiting
+}
+
+// InArchive reports whether c holds change id archived, finished or dropped.
+func (c *Collection) InArchive(id string) bool {
+	return slices.ContainsFunc(c.Archived, func(ch *Change) bool { return ch.ID == id })
+}
+
+// Cycle returns the cycle whose ID is id, or nil.
+func (c *Collection) Cycle(id string) *Cycle {
+	for _, cy := range c.Cycles {
+		if cy.ID == id {
+			return cy
+		}
+	}
+	return nil
 }
 
 // Change returns the change whose ID is id, or nil.

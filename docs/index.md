@@ -33,8 +33,9 @@ chat      /grove-implement <change-id>          builds it with you, updates the 
 terminal  merge
 ```
 
-Or, once several changes are approved, `/grove-apply` with no ID builds them
-all in order and you merge once.
+Or, once several changes are approved, `/grove-plan` puts them in a cycle,
+`/grove-apply <cycle-id>` builds them all in order, and you merge once.
+Mark the cycle `unattended` and `grove run` builds it for you.
 
 Some agents type skills another way, such as `$grove-explore`; the
 [Reference](reference.md) lists how each is typed.
@@ -48,8 +49,10 @@ Some agents type skills another way, such as `$grove-explore`; the
   changes, approval and archive mean.
 - [Coordinating changes](coordinating.md): changes that wait on others,
   stale plans, and the project as data.
-- [Running apply unattended](running.md): `grove run` builds approved
-  changes in one Claude Code session, on its own or from a timer.
+- [Planning cycles](planning.md): group approved changes, say which need
+  a person, and mark a cycle for `grove run`.
+- [Running apply unattended](running.md): `grove run` builds a cycle you
+  marked in one Claude Code session, on its own or from a timer.
 - Guides: recipes others have tried, such as
   [pushing changes to a tracker](guides/push-to-a-tracker.md),
   [running Grove in CI](guides/run-grove-in-ci.md),

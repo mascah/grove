@@ -139,9 +139,10 @@ tells you which of its proposal, specs and tasks it would edit and how. Once
 you agree, it edits them on this branch and builds to them. Merging the
 branch approves the revision with the code, and `grove review` shows it.
 
-`/grove-apply 261015-k3m9q` builds the change without you: it asks no one,
-marks a task an open question decides blocked, and never edits the change.
-`grove run` uses it (see [Running apply unattended](running.md)).
+`/grove-apply <cycle-id>` builds a cycle of changes without you, such as
+a cycle of just this one, which [Planning cycles](planning.md) makes: it
+asks no one, marks a task an open question decides blocked, and never edits the
+change. `grove run` uses it (see [Running apply unattended](running.md)).
 
 When every task is done, the agent archives the change: it merges the
 change's specs into the maintained specs in `grove/specs/`, then runs

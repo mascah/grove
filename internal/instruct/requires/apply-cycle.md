@@ -1,9 +1,11 @@
 - Work in this working tree on a branch other than the target; create one if
   you are on the target.
-- Build each change below in the order given, by running Grove's
-  `instructions apply <change-id>` and following what it prints to the end:
-  it archives the change when every task is done. Then the next. A change
-  Grove refuses as waiting stays as it is.
+- Build each change below in the order given, one at a time, by running
+  Grove's `instructions apply <cycle-id> <change-id>` and following what it
+  prints to the end: it archives the change when every task is done. Then
+  the next. A change Grove refuses as waiting stays as it is.
+- Build whether or not the cycle is marked `unattended`, and whatever its
+  `needs_human` says: only `grove run` reads them.
 - Wait for no one's answer and settle nothing yourself: a task an open
   question decides, or that cannot be built as the change says, is marked
   `Status: blocked` by the change's own instructions and left for a

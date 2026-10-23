@@ -20,7 +20,8 @@ Acceptance:
   records the owner's answer, and edits no change's files.
 - `internal/cli/walkthrough_test.go` covers `grove check` reporting a
   marked cycle with `needs_human`, a marked stale cycle, a malformed cycle
-  file and one change in two open cycles; `just check` passes.
+  file (one without `created` among them) and one change in two open
+  cycles; `just check` passes.
 
 ## T-02 — Run, apply and implement take cycles
 
@@ -38,7 +39,9 @@ Acceptance:
 - `docs/running.md`, `docs/coordinating.md`, `docs/reference.md`,
   `docs/index.md`, `README.md`, `docs/guides/run-apply-on-a-timer.md` and
   `docs/guides/run-grove-in-ci.md` describe the runner building only
-  marked cycles and type no `/grove-apply` without a cycle ID.
+  marked cycles and type no `/grove-apply` without a cycle ID;
+  `docs/reference.md` lists `grove instructions apply <cycle-id>
+  <change-id>`.
   `dev/walkthrough.md` runs the changed steps.
 - On the fixture with a remote and Claude Code: an approved change in no
   cycle is not built by `grove run`; after planning it as a cycle of one
@@ -46,5 +49,9 @@ Acceptance:
   the pull request is merged.
 - `internal/cli/walkthrough_test.go`, with a stand-in `claude`, covers: no
   eligible cycle, an unmarked cycle, a stale marked cycle, two marked
-  cycles selecting the older, the pause per cycle, and `grove instructions
-  apply` refusing a change ID and no ID; `just check` passes.
+  cycles planned the same day selecting the earlier `created`, the pause
+  per cycle, `grove instructions apply` refusing a change ID and no ID,
+  and `grove instructions apply <cycle-id> <change-id>` printing the
+  member's instructions with the cycle's plan and refusing a change
+  outside the cycle and a member waiting on one not archived; `just check`
+  passes.

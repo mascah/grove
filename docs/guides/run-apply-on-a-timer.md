@@ -6,10 +6,12 @@ it is not part of what Grove does. Use it if it helps.
 ## What it is for
 
 Grove does not schedule itself. On a Mac, launchd can run `grove run` every
-so often in a checkout you keep for one project, so approved work is started
-without anyone watching. Each firing either starts one attempt or does
-nothing: while a run is going, while the project is paused after an
-attempt, or when nothing is approved. [Running apply
+so often in a checkout you keep for one project, so a cycle you mark
+`unattended` is started without anyone watching. Each firing either starts
+one attempt or does nothing: while a run is going, while the project is
+paused after an attempt, or when no marked cycle can be built. Marking a
+cycle is what puts work in front of the timer; merging a change alone does
+not. [Running apply
 unattended](../running.md) says what one run does.
 
 ## Before the timer

@@ -14,15 +14,17 @@ folder at the cycle's `planned` commit.
 
 When the owner runs `/grove-plan <description>`, the system shall print
 instructions for writing a new cycle file holding a `title`, an optional
-one-line `goal`, the approved changes the owner agrees to as `changes`, and
-the target commit the plan read as `planned`, editing no change's files.
+one-line `goal`, the approved changes the owner agrees to as `changes`, the
+time Grove gives the plan as `created`, and the target commit the plan read
+as `planned`, editing no change's files.
 
 #### Scenario: Two approved changes
 
 - GIVEN the target approves changes A and B, neither archived
 - WHEN the owner runs `/grove-plan 0.4 release` and agrees to A and B
-- THEN a new cycle file lists A and B under `changes`, `planned` is the
-  target's commit, and A's and B's files are unchanged
+- THEN a new cycle file lists A and B under `changes`, `created` is the
+  time Grove gave the plan, `planned` is the target's commit, and A's and
+  B's files are unchanged
 
 #### Scenario: A draft change named
 
@@ -113,7 +115,8 @@ naming what to do.
 ### Requirement: Report a malformed cycle
 
 When the owner runs `grove check`, the system shall report a cycle file
-with no `title`, no `changes` or no `planned`, with an unknown field, that
+with no `title`, no `created`, no `changes` or no `planned`, with an
+unknown field, that
 lists a change that is no change, open or archived, or that lists a change
 another cycle not yet done also lists.
 

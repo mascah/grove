@@ -11,11 +11,14 @@
 - name: propose
   description: Propose a change from this conversation or from a description, or revise a drafted change given its ID.
   args: '"<args>"'
+- name: plan
+  description: Plan a cycle of approved changes from a description or one change's ID, or revise a cycle given its ID, asking the owner which changes need a person.
+  args: '"<args>"'
 - name: implement
-  description: Implement an approved change given its ID with the owner in this session, asking them where the change does not settle a task, revising the change on its branch with their agreement, and archiving it when every task is done.
+  description: Implement an approved change, or each change of a cycle, given its ID with the owner in this session, asking them where the change does not settle a task, revising the change on its branch with their agreement, and archiving it when every task is done.
   args: <args>
 - name: apply
-  description: Apply an approved change given its ID, or every approved change not yet archived given none, building its tasks, recording progress in its implementation.md and archiving it when every task is done.
+  description: Apply a cycle of approved changes given its ID, building each change in turn without asking anyone, recording progress in its implementation.md and archiving it when every task is done.
   args: <args>
 - name: archive
   description: Archive a finished or dropped change given its ID, first folding a finished change's specs into the maintained specs.

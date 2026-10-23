@@ -16,8 +16,8 @@ When the operator runs `grove run` in a clean checkout that is not paused,
 and the fetched target holds an eligible cycle, the system shall
 fast-forward the local target branch to the fetched target, create the
 attempt's branch from it, record the attempt for the oldest eligible
-cycle, launch one Claude Code session on the apply skill with that cycle's
-ID, and wait for the session to end.
+cycle, the one whose `created` is earliest, launch one Claude Code session
+on the apply skill with that cycle's ID, and wait for the session to end.
 
 #### Scenario: Local target has commits of its own
 
@@ -37,7 +37,8 @@ ID, and wait for the session to end.
 
 #### Scenario: Two marked cycles
 
-- GIVEN `origin`'s target holds eligible cycles K and L, K the older
+- GIVEN `origin`'s target holds eligible cycles K and L planned the same
+  day, K's `created` the earlier
 - WHEN the operator runs `grove run`
 - THEN the attempt selects K only
 

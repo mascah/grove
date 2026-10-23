@@ -28,18 +28,21 @@ A cycle is approved changes the owner means to build together, in a file
 `grove/cycles/<id>-<slug>.yaml` listing them. `/grove-plan` writes it: from
 a description, from one change ID (a cycle of one), or revising a cycle by
 its ID. Plan reads each change, asks the owner about any that may need a
-person, records the ones the owner says do, and records the target commit
-it checked. Merging the cycle file plans the cycle.
+person, records the ones the owner says do, and records when it planned
+the cycle and the target commit it checked. Merging the cycle file plans
+the cycle.
 
 Handing a cycle to the runner is a separate, later merge: `unattended:
 true` in the cycle file. `grove check` reports a cycle so marked that still
 has a change the owner said needs a person, and a cycle whose changes
 changed on the target since its plan.
 
-`grove run` builds only cycles: the oldest one marked `unattended` that is
-not done, not stale, has no change needing a person and waits on nothing
-outside it. It launches `/grove-apply <cycle-id>` and pauses until that
-cycle is archived. An approved change in no cycle, or in a cycle not
+`grove run` builds only cycles: the oldest one, by `created`, marked
+`unattended` that is not done, not stale, has no change needing a person
+and waits on nothing outside it. It launches `/grove-apply <cycle-id>` and
+pauses until that cycle is archived. Apply builds the cycle one change at a
+time: each member's instructions come from `grove instructions apply
+<cycle-id> <change-id>` when the session reaches it, with the cycle's plan. An approved change in no cycle, or in a cycle not
 marked, is never built unattended; the owner builds it with
 `/grove-implement`, which now also takes a cycle ID. Apply takes only a
 cycle ID.
@@ -61,7 +64,8 @@ The rules are in [specs/cycles/spec.md](specs/cycles/spec.md),
   for cycles.
 - `grove run` selecting one cycle per attempt, launching apply with its ID,
   and pausing per cycle.
-- `apply <cycle-id>` replacing apply's change-ID and no-ID forms;
+- `apply <cycle-id>`, and `instructions apply <cycle-id> <change-id>` for
+  one member, replacing apply's change-ID and no-ID forms;
   `implement <cycle-id>`.
 - `grove changes` and `grove review` showing cycles; the project index in
   instructions listing them.
@@ -106,12 +110,26 @@ The rules are in [specs/cycles/spec.md](specs/cycles/spec.md),
   an approved change's `.grove.yaml`.
 - **`phase-3-cycles` is inspiration, not a template.** The owner: "We can
   use the old branch as inspiration we don't have to copy it exactly".
+- **A cycle records when it was planned; the oldest is the earliest
+  `created`.** The owner, 2026-10-22, while implementing, on ordering
+  cycles by ID: "I think we need to try and fix this", then "yes add a
+  created field". Reason: cycles planned on the same day otherwise have no
+  order.
+- **Apply builds a cycle one change at a time.** The owner, 2026-10-22,
+  while implementing, on printing every member's apply instructions at
+  once: "This could cause massive context bloat and muddy important details
+  about later tasks later in the session", then "We should make sure
+  `instructions apply` also prints the cycle plan as well I think. I agree
+  with the rest". `instructions apply <cycle-id>` prints the cycle's plan
+  and the loop; `instructions apply <cycle-id> <change-id>` prints one
+  member's apply instructions with the cycle's plan.
 - **The constitution allows it** since #19 (rules 2, 4, 7, 10 and 11).
 
 ### Assumptions to confirm in review
 
 - The cycle file's fields are `title`, optional `goal`, `changes` (approved
-  change IDs), `planned` (the target commit the plan checked),
+  change IDs), `created` (when plan started it, from Grove's template),
+  `planned` (the target commit the plan checked),
   `needs_human` (change ID to the reason the owner gave; optional) and
   `unattended` (optional).
 - Plan never writes or removes `unattended`. Re-planning a marked cycle

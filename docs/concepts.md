@@ -75,10 +75,10 @@ flowchart LR
 5. **Implement.** The agent builds the change on a branch with you and
    records progress. It asks you what the change leaves open and, with
    your agreement, revises the change on that branch; your merge then
-   approves the revision with the code. **Apply** builds the change without
-   you: it asks no one, marks a task an open question decides blocked, and
-   never edits the change. With no ID, apply builds every approved change in
-   order.
+   approves the revision with the code. **Apply** builds a cycle of
+   changes without you, in order: it asks no one, marks a task an open
+   question decides blocked, and never edits a change. A cycle is approved
+   changes planned together (see [Planning cycles](planning.md)).
 6. **Archive.** When every task is done, the agent folds the change's specs
    into the maintained specs and moves the change to
    `grove/changes/archive/`. You merge code, specs and archive together.

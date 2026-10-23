@@ -9,12 +9,14 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/mascah/grove/internal/doc"
 	"github.com/mascah/grove/internal/gitx"
+	"github.com/mascah/grove/internal/instruct"
 )
 
 const defaultTimeout = 2 * time.Hour
@@ -29,7 +31,8 @@ type attempt struct {
 	Started  time.Time `json:"started"`
 	Ended    time.Time `json:"ended,omitzero"`
 	Outcome  string    `json:"outcome,omitempty"` // exit status N, timed out, cancelled or failed to start
-	Changes  []string  `json:"changes"`
+	Cycle    string    `json:"cycle"`
+	Changes  []string  `json:"changes"` // the cycle's, in build order
 	Commit   string    `json:"commit"`
 	Checkout string    `json:"checkout"`
 	Branch   string    `json:"branch"`
@@ -38,8 +41,8 @@ type attempt struct {
 
 // runAttempt starts one attempt: it updates the target from origin and,
 // unless the latest attempt's changes are still open or retry is set,
-// launches one Claude Code session on the apply skill for every change it
-// would build, on a new branch, within timeout.
+// launches one Claude Code session on the apply skill for the oldest
+// eligible cycle, on a new branch, within timeout.
 func runAttempt(stdout io.Writer, retry bool, timeout time.Duration) error {
 	p, err := openProject()
 	if err != nil {
@@ -101,18 +104,18 @@ func runAttempt(stdout io.Writer, retry bool, timeout time.Duration) error {
 		return err
 	}
 	for _, id := range last.Changes {
-		if !retry && !archived(ip.Agreed, id) {
+		if !retry && !ip.Agreed.InArchive(id) {
 			return fmt.Errorf("the project is paused after attempt %s, whose output is %s; once you have dealt with it, run grove run --retry", last.ID, last.Output)
 		}
 	}
-	ordered, _ := buildable(ip.Agreed, ip.Agreed)
-	if len(ordered) == 0 {
+	cy, ordered := eligible(p, ip)
+	if cy == nil {
 		fmt.Fprintf(stdout, "Nothing to apply on %s at %s.\n", p.Target, commit[:7])
 		return nil
 	}
 
 	now := time.Now()
-	a := attempt{ID: doc.NewID(now), Started: now, Commit: commit, Checkout: p.Top}
+	a := attempt{ID: doc.NewID(now), Started: now, Cycle: cy.ID, Commit: commit, Checkout: p.Top}
 	a.Branch, a.Output = "grove/run-"+a.ID, filepath.Join(dir, a.ID+".log")
 	for _, ch := range ordered {
 		a.Changes = append(a.Changes, ch.ID)
@@ -132,7 +135,7 @@ func runAttempt(stdout io.Writer, retry bool, timeout time.Duration) error {
 		return err
 	}
 	defer out.Close()
-	a.Outcome = session(out, p.Top, skill, timeout)
+	a.Outcome = session(out, p.Top, skill+" "+cy.ID, timeout)
 	a.Ended = time.Now()
 	if err := a.save(dir); err != nil {
 		return err
@@ -143,6 +146,25 @@ func runAttempt(stdout io.Writer, retry bool, timeout time.Duration) error {
 	}
 	fmt.Fprintf(stdout, "Attempt %s.\n", ended)
 	return nil
+}
+
+// eligible returns the oldest cycle the target ip holds that is marked
+// unattended, is not done, names no member in needs_human, has no member
+// waiting on a change neither in it nor archived as finished, and whose
+// members are as its plan read them; and its members in build order.
+func eligible(p project, ip instruct.Project) (*doc.Cycle, []*doc.Change) {
+	for _, cy := range ip.Agreed.Cycles {
+		ordered, waiting := buildable(ip.Agreed, ip.Agreed, cy)
+		if !cy.Meta.Unattended || len(ordered) == 0 || len(waiting) > 0 ||
+			slices.ContainsFunc(cy.Meta.Changes, func(id string) bool { _, ok := cy.Meta.NeedsHuman[id]; return ok }) {
+			continue
+		}
+		// A planned that is no commit is check's to report; the cycle is skipped.
+		if changed, err := changedSincePlan(p, ip.Commit, ip.Agreed, cy); err == nil && len(changed) == 0 {
+			return cy, ordered
+		}
+	}
+	return nil, nil
 }
 
 // session runs skill in Claude Code in dir, its output going to out, and

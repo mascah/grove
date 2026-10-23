@@ -8,8 +8,6 @@ import (
 	"io"
 	"os"
 	"strings"
-
-	"github.com/mascah/grove/internal/instruct"
 )
 
 const usage = `usage: grove [command]
@@ -25,17 +23,21 @@ With no command, open the reader on the maintained specs and approved changes.
                              print the instructions for proposing a new change
   instructions propose <change-id>
                              print the instructions for revising a drafted change
-  instructions implement <change-id>
-                             print the instructions for implementing an approved change
-                             with the owner
-  instructions apply [<change-id>]
-                             print the instructions for applying an approved change,
-                             or every approved change with none
+  instructions plan ["<description>" | <change-id>]
+                             print the instructions for planning a new cycle
+  instructions plan <cycle-id>
+                             print the instructions for revising a cycle
+  instructions implement <change-id> | <cycle-id>
+                             print the instructions for implementing an approved change,
+                             or each change of a cycle, with the owner
+  instructions apply <cycle-id> [<change-id>]
+                             print the instructions for applying each change of a cycle,
+                             or one change of it
   instructions archive <change-id>
                              print the instructions for archiving a change
   run [--retry] [--timeout <duration>]
-                             apply every approved change in one Claude Code session
-                             on a new branch, then pause until they are archived
+                             apply the oldest cycle marked unattended in one Claude Code
+                             session on a new branch, then pause until it is archived
   archive <change-id>        move a change to changes/archive/
   review                     show what merging this branch into the target would approve
   specs                      list the maintained specs
@@ -66,12 +68,14 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = instructionsPropose(stdout, "", args[2])
 	case len(args) >= 4 && len(args) <= 5 && args[0] == "instructions" && args[1] == "propose" && args[2] == "--schema":
 		err = instructionsPropose(stdout, args[3], strings.Join(args[4:], ""))
-	case len(args) == 2 && args[0] == "instructions" && args[1] == "apply":
-		err = instructionsApplyAll(stdout)
-	case len(args) == 3 && args[0] == "instructions" && args[1] == "apply":
-		err = instructionsApply(stdout, args[2], instruct.Apply)
+	case len(args) == 2 && args[0] == "instructions" && args[1] == "plan":
+		err = instructionsPlan(stdout, "")
+	case len(args) == 3 && args[0] == "instructions" && args[1] == "plan":
+		err = instructionsPlan(stdout, args[2])
+	case len(args) >= 2 && len(args) <= 4 && args[0] == "instructions" && args[1] == "apply":
+		err = instructionsApply(stdout, args[2:]...)
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "implement":
-		err = instructionsApply(stdout, args[2], instruct.Implement)
+		err = instructionsImplement(stdout, args[2])
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "archive":
 		err = instructionsArchive(stdout, args[2])
 	case len(args) > 0 && args[0] == "run":
