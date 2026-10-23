@@ -86,16 +86,16 @@ every answer below in one round ("yes").
   breaking:** a project's existing `grove/schemas/bugfix/` still overrides
   the built-in file by file. Reason: the docs are the specification
   (rule 8), and a project that copied the example keeps what it has.
+- **Files in `grove/schemas/bugfix/` with no `schema.yaml` there are
+  ignored as an edge, and the change stays non-breaking.** Grove ignored
+  such files at 57af2e3; with the built-in they are read as `bugfix`
+  files, and `grove check` could report one `bugfix` does not use. The
+  owner, on PR #43 (2026-10-23): "Noone currently uses grove we can ignore
+  this". Reason: no project is affected.
 
 ## Open questions
 
 None must be answered before review. None blocks a task.
-
-- Can wait: a project with files in `grove/schemas/bugfix/` but no
-  `schema.yaml` there, which Grove ignored at 57af2e3, would now have them
-  read as `bugfix` files, and `grove check` would report one `bugfix` does
-  not use. Whether that edge makes the change breaking under
-  `CONTRIBUTING.md`, "Breaking changes", is the owner's to say at review.
 
 ## Related documents
 
