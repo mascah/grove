@@ -1,0 +1,5 @@
+title: Check requirements and the archive fold
+created: 2026-10-23T20:42:48Z
+description: grove check wants shall and a scenario in each requirement, and grove archive refuses a fold that does not match the change.
+schema: default
+base: 57af2e3f2f9e00484fd1984de15898613917e3be
