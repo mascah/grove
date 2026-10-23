@@ -1,0 +1,6 @@
+title: Fewer words in Grove's instructions
+created: 2026-10-23T21:42:50Z
+description: Each rule in Grove's instructions is said once, every skill opens with shorter text, and just check holds internal/instruct to 7,000 words.
+schema: default
+depends_on: [261023-g0a3h, 261023-6yafg, 261023-vqsrt, 261023-yqfpj, 261023-bgtcb, 261023-kh3gg]
+base: 0c6f419dab8187d31dd526c0a60754fbbdeeb688
