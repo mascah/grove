@@ -1,0 +1,6 @@
+title: A cycle can depend on cycles
+created: 2026-10-23T22:45:57Z
+description: A cycle's depends_on names the cycles it follows; grove run waits for them, and the merges that archived their changes leave its plan fresh.
+schema: default
+depends_on: [261023-bgtcb]
+base: ab885afba9f7f05be747770df0987bb39badcb0f
