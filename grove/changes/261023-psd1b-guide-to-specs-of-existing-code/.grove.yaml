@@ -1,0 +1,6 @@
+title: A guide to writing specs of existing code
+created: 2026-10-23T21:42:53Z
+description: A trialed guide to proposing a change that only records what the code already does, with no tasks, archived in one merge.
+schema: default
+depends_on: [261023-6yafg]
+base: 0c6f419dab8187d31dd526c0a60754fbbdeeb688
