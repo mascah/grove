@@ -1,0 +1,6 @@
+title: Maintained specs list the changes that shaped them
+created: 2026-10-23T21:42:54Z
+description: Archive adds a line to a maintained spec's History for each change it folds in, linking the archived change and its reasons.
+schema: default
+depends_on: [261023-bfwp5]
+base: 0c6f419dab8187d31dd526c0a60754fbbdeeb688
