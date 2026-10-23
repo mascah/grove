@@ -1,0 +1,5 @@
+title: Restore context in grove.yaml
+created: 2026-10-23T18:40:30Z
+description: grove.yaml's context comes back, given to every skill so it reaches agents working through Grove and no other session.
+schema: default
+base: 2f8f44d2235aaace8c783c60edbf0e2588c11096

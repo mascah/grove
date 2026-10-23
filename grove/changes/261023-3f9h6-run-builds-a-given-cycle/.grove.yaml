@@ -1,0 +1,5 @@
+title: grove run builds a cycle it is given
+created: 2026-10-23T18:28:52Z
+description: grove run <cycle-id> builds a named cycle whether or not it is marked unattended, and plan's verdict names /grove-implement first.
+schema: default
+base: 2f8f44d2235aaace8c783c60edbf0e2588c11096
