@@ -101,19 +101,30 @@ it has uncommitted changes. Then it:
 The agent builds the cycle's changes in turn, as "Applying a cycle" in
 [Coordinating changes](coordinating.md) says, archives each one it finishes,
 commits, pushes and opens the pull request, as the rules say. While it
-works, Grove prints a line for each message the agent writes, each tool
-it calls, with the first line of its input, such as a command or a file
-path, and, indented, the first line of each tool's result:
+works, Grove prints one row per event, with the time it read it and a mark
+for its kind: `▶` the session's start and its model, `•` the first line of
+each message the agent writes, `›` each tool it calls, with the first line
+of its input, such as a command or a file path, `✗` the first line of a
+tool's result when it is an error, `·` thinking and other notices, and `■`
+the session's result, with its turns and cost. A tool's result that is not
+an error gets no row. A row the same as the one before it is counted on
+that row instead of printed again:
 
 ```text
-I'll build cycle 261020-m4k8t, starting with 261019-p4x8d.
-Bash: grove instructions apply 261020-m4k8t 261019-p4x8d
-  # Grove instructions: apply
-Read: /Users/you/grove-runs/ledger/ledger.py
-  1	import csv
+09:12:40 ▶ started: model claude-opus-5-5
+09:12:43 • I'll build cycle 261020-m4k8t, starting with 261019-p4x8d.
+09:12:44 › Bash grove instructions apply 261020-m4k8t 261019-p4x8d
+09:12:47 · thinking (×3)
+09:12:52 › Read /Users/you/grove-runs/ledger/ledger.py
+09:13:20 › Bash python3 -m pytest
+09:13:24 ✗ Exit code 1
+09:31:02 ■ result: success, 48 turns, $3.17
 ```
 
-These go to standard output whether or not it is a terminal. When the
+In a terminal, the rows are colored by kind and cut to its width, and a
+count goes up in place. Sent to a file or a pipe, as from a timer, they
+are plain text, never cut, and a counted row is printed once the next
+row differs. When the
 session ends, Grove says
 > Attempt 261021-6jbj1 ended: exit status 0; its output is /Users/you/grove-runs/ledger/.git/grove/261021-6jbj1.log.
 

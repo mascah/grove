@@ -297,10 +297,13 @@ Each step names the section of
    > grove: a run is in progress in this checkout
 
    and `grove run` in another project's checkout proceeds. While the first
-   runs, it prints the agent's messages as they come, each tool call with
-   the first line of its input, such as
-   `Bash: grove instructions apply <cycle-id> <change-id>`, and, indented,
-   the first line of its result. It ends
+   runs, it prints one row per event as it comes, each with a time and a
+   mark: a green `▶` start naming the model, `•` messages, cyan `›` tool
+   calls such as `› Bash grove instructions apply <cycle-id> <change-id>`,
+   no row for a tool result unless it is a red `✗` error, faint `·`
+   thinking whose `(×N)` count goes up in place, and a `■` result with its
+   turns and cost. Narrow the terminal: new rows are cut to its width. It
+   ends
    > Attempt \<attempt> ended: exit status 0; its output is \<checkout>/.git/grove/\<attempt>.log.
 
    `head -1` of that log is a JSON object, as is every line after it.
@@ -317,9 +320,11 @@ Each step names the section of
 
    In `~/tmp/ledger`, approve the budgets change, plan it as a cycle of one
    with `/grove-plan <budgets-id>`, merge it, mark it `unattended`, merge
-   and push: still paused. Merge the pull request: `grove run` starts an
-   attempt that selects only the budgets cycle. Let it finish and close its
-   pull request unmerged.
+   and push: still paused. Merge the pull request:
+   `grove run > ~/tmp/run.txt` starts an attempt that selects only the
+   budgets cycle. Let it finish and close its pull request unmerged.
+   `~/tmp/run.txt` holds the same rows as a terminal shows, with no color
+   codes, none cut short, and each thinking count on one line.
 
 4. **When a session is stopped** ("When a session is stopped").
    `grove run --retry`, and once it prints an `Edit:` or `Write:` line,
