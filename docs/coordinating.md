@@ -3,7 +3,7 @@
 [Getting started](getting-started.md) takes one change from an idea to an
 updated spec. When several changes are approved at once, some must land
 before others. This page shows how a change says what it waits on, how one
-session applies every approved change in order, what happens when two
+session applies a cycle of changes in order, what happens when two
 changes rewrite the same requirement, and how to get the whole picture as
 data.
 
@@ -40,17 +40,17 @@ finished. `grove changes` reads your main branch; applying reads your
 working tree, which on a branch holds everything main held when the branch
 started, plus what you archived on it. A dropped change never finishes.
 
-Applying a change that waits is refused. **Chat:**
+Building a change that waits is refused. **Chat:**
 
 ```text
-/grove-apply 261019-r2w7k
+/grove-implement 261019-r2w7k
 ```
 
 > grove: 261019-r2w7k waits on 261019-p4x8d, which this working tree has not archived as finished
 
-The agent tells you and builds nothing. There are three ways past: apply the
-change it waits on, which archives it when every task is done; apply every
-approved change at once, as the next section shows; or, if it need not wait
+The agent tells you and builds nothing. There are three ways past: build the
+change it waits on, which archives it when every task is done; build both
+in one cycle, as the next section shows; or, if it need not wait
 after all, remove the dependency from `depends_on` on a branch and merge
 that. Any field of an approved change's `.grove.yaml` but `created` and
 `base` can change this way; `base` changes only when the change is revised
@@ -66,25 +66,35 @@ The order comes from `depends_on`: a change can be applied once every
 change it waits on is archived as finished, and changes that do not wait on
 each other can be built in parallel, on separate branches.
 
-## Applying every approved change
+## Applying a cycle
 
-One session can build everything that is approved and not yet archived, on
-one branch, and you merge once. **Terminal:** `git switch -c apply-all`.
-**Chat:**
+One session can build every change of a cycle (see
+[Planning cycles](planning.md)), on one branch, and you merge once.
+**Terminal:** `git switch -c apply-0.4`. **Chat:**
 
 ```text
-/grove-apply
+/grove-apply 261020-m4k8t
 ```
 
-With no ID, Grove lists the approved changes your working tree has not
-archived, in build order: each after the changes it depends on, otherwise
-oldest first. The agent takes them in turn, each with its own apply
-instructions, and when a change's tasks are all done it archives the change
-on the branch, as `/grove-apply <change-id>` does. The next change in the
-list then finds its dependency archived as finished.
+Apply takes only a cycle's ID. Given a change's ID, or none, it builds
+nothing and says
+> grove: apply takes a cycle ID; build 261019-r2w7k with the owner with /grove-implement 261019-r2w7k
 
-A change that waits on a change that is neither in the list nor archived as
-finished, because it was dropped or does not exist, is left out and named;
+Grove lists the cycle's changes your working tree has not archived, in
+build order: each after the changes it depends on, otherwise oldest first.
+The agent takes them one at a time. For each it runs
+`grove instructions apply 261020-m4k8t <change-id>`, which prints that
+change's apply instructions with the cycle's list, naming its place in it,
+and when the change's tasks are all done it archives the change on the
+branch. The next change in the list then finds its dependency archived as
+finished. Apply builds a cycle whether or not it is marked `unattended`;
+only `grove run` reads the mark.
+
+`/grove-implement 261020-m4k8t` builds the same cycle with you, each
+change as `/grove-implement <change-id>` does.
+
+A change that waits on a change that is neither in the cycle nor archived
+as finished, because it was dropped or does not exist, is left out and named;
 `grove check` says why. A change whose task is blocked by an open question
 stays open, with the question in its `implementation.md`; a change that
 waits on it is refused and stays as it is. The agent's report says which
@@ -99,9 +109,9 @@ task its `implementation.md` already marks done is not built twice.
 Nothing in the session needs you. It creates a branch if it is on your main
 branch, settles no question itself, and commits only when a rule in
 `grove.yaml` asks, such as `Commit after each task, naming its task ID.`
-under `rules.skills.apply` (see [Reference](reference.md), "grove.yaml"). A
-pipeline that runs your agent on each push to main, with `/grove-apply` as
-the prompt, builds whatever that push approved and opens one pull request.
+under `rules.skills.apply` (see [Reference](reference.md), "grove.yaml").
+`grove run` starts such a session for a cycle you mark `unattended` (see
+[Running apply unattended](running.md)).
 
 ## When the plan is stale
 

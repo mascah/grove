@@ -38,7 +38,7 @@ schema: default
 #       - Commit after each task, naming its task ID.
 # Kinds: proposal, change-spec, tasks, implementation, spec, and those of
 # the project's own schemas.
-# Skills: explore, propose, implement, apply, archive.
+# Skills: explore, prototype, propose, plan, implement, apply, archive.
 rules: {}
 `
 

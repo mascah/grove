@@ -32,5 +32,5 @@ recommended.
 
 Say what you found, what the owner decided (quoted), what is still open, and
 which result this reached: no change, options to choose from, a
-prerequisite, or ready to propose. The owner keeps anything by asking you to
+prerequisite, a question to prototype, or ready to propose. The owner keeps anything by asking you to
 write it down, or by proposing from this conversation.

@@ -7,13 +7,13 @@
 | `grove` | Opens the reader on the maintained specs and approved changes. |
 | `grove init` | Writes `grove.yaml` if there is none, and Grove's skills or commands for each harness it lists. Safe to re-run: see "Harnesses". Commits nothing. |
 | `grove specs` | Lists the maintained specs on the target branch. |
-| `grove changes` | Lists the approved changes on the target branch that are not archived, and what each waits on. |
+| `grove changes` | Lists the approved changes on the target branch that are not archived, what each waits on, and the cycle not done that holds it, with `unattended` when it is marked. |
 | `grove changes --json` | Prints the target branch's changes, archived ones included, as JSON (see [Coordinating changes](coordinating.md), "The project as data"). |
-| `grove check` | Reports each problem in the Grove documents of this working tree, each unknown field or `rules` key in `grove.yaml`, and each mistake in a change schema, as `path:line: message`, and exits non-zero if there is one. Among the problems: a `depends_on` naming no change, open or archived, or a dropped change, changes that wait on each other in a loop, and a requirement a change modifies or removes whose text in the working tree's maintained spec is neither what it was at the change's `base` nor what the change or a change it depends on gives it. |
-| `grove review` | Shows what merging the current branch into the target would approve: each change, maintained spec or change schema file it adds or alters, and the diff. |
+| `grove check` | Reports each problem in the Grove documents of this working tree, each unknown field or `rules` key in `grove.yaml`, and each mistake in a change schema, as `path:line: message`, and exits non-zero if there is one. Among the problems: a `depends_on` naming no change, open or archived, or a dropped change, changes that wait on each other in a loop, the cycle problems [Planning cycles](planning.md) lists, and a requirement a change modifies or removes whose text in the working tree's maintained spec is neither what it was at the change's `base` nor what the change or a change it depends on gives it. |
+| `grove review` | Shows what merging the current branch into the target would approve: each change, maintained spec, cycle or change schema file it adds or alters, and the diff. |
 | `grove archive <change-id>` | Moves the change's folder to `changes/archive/`. Refuses unless `implementation.md` marks every task in `tasks.md` `Status: done`, or says `Status: dropped`. Commits nothing. |
-| `grove run` | In a clean checkout with `origin`, fetches the target, selects what `grove instructions apply` would build there, and starts one Claude Code session on the apply skill on a new branch, `grove/run-<attempt>`. Keeps a record and the output in `.git/grove/`, then starts nothing until every change it selected is archived on the target. See [Running apply unattended](running.md). |
-| `grove run --retry` | Starts a new attempt even though the latest one's changes are not archived. |
+| `grove run` | In a clean checkout with `origin`, fetches the target, selects the cycle there with the earliest `created` that is marked `unattended` and can be built unattended, and starts one Claude Code session on the apply skill for it on a new branch, `grove/run-<attempt>`. Keeps a record and the output in `.git/grove/`, then starts nothing until every change of that cycle is archived on the target. See [Running apply unattended](running.md). |
+| `grove run --retry` | Starts a new attempt even though the latest one's cycle is not archived. |
 | `grove run --timeout <duration>` | Stops the session after `<duration>`, such as `30m` or `1h30m`, rather than 2 hours. Goes with `--retry`. |
 | `grove version` | Prints the version of Grove, such as `grove 0.1.0`. A build from a checkout prints a Go pseudo-version naming its commit, and `dev` when Go recorded none. |
 
@@ -22,17 +22,22 @@ Skills run these; you do not need to:
 | Command | Prints the instructions to |
 | --- | --- |
 | `grove instructions explore` | Interview the user about an idea, with the project's specs and changes listed. |
+| `grove instructions prototype "<question>"` | Answer the question, or one from the conversation, with a throwaway experiment on a `prototype/<slug>` branch that is never merged, writing no Grove document; a proposal cites its findings. |
 | `grove instructions propose [--schema <name>] ["<description>"]` | Write a new change from the conversation or the description, with the project's change schema or the one named. |
 | `grove instructions propose <change-id>` | Revise a drafted change, with the schema it has. |
+| `grove instructions plan ["<description>"]` | Write a new cycle of approved changes from the conversation or the description, asking which need a person, editing no change (see [Planning cycles](planning.md)). |
+| `grove instructions plan <change-id>` | Write a new cycle whose only change is that approved change. |
+| `grove instructions plan <cycle-id>` | Revise the cycle as the working tree holds it, setting `planned` to the target's commit. |
 | `grove instructions implement <change-id>` | Build an approved change with the owner, asking them what the change leaves open and, with their agreement, revising it on the branch; record progress, and archive it when every task is done. Refuses a change that waits on one this working tree does not hold archived as finished. |
-| `grove instructions apply <change-id>` | Build an approved change without asking anyone, marking a task an open question decides blocked, record progress, and archive it when every task is done. Refuses a change that waits on one this working tree does not hold archived as finished. |
-| `grove instructions apply` | Build every approved change this working tree has not archived, in dependency order, each with its own instructions (see [Coordinating changes](coordinating.md), "Applying every approved change"). |
+| `grove instructions implement <cycle-id>` | Build each change of the cycle this working tree has not archived with the owner, in build order, one at a time, each as `grove instructions implement <change-id>` does. |
+| `grove instructions apply <cycle-id>` | Build each change of the cycle this working tree has not archived without asking anyone, in build order, one at a time, each with its own instructions (see [Coordinating changes](coordinating.md), "Applying a cycle"). Refuses a change's ID, and no ID. |
+| `grove instructions apply <cycle-id> <change-id>` | Build that change of the cycle without asking anyone, marking a task an open question decides blocked, record progress, and archive it when every task is done; with the cycle's changes in build order. Refuses a change the cycle does not list, and one that waits on a change this working tree does not hold archived as finished. |
 | `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs, then run `grove archive`. |
 
 ## Harnesses
 
-`grove init` writes a file for each of Grove's five skills, explore,
-propose, implement, apply and archive, for each harness under `agents` in
+`grove init` writes a file for each of Grove's seven skills, explore,
+prototype, propose, plan, implement, apply and archive, for each harness under `agents` in
 `grove.yaml`: as a skill, or as a command where the harness has commands.
 How you type apply, the others alike:
 
@@ -46,7 +51,7 @@ How you type apply, the others alike:
 | Hermes | `hermes` | `/grove-apply` | none |
 
 Type the words a skill takes after its name, such as
-`/grove-apply 261015-k3m9q`.
+`/grove-apply 261020-m4k8t`.
 
 Where the files go, `<skill>` being the skill's name:
 
@@ -99,11 +104,11 @@ rules:
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `root` | `grove` | The folder that holds `specs/` and `changes/`. |
+| `root` | `grove` | The folder that holds `specs/`, `changes/` and `cycles/`. |
 | `target` | `main` | The branch whose contents count as agreed. Merging into it approves. |
 | `agents` | `claude` and `codex`, as `skills` | Each harness `init` writes Grove's skills for, and whether as `skills` or `commands` (see "Harnesses"). The first `init` chooses them. |
 | `schema` | `default` | The change schema a new change has unless the owner names another while proposing. See "Change schemas". |
-| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `propose`, `implement`, `apply`, `archive`. |
+| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `prototype`, `propose`, `plan`, `implement`, `apply`, `archive`. |
 
 `grove check` reports a field or `rules` key that Grove does not know; other
 commands ignore it. It also reports a harness under `agents` that Grove has
@@ -316,6 +321,7 @@ grove/
     tasks.md
     implementation.md
   changes/archive/<id>-<slug>/
+  cycles/<id>-<slug>.yaml
 ```
 
 A folder under `changes/` or `specs/` is a change or a maintained spec when
@@ -330,5 +336,10 @@ Either may add a one-line `description`, shown in lists. A change may add
 whole name, a change's the start of it. A main document starts with the
 title as its heading, and `grove check` reports one whose first heading is
 not `# ` and the title. A change's other files have no metadata: their
-folder names their change. The change folder above is `default`'s;
+folder names their change. A cycle file's name starts with its ID, and it
+holds its `title`, when it was `created`, an optional one-line `goal`, `changes`, the list of
+approved change IDs in it, `planned`, the full commit of the target its
+plan read, an optional `needs_human`, each change the owner said needs a
+person with their reason, and an optional `unattended: true`, which hands
+it to `grove run` (see [Planning cycles](planning.md)). The change folder above is `default`'s;
 `schemas/` holds the project's own change schemas (see "Change schemas").

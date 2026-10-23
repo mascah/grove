@@ -29,6 +29,18 @@ func instructionsExplore(stdout io.Writer) error {
 	return show(stdout)(instruct.Explore(ip))
 }
 
+func instructionsPrototype(stdout io.Writer, question string) error {
+	p, err := openProject()
+	if err != nil {
+		return err
+	}
+	ip, err := p.agreed()
+	if err != nil {
+		return err
+	}
+	return show(stdout)(instruct.Prototype(ip, question))
+}
+
 // instructionsPropose prints the propose instructions: for a new change in
 // change schema schema, or grove.yaml's when it is empty, when arg is empty
 // or a description, or for revising the drafted change whose ID arg is.
@@ -53,6 +65,41 @@ func instructionsPropose(stdout io.Writer, schema, arg string) error {
 		return err
 	}
 	return show(stdout)(instruct.Revise(ip, c, files))
+}
+
+// instructionsPlan prints the plan instructions: for a new cycle when arg
+// is empty or a description, for a new cycle of one when it is an approved
+// change's ID, or for revising the cycle in this working tree whose ID it is.
+func instructionsPlan(stdout io.Writer, arg string) error {
+	p, err := openProject()
+	if err != nil {
+		return err
+	}
+	ip, err := p.agreed()
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	if !doc.ValidID(arg) {
+		return show(stdout)(instruct.Plan(ip, doc.NewID(now), now.UTC().Format(time.RFC3339), arg, nil))
+	}
+	if c := ip.Agreed.Change(arg); c != nil {
+		return show(stdout)(instruct.Plan(ip, doc.NewID(now), now.UTC().Format(time.RFC3339), "", c))
+	}
+	fsys := os.DirFS(filepath.Join(p.Top, p.Root))
+	tree, err := doc.Load(fsys, ip.Layout)
+	if err != nil {
+		return err
+	}
+	cy := tree.Cycle(arg)
+	if cy == nil {
+		return fmt.Errorf("%s approves no change %s, and this working tree holds no cycle %s", p.Target, arg, arg)
+	}
+	b, err := fs.ReadFile(fsys, cy.Path)
+	if err != nil {
+		return err
+	}
+	return show(stdout)(instruct.Replan(ip, cy, string(b)))
 }
 
 // instructionsArchive prints the archive instructions for change id as the
@@ -100,22 +147,64 @@ func archive(stdout io.Writer, id string) error {
 	return nil
 }
 
-// instructionsApply prints the instructions skill builds, apply's or
-// implement's, for change id as the target holds it, unless it waits on a
-// change this working tree has not archived as finished (D-56).
-func instructionsApply(stdout io.Writer, id string, skill func(instruct.Project, *doc.Change, map[string]string) (instruct.Instructions, error)) error {
+// target returns the project, the target's documents and this working
+// tree's.
+func target() (project, instruct.Project, *doc.Collection, error) {
 	p, err := openProject()
 	if err != nil {
-		return err
+		return p, instruct.Project{}, nil, err
 	}
 	ip, err := p.agreed()
 	if err != nil {
-		return err
+		return p, ip, nil, err
 	}
 	tree, err := doc.Load(os.DirFS(filepath.Join(p.Top, p.Root)), ip.Layout)
+	return p, ip, tree, err
+}
+
+// instructionsApply prints the apply instructions for the target's cycle
+// ids[0], or, with ids[1], for that member of it. Apply takes nothing else.
+func instructionsApply(stdout io.Writer, ids ...string) error {
+	if len(ids) == 0 {
+		return errors.New("apply takes a cycle ID; build a change with the owner with /grove-implement <change-id>")
+	}
+	p, ip, tree, err := target()
 	if err != nil {
 		return err
 	}
+	cy := ip.Agreed.Cycle(ids[0])
+	switch {
+	case cy == nil && ip.Agreed.Change(ids[0]) != nil:
+		return fmt.Errorf("apply takes a cycle ID; build %s with the owner with /grove-implement %s", ids[0], ids[0])
+	case cy == nil:
+		return fmt.Errorf("%s holds no cycle %s", p.Target, ids[0])
+	case len(ids) == 1:
+		return instructionsCycle(stdout, p, ip, tree, cy, "apply")
+	case !slices.Contains(cy.Meta.Changes, ids[1]):
+		return fmt.Errorf("%s is not in cycle %s", ids[1], cy.ID)
+	}
+	return instructionsChange(stdout, p, ip, tree, ids[1], instruct.Apply, cy)
+}
+
+// instructionsImplement prints the implement instructions for the target's
+// cycle or change id.
+func instructionsImplement(stdout io.Writer, id string) error {
+	p, ip, tree, err := target()
+	if err != nil {
+		return err
+	}
+	if cy := ip.Agreed.Cycle(id); cy != nil {
+		return instructionsCycle(stdout, p, ip, tree, cy, "implement")
+	}
+	return instructionsChange(stdout, p, ip, tree, id, instruct.Implement, nil)
+}
+
+// instructionsChange prints the instructions skill builds, apply's or
+// implement's, for change id as the target holds it, with cycle cy's plan
+// when it is not nil, unless it waits on a change tree has not archived as
+// finished (D-56).
+func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *doc.Collection, id string,
+	skill func(instruct.Project, *doc.Change, map[string]string) (instruct.Instructions, error), cy *doc.Cycle) error {
 	c := ip.Agreed.Change(id)
 	if c == nil {
 		return fmt.Errorf("%s holds no approved change %s", p.Target, id)
@@ -131,45 +220,58 @@ func instructionsApply(stdout io.Writer, id string, skill func(instruct.Project,
 	if err != nil {
 		return err
 	}
-	return show(stdout)(skill(ip, c, files))
+	in, err := skill(ip, c, files)
+	if err == nil && cy != nil {
+		var b []byte
+		if b, err = fs.ReadFile(fsys, cy.Path); err == nil {
+			// Every member in build order, archived or not, so a member's place does not move.
+			outside := func(id string) bool { return tree.Finished(id) && !slices.Contains(cy.Meta.Changes, id) }
+			ordered, _ := doc.Order(members(ip.Agreed, cy, func(string) bool { return false }), outside)
+			in.InCycle(cy, string(b), ordered, id, tree.InArchive)
+		}
+	}
+	return show(stdout)(in, err)
 }
 
-// instructionsApplyAll prints the instructions for applying every approved
-// change this working tree has not archived, in dependency order.
-func instructionsApplyAll(stdout io.Writer) error {
-	p, err := openProject()
+// instructionsCycle prints the instructions for building each member of
+// cycle cy that tree has not archived with skill, apply's or implement's,
+// in build order.
+func instructionsCycle(stdout io.Writer, p project, ip instruct.Project, tree *doc.Collection, cy *doc.Cycle, skill string) error {
+	fsys, err := gitx.TreeFS(p.Top, ip.Commit, p.Root)
 	if err != nil {
 		return err
 	}
-	ip, err := p.agreed()
+	b, err := fs.ReadFile(fsys, cy.Path)
 	if err != nil {
 		return err
 	}
-	tree, err := doc.Load(os.DirFS(filepath.Join(p.Top, p.Root)), ip.Layout)
-	if err != nil {
-		return err
-	}
-	ordered, waiting := buildable(ip.Agreed, tree)
-	return show(stdout)(instruct.ApplyAll(ip, ordered, waiting))
+	ordered, waiting := buildable(ip.Agreed, tree, cy)
+	return show(stdout)(instruct.Cycle(ip, skill, cy, string(b), ordered, waiting))
 }
 
-// buildable returns the changes agreed approves that tree has not
-// archived, in build order, then those that wait on a change neither being
-// built nor finished in tree.
-func buildable(agreed, tree *doc.Collection) (ordered, waiting []*doc.Change) {
-	open := slices.DeleteFunc(slices.Clone(agreed.Changes), func(ch *doc.Change) bool { return archived(tree, ch.ID) })
-	ordered, waiting = doc.Order(open, tree.Finished)
+// members returns the changes agreed approves that cycle cy lists and that
+// done does not report.
+func members(agreed *doc.Collection, cy *doc.Cycle, done func(id string) bool) []*doc.Change {
+	var out []*doc.Change
+	for _, ch := range agreed.Changes {
+		if slices.Contains(cy.Meta.Changes, ch.ID) && !done(ch.ID) {
+			out = append(out, ch)
+		}
+	}
+	return out
+}
+
+// buildable returns the members of cycle cy that agreed approves and tree
+// has not archived, in build order, then those that wait on a change
+// neither being built nor finished in tree.
+func buildable(agreed, tree *doc.Collection, cy *doc.Cycle) (ordered, waiting []*doc.Change) {
+	ordered, waiting = doc.Order(members(agreed, cy, tree.InArchive), tree.Finished)
 	for _, ch := range waiting { // what keeps it out: neither being built nor finished here
 		ch.WaitsOn = slices.DeleteFunc(slices.Clone(ch.Meta.DependsOn), func(id string) bool {
 			return tree.Finished(id) || slices.ContainsFunc(ordered, func(o *doc.Change) bool { return o.ID == id })
 		})
 	}
 	return ordered, waiting
-}
-
-// archived reports whether tree holds change id archived, finished or dropped.
-func archived(tree *doc.Collection, id string) bool {
-	return slices.ContainsFunc(tree.Archived, func(ch *doc.Change) bool { return ch.ID == id })
 }
 
 // show returns a function printing instructions unless building them failed.

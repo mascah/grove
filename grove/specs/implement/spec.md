@@ -3,7 +3,7 @@
 ## Purpose
 
 `/grove-implement <change-id>` builds an approved change in the owner's own
-session. Where the change does not settle how a task is built, it asks the
+session, and `/grove-implement <cycle-id>` each change of a cycle in turn. Where the change does not settle how a task is built, it asks the
 owner instead of blocking, and with their agreement revises the change on
 its implementation branch, so the merge approves the revision with the
 code. "The owner" is the person in whose session the skill runs.
@@ -11,8 +11,9 @@ code. "The owner" is the person in whose session the skill runs.
 ## Boundaries
 
 This covers the implement instructions and, by contrast, the rule that
-apply asks no one. Building every approved change, and building without
-anyone watching, belong to apply and to `grove run`
+apply asks no one. Building a cycle without asking anyone, and building
+without anyone watching, belong to apply (`grove/specs/apply/spec.md`)
+and to `grove run`
 (`grove/specs/runs/spec.md`). Revising a change outside its implementation
 branch belongs to `/grove-propose`. What makes a revision approved is the
 merge into the target (`CONSTITUTION.md` rule 4).
@@ -107,6 +108,26 @@ decides, or that cannot be built as the change says, is marked
 - THEN T-02 is marked `Status: blocked` with the question, nobody is asked,
   and C's proposal, change specs and tasks are unchanged
 
+### Requirement: Implement a cycle
+
+When the owner runs `/grove-implement <cycle-id>` for a cycle the target
+holds, the system shall print instructions for building each member not yet
+archived, in build order, each as `/grove-implement <change-id>` builds it,
+in the owner's session.
+
+#### Scenario: A cycle the owner builds
+
+- GIVEN cycle K lists A and B, is not marked `unattended`, and
+  `needs_human` names B
+- WHEN the owner runs `/grove-implement K`
+- THEN A and then B are built in the owner's session, the agent asking the
+  owner where `/grove-implement` would
+
 ## Known discrepancies
 
-None known.
+- "Apply asks no one", scenario "The same open question under apply",
+  builds C with `/grove-apply C`. Since change 261022-1grb0, apply takes
+  only a cycle ID and refuses a change ID
+  (`grove/specs/apply/spec.md`, "Apply takes only a cycle";
+  `internal/cli/instructions.go`, `instructionsApply`); the scenario holds
+  for C built as a member of a cycle with `/grove-apply <cycle-id>`.

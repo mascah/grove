@@ -218,6 +218,8 @@ type Instructions struct {
 	Description string     // the owner's description, when given
 	Documents   []Document // the kinds of document the skill writes
 	Change      []File     // the change being worked on, in full
+	Cycle       []File     // the cycle being revised or built, in full
+	Plan        string     // the cycle's members in build order, for one of them
 }
 
 // Document is one kind of document to write, with its paths and templates
@@ -445,6 +447,18 @@ func Explore(p Project) (Instructions, error) {
 	return in, err
 }
 
+// Prototype returns the instructions for answering question, or one from
+// the conversation when it is empty, with a throwaway experiment.
+func Prototype(p Project, question string) (Instructions, error) {
+	from := "a question from this conversation"
+	if question != "" {
+		from = "the owner's question below"
+	}
+	in, err := build(p, p.Schema, "prototype", "You are prototyping "+from+" with the owner, in their own working tree.", strings.NewReplacer(), nil, nil)
+	in.Description = question
+	return in, err
+}
+
 // Propose returns the instructions for writing new change id in change
 // schema s, created at created, from the conversation or from description
 // when it is not empty.
@@ -456,6 +470,40 @@ func Propose(p Project, s, id, created, description string) (Instructions, error
 	in, err := build(p, s, "propose", fmt.Sprintf("You are proposing new change %s%s, from %s, in the owner's own working tree.", id, with(s), from),
 		strings.NewReplacer("<change>", id+"-<slug>", "{{change}}", id, "{{created}}", created, "{{schema}}", s, "{{base}}", short(p.Commit), "{{commit}}", p.Commit), nil, nil)
 	in.Description, in.Schemas = description, p.choices()
+	return in, err
+}
+
+// Plan returns the instructions for planning new cycle id, created at
+// created, from the owner's description or this conversation, or with
+// approved change only as its one member when only is not nil.
+func Plan(p Project, id, created, description string, only *doc.Change) (Instructions, error) {
+	from := "from this conversation"
+	switch {
+	case only != nil:
+		from = fmt.Sprintf("with approved change %s, %q, as its only member", only.ID, only.Meta.Title)
+	case description != "":
+		from = "from the owner's description below"
+	}
+	in, err := plan(p, fmt.Sprintf("You are planning new cycle %s, %s, in the owner's own working tree.", id, from), p.Root+"/cycles/"+id+"-<slug>.yaml", created)
+	in.Description = description
+	return in, err
+}
+
+// Replan returns the instructions for revising cycle cy, whose file, read
+// from the working tree, holds content.
+func Replan(p Project, cy *doc.Cycle, content string) (Instructions, error) {
+	in, err := plan(p, fmt.Sprintf("You are revising cycle %s, %q, in the owner's own working tree.", cy.ID, cy.Meta.Title), p.Root+"/"+cy.Path, cy.Meta.Created)
+	in.Cycle = []File{{p.Root + "/" + cy.Path, content}}
+	return in, err
+}
+
+// plan returns the plan instructions with the cycle file at path to write,
+// created at created, from Grove's own template: a cycle is no change, so
+// no schema has it.
+func plan(p Project, task, path, created string) (Instructions, error) {
+	in, err := build(p, p.Schema, "plan", task, strings.NewReplacer(), nil, nil)
+	fill := strings.NewReplacer("{{commit}}", p.Commit, "{{created}}", created)
+	in.Documents = append(in.Documents, Document{Kind: "cycle", Path: path, Template: fill.Replace(embedded("metadata/cycle.yaml"))})
 	return in, err
 }
 
@@ -482,22 +530,47 @@ func Implement(p Project, c *doc.Change, files map[string]string) (Instructions,
 	return build(p, c.Meta.Schema, "implement", task, fill(p, c), c, files)
 }
 
-// ApplyAll returns the instructions for applying the approved changes
-// ordered, in that order, and names what each change in waiting waits on.
-func ApplyAll(p Project, ordered, waiting []*doc.Change) (Instructions, error) {
+// Cycle returns the instructions for building cycle cy, whose file holds
+// content, with skill, apply or implement: the members ordered, in that
+// order and one at a time, each with its own instructions, and what each
+// member in waiting waits on.
+func Cycle(p Project, skill string, cy *doc.Cycle, content string, ordered, waiting []*doc.Change) (Instructions, error) {
+	each, task := "instructions implement <change-id>", "You are implementing cycle %s, %q, as %s@%s holds it, with the owner, in their own working tree."
+	if skill == "apply" {
+		each, task = "instructions apply "+cy.ID+" <change-id>", "You are applying cycle %s, %q, as %s@%s holds it, in your own working tree."
+	}
 	var b strings.Builder
-	b.WriteString("Build these changes in this order, each after the changes it depends on. For each, run Grove's `instructions apply <change-id>` and follow what it prints to the end; then the next.\n\n")
+	fmt.Fprintf(&b, "Build these changes in this order, one at a time, each after the changes it depends on. For each, run Grove's `%s` and follow what it prints to the end; then the next.\n\n", each)
 	for i, c := range ordered {
 		fmt.Fprintf(&b, "%d. %s %q%s\n", i+1, c.ID, c.Meta.Title, with(c.Meta.Schema))
 	}
 	if len(ordered) == 0 {
-		b.WriteString("- None: every approved change is archived in this working tree. There is nothing to build.\n")
+		b.WriteString("- None: every change in the cycle is archived in this working tree. There is nothing to build.\n")
 	}
 	for _, c := range waiting {
 		fmt.Fprintf(&b, "\nLeave out %s, %q: it waits on %s, which is neither being built nor archived as finished. Grove's `check` says why.\n", c.ID, c.Meta.Title, strings.Join(c.WaitsOn, " and "))
 	}
-	task := fmt.Sprintf("You are applying every approved change %s@%s holds that this working tree has not archived, in your own working tree.", p.Target, short(p.Commit))
-	return Instructions{Project: p, Skill: "apply", Task: task, Requires: embedded("requires/apply-all.md"), Guide: b.String()}, nil
+	return Instructions{Project: p, Skill: skill, Task: fmt.Sprintf(task, cy.ID, cy.Meta.Title, p.Target, short(p.Commit)),
+		Requires: embedded("requires/" + skill + "-cycle.md"), Guide: b.String(), Cycle: []File{{p.Root + "/" + cy.Path, content}}}, nil
+}
+
+// InCycle adds to in, the instructions for member current of cycle cy, the
+// cycle's plan: its members ordered, those archived reports marked, and its
+// file, which holds content.
+func (in *Instructions) InCycle(cy *doc.Cycle, content string, ordered []*doc.Change, current string, archived func(id string) bool) {
+	var b strings.Builder
+	for i, c := range ordered {
+		mark := ""
+		switch {
+		case c.ID == current:
+			mark, in.Task = " — this change", strings.TrimSuffix(in.Task, ".")+fmt.Sprintf(", change %d of %d in cycle %s.", i+1, len(ordered), cy.ID)
+		case archived(c.ID):
+			mark = " — archived in this working tree"
+		}
+		fmt.Fprintf(&b, "%d. %s %q%s\n", i+1, c.ID, c.Meta.Title, mark)
+	}
+	in.Plan = fmt.Sprintf("Cycle %s, %q, in build order:\n\n%s\nWhen this change is archived, or left with a task blocked, go on with the next as the cycle's instructions say.\n\n", cy.ID, cy.Meta.Title, b.String())
+	in.Cycle = []File{{in.Root + "/" + cy.Path, content}}
 }
 
 // Archive returns the instructions for archiving change c, read from the
@@ -549,6 +622,12 @@ func (in Instructions) Markdown() string {
 	for _, f := range in.Change {
 		include(&b, f.Path, f.Content)
 	}
+	if len(in.Cycle) > 0 {
+		b.WriteString("## The cycle\n\n" + in.Plan)
+	}
+	for _, f := range in.Cycle {
+		include(&b, f.Path, f.Content)
+	}
 	return b.String()
 }
 
@@ -593,6 +672,26 @@ func (p Project) index(b *strings.Builder) {
 		b.WriteString("- None.\n")
 	}
 	b.WriteString("\n")
+	open := slices.DeleteFunc(slices.Clone(p.Agreed.Cycles), func(cy *doc.Cycle) bool { return cy.Done })
+	if len(open) > 0 {
+		b.WriteString("Cycles not done (planned; `unattended: true` hands one to `grove run`):\n")
+	}
+	for _, cy := range open {
+		more := []string{"changes: " + strings.Join(cy.Meta.Changes, ", ")}
+		if cy.Meta.Goal != "" {
+			more = append(more, "goal: "+cy.Meta.Goal)
+		}
+		for _, id := range slices.Sorted(maps.Keys(cy.Meta.NeedsHuman)) {
+			more = append(more, "needs a person: "+id+", "+cy.Meta.NeedsHuman[id])
+		}
+		if cy.Meta.Unattended {
+			more = append(more, "unattended: true")
+		}
+		entry(b, p.Root+"/"+cy.Path, &cy.Document, more...)
+	}
+	if len(open) > 0 {
+		b.WriteString("\n")
+	}
 }
 
 // entry lists document d at path, with more lines about it.

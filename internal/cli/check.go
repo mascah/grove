@@ -41,9 +41,15 @@ func check(stdout io.Writer) error {
 	if err := stale(p, root, c); err != nil {
 		return err
 	}
+	if err := stalePlans(p, c); err != nil {
+		return err
+	}
 	docs := append([]*doc.Document{}, c.Specs...)
 	for _, ch := range c.Changes {
 		docs = append(docs, &ch.Document)
+	}
+	for _, cy := range c.Cycles {
+		docs = append(docs, &cy.Document)
 	}
 	n := len(unknown)
 	for _, d := range docs {
@@ -96,6 +102,58 @@ func stale(p project, root fs.FS, c *doc.Collection) error {
 		}
 	}
 	return nil
+}
+
+// stalePlans reports each member of a cycle in c, marked unattended and
+// not done, that changed on the target since the cycle's plan. Only then is
+// the target read, so a project with no such cycle checks without it.
+func stalePlans(p project, c *doc.Collection) error {
+	var target instruct.Project
+	for _, cy := range c.Cycles {
+		if !cy.Meta.Unattended || cy.Done || cy.Meta.Planned == "" {
+			continue
+		}
+		if target.Agreed == nil {
+			var err error
+			if target, err = p.agreed(); err != nil {
+				return err
+			}
+		}
+		changed, err := changedSincePlan(p, target.Commit, target.Agreed, cy)
+		if err != nil {
+			cy.Diagnostics = append(cy.Diagnostics, doc.Diagnostic{Path: cy.Path, Message: "planned: " + cy.Meta.Planned + " is not a commit in this repository"})
+		}
+		for _, id := range changed {
+			cy.Diagnostics = append(cy.Diagnostics, doc.Diagnostic{Path: cy.Path,
+				Message: fmt.Sprintf("planned: %s changed on %s since this plan, so grove run skips this cycle; re-plan it with /grove-plan %s", id, p.Target, cy.ID)})
+		}
+	}
+	return nil
+}
+
+// changedSincePlan returns each member of cy that at, the documents at
+// commit, holds open with a folder that differs from it at cy's planned
+// commit.
+func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]string, error) {
+	planned, err := gitx.Run(p.Top, "rev-parse", "--verify", "--end-of-options", cy.Meta.Planned+"^{commit}")
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, id := range cy.Meta.Changes {
+		ch := at.Change(id)
+		if ch == nil {
+			continue
+		}
+		diff, err := gitx.Run(p.Top, "diff", "--name-only", strings.TrimSpace(planned), commit, "--", p.Root+"/"+ch.Dir)
+		if err != nil {
+			return nil, err
+		}
+		if diff != "" {
+			out = append(out, id)
+		}
+	}
+	return out, nil
 }
 
 // behind returns ch and every change it depends on, directly or through
