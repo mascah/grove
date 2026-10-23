@@ -80,3 +80,6 @@ Status: done
 
     - record-editing: applied to specs/record-editing/spec.md
 -->
+
+- requirements: applied to specs/requirements/spec.md, a new maintained
+  spec, its requirements copied word for word
