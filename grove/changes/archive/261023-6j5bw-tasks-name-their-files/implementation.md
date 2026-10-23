@@ -75,7 +75,8 @@ Status: done
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- cycles: applied to specs/cycles/spec.md (Purpose's stale definition, and
+  the MODIFIED "Report a cycle that cannot run unattended" and "Revise a
+  cycle")
+- implement: applied to specs/implement/spec.md
+- propose: applied to a new specs/propose/spec.md, with its .grove.yaml
