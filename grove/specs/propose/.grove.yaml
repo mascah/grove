@@ -1,2 +1,2 @@
 title: Propose
-description: /grove-propose writes a change whose tasks name their files and interfaces, and grove check reports a named file that moved since the change's base.
+description: /grove-propose asks one round of every decision it would otherwise assume, then writes a change whose tasks name their files and interfaces; grove check reports a named file that moved since the change's base.
