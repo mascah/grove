@@ -103,7 +103,10 @@ The agent writes a change folder, such as
 Before writing, it lists every decision it would otherwise assume, each
 with a recommended answer, and waits for yours. It keeps anything you leave
 undecided as an open question, and says which task, if any, that question
-blocks. It runs
+blocks. Before showing you the change, it checks that every requirement
+has an outcome you can observe and a task whose acceptance covers it, and
+that the scope, specs and tasks agree; it fixes what it can, tells you what
+it changed, and asks you about the rest. It runs
 `grove check` until the folder has no problems. You can
 also propose without exploring: `/grove-propose <description>`. To revise a
 drafted change later, run `/grove-propose <change-id>`.

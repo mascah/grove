@@ -63,7 +63,9 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    with scenarios), and `tasks.md` (T-01 with its acceptance, a `Files:`
    line naming `ledger/cli.py`, the file under fix, and `tests/test_cli.py`,
    which the session said in the conversation it would touch, and an
-   `Interfaces:` line, with no code or steps). It runs `grove check` until:
+   `Interfaces:` line, with no code or steps). Before presenting it, the
+   session checks that T-01's acceptance covers each scenario and says so,
+   or says what it added. It runs `grove check` until:
    > No problems in grove/.
 
    Its instructions, `grove instructions propose`, give
@@ -401,6 +403,11 @@ Each step names the section of
   the finding and cites `prototype/<slug>` at that commit, linking no
   prototype file. `git diff main prototype/<slug> -- grove` is empty, and
   main is unchanged.
+- **Propose checks the change** (§3). On a new branch, `/grove-propose Add
+  ledger delete ID, and print the deleted record`, answering "yes" to the
+  round. Before presenting the change, the session checks that a task's
+  acceptance covers each requirement, deleting and printing alike; where
+  one did not, it says what it added.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
   is given that change's files in full and edits them.
 - **A question that blocks a task** (§5). On a new branch,

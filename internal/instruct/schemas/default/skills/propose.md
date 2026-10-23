@@ -36,3 +36,12 @@ decisions section. Each task names the files it touches and the interfaces
 it produces, as the tasks guide says, so where the change goes in the code
 is settled here, not left to whoever builds it. No code, commands or steps,
 no sequencing, no estimates.
+
+### 5. Check the change
+
+Read the documents you wrote side by side. Name, for each ADDED or
+MODIFIED requirement, the task whose acceptance shows it; a requirement
+with none needs an acceptance line or a task. A file a task names that the
+scope puts out, or a scenario the requirement's sentence does not cover,
+is a contradiction: one side is wrong, and which one is the owner's to say
+unless the conversation already settled it.

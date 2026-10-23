@@ -35,6 +35,13 @@
   experiment. Link no file outside the change and the target branch: the
   prototype branch is never merged.
 - Change no code.
+- Before you tell the owner the change is written, check that each
+  requirement has an outcome a user or caller can observe, each ADDED or
+  MODIFIED requirement is covered by a task's acceptance, the proposal's
+  scope, the change specs and the tasks do not contradict each other, and
+  no task does what the scope leaves out. Fix what you can and tell the
+  owner what you changed; ask the owner about what needs a decision, and
+  change nothing it decides until they answer.
 - Finish: run Grove's `check` and fix what it reports in the files you
   wrote. Tell the owner which files you wrote, the qualified task IDs (such
   as `<change-id>:T-01`) and the questions still open. Commit only when the

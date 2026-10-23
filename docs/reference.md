@@ -24,7 +24,7 @@ Skills run these; you do not need to:
 | --- | --- |
 | `grove instructions explore` | Interview the user about an idea, with the project's specs and changes listed. |
 | `grove instructions prototype "<question>"` | Answer the question, or one from the conversation, with a throwaway experiment on a `prototype/<slug>` branch that is never merged, writing no Grove document; a proposal cites its findings. |
-| `grove instructions propose [--schema <name>] ["<description>"]` | Write a new change from the conversation or the description, with the project's change schema or the one named. |
+| `grove instructions propose [--schema <name>] ["<description>"]` | Write a new change from the conversation or the description, with the project's change schema or the one named, then check before presenting it that each requirement has an observable outcome and a task's acceptance covering it, and that the scope, specs and tasks agree. |
 | `grove instructions propose <change-id>` | Revise a drafted change, with the schema it has. |
 | `grove instructions plan ["<description>"]` | Write a new cycle of approved changes from the conversation or the description, asking which need a person, editing no change (see [Planning cycles](planning.md)). |
 | `grove instructions plan <change-id>` | Write a new cycle whose only change is that approved change. |
