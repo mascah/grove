@@ -1,0 +1,5 @@
+title: Plan's verdict, runs without a remote, streamed output
+created: 2026-10-23T15:32:33Z
+description: Plan says whether grove run would build the cycle and what removes each obstacle; grove run works in a checkout with no origin and shows the session as it runs.
+schema: default
+base: 5383ad8e5df51d5b953ecc735fb74c51129c69b8
