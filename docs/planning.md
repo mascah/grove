@@ -2,8 +2,8 @@
 
 A cycle is approved changes you mean to build together, such as a release.
 Planning one finds out, with you, which of its changes need a person. A
-cycle is also how work reaches `grove run`: it builds only a cycle you have
-marked `unattended`, never a change on its own (see
+cycle is also how work reaches `grove run`: it builds a cycle you name or
+have marked `unattended`, never a change on its own (see
 [Running apply unattended](running.md)).
 
 ## Plan a cycle
@@ -41,14 +41,16 @@ planned: 8f2d6c1a4b9e0f7d3c5a2b1e6f4d8c0a9b7e5f3d
 `created` is when the plan started, and `planned` the commit of your main
 branch it read. Grove's template writes both, so you never type them.
 
-It ends by saying whether `grove run` would build the cycle once you mark
-it `unattended`, and what removes each obstacle. For this one:
+It ends by naming `/grove-implement <cycle-id>`, which builds the cycle
+with you, then saying whether `grove run <cycle-id>` would build it, and
+that `unattended: true`, merged on its own, hands it to a `grove run` given
+no cycle, and what removes each obstacle. For this one:
 
-> grove run would skip this cycle if marked: 261019-r2w7k needs a person. To remove that, revise it with `/grove-propose 261019-r2w7k` so its acceptance can be checked without a person, merge it, and re-plan with `/grove-plan 261020-m4k8t`.
+> Build this cycle with `/grove-implement 261020-m4k8t`. grove run would refuse it, given as `grove run 261020-m4k8t` or marked: 261019-r2w7k needs a person. To remove that, revise it with `/grove-propose 261019-r2w7k` so its acceptance can be checked without a person, merge it, and re-plan with `/grove-plan 261020-m4k8t`.
 
 For a cycle with nothing in the way:
 
-> grove run would build this cycle once `unattended: true` is added to its file in a merge of its own.
+> Build this cycle with `/grove-implement 261020-m4k8t`, or have `grove run 261020-m4k8t` build it. Adding `unattended: true` to its file in a merge of its own hands it to a `grove run` given no cycle, such as a timer's.
 
 A change that waits on one outside the cycle keeps `grove run` from the
 cycle until that one is archived as finished, and the agent names what the

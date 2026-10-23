@@ -20,26 +20,29 @@
 - Keep `created` as the template has it. Set `planned` to the commit the
   template shows: the target commit you read the members at. Change it
   only so.
-- Never write or remove `unattended`. It hands the cycle to `grove run`
-  and is the owner's to set, in a later merge of its own. If the cycle has
+- Never write or remove `unattended`. It hands the cycle to a `grove run`
+  given no cycle and is the owner's to set, in a later merge of its own. If the cycle has
   it and the owner says a member needs a person, tell them `grove check`
   reports the mark and that they remove it.
 - The plan is made when the owner merges the cycle file into the target
   branch; nothing you do makes it.
 - Finish: run Grove's `check` and fix what it reports in the cycle file.
   Tell the owner the members in build order, which need a person, and which
-  wait on what. Then say whether `grove run` would build the cycle once it
-  is marked `unattended` and, for each obstacle, what removes it:
-  - A member `needs_human` names: revise it with `/grove-propose
-    <change-id>` so that its acceptance can be checked without a person,
-    merge that, and re-plan the cycle with `/grove-plan <cycle-id>`.
+  wait on what. Then, in this order: say `/grove-implement <cycle-id>`
+  builds the cycle with them; say whether `grove run <cycle-id>` would
+  build it; and say `unattended: true`, added to the cycle file in a merge
+  of its own, hands it to a `grove run` given no cycle, such as a timer's.
+  For each obstacle, say what removes it:
+  - A member `needs_human` names: `grove run` refuses the cycle, given or
+    marked. Revise the member with `/grove-propose <change-id>` so that its
+    acceptance can be checked without a person, merge that, and re-plan
+    the cycle with `/grove-plan <cycle-id>`.
   - A member waiting on a change neither in the cycle nor archived as
     finished: `grove run` builds nothing of the cycle until that change is
     archived as finished.
   - Something the runner's checkout must have, such as a login the owner
     said the runner has: name it.
-  With no obstacle, say `grove run` would build the cycle once
-  `unattended: true` is added to the cycle file in a merge of its own.
+  With no obstacle, say `grove run <cycle-id>` would build the cycle.
   Commit only when the owner or the project's rules ask. The
   next step is the owner's: commit, read what Grove's `review` shows, and
   merge it into the target branch.

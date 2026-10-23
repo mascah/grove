@@ -29,7 +29,19 @@ Status: done
 
 ### T-02 — Plan's finish names /grove-implement first
 
-Status: not started
+Status: done
+
+- `internal/instruct/requires/plan.md`: the finish says, in order,
+  `/grove-implement <cycle-id>`, whether `grove run <cycle-id>` would build
+  the cycle, and `unattended: true` for a `grove run` given no cycle; a
+  member under `needs_human` makes `grove run` refuse the cycle, given or
+  marked. The `unattended` bullet now says the mark hands the cycle to a
+  `grove run` given no cycle.
+- `docs/planning.md`: the intro and both finish examples;
+  `dev/walkthrough.md` planning steps 1 and 3.
+- `internal/cli/walkthrough_test.go`: `TestCycles` checks the three appear
+  in that order in `grove instructions plan`.
+- `just check`: passes; 3429 Go lines, 1167 test lines.
 
 ## Reconciliation
 
