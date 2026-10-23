@@ -3,3 +3,4 @@ created: 2026-10-23T16:22:40Z
 goal: A proposal leaves no assumption and names the files each task touches, and check notices when they move.
 changes: [261023-fca8x, 261023-6j5bw]
 planned: 67726e2ad2cf350510ba173d55273ca628a155df
+unattended: true
