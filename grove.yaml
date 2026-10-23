@@ -23,4 +23,13 @@ schema: default
 # Kinds: proposal, change-spec, tasks, implementation, spec, and those of
 # the project's own schemas.
 # Skills: explore, propose, apply, archive.
-rules: {}
+rules:
+  skills:
+    implement: 
+      - Commit after each task, naming its task ID.
+      - When you are done, push the branch to origin and open a pull request with gh pr create
+
+    apply:
+      - Commit after each task, naming its task ID.
+      - When you are done, push the branch to origin and open a pull request with gh pr create, listing the changes archived and each blocked task with its question.
+
