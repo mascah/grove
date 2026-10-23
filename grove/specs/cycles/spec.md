@@ -7,8 +7,8 @@ A cycle is approved changes the owner means to build together, in a file
 `changes` lists. A cycle is done when the target holds every member
 archived, finished or dropped. A member "needs a person" when the cycle's
 `needs_human` names it. A cycle is stale when the folder of a member not
-yet archived differs on the target from the same folder at the cycle's
-`planned` commit.
+yet archived, or a file one of its tasks names, differs on the target from
+the same path at the cycle's `planned` commit.
 
 ## Boundaries
 
@@ -69,6 +69,14 @@ instructions for revising that cycle file as the owner asks and setting
 - WHEN the owner runs `/grove-plan K`
 - THEN the agent reads A as the target holds it, asks about it as for a new
   plan, and sets `planned` to the target's commit
+
+#### Scenario: Re-plan after a member's file moved
+
+- GIVEN cycle K is stale because a file member B's T-01 names changed on
+  the target, and the owner is content to build B on the new text
+- WHEN the owner runs `/grove-plan K` and merges the cycle file
+- THEN `planned` is the target's commit, K is no longer stale, and B's
+  files are unchanged
 
 ### Requirement: Ask about work that needs a person
 
@@ -162,6 +170,15 @@ naming what to do.
 - WHEN the owner runs `grove check`
 - THEN it reports K, saying A changed since the plan and to re-plan K with
   `/grove-plan K`
+
+#### Scenario: Marked and a member's file moved
+
+- GIVEN cycle K holds `unattended: true`, member B's T-01 names
+  `ledger/records.py`, and the target merged a commit touching that file
+  after K's `planned` commit
+- WHEN the owner runs `grove check`
+- THEN it reports K, saying B changed since the plan and to re-plan K with
+  `/grove-plan K`, and `grove run` does not build K
 
 ### Requirement: Report a malformed cycle
 

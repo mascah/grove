@@ -285,7 +285,9 @@ func TestPropose(t *testing.T) {
 	}
 	out := grove(t, "instructions", "propose", "Editing a missing record should print an error")
 	req, how := strings.Index(out, "## What Grove requires of propose\n\n- A change describes future work."), strings.Index(out, "## How to propose\n\n**Propose says")
-	if !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") || req < 0 || how < req {
+	if !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") || req < 0 || how < req ||
+		!strings.Contains(out, "on a `Files:` line after `Result:`") || !strings.Contains(out, "\nFiles: [`path/to/file`") || strings.Contains(out, "file-by-file") ||
+		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || strings.Contains(out, "Assumptions to confirm") {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
 
@@ -359,7 +361,7 @@ func TestApplyInstructions(t *testing.T) {
 		}
 	}
 	out = grove(t, "instructions", "apply", k, cid)
-	for _, s := range []string{"/implementation.md\">\n# Implementation: Allow editing older records", "### Requirement: Edit older records", "even if you could\n  ask",
+	for _, s := range []string{"/implementation.md\">\n# Implementation: Allow editing older records", "### Requirement: Edit older records", "even if you could\n  ask", "A file no\n  task names stays as it is",
 		", change 1 of 1 in cycle " + k + ".", "## The cycle\n\nCycle " + k + ", \"Cycle " + k + "\", in build order:\n\n1. " + cid + " \"Allow editing older records\" — this change\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("apply instructions for a member lack %q:\n%s", s, out)
@@ -370,7 +372,7 @@ func TestApplyInstructions(t *testing.T) {
 		t.Errorf("apply of a change outside the cycle: status %d, %q", code, stderr.String())
 	}
 	out = grove(t, "instructions", "implement", cid)
-	for _, s := range []string{"You are implementing approved change " + cid, "## What Grove requires of implement\n", "ask the owner and\n  wait", "### change-spec: ", "### Requirement: Edit older records"} {
+	for _, s := range []string{"You are implementing approved change " + cid, "## What Grove requires of implement\n", "ask the owner and\n  wait", "with their agreement add it to that task's `Files:` line", "### change-spec: ", "### Requirement: Edit older records"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("implement instructions lack %q", s)
 		}
@@ -1002,4 +1004,64 @@ func TestRun(t *testing.T) {
 	git(t, checkout, "switch", "-q", "main")
 	git(t, checkout, "merge", "-q", "--no-ff", "-m", "Merge the attempt", branch)
 	runs(`^Nothing to apply on main at [0-9a-f]{7}\.\n$`)
+}
+
+// TestMovedFiles follows the walkthrough's steps on a task's named file
+// changing on main: a change alone reported against its base, a member of
+// a marked cycle against its plan, and a Files: line Grove cannot read.
+func TestMovedFiles(t *testing.T) {
+	dir := setUp(t)
+	base := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
+	cid, folder := propose(t, dir, "older-edits", "Allow editing older records", "base: "+base+"\n")
+	tasks := "## T-01 — Allow editing older records\n\nResult: older records can be edited.\n\nFiles: `ledger/cli.py`,\n`tests/test_cli.py`\n\nAcceptance:\n- An older record saves.\n"
+	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(tasks), 0o644)
+	commitAll(t, dir, "Propose")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
+	checks := func(want string) {
+		t.Helper()
+		var stdout, stderr strings.Builder
+		if code := run([]string{"check"}, &stdout, &stderr); stdout.String() != want || (code == 0) != (want == "No problems in grove/.\n") {
+			t.Errorf("check: status %d\n%s%s\nwant\n%s", code, stdout.String(), stderr.String(), want)
+		}
+	}
+	edit := func(file, msg string) {
+		t.Helper()
+		os.WriteFile(filepath.Join(dir, file), []byte(read(t, filepath.Join(dir, file))+"# "+msg+"\n"), 0o644)
+		commitAll(t, dir, msg)
+	}
+
+	// Unchanged on main, or changed only on the branch building it.
+	checks("No problems in grove/.\n")
+	git(t, dir, "switch", "-q", "-c", "older-edits-impl")
+	edit("ledger/cli.py", "Build T-01")
+	checks("No problems in grove/.\n")
+	git(t, dir, "switch", "-q", "main")
+
+	// Changed on main since base.
+	edit("tests/test_cli.py", "Another change")
+	rel := "grove/changes/" + filepath.Base(folder) + "/tasks.md"
+	checks(rel + ": T-01's tests/test_cli.py changed on main since base " + base[:7] + "; revise the change with propose\n")
+	if out := grove(t, "instructions", "implement", cid); !strings.Contains(out, "\n- Changed on main since base "+base[:7]+": T-01's `tests/test_cli.py`.\n") {
+		t.Errorf("implement instructions do not name the moved file:\n%.3000s", out)
+	}
+
+	// A member of a marked cycle: reported against the plan, not base.
+	k := "261023-k0000"
+	planCycle(t, dir, k, "2026-10-23T09:00:00Z", true, cid)
+	checks("No problems in grove/.\n")
+	edit("ledger/cli.py", "Yet another change")
+	checks("grove/cycles/" + k + "-cycle.yaml: planned: " + cid + " changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan " + k + "\n")
+	p, _ := openProject()
+	if ip, err := p.agreed(); err != nil || func() bool { cy, _ := eligible(p, ip); return cy != nil }() {
+		t.Errorf("grove run would build a cycle whose member's file moved: %v", err)
+	}
+	if out := grove(t, "instructions", "implement", cid); strings.Contains(out, "since base") {
+		t.Errorf("implement instructions for a member name a moved file against base:\n%.3000s", out)
+	}
+
+	// A Files: line Grove cannot read.
+	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, "`ledger/cli.py`,\n`tests/test_cli.py`", "ledger/cli.py", 1)), 0o644)
+	os.Remove(filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"))
+	checks(rel + ":5: T-01's Files: line should list repo-relative paths in backticks, separated by commas\n")
 }

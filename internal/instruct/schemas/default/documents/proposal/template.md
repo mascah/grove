@@ -29,9 +29,8 @@ belong in the change specs; summarize them here. -->
 <!-- Only choices the owner made, each attributed: quoted, or naming where the
 owner decided it. Each constrains the
 work or would be costly to reverse, and has its reason. What the author infers
-or proposes is not a decision: put it under Open questions, or under a list
-headed "Assumptions to confirm in review". Use design.md only when one needs
-more room. -->
+or proposes is not a decision: ask it in the round before writing, or put it
+under Open questions. Use design.md only when one needs more room. -->
 
 ## Open questions
 

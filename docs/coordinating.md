@@ -90,6 +90,11 @@ branch. The next change in the list then finds its dependency archived as
 finished. Apply builds a cycle whether or not it is marked `unattended`;
 only `grove run` reads the mark.
 
+Apply changes only the files a change's tasks name on their `Files:` lines.
+A file it finds should change too is left as it is and named in that
+task's evidence in `implementation.md`; implementing with you, the agent
+asks to add it to the task instead.
+
 `/grove-implement 261020-m4k8t` builds the same cycle with you, each
 change as `/grove-implement <change-id>` does.
 
@@ -146,6 +151,20 @@ branch's text, keeping what the change itself alters, and sets `base` to
 your main branch's commit. `grove check` is clean again. Merge it, and the
 revised change is approved. Do not edit `base` by hand: that hides the
 report without bringing the change up to date.
+
+The code can move too. Each task names the files it touches on its
+`Files:` line, and `grove check` reports a file that changed on your main
+branch since the change's `base`:
+
+> grove/changes/261019-s5v3m-show-what-was-saved/tasks.md: T-01's ledger/cli.py changed on main since base 4f1c2a9; revise the change with propose
+
+Only main counts: a branch building the change, which edits that file, is
+not reported. `/grove-implement 261019-s5v3m` names the task and file, and
+the agent tells you what changed and asks before building that task. A
+change in a cycle that is not done is not reported against its `base`: a
+moved file makes its cycle stale instead, and re-planning the cycle is
+enough to build on the new text (see [Planning cycles](planning.md),
+"Mark it unattended").
 
 In a change spec, each REMOVED requirement keeps its heading,
 `### Requirement: <name>`, followed by why it goes, so `grove check` can

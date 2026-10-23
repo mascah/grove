@@ -15,13 +15,24 @@ describes future work. It does not plan or perform the implementation.
 - Say in a few sentences what you understand is being proposed: the problem,
   the intended outcome, what is in scope and what is not. Ask the owner to
   confirm or correct it before you write.
-- If several options are still open, ask which one. If an unanswered question
-  would change the requirements or how a task is built, ask it now.
+- If several options are still open, ask which one.
 - If the direction turns out not to be settled, say so. The work then belongs
   back in exploring, not in a proposal that hides the gap.
 
-### 3. Write the change
+### 3. Ask one round
+
+- List every decision the documents need that this conversation has not
+  settled: which option, which requirements and scenarios, where each task
+  goes in the code, what is out of scope, which files outside the code
+  change. Number them, each with your recommended answer and its reason,
+  worded so that "yes" accepts it, and wait.
+- A decision the owner leaves open is an open question, naming the task it
+  blocks; one the owner answers is a decision, in their words.
+
+### 4. Write the change
 
 Write `design.md` only when a decision needs more room than the proposal's
-decisions section. No implementation planning: no file-by-file plan, no
-sequencing, no estimates.
+decisions section. Each task names the files it touches and the interfaces
+it produces, as the tasks guide says, so where the change goes in the code
+is settled here, not left to whoever builds it. No code, commands or steps,
+no sequencing, no estimates.

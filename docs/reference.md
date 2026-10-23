@@ -9,7 +9,7 @@
 | `grove specs` | Lists the maintained specs on the target branch. |
 | `grove changes` | Lists the approved changes on the target branch that are not archived, what each waits on, and the cycle not done that holds it, with `unattended` when it is marked. |
 | `grove changes --json` | Prints the target branch's changes, archived ones included, as JSON (see [Coordinating changes](coordinating.md), "The project as data"). |
-| `grove check` | Reports each problem in the Grove documents of this working tree, each unknown field or `rules` key in `grove.yaml`, and each mistake in a change schema, as `path:line: message`, and exits non-zero if there is one. Among the problems: a `depends_on` naming no change, open or archived, or a dropped change, changes that wait on each other in a loop, the cycle problems [Planning cycles](planning.md) lists, and a requirement a change modifies or removes whose text in the working tree's maintained spec is neither what it was at the change's `base` nor what the change or a change it depends on gives it. |
+| `grove check` | Reports each problem in the Grove documents of this working tree, each unknown field or `rules` key in `grove.yaml`, and each mistake in a change schema, as `path:line: message`, and exits non-zero if there is one. Among the problems: a `depends_on` naming no change, open or archived, or a dropped change, changes that wait on each other in a loop, the cycle problems [Planning cycles](planning.md) lists, a requirement a change modifies or removes whose text in the working tree's maintained spec is neither what it was at the change's `base` nor what the change or a change it depends on gives it, a task's `Files:` line it cannot read, and, for a change in no cycle that is not done, a file a task names that changed on the target since the change's `base` ([Coordinating changes](coordinating.md), "When the plan is stale"). |
 | `grove review` | Shows what merging the current branch into the target would approve: each change, maintained spec, cycle or change schema file it adds or alters, and the diff. |
 | `grove archive <change-id>` | Moves the change's folder to `changes/archive/`. Refuses unless `implementation.md` marks every task in `tasks.md` `Status: done`, or says `Status: dropped`. Commits nothing. |
 | `grove run` | In a clean checkout, fetches the target from `origin` if there is one, else uses the local target, selects the cycle there with the earliest `created` that is marked `unattended` and can be built unattended, and starts one Claude Code session on the apply skill for it on a new branch, `grove/run-<attempt>`. Keeps a record and the output in `.git/grove/`, then starts nothing until every change of that cycle is archived on the target. See [Running apply unattended](running.md). |
@@ -141,10 +141,12 @@ A schema's folder holds `schema.yaml`, a folder for each kind of document,
 each skill, `skills/<skill>.md`.
 
 A schema cannot change Grove's skills or what Grove requires of each, which
-its instructions give first; that a merge approves a change; a change's
+its instructions give first, such as propose asking one round of every
+decision it would otherwise assume before it writes; that a merge approves a change; a change's
 `.grove.yaml`; or how progress is recorded: each task is a `T-NN` heading in
-`tasks.md`, and its status a `Status:` line in `implementation.md`, which
-`grove archive` reads. So every schema has `tasks` and `implementation` at
+`tasks.md`, naming the files it touches on a `Files:` line and the
+interfaces it produces on an `Interfaces:` line, and its status a `Status:`
+line in `implementation.md`, which `grove archive` reads. So every schema has `tasks` and `implementation` at
 those paths, keeps the `Status:` lines of Grove's implementation template,
 and has one kind with `metadata: changes/<change>/.grove.yaml`, the change's
 main document. Its other kinds are in the change folder, except `spec`.
@@ -230,8 +232,8 @@ Tell the owner which of these it is:
 - A maintained requirement says what should happen, and the code breaks it.
   Cite the requirement in the proposal. Write no change spec: what is agreed
   does not change.
-- No maintained requirement covers the behavior. Ask the owner whether the
-  corrected behavior should become agreed. If yes, write a change spec that
+- No maintained requirement covers the behavior. Ask, in the round before
+  writing, whether the corrected behavior should become agreed. If yes, write a change spec that
   ADDs it; archiving folds it into the maintained spec. If no, write none,
   and the fix stays observed behavior.
 - The maintained spec itself is wrong. That is not a bug: tell the owner it
@@ -241,9 +243,10 @@ Tell the owner which of these it is:
 ### 3. Write the change
 
 - The first task adds a test that reproduces the bug and fails before the
-  fix. A simple fix is that one task.
-- No implementation planning: no file-by-file plan, no sequencing, no
-  estimates.
+  fix. A simple fix is that one task: its `Files:` line names the test and
+  the file under fix, and its `Interfaces:` line what the fix changes that
+  callers see.
+- No code, commands or steps, no sequencing, no estimates.
 ```
 
 `grove/schemas/bugfix/documents/proposal/template.md`:

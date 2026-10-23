@@ -97,7 +97,8 @@ No skill writes or removes the line, and re-planning keeps it.
 > grove/cycles/261020-m4k8t-0-4-release.yaml:8: unattended: 261019-r2w7k needs a person, as needs_human says, so grove run skips this cycle; remove unattended, or build the cycle with /grove-implement 261020-m4k8t
 
 And one whose plan is stale, because the folder of a change in it that is
-not archived differs on your main branch from what it was at `planned`:
+not archived, or a file one of its tasks names on its `Files:` line,
+differs on your main branch from what it was at `planned`:
 
 > grove/cycles/261020-m4k8t-0-4-release.yaml: planned: 261019-p4x8d changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan 261020-m4k8t
 
@@ -109,7 +110,9 @@ not archived differs on your main branch from what it was at `planned`:
 
 revises the cycle as you ask: the agent reads its changes as your main
 branch holds them, asks about them as for a new plan, and sets `planned`
-to your main branch's commit. Merge it.
+to your main branch's commit. Merge it. When a file a change's task names
+moved and you are content to build the change on the new text, re-planning
+is all it takes; the change itself stays as it is.
 
 A cycle is done when every change in it is archived, finished or dropped;
 its file stays. A change is in at most one cycle that is not done.

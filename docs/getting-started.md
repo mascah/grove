@@ -89,10 +89,13 @@ The agent writes a change folder, such as
 - `.grove.yaml`: the change's title and when it was created.
 - `proposal.md`: why, what changes, and your decisions in your words.
 - `specs/<capability>/spec.md`: the requirements this adds or changes.
-- `tasks.md`: the work, each task with how to check it is done.
+- `tasks.md`: the work, each task naming the files it touches and saying
+  how to check it is done.
 
-It asks rather than assumes, keeps anything you leave undecided as an open
-question, and says which task, if any, that question blocks. It runs
+Before writing, it lists every decision it would otherwise assume, each
+with a recommended answer, and waits for yours. It keeps anything you leave
+undecided as an open question, and says which task, if any, that question
+blocks. It runs
 `grove check` until the folder has no problems. You can
 also propose without exploring: `/grove-propose <description>`. To revise a
 drafted change later, run `/grove-propose <change-id>`.

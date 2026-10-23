@@ -1,5 +1,8 @@
 - The change below is approved as the target branch holds it. Build what it
   says, nothing more.
+- Change only the files the tasks name on their `Files:` lines. A file no
+  task names stays as it is, even if it looks like it should change: name
+  it, and why, in that task's evidence in `implementation.md`.
 - Work in this working tree on a branch other than the target; create one if
   you are on the target.
 - Do not edit the change's files other than `implementation.md`: they are
