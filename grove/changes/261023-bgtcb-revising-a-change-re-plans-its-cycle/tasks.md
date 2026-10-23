@@ -80,7 +80,8 @@ Acceptance:
   member re-plans its cycle; `docs/reference.md`'s `grove instructions
   propose <change-id>` row says it re-plans a cycle the change is in.
 - `dev/walkthrough.md`: planning step 1's finish names the shorter way;
-  in "Running apply unattended" step 6, `/grove-propose <export-id>`
+  in the unattended-run section's step 6 ("Run a cycle you name"),
+  `/grove-propose <export-id>`
   makes export checkable without a person and re-plans its cycle on the
   same branch, one squash merge, and `grove run --retry
   <export-cycle-id>` then starts a session; in planning step 5, two

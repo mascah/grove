@@ -1,6 +1,8 @@
 # Changes to runs
 
 The maintained spec is [grove/specs/runs/spec.md](../../../../specs/runs/spec.md).
+"Retry" starts from the text change 261023-g0a3h gives it, which this
+change depends on; only the scenario's GIVEN differs.
 
 ## MODIFIED Requirements
 
@@ -17,4 +19,5 @@ latest attempt selected.
   answering it that re-planned K
 - WHEN the operator runs `grove run --retry`
 - THEN a new branch is created from the fetched target and a session is
-  launched on the apply skill with K's ID, which builds B
+  launched on the implement skill with K's ID and `--unattended`, which
+  builds B

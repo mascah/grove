@@ -68,6 +68,10 @@ Past a pause, the steps become: revise the change with `/grove-propose
 - A revision and a re-plan that reach the target as separate commits, by
   rebase or fast-forward: the cycle stays stale, as decision 2 says.
 - Revising a change in no cycle: unchanged.
+- How `grove run` launches its session: change 261023-g0a3h, which this
+  change depends on, has it type `/grove-implement <cycle-id>
+  --unattended`. Runs' "Retry" is the one requirement both modify; this
+  change starts from that change's text.
 
 ## Decisions
 
