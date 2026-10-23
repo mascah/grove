@@ -1,4 +1,4 @@
-# Run apply on a timer
+# Run on a timer
 
 A guide is a recipe that uses Grove's existing features and has been tried;
 it is not part of what Grove does. Use it if it helps.
@@ -11,13 +11,13 @@ so often in a checkout you keep for one project, so a cycle you mark
 one attempt or does nothing: while a run is going, while the project is
 paused after an attempt, or when no marked cycle can be built. Marking a
 cycle is what puts work in front of the timer; merging a change alone does
-not. [Running apply
+not. [Running
 unattended](../running.md) says what one run does.
 
 ## Before the timer
 
 Set up the checkout as "Set up a checkout" in
-[Running apply unattended](../running.md) says, and run `grove run` in it
+[Running unattended](../running.md) says, and run `grove run` in it
 once by hand to see a session through. The timer's session has the same
 permissions, from the checkout's `.claude/settings.local.json`, and nobody
 to answer it, so a tool those settings do not allow fails and the agent

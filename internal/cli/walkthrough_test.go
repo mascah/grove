@@ -917,7 +917,7 @@ func TestCycles(t *testing.T) {
 		"grove/cycles/261099-zzzzz-later.yaml:3: changes: 260101-zzzzz is no change, open or archived\n")
 }
 
-// TestRun follows the walkthrough's "Running apply unattended" with a
+// TestRun follows the walkthrough's "Running unattended" with a
 // stand-in claude on PATH, in an operator's clone of the fixture's remote.
 func TestRun(t *testing.T) {
 	owner := setUp(t)

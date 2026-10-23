@@ -12,8 +12,8 @@
 | `grove check` | Reports each problem in the Grove documents of this working tree, each unknown field or `rules` key in `grove.yaml`, and each mistake in a change schema, as `path:line: message`, and exits non-zero if there is one. Among the problems: a `depends_on` naming no change, open or archived, or a dropped change, changes that wait on each other in a loop, the cycle problems [Planning cycles](planning.md) lists, a requirement a change modifies or removes whose text in the working tree's maintained spec is neither what it was at the change's `base` nor what the change or a change it depends on gives it, a requirement in a maintained spec or an open change, not under `## REMOVED Requirements`, with no "shall" or no `#### Scenario:`, an `## ADDED`, `## MODIFIED` or `## REMOVED Requirements` heading in a maintained spec, a task's `Files:` line it cannot read, and, for a change in no cycle that is not done, a file a task names that changed on the target since the change's `base` ([Coordinating changes](coordinating.md), "When the plan is stale"). |
 | `grove review` | Shows what merging the current branch into the target would approve: each change, maintained spec, cycle or change schema file it adds or alters, and the diff. |
 | `grove archive <change-id>` | Moves the change's folder to `changes/archive/`. Refuses unless `implementation.md` marks every task in `tasks.md` `Status: done`, or says `Status: dropped`. For a finished change, also refuses, printing each requirement as `path:line: message`, unless each maintained spec the change has a change spec for holds, whitespace aside, its requirements where this branch left the target, then what each change archived on this branch since gives them, then what this change gives them. Commits nothing. |
-| `grove run` | In a clean checkout, fetches the target from `origin` if there is one, else uses the local target, selects the cycle there with the earliest `created` that is marked `unattended` and can be built unattended, and starts one Claude Code session on the apply skill for it on a new branch, `grove/run-<attempt>`. Keeps a record and the output in `.git/grove/`, then starts nothing until every change of that cycle is archived on the target. See [Running apply unattended](running.md). |
-| `grove run <cycle-id>` | As `grove run`, but builds the cycle given, whether or not it is marked `unattended`, and says why when it cannot be built. See [Running apply unattended](running.md), "Run a cycle you name". |
+| `grove run` | In a clean checkout, fetches the target from `origin` if there is one, else uses the local target, selects the cycle there with the earliest `created` that is marked `unattended` and can be built unattended, and starts one Claude Code session on it on a new branch, `grove/run-<attempt>`, typing `/grove-implement <cycle-id> --unattended`, or `/grove:implement <cycle-id> --unattended` where Claude Code is listed as commands. Keeps a record and the output in `.git/grove/`, then starts nothing until every change of that cycle is archived on the target. See [Running unattended](running.md). |
+| `grove run <cycle-id>` | As `grove run`, but builds the cycle given, whether or not it is marked `unattended`, and says why when it cannot be built. See [Running unattended](running.md), "Run a cycle you name". |
 | `grove run --retry` | Starts a new attempt even though the latest one's cycle is not archived. |
 | `grove run --timeout <duration>` | Stops the session after `<duration>`, such as `30m` or `1h30m`, rather than 2 hours. Goes with `--retry`. |
 | `grove version` | Prints the version of Grove, such as `grove 0.1.0`. A build from a checkout prints a Go pseudo-version naming its commit, and `dev` when Go recorded none. |
@@ -29,30 +29,31 @@ Skills run these; you do not need to:
 | `grove instructions plan ["<description>"]` | Write a new cycle of approved changes from the conversation or the description, asking which need a person, editing no change (see [Planning cycles](planning.md)). |
 | `grove instructions plan <change-id>` | Write a new cycle whose only change is that approved change. |
 | `grove instructions plan <cycle-id>` | Revise the cycle as the working tree holds it, setting `planned` to the target's commit. |
-| `grove instructions implement <change-id>` | Build an approved change with the owner, asking them what the change leaves open and, with their agreement, revising it on the branch; record progress, and archive it when every task is done. Refuses a change that waits on one this working tree does not hold archived as finished. |
+| `grove instructions implement <change-id>` | Build an approved change with the owner, asking them what the change leaves open and, with their agreement, revising it on the branch; record progress, and archive it when every task is done. For a change in a cycle that is not done, with the cycle's changes in build order. Refuses a change that waits on one this working tree does not hold archived as finished. |
+| `grove instructions implement <change-id> --unattended` | Build it as above but ask no one: mark a task an open question decides blocked, and, for a change in no cycle, a task naming a file changed on the target since `base`; edit none of the change's files but `implementation.md`. Refuses as above. |
 | `grove instructions implement <cycle-id>` | Build each change of the cycle this working tree has not archived with the owner, in build order, one at a time, each as `grove instructions implement <change-id>` does. |
-| `grove instructions apply <cycle-id>` | Build each change of the cycle this working tree has not archived without asking anyone, in build order, one at a time, each with its own instructions (see [Coordinating changes](coordinating.md), "Applying a cycle"). Refuses a change's ID, and no ID. |
-| `grove instructions apply <cycle-id> <change-id>` | Build that change of the cycle without asking anyone, marking a task an open question decides blocked, record progress, and archive it when every task is done; with the cycle's changes in build order. Refuses a change the cycle does not list, and one that waits on a change this working tree does not hold archived as finished. |
+| `grove instructions implement <cycle-id> --unattended` | Build each change of the cycle the same way without asking anyone, each with `grove instructions implement <change-id> --unattended`, whether or not the cycle is marked `unattended` and whatever its `needs_human` says (see [Coordinating changes](coordinating.md), "Building a cycle unattended"). |
 | `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs, copying each requirement word for word, then run `grove archive`, fixing the specs and running it again if it refuses. |
 
 ## Harnesses
 
-`grove init` writes a file for each of Grove's seven skills, explore,
-prototype, propose, plan, implement, apply and archive, for each harness under `agents` in
-`grove.yaml`: as a skill, or as a command where the harness has commands.
-How you type apply, the others alike:
+`grove init` writes a file for each of Grove's six skills, explore,
+prototype, propose, plan, implement and archive, for each harness under `agents` in
+`grove.yaml`: as a skill, or as a command where the harness has commands,
+and removes the files of skills Grove no longer has, such as `grove-apply`.
+How you type implement, the others alike:
 
 | Harness | `agents` key | As skills | As commands |
 | --- | --- | --- | --- |
-| Claude Code | `claude` | `/grove-apply` | `/grove:apply` |
-| Codex | `codex` | `$grove-apply` | none |
-| Cursor | `cursor` | `/grove-apply` | none |
-| OpenCode | `opencode` | not typed; ask for `grove-apply` by name | `/grove-apply` |
-| Pi | `pi` | `/skill:grove-apply` | `/grove-apply` |
-| Hermes | `hermes` | `/grove-apply` | none |
+| Claude Code | `claude` | `/grove-implement` | `/grove:implement` |
+| Codex | `codex` | `$grove-implement` | none |
+| Cursor | `cursor` | `/grove-implement` | none |
+| OpenCode | `opencode` | not typed; ask for `grove-implement` by name | `/grove-implement` |
+| Pi | `pi` | `/skill:grove-implement` | `/grove-implement` |
+| Hermes | `hermes` | `/grove-implement` | none |
 
 Type the words a skill takes after its name, such as
-`/grove-apply 261020-m4k8t`.
+`/grove-implement 261020-m4k8t --unattended`.
 
 Where the files go, `<skill>` being the skill's name:
 
@@ -102,7 +103,7 @@ rules:
     tasks:
       - Every task names its test.
   skills:
-    apply:
+    implement:
       - Commit after each task, naming its task ID.
 ```
 
@@ -113,10 +114,12 @@ rules:
 | `agents` | `claude` and `codex`, as `skills` | Each harness `init` writes Grove's skills for, and whether as `skills` or `commands` (see "Harnesses"). The first `init` chooses them. |
 | `schema` | `default` | The change schema a new change has unless the owner names another while proposing. See "Change schemas". |
 | `context` | empty | Instructions given to every skill, so they reach agents working through Grove and no other session; project facts every session needs stay in `CLAUDE.md` or `AGENTS.md`. |
-| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `prototype`, `propose`, `plan`, `implement`, `apply`, `archive`. |
+| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `prototype`, `propose`, `plan`, `implement`, `archive`; lines under `implement` are given with the owner and with `--unattended`. |
 
 `grove check` reports a field or `rules` key that Grove does not know; other
-commands ignore it. It also reports a harness under `agents` that Grove has
+commands ignore it. A `rules.skills.apply` key, from before apply became
+`implement --unattended`, is reported as saying its lines go under
+`rules.skills.implement`. It also reports a harness under `agents` that Grove has
 no row for, or a form that harness does not have, and `init` stops at
 either.
 
@@ -124,7 +127,7 @@ either.
 or replace them. Short rules work better than long ones.
 
 Grove's skills commit nothing unless you ask in the conversation or a rule
-asks, as `apply` does above.
+asks, as `implement` does above.
 
 ## Change schemas
 
@@ -138,7 +141,7 @@ is `default`, the software change [Concepts](concepts.md) describes:
 | `proposal` | `changes/<change>/proposal.md`, the change's main document | propose, implement |
 | `change-spec` | `changes/<change>/specs/<capability>/spec.md` | propose, implement |
 | `tasks` | `changes/<change>/tasks.md` | propose, implement |
-| `implementation` | `changes/<change>/implementation.md` | implement, apply, archive |
+| `implementation` | `changes/<change>/implementation.md` | implement, archive |
 | `spec` | `specs/<capability>/spec.md`, a maintained spec | archive |
 
 A schema's folder holds `schema.yaml`, a folder for each kind of document,
@@ -187,7 +190,7 @@ Each file the schema needs comes from `grove/schemas/<name>/`, else from
 for `default` is so your other schemas' too, unless they have their own.
 
 A change has a schema, which its `.grove.yaml` names as `schema`, and keeps
-it: revising, implementing, applying and archiving the change use it. A change without
+it: revising, implementing and archiving the change use it. A change without
 one has `default`. A new change has `grove.yaml`'s `schema`, unless the owner
 says which kind of work it is while exploring or proposing: when the project
 has schemas other than `default`, the instructions list them, and the agent

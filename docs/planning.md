@@ -4,7 +4,7 @@ A cycle is approved changes you mean to build together, such as a release.
 Planning one finds out, with you, which of its changes need a person. A
 cycle is also how work reaches `grove run`: it builds a cycle you name or
 have marked `unattended`, never a change on its own (see
-[Running apply unattended](running.md)).
+[Running unattended](running.md)).
 
 ## Plan a cycle
 

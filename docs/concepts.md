@@ -77,10 +77,11 @@ flowchart LR
 5. **Implement.** The agent builds the change on a branch with you and
    records progress. It asks you what the change leaves open and, with
    your agreement, revises the change on that branch; your merge then
-   approves the revision with the code. **Apply** builds a cycle of
-   changes without you, in order: it asks no one, marks a task an open
-   question decides blocked, and never edits a change. A cycle is approved
-   changes planned together (see [Planning cycles](planning.md)).
+   approves the revision with the code. With `--unattended` it builds a
+   change, or a cycle of changes in order, without you: it asks no one,
+   marks a task an open question decides blocked, and never edits a
+   change. A cycle is approved changes planned together (see
+   [Planning cycles](planning.md)).
 6. **Archive.** When every task is done, the agent folds the change's specs
    into the maintained specs and moves the change to
    `grove/changes/archive/`. You merge code, specs and archive together.
@@ -94,7 +95,7 @@ specs; its `implementation.md` says `Status: dropped` and why.
 What Grove requires at each step is the same in every project: exploring
 writes nothing unless you ask, prototyping writes no Grove document and
 never merges its branch, only your merge approves a change,
-implementing and applying build the change as your main branch holds it,
+implementing builds the change as your main branch holds it,
 or as you agreed to revise it while implementing, and record each task's
 status in `implementation.md`, and archiving refuses a change that is
 neither finished nor dropped, or a finished one whose requirements the
@@ -124,7 +125,7 @@ A `default` change folder holds:
 | `proposal.md` | propose, implement | Why, what changes, decisions with who made them, open questions. |
 | `specs/<capability>/spec.md` | propose, implement | Requirements the change adds, changes or removes, for one capability each. |
 | `tasks.md` | propose, implement | The work as numbered tasks, each with the files it touches, the interfaces it produces and how to check it is done. |
-| `implementation.md` | implement, apply, archive | Each task's status and evidence, each scenario of the change specs with the check that shows it or `unverified` and why, and which specs were updated. |
+| `implementation.md` | implement, archive | Each task's status and evidence, each scenario of the change specs with the check that shows it or `unverified` and why, and which specs were updated. |
 
 `tasks.md` is part of what was approved, so building it never edits it
 except in a revision you agree to while implementing; progress goes in

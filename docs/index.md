@@ -9,11 +9,11 @@ Grove has two halves:
 
 - **In your terminal**, the `grove` command sets up a project, lists and
   checks specs and changes, shows what a merge would approve, opens a
-  reader, and can run apply unattended.
+  reader, and can run a cycle unattended.
 - **In your agent's chat** (Claude Code, Codex, Cursor, OpenCode, Pi or
   Hermes), Grove's skills explore an idea, prototype it on a throwaway branch,
   propose a change, implement it
-  with you or apply it without you, and archive it. Each skill asks `grove` for instructions and follows them in
+  with you or without you, and archive it. Each skill asks `grove` for instructions and follows them in
   the conversation you are already in.
 
 Grove never commits. It starts an agent only when you run `grove run`,
@@ -34,7 +34,8 @@ terminal  merge
 ```
 
 Or, once several changes are approved, `/grove-plan` puts them in a cycle,
-`/grove-apply <cycle-id>` builds them all in order, and you merge once.
+`/grove-implement <cycle-id> --unattended` builds them all in order
+without asking you, and you merge once.
 Mark the cycle `unattended` and `grove run` builds it for you.
 
 Some agents type skills another way, such as `$grove-explore`; the
@@ -51,11 +52,11 @@ Some agents type skills another way, such as `$grove-explore`; the
   stale plans, and the project as data.
 - [Planning cycles](planning.md): group approved changes, say which need
   a person, and mark a cycle for `grove run`.
-- [Running apply unattended](running.md): `grove run` builds a cycle you
+- [Running unattended](running.md): `grove run` builds a cycle you
   marked in one Claude Code session, on its own or from a timer.
 - Guides: recipes others have tried, such as
   [pushing changes to a tracker](guides/push-to-a-tracker.md),
   [running Grove in CI](guides/run-grove-in-ci.md),
-  [running apply on a timer](guides/run-apply-on-a-timer.md) and
+  [running on a timer](guides/run-on-a-timer.md) and
   [keeping a glossary and decision records](guides/glossary-and-decisions.md).
 - [Reference](reference.md): every command, skill and setting.
