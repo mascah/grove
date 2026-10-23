@@ -1,0 +1,5 @@
+title: Specs without .grove.yaml, and no design.md
+created: 2026-10-23T21:42:51Z
+description: A maintained spec is a folder holding spec.md, titled by its first heading and described by its Purpose's first sentence; propose writes no design.md.
+schema: default
+base: 0c6f419dab8187d31dd526c0a60754fbbdeeb688
