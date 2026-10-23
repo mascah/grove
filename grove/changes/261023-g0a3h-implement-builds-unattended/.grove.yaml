@@ -1,0 +1,6 @@
+title: Implement builds unattended, and apply goes
+created: 2026-10-23T21:36:27Z
+description: /grove-implement <id> --unattended builds a change or a cycle asking no one, grove run types it, and the apply skill is removed.
+schema: default
+depends_on: [261023-m2she]
+base: 57af2e3f2f9e00484fd1984de15898613917e3be
