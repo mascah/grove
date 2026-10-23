@@ -19,13 +19,15 @@ check` and `grove archive` shall accept it with none.
   under "Observed current behavior", its `tasks.md` holds no `T-NN`
   task, and `grove check` reports no problem in it
 
-#### Scenario: Archived with no tasks
+#### Scenario: Implemented with no tasks
 
-- GIVEN change R has no tasks, and its change spec is folded into
-  `grove/specs/record-editing/spec.md`
-- WHEN the owner runs `grove archive R`
-- THEN Grove moves R to `changes/archive/`, since no task waits on
-  `implementation.md`
+- GIVEN change R, drafted on branch `record-edit` with no tasks, and the
+  target does not hold R
+- WHEN the owner runs `/grove-implement R` on `record-edit`
+- THEN the agent builds nothing, folds R's change spec into
+  `grove/specs/record-editing/spec.md`, and `grove archive R` moves R to
+  `changes/archive/`, since no task waits on `implementation.md`; one
+  merge of `record-edit` approves and archives R
 
 #### Scenario: The owner wants the code changed too
 

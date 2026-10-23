@@ -34,13 +34,14 @@ Acceptance:
   ADDED, what the code does today under "Observed current behavior", and
   each difference the owner does not accept under the maintained spec's
   "Known discrepancies"; that the change has no tasks; and that it is
-  archived on its own branch, with `/grove-implement <change-id>` on the
-  draft or with `/grove-archive <change-id>`, so one merge records it.
+  built on its own branch with `/grove-implement <change-id>` on the
+  draft, which verifies and archives it, so one merge approves and
+  records it. It does not offer `/grove-archive` alone.
 - On a fresh ledger fixture, in Claude Code, following only the guide: a
   change recording what `ledger edit` does is proposed with no tasks,
   with the traceback `ledger edit 99 --note x` ends in left as a
-  difference the owner does not accept; it is archived on the same
-  branch; `grove/specs/record-editing/spec.md` holds the rules and lists
+  difference the owner does not accept; `/grove-implement <change-id>`
+  on the same branch builds nothing and archives it; `grove/specs/record-editing/spec.md` holds the rules and lists
   the traceback under "Known discrepancies"; `grove check` prints "No
   problems in grove/."; and `grove review` names the change as approved
   by the merge.

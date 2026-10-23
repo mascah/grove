@@ -31,8 +31,9 @@ A guide, `docs/guides/spec-existing-code.md`, shows how to record
 behavior the code already has: propose a change with the rules the owner
 agrees under ADDED, what the code does today under "Observed current
 behavior", and each difference the owner does not accept kept for the
-maintained spec's "Known discrepancies"; give it no tasks; and archive
-it on the same branch, so one merge records it. The guide is tried on
+maintained spec's "Known discrepancies"; give it no tasks; and run
+`/grove-implement <change-id>` on the same branch, which with no tasks
+only verifies and archives it, so one merge approves and records it. The guide is tried on
 the ledger fixture before it is published. The tasks guide says such a
 change has no tasks. The rule is in
 [specs/propose/spec.md](specs/propose/spec.md).
@@ -55,6 +56,8 @@ change has no tasks. The rule is in
   change with no tasks.
 - Archiving a draft on its branch with `/grove-implement`: change
   261023-6yafg, which this change waits on.
+- Recording such a change with `/grove-archive` alone (see the first
+  decision).
 - A step in `dev/walkthrough.md`: guides are trialed recipes, not
   specification (rule 8).
 
@@ -67,13 +70,18 @@ every answer below in one round ("yes to C & D").
   only records behavior the code already has, with the agreed rules
   under ADDED, what the code does today under "Observed current
   behavior", and differences the owner does not accept under the
-  maintained spec's "Known discrepancies", with no tasks; it archives on
-  the same branch, through 261023-6yafg's draft path or
-  `/grove-archive`, so one merge records it. It is trialed on the ledger
-  fixture before it is published, and the trial is a task with its
-  result in the implementing pull request.** Reason: AI-DLC reverse
-  engineers existing code; OpenSpec (#724) and Spec Kit leave it out;
-  and guides are trialed recipes (rule 8).
+  maintained spec's "Known discrepancies", with no tasks; it is built on
+  the same branch through 261023-6yafg's draft path,
+  `/grove-implement <change-id>`, which with no tasks goes straight to
+  verifying and archiving, so one merge approves and archives it. It is
+  trialed on the ledger fixture before it is published, and the trial is
+  a task with its result in the implementing pull request.** Reason:
+  AI-DLC reverse engineers existing code; OpenSpec (#724) and Spec Kit
+  leave it out; and guides are trialed recipes (rule 8). The owner's
+  answer also allowed `/grove-archive` alone; the coordinator narrowed
+  it to implement after writing, because rule 4 approves a draft with
+  its code only on "the branch that implements it, with the owner in the
+  session", and archive alone implements nothing.
 - **The tasks guide says a change that only records behavior the code
   already has has no tasks; `grove bootstrap` stays parked, with no new
   command.** Reason: `grove check` and `grove archive` already accept
