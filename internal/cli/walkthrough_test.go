@@ -431,7 +431,8 @@ func TestArchive(t *testing.T) {
 		if m == nil {
 			t.Fatalf("no %s template in:\n%s", name, out)
 		}
-		filled := strings.NewReplacer("<capability>", "record-editing", "<title>", "Record editing").Replace(m[1])
+		filled := regexp.MustCompile(`(?s)### Requirement: \[.*?\n\n## Known`).ReplaceAllString(m[1], olderEdits+"\n## Known")
+		filled = strings.NewReplacer("<capability>", "record-editing", "<title>", "Record editing").Replace(filled)
 		os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", name), []byte(filled), 0o644)
 	}
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
@@ -465,6 +466,62 @@ func TestArchive(t *testing.T) {
 	}
 	if len(next) >= 12<<10 {
 		t.Errorf("explore instructions are %d bytes, want under 12 KiB", len(next))
+	}
+}
+
+// TestFold follows the walkthrough's "Archive checks the fold": archive
+// compares the maintained spec with where the branch left main, the changes
+// archived on the branch since, and the change archived.
+func TestFold(t *testing.T) {
+	dir := setUp(t)
+	req := func(name, rule string) string {
+		return "### Requirement: " + name + "\n\nWhen a user " + rule + ", the system shall save it.\n\n#### Scenario: " + name + "\n\n- THEN it is saved\n\n"
+	}
+	keep, show, old := req("Keep a category", "edits a record"), req("Show a record", "asks for a record"), req("Old rule", "types")
+	maintain(t, dir, keep+show+old)
+	commitAll(t, dir, "Record editing")
+	changeSpec := func(branch, title, body string) (string, string) {
+		cid, folder := propose(t, dir, branch, title, "")
+		os.WriteFile(filepath.Join(folder, "specs/record-editing/spec.md"), []byte("# Changes to record-editing\n\n"+body), 0o644)
+		commitAll(t, dir, "Propose "+title)
+		git(t, dir, "switch", "-q", "main")
+		git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve "+cid, branch)
+		os.WriteFile(filepath.Join(folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
+		return cid, folder
+	}
+	keep2 := req("Keep a category", "edits an older record")
+	a, aDir := changeSpec("a", "Keep older categories", "## MODIFIED Requirements\n\n"+keep2)
+	del := req("Delete a record", "deletes a record")
+	c, _ := changeSpec("c", "Delete records", "## ADDED Requirements\n\n"+del+"## REMOVED Requirements\n\n### Requirement: Old rule\n\nNo one types.\n")
+	d, dDir := changeSpec("d", "Show more", "## MODIFIED Requirements\n\n"+req("Show a record", "asks for more"))
+	git(t, dir, "switch", "-q", "-c", "impl")
+	git(t, dir, "switch", "-q", "main")
+	maintain(t, dir, keep+req("Show a record", "asks for a saved record")+old)
+	commitAll(t, dir, "The target moves")
+	git(t, dir, "switch", "-q", "impl")
+
+	refuses := func(id, want string) {
+		t.Helper()
+		var stdout, stderr strings.Builder
+		if code := run([]string{"archive", id}, &stdout, &stderr); code != 1 || stdout.String() != want || !strings.HasSuffix(stderr.String(), "so "+id+" stays where it is; fix the maintained specs and run grove archive again\n") {
+			t.Errorf("archive %s: status %d\n%s%s", id, code, stdout.String(), stderr.String())
+		}
+	}
+	maintain(t, dir, strings.Replace(keep2, "older", "old", 1)+req("Show a record", "asks")+old)
+	refuses(a, "grove/specs/record-editing/spec.md:5: requirement \"Keep a category\" is not as "+a+" gives it\n"+
+		"grove/specs/record-editing/spec.md:13: requirement \"Show a record\" changed though no change names it\n")
+	maintain(t, dir, old+strings.ReplaceAll(keep2, "edits an ", "edits\nan ")+show)
+	grove(t, "archive", a)
+
+	maintain(t, dir, keep2+show+old+del)
+	refuses(c, "grove/specs/record-editing/spec.md:21: requirement \"Old rule\" is still here though "+c+" removes it\n")
+	maintain(t, dir, keep2+show+del)
+	grove(t, "archive", c)
+
+	os.WriteFile(filepath.Join(dDir, "implementation.md"), []byte("# Implementation\n\nStatus: dropped\n"), 0o644)
+	grove(t, "archive", d)
+	if _, err := os.Stat(filepath.Join(dir, "grove/changes/archive", filepath.Base(aDir))); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -558,9 +615,7 @@ func finish(t *testing.T, dir, branch, id, folder, spec string) string {
 	t.Helper()
 	git(t, dir, "switch", "-q", "-c", branch)
 	os.WriteFile(filepath.Join(folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
-	os.MkdirAll(filepath.Join(dir, "grove/specs/record-editing"), 0o755)
-	os.WriteFile(filepath.Join(dir, "grove/specs/record-editing/.grove.yaml"), []byte("title: Record editing\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "grove/specs/record-editing/spec.md"), []byte("# Record editing\n\n## Requirements\n\n"+spec), 0o644)
+	maintain(t, dir, spec)
 	var stdout, stderr strings.Builder
 	run([]string{"check"}, &stdout, &stderr)
 	grove(t, "archive", id)
@@ -570,9 +625,21 @@ func finish(t *testing.T, dir, branch, id, folder, spec string) string {
 	return stdout.String()
 }
 
+// maintain writes reqs as the requirements of the record-editing
+// maintained spec, as archive's fold does.
+func maintain(t *testing.T, dir, reqs string) {
+	t.Helper()
+	os.MkdirAll(filepath.Join(dir, "grove/specs/record-editing"), 0o755)
+	os.WriteFile(filepath.Join(dir, "grove/specs/record-editing/.grove.yaml"), []byte("title: Record editing\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove/specs/record-editing/spec.md"), []byte("# Record editing\n\n## Requirements\n\n"+reqs), 0o644)
+}
+
 // TestCoordinating follows the walkthrough's "Coordinating changes".
 func TestCoordinating(t *testing.T) {
 	dir := setUp(t)
+	keep := "### Requirement: Keep a category\n\nWhen a user edits a record and leaves its category unchanged, the system shall save the edit.\n\n#### Scenario: A note\n"
+	maintain(t, dir, keep)
+	commitAll(t, dir, "Record editing")
 	unknown, unknownDir := approve(t, dir, "unknown-id", "Editing an unknown ID prints an error", "")
 
 	// Propose records depends_on and base; lists show what waits.
@@ -614,9 +681,9 @@ func TestCoordinating(t *testing.T) {
 	}
 
 	// A dependency archived on this branch, not yet on main, is met.
-	keep := "### Requirement: Keep a category\n\nWhen a user edits a record and leaves its category unchanged, the system shall save the edit.\n\n#### Scenario: A note\n"
 	git(t, dir, "switch", "-q", "-c", "batch")
 	os.WriteFile(filepath.Join(unknownDir, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
+	maintain(t, dir, keep+olderEdits)
 	grove(t, "archive", unknown)
 	if out := grove(t, "instructions", "apply", k, del); !strings.Contains(out, "You are applying approved change "+del) || !strings.Contains(out, ", change 2 of 2 in cycle "+k+".") ||
 		!strings.Contains(out, "1. "+unknown+" \"Editing an unknown ID prints an error\" — archived in this working tree\n2. "+del+" \"Add ledger delete ID\" — this change\n") {
@@ -629,7 +696,7 @@ func TestCoordinating(t *testing.T) {
 	git(t, dir, "clean", "-qfd")
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "branch", "-q", "-D", "batch")
-	if out := finish(t, dir, "unknown-id-impl", unknown, unknownDir, keep); out != "No problems in grove/.\n" {
+	if out := finish(t, dir, "unknown-id-impl", unknown, unknownDir, keep+olderEdits); out != "No problems in grove/.\n" {
 		t.Errorf("check on unknown-id-impl printed %q", out)
 	}
 	grove(t, "instructions", "apply", k, del)
@@ -684,7 +751,7 @@ func TestCoordinating(t *testing.T) {
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve showing what was saved", "show-saved")
 	want := "grove/changes/" + filepath.Base(showDir) + "/specs/record-editing/spec.md:5: requirement \"Keep a category\" was rewritten since base " + base[:7] + "; revise the change with propose\n"
-	if out := finish(t, dir, "recategorize-impl", recat, recatDir, "### Requirement: Keep a category\n\n"+recatText); out != want {
+	if out := finish(t, dir, "recategorize-impl", recat, recatDir, olderEdits+"### Requirement: Keep a category\n\n"+recatText); out != want {
 		t.Errorf("check while archiving recategorize printed %q", out)
 	}
 	stdout.Reset()
@@ -966,6 +1033,7 @@ func TestRun(t *testing.T) {
 	t.Chdir(owner)
 	os.WriteFile(filepath.Join(aDir, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
 	os.WriteFile(filepath.Join(bDir, "implementation.md"), []byte("Status: dropped\n"), 0o644)
+	maintain(t, owner, olderEdits)
 	grove(t, "archive", a)
 	grove(t, "archive", b)
 	commitAll(t, owner, "Archive the batch")
