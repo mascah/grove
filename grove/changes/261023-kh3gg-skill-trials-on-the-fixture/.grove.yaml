@@ -1,0 +1,6 @@
+title: Skill trials on the fixture
+created: 2026-10-23T21:42:49Z
+description: Five hand-run cases on the ledger fixture count how Grove's skills behave, run in Claude Code and Codex whenever instruction text changes.
+schema: default
+depends_on: [261023-g0a3h, 261023-6yafg, 261023-vqsrt, 261023-yqfpj, 261023-bgtcb]
+base: 0c6f419dab8187d31dd526c0a60754fbbdeeb688
