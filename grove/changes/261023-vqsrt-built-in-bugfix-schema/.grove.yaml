@@ -1,0 +1,5 @@
+title: A built-in bugfix schema
+created: 2026-10-23T21:36:29Z
+description: Grove ships a bugfix change schema beside default, and explore and propose suggest it when the owner describes wrong behavior.
+schema: default
+base: 57af2e3f2f9e00484fd1984de15898613917e3be
