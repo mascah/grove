@@ -853,7 +853,7 @@ func TestRun(t *testing.T) {
 	t.Chdir(owner)
 	a, aDir := approve(t, owner, "a", "Editing an unknown ID prints an error", "")
 	b, bDir := approve(t, owner, "b", "Add ledger delete ID", "depends_on: ["+a+"]\n")
-	c, _ := approve(t, owner, "c", "Monthly budgets in report", "")
+	c, cDir := approve(t, owner, "c", "Monthly budgets in report", "")
 	nothing := func() {
 		t.Helper()
 		git(t, owner, "push", "-q", "origin", "main")
@@ -958,4 +958,26 @@ func TestRun(t *testing.T) {
 	standIn("sh -c 'trap \"\" TERM; sleep 30' &\nsleep 30")
 	runs(`^grove: attempt .* ended: timed out;`, "--retry", "--timeout", "1s")
 	gone("after the time limit")
+
+	// No remote: the local target, commits of its own and all, is the fetched
+	// one, and merging the attempt's branch into it ends the pause.
+	git(t, checkout, "remote", "remove", "origin")
+	git(t, checkout, "switch", "-q", "main")
+	os.WriteFile(filepath.Join(checkout, "notes.txt"), []byte("mine\n"), 0o644)
+	commitAll(t, checkout, "A note of the operator's")
+	local := strings.TrimSpace(git(t, checkout, "rev-parse", "main"))
+	standIn("")
+	runs(`^Attempt .* ended: exit status 0;`, "--retry")
+	if last, _ := latest(filepath.Join(checkout, ".git/grove")); last.Commit != local || last.Cycle != l {
+		t.Errorf("the run with no remote recorded %s %s, want %s %s", last.Cycle, last.Commit, l, local)
+	}
+	runs(`^grove: the project is paused after attempt `)
+	cRel, _ := filepath.Rel(owner, cDir)
+	os.WriteFile(filepath.Join(checkout, cRel, "implementation.md"), []byte("Status: dropped\n"), 0o644)
+	grove(t, "archive", c)
+	commitAll(t, checkout, "Drop "+c)
+	branch := strings.TrimSpace(git(t, checkout, "branch", "--show-current"))
+	git(t, checkout, "switch", "-q", "main")
+	git(t, checkout, "merge", "-q", "--no-ff", "-m", "Merge the attempt", branch)
+	runs(`^Nothing to apply on main at [0-9a-f]{7}\.\n$`)
 }

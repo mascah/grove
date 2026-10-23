@@ -310,6 +310,17 @@ Each step names the section of
    ends `failed to start`, the reason in its output, and the next
    `grove run` says the project is paused.
 
+6. **Without a remote** ("Without a remote"). `just fixture
+   ~/tmp/ledger-local`, `grove init`, commit, approve the unknown-ID
+   change, plan it as a cycle of one, mark it `unattended` and merge, with
+   only `Commit after each task, naming its task ID.` under
+   `rules.skills.apply`; write `.claude/settings.local.json` and the
+   `.git/info/exclude` line from the page. `git remote` lists nothing.
+   `grove run` fetches nothing, ends `exit status 0`, and its record holds
+   `main`'s commit. `grove run` says the project is paused. Merge
+   `grove/run-<attempt>` into `main`: `grove run` says there is nothing to
+   apply.
+
 ## Other paths
 
 - **Propose from a description** (§3). On a new branch, with no exploration,

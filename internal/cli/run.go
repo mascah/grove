@@ -39,7 +39,8 @@ type attempt struct {
 	Output   string    `json:"output"`
 }
 
-// runAttempt starts one attempt: it updates the target from origin and,
+// runAttempt starts one attempt: it updates the target from origin, if the
+// checkout has one, and,
 // unless the latest attempt's changes are still open or retry is set,
 // launches one Claude Code session on the apply skill for the oldest
 // eligible cycle, on a new branch, within timeout.
@@ -69,20 +70,26 @@ func runAttempt(stdout io.Writer, retry bool, timeout time.Duration) error {
 	} else if out != "" {
 		return errors.New("the checkout has uncommitted changes; commit, stash or discard them first")
 	}
-	if _, err := gitx.Run(p.Top, "fetch", "-q", "origin", p.Target); err != nil {
-		return err
-	}
-	commit, err := gitx.Run(p.Top, "rev-parse", "--verify", "FETCH_HEAD^{commit}")
-	if err != nil {
-		return err
-	}
-	commit = strings.TrimSpace(commit)
 	local, err := gitx.ResolveBranch(p.Top, p.Target)
 	if err != nil {
 		return err
 	}
-	if _, err := gitx.Run(p.Top, "merge-base", "--is-ancestor", local, commit); err != nil {
-		return fmt.Errorf("the local %s has commits origin's does not, so it cannot be fast-forwarded", p.Target)
+	remotes, err := gitx.Run(p.Top, "remote")
+	if err != nil {
+		return err
+	}
+	commit := local // with no origin, the local target is the fetched one
+	if slices.Contains(strings.Fields(remotes), "origin") {
+		if _, err := gitx.Run(p.Top, "fetch", "-q", "origin", p.Target); err != nil {
+			return err
+		}
+		if commit, err = gitx.Run(p.Top, "rev-parse", "--verify", "FETCH_HEAD^{commit}"); err != nil {
+			return err
+		}
+		commit = strings.TrimSpace(commit)
+		if _, err := gitx.Run(p.Top, "merge-base", "--is-ancestor", local, commit); err != nil {
+			return fmt.Errorf("the local %s has commits origin's does not, so it cannot be fast-forwarded", p.Target)
+		}
 	}
 	config, err := gitx.Run(p.Top, "show", commit+":grove.yaml")
 	if err != nil {

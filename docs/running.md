@@ -24,7 +24,8 @@ cd ~/grove-runs/ledger
 What you prepare, since Grove does not:
 
 - **The remote.** `origin` holds the target branch. Grove fetches it and
-  pushes nothing.
+  pushes nothing. A checkout with no `origin` works too: see
+  "Without a remote".
 - **The harness.** `grove.yaml` on the target lists `claude` under
   `agents`. `grove run` types the apply skill as that form has it,
   `/grove-apply` for skills or `/grove:apply` for commands, followed by the
@@ -80,8 +81,9 @@ grove run
 Grove refuses while another `grove run` is going in this checkout, or while
 it has uncommitted changes. Then it:
 
-1. Fetches the target from `origin`. If the local target branch has
-   commits `origin`'s does not, it refuses and leaves them alone.
+1. Fetches the target from `origin`, if the checkout has one. If the
+   local target branch has commits `origin`'s does not, it refuses and
+   leaves them alone.
 2. Selects one cycle on the fetched target: the one with the earliest
    `created` that is marked `unattended`, is not done, has no change under
    `needs_human`, has no change waiting on one neither in the cycle nor
@@ -111,6 +113,23 @@ not show and nobody commits:
   it selected and its `changes` in build order, the target `commit`, the
   `checkout`, the `branch`, the `output` file and the `outcome`, one of `exit status <n>`, `timed out`,
   `cancelled` or `failed to start`.
+
+## Without a remote
+
+In a checkout with no remote named `origin`, `grove run` fetches nothing:
+the local target branch is the fetched target. It selects a cycle there
+and creates the attempt's branch from it, and the record holds the local
+target's commit. Nobody opens a pull request, so leave the push and
+`gh pr create` rule out of `grove.yaml`, and merge the attempt's branch
+into the target yourself:
+
+```sh
+git switch main
+git merge grove/run-261021-6jbj1
+```
+
+That merge archives the changes and ends the pause, as merging the pull
+request does with `origin`.
 
 ## The pause
 
