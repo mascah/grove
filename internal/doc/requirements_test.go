@@ -42,3 +42,18 @@ Text.
 		t.Errorf("Requirements:\n got %#v\nwant %#v", got, want)
 	}
 }
+
+func TestShape(t *testing.T) {
+	src := "## ADDED Requirements\n\n### Requirement: A\n\nIt SHALL hold.\n\n~~~\n## REMOVED Requirements\n~~~\n\n#### Scenario: S\n\n## REMOVED Requirements\n\n### Requirement: B\n\nGone.\n"
+	if got := ChangeHeadings(src); !reflect.DeepEqual(got, []int{1, 13}) {
+		t.Errorf("ChangeHeadings: %v", got)
+	}
+	for _, r := range Requirements(src) {
+		if p := r.Problems(); p != nil {
+			t.Errorf("%s: %v", r.Name, p)
+		}
+	}
+	if got := (Requirement{Name: "C", Text: "Users can."}).Problems(); !reflect.DeepEqual(got, []string{`requirement "C" has no scenario`, `requirement "C" has no "shall"`}) {
+		t.Errorf("Problems: %q", got)
+	}
+}

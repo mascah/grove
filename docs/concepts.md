@@ -97,7 +97,8 @@ never merges its branch, only your merge approves a change,
 implementing and applying build the change as your main branch holds it,
 or as you agreed to revise it while implementing, and record each task's
 status in `implementation.md`, and archiving refuses a change that is
-neither finished nor dropped.
+neither finished nor dropped, or a finished one whose requirements the
+maintained specs do not hold word for word.
 
 ## Why archive folds a change into the specs
 

@@ -47,6 +47,7 @@ func check(stdout io.Writer) error {
 	if err := movedSinceBase(p, c); err != nil {
 		return err
 	}
+	shapes(root, c)
 	docs := append([]*doc.Document{}, c.Specs...)
 	for _, ch := range c.Changes {
 		docs = append(docs, &ch.Document)
@@ -105,6 +106,32 @@ func stale(p project, root fs.FS, c *doc.Collection) error {
 		}
 	}
 	return nil
+}
+
+// shapes reports each requirement of a maintained spec or an open change
+// spec in c that lacks "shall" or a scenario, and each change heading left
+// in a maintained spec.
+func shapes(root fs.FS, c *doc.Collection) {
+	report := func(d *doc.Document, file string) {
+		b, _ := fs.ReadFile(root, file)
+		for _, r := range doc.Requirements(string(b)) {
+			for _, m := range r.Problems() {
+				d.Diagnostics = append(d.Diagnostics, doc.Diagnostic{Path: file, Line: r.Line, Message: m})
+			}
+		}
+	}
+	for _, d := range c.Specs {
+		report(d, d.Path)
+		b, _ := fs.ReadFile(root, d.Path)
+		for _, l := range doc.ChangeHeadings(string(b)) {
+			d.Diagnostics = append(d.Diagnostics, doc.Diagnostic{Path: d.Path, Line: l, Message: "this heading belongs in a change spec; a maintained spec lists its requirements under ## Requirements"})
+		}
+	}
+	for _, ch := range c.Changes {
+		for _, file := range slices.Sorted(maps.Keys(ch.Touches)) {
+			report(&ch.Document, file)
+		}
+	}
 }
 
 // stalePlans reports each member of a cycle in c, marked unattended and

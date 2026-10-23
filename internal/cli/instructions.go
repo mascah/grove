@@ -120,33 +120,6 @@ func instructionsArchive(stdout io.Writer, id string) error {
 	return show(stdout)(instruct.Archive(ip, c, files))
 }
 
-// archive moves change id's folder in the working tree to changes/archive/.
-func archive(stdout io.Writer, id string) error {
-	p, err := openProject()
-	if err != nil {
-		return err
-	}
-	root := filepath.Join(p.Top, p.Root)
-	c, _, err := change(os.DirFS(root), p.instruct().Layout, id)
-	if err != nil {
-		return err
-	}
-	for _, t := range c.Tasks {
-		if !c.Dropped && t.Status != "done" {
-			return fmt.Errorf("%s is not done in implementation.md; archive a change when every task is done or the file says Status: dropped", t.ID)
-		}
-	}
-	to := "changes/archive/" + filepath.Base(c.Dir)
-	if err := os.MkdirAll(filepath.Join(root, "changes", "archive"), 0o755); err != nil {
-		return err
-	}
-	if err := os.Rename(filepath.Join(root, c.Dir), filepath.Join(root, to)); err != nil {
-		return err
-	}
-	fmt.Fprintf(stdout, "Archived %s to %s/%s/; nothing is committed.\n", id, p.Root, to)
-	return nil
-}
-
 // target returns the project, the target's documents and this working
 // tree's.
 func target() (project, instruct.Project, *doc.Collection, error) {
