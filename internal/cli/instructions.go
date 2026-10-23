@@ -135,50 +135,30 @@ func target() (project, instruct.Project, *doc.Collection, error) {
 	return p, ip, tree, err
 }
 
-// instructionsApply prints the apply instructions for the target's cycle
-// ids[0], or, with ids[1], for that member of it. Apply takes nothing else.
-func instructionsApply(stdout io.Writer, ids ...string) error {
-	if len(ids) == 0 {
-		return errors.New("apply takes a cycle ID; build a change with the owner with /grove-implement <change-id>")
-	}
-	p, ip, tree, err := target()
-	if err != nil {
-		return err
-	}
-	cy := ip.Agreed.Cycle(ids[0])
-	switch {
-	case cy == nil && ip.Agreed.Change(ids[0]) != nil:
-		return fmt.Errorf("apply takes a cycle ID; build %s with the owner with /grove-implement %s", ids[0], ids[0])
-	case cy == nil:
-		return fmt.Errorf("%s holds no cycle %s", p.Target, ids[0])
-	case len(ids) == 1:
-		return instructionsCycle(stdout, p, ip, tree, cy, "apply")
-	case !slices.Contains(cy.Meta.Changes, ids[1]):
-		return fmt.Errorf("%s is not in cycle %s", ids[1], cy.ID)
-	}
-	return instructionsChange(stdout, p, ip, tree, ids[1], instruct.Apply, cy)
-}
-
 // instructionsImplement prints the implement instructions for the target's
-// cycle or change id.
-func instructionsImplement(stdout io.Writer, id string) error {
+// cycle or change id, with the owner or, unattended, asking no one. A
+// member of a cycle the target holds that is not done gets its plan.
+func instructionsImplement(stdout io.Writer, id string, unattended bool) error {
 	p, ip, tree, err := target()
 	if err != nil {
 		return err
 	}
 	if cy := ip.Agreed.Cycle(id); cy != nil {
-		return instructionsCycle(stdout, p, ip, tree, cy, "implement")
+		return instructionsCycle(stdout, p, ip, tree, cy, unattended)
 	}
-	return instructionsChange(stdout, p, ip, tree, id, instruct.Implement, nil)
+	var cy *doc.Cycle
+	if i := slices.IndexFunc(ip.Agreed.Cycles, func(cy *doc.Cycle) bool { return !cy.Done && slices.Contains(cy.Meta.Changes, id) }); i >= 0 {
+		cy = ip.Agreed.Cycles[i]
+	}
+	return instructionsChange(stdout, p, ip, tree, id, unattended, cy)
 }
 
-// instructionsChange prints the instructions skill builds, apply's or
-// implement's, for change id as the target holds it, with cycle cy's plan
+// instructionsChange prints the implement instructions, with the owner or
+// unattended, for change id as the target holds it, with cycle cy's plan
 // when it is not nil, unless it waits on a change tree has not archived as
 // finished (D-56). For a change in no cycle that is not done, they name
 // each task's file that changed on the target since the change's base.
-func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *doc.Collection, id string,
-	skill func(instruct.Project, *doc.Change, map[string]string) (instruct.Instructions, error), cy *doc.Cycle) error {
+func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *doc.Collection, id string, unattended bool, cy *doc.Cycle) error {
 	c := ip.Agreed.Change(id)
 	if c == nil {
 		return fmt.Errorf("%s holds no approved change %s", p.Target, id)
@@ -194,7 +174,7 @@ func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *
 	if err != nil {
 		return err
 	}
-	in, err := skill(ip, c, files)
+	in, err := instruct.Implement(ip, c, files, unattended)
 	if err == nil && cy == nil && !inOpenCycle(tree, id) && c.Meta.Base != "" {
 		var tasks []doc.Task
 		tasks, err = moved(p, ip.Commit, c)
@@ -220,10 +200,10 @@ func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *
 	return show(stdout)(in, err)
 }
 
-// instructionsCycle prints the instructions for building each member of
-// cycle cy that tree has not archived with skill, apply's or implement's,
-// in build order.
-func instructionsCycle(stdout io.Writer, p project, ip instruct.Project, tree *doc.Collection, cy *doc.Cycle, skill string) error {
+// instructionsCycle prints the instructions for implementing each member
+// of cycle cy that tree has not archived, with the owner or unattended, in
+// build order.
+func instructionsCycle(stdout io.Writer, p project, ip instruct.Project, tree *doc.Collection, cy *doc.Cycle, unattended bool) error {
 	fsys, err := gitx.TreeFS(p.Top, ip.Commit, p.Root)
 	if err != nil {
 		return err
@@ -233,7 +213,7 @@ func instructionsCycle(stdout io.Writer, p project, ip instruct.Project, tree *d
 		return err
 	}
 	ordered, waiting := buildable(ip.Agreed, tree, cy)
-	return show(stdout)(instruct.Cycle(ip, skill, cy, string(b), ordered, waiting))
+	return show(stdout)(instruct.Cycle(ip, cy, string(b), ordered, waiting, unattended))
 }
 
 // members returns the changes agreed approves that cycle cy lists and that

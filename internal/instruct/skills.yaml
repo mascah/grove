@@ -1,7 +1,8 @@
 # Grove's skills (CONSTITUTION.md rule 10). A skill's description is the
 # description of the skill init writes for it, and args what that skill
 # passes to `instructions <skill>`, <args> being what the user typed after
-# the skill's name. What Grove requires of a skill is requires/<name>.md; how
+# the skill's name. What Grove requires of a skill is requires/<name>.md, and for implement
+# also requires/implement-owner.md or requires/implement-unattended.md; how
 # it goes is the change schema's.
 - name: explore
   description: Explore an idea with the owner before proposing a change, in an interview that writes nothing unless asked.
@@ -15,10 +16,7 @@
   description: Plan a cycle of approved changes from a description or one change's ID, or revise a cycle given its ID, asking the owner which changes need a person.
   args: '"<args>"'
 - name: implement
-  description: Implement an approved change, or each change of a cycle, given its ID with the owner in this session, asking them where the change does not settle a task, revising the change on its branch with their agreement, and archiving it when every task is done.
-  args: <args>
-- name: apply
-  description: Apply a cycle of approved changes given its ID, building each change in turn without asking anyone, recording progress in its implementation.md and archiving it when every task is done.
+  description: Implement an approved change, or each change of a cycle, given its ID with the owner in this session, asking them where the change does not settle a task and revising the change on its branch with their agreement, or with --unattended asking no one, and archiving it when every task is done.
   args: <args>
 - name: archive
   description: Archive a finished or dropped change given its ID, first folding a finished change's specs into the maintained specs.
