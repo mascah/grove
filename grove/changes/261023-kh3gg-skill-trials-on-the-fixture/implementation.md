@@ -36,10 +36,18 @@ Evidence of the hand-run version, before the revision:
 
 ### T-02 — Record the baseline
 
-Status: not started
+Status: in progress
 
 Was blocked on who runs the ten trials by hand; the revision of
 2026-10-23 answers it: `just trials` (T-03).
+
+`just trials` on 2026-10-23, on Grove as cycle B leaves it (8454724's
+code and instructions; the script at 8d146e7 to 8fdd968, which changed
+only `dev/trials/`): nine of the ten trials are in the pull request's
+description. Codex's (c) is left: its rerun, after the script's
+unattended fix, hit Codex's usage limit ("try again at Oct 24th, 2026
+2:20 AM"), so it waits for `HARNESSES=codex just trials c`. No setup
+needed correcting.
 
 Found while preparing it: in a git worktree, `just build` gives a binary
 whose `grove version` prints `grove dev`, with no build info from Git;
@@ -70,6 +78,11 @@ Status: done
   when it is open, which stalled the loop; a round that ends "Yes to all,
   or tell me which numbers to change." has no question mark, so a small
   model decides whether the agent waits.
+- Found by the baseline, and fixed: a run that archives a change moved
+  files the snapshot still listed, which ended six trials; the
+  unattended runs of (c) got owner replies; and a turn Codex failed at
+  its usage limit was scored as an empty run. A failed turn now fails
+  the trial, with the harness's message in its row.
 
 ## Scenarios
 
