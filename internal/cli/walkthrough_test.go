@@ -922,7 +922,8 @@ func TestCycles(t *testing.T) {
 	out := grove(t, "instructions", "plan", "0.4 release")
 	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.yaml`").FindStringSubmatch(out)
 	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
-		"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n"} {
+		"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n",
+		"\n# depends_on: [", "ask the owner\n  whether it follows any of them", "`grove run` builds\n    nothing of the cycle until it is"} {
 		if m == nil || !strings.Contains(out, s) {
 			t.Errorf("plan instructions lack %q:\n%s", s, out)
 		}
@@ -1007,10 +1008,42 @@ func TestCycles(t *testing.T) {
 	checks("grove/cycles/261099-zzzzy-bare.yaml: created: required field is missing\n" +
 		"grove/cycles/261099-zzzzy-bare.yaml: changes: required field is missing\n" +
 		"grove/cycles/261099-zzzzy-bare.yaml: planned: required field is missing\n" +
-		"grove/cycles/261099-zzzzz-later.yaml:4: unknown field \"start\"; this file takes title, created, changes, planned, goal, needs_human and unattended\n" +
+		"grove/cycles/261099-zzzzz-later.yaml:4: unknown field \"start\"; this file takes title, created, changes, planned, goal, depends_on, needs_human and unattended\n" +
 		"grove/cycles/261099-zzzzz-later.yaml: planned: required field is missing\n" +
 		"grove/cycles/261099-zzzzz-later.yaml:3: changes: " + a + " is also in cycle " + k + ", which is not done\n" +
 		"grove/cycles/261099-zzzzz-later.yaml:3: changes: 260101-zzzzz is no change, open or archived\n")
+	git(t, dir, "checkout", "-q", "--", ".")
+	git(t, dir, "clean", "-qfd")
+
+	// A cycle that follows another, one that follows no cycle, and two that
+	// follow each other.
+	y, now := "261099-y0000", strings.TrimSpace(git(t, dir, "rev-parse", "main"))
+	fresh, next := strings.Replace(plan, main, now, 1), filepath.Join(dir, "grove/cycles/261099-y0000-next.yaml")
+	follow := func(k, y string) {
+		os.WriteFile(next, []byte("title: Next\ncreated: 2026-10-23T09:00:00Z\nchanges: ["+b+"]\nplanned: "+now+"\ndepends_on: ["+y+"]\n"), 0o644)
+		os.WriteFile(cycle, []byte(fresh+k), 0o644)
+	}
+	follow("", k)
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check of a cycle that follows another printed %q", got)
+	}
+	commitAll(t, dir, "Plan next")
+	if got := grove(t, "changes"); !strings.Contains(got, b+"  Add ledger delete ID  approved  in cycle "+y+", waits on cycle "+k+"\n") {
+		t.Errorf("changes of a cycle that waits on a cycle printed %q", got)
+	}
+	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "`grove/cycles/261099-y0000-next.yaml`\n  - changes: "+b+"\n  - follows "+k+"\n") {
+		t.Errorf("the project index does not name the cycle followed:\n%s", out)
+	}
+	follow("", "261099-zzzzz")
+	checks("grove/cycles/261099-y0000-next.yaml:5: depends_on: 261099-zzzzz is no cycle\n")
+	follow("depends_on: ["+y+"]\n", k)
+	checks(file + ":5: depends_on: " + y + " waits on this cycle in turn, so neither can run\n" +
+		"grove/cycles/261099-y0000-next.yaml:5: depends_on: " + k + " waits on this cycle in turn, so neither can run\n")
+	git(t, dir, "checkout", "-q", "--", ".")
+	finish(t, dir, "a-impl", a, aDir, olderEdits)
+	if got := grove(t, "changes"); !strings.Contains(got, b+"  Add ledger delete ID  approved  in cycle "+y+"\n") {
+		t.Errorf("changes once the cycle followed is done printed %q", got)
+	}
 }
 
 // TestRun follows the walkthrough's "Running unattended" with a
@@ -1350,4 +1383,94 @@ func TestMovedFiles(t *testing.T) {
 	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, "`ledger/cli.py`,\n`tests/test_cli.py`", "ledger/cli.py", 1)), 0o644)
 	os.Remove(filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"))
 	checks(rel + ":5: T-01's Files: line should list repo-relative paths in backticks, separated by commas\n")
+}
+
+// TestFollows follows the walkthrough's steps on a cycle that follows
+// another: run waits on it, and the merges archiving its changes, or those
+// of a cycle it follows in turn, leave the plan fresh; nothing else does.
+func TestFollows(t *testing.T) {
+	dir := setUp(t)
+	b, bDir := approve(t, dir, "b", "Add ledger delete ID", "")
+	os.WriteFile(filepath.Join(bDir, "tasks.md"), []byte("## T-01 — Add ledger delete ID\n\nFiles: `ledger/cli.py`\n"), 0o644)
+	commitAll(t, dir, "Name B's file")
+	c, cDir := approve(t, dir, "c", "Monthly budgets in report", "")
+	d, dDir := approve(t, dir, "d", "Show saved records", "")
+	e, eDir := approve(t, dir, "e", "Export records", "")
+	f, fDir := approve(t, dir, "f", "Import a CSV", "")
+	k, l, m, n := "261023-k0000", "261023-p0000", "261023-q0000", "261023-r0000" // K follows L, L follows M
+	planCycle(t, dir, m, "2026-10-23T11:00:00Z", false, e)
+	planCycle(t, dir, l, "2026-10-23T10:00:00Z", true, c, d)
+	planCycle(t, dir, k, "2026-10-23T09:00:00Z", true, b)
+	planCycle(t, dir, n, "2026-10-23T12:00:00Z", false, f)
+	for id, follows := range map[string]string{k: l, l: m} {
+		file := filepath.Join(dir, "grove/cycles", id+"-cycle.yaml")
+		os.WriteFile(file, []byte(read(t, file)+"depends_on: ["+follows+"]\n"), 0o644)
+	}
+	commitAll(t, dir, "Order the cycles")
+
+	clean, stale := "No problems in grove/.\n", "grove/cycles/"+k+"-cycle.yaml: planned: "+b+" changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan "+k+"\n"
+	state := func(want, selects, how string) {
+		t.Helper()
+		var stdout, stderr strings.Builder
+		run([]string{"check"}, &stdout, &stderr)
+		p, _ := openProject()
+		ip, _ := p.agreed()
+		got := ""
+		if cy, _ := eligible(p, ip); cy != nil {
+			got = cy.ID
+		}
+		if stdout.String() != want || got != selects {
+			t.Errorf("%s: check printed %q, grove run selects %q, want %q", how, stdout.String(), got, selects)
+		}
+	}
+	edit := func(msg string) {
+		os.WriteFile(filepath.Join(dir, "ledger/cli.py"), []byte(read(t, filepath.Join(dir, "ledger/cli.py"))+"# "+msg+"\n"), 0o644)
+		commitAll(t, dir, msg)
+	}
+	// land builds change id on a branch, archiving it and editing B's file, and merges it.
+	land := func(id, folder string, squash bool) {
+		t.Helper()
+		git(t, dir, "switch", "-q", "-c", "land-"+id)
+		os.WriteFile(filepath.Join(folder, "implementation.md"), []byte("Status: dropped\n"), 0o644)
+		grove(t, "archive", id)
+		edit("Build " + id)
+		git(t, dir, "switch", "-q", "main")
+		if squash {
+			git(t, dir, "merge", "-q", "--squash", "land-"+id)
+			commitAll(t, dir, "Land "+id+", squashed")
+		} else {
+			git(t, dir, "merge", "-q", "--no-ff", "-m", "Land "+id, "land-"+id)
+		}
+	}
+
+	// K waits on L, which waits on M; given K, run refuses it, and implement
+	// builds it with the owner as it would without depends_on.
+	state(clean, "", "planned")
+	var stdout, stderr strings.Builder
+	branches := git(t, dir, "branch")
+	if code := run([]string{"run", k}, &stdout, &stderr); code != 1 || stderr.String() != "grove: cycle "+k+" waits on cycle "+l+", which is not done\n" || git(t, dir, "branch") != branches {
+		t.Errorf("grove run %s: status %d, %q", k, code, stderr.String())
+	}
+	if out := grove(t, "instructions", "implement", k); !strings.Contains(out, "\n1. "+b+" \"Add ledger delete ID\"\n") {
+		t.Errorf("implement %s does not list its member:\n%.3000s", k, out)
+	}
+
+	// M lands in a merge commit, then L as two commits: a squash, then a
+	// squash or a merge commit. The older marked K waits until L is done.
+	land(e, eDir, false)
+	state(clean, l, "M's change archived in a merge commit")
+	land(c, cDir, false)
+	state(clean, l, "one of L's changes archived")
+	land(d, dDir, true)
+	state(clean, k, "L's last change archived in a squash")
+	git(t, dir, "reset", "-q", "--hard", "HEAD~1")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Land "+d, "land-"+d)
+	state(clean, k, "L's last change archived in a merge commit")
+
+	// Any other commit still counts.
+	edit("Another change")
+	state(stale, "", "a commit archiving nothing")
+	git(t, dir, "reset", "-q", "--hard", "HEAD~1")
+	land(f, fDir, false)
+	state(stale, "", "an archive of a cycle K does not follow")
 }

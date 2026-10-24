@@ -88,7 +88,8 @@ type Task struct {
 // together, listed in its changes field.
 type Cycle struct {
 	Document
-	Done bool // every member is archived, finished or dropped
+	Done    bool     // every member is archived, finished or dropped
+	WaitsOn []string // what DependsOn names that is not a cycle done
 }
 
 // Collection is everything under one document root.
@@ -158,13 +159,56 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 		if err != nil {
 			return nil, err
 		}
-		cy.lines = cy.parse(name, b, []string{"title", "created", "changes", "planned"}, []string{"goal", "needs_human", "unattended"})
+		cy.lines = cy.parse(name, b, []string{"title", "created", "changes", "planned"}, []string{"goal", "depends_on", "needs_human", "unattended"})
 		cy.Done = !slices.ContainsFunc(cy.Meta.Changes, func(id string) bool { return !c.InArchive(id) })
 		c.Cycles = append(c.Cycles, cy)
 	}
 	slices.SortStableFunc(c.Cycles, func(a, b *Cycle) int { return cmp.Compare(a.Meta.Created, b.Meta.Created) })
+	for _, cy := range c.Cycles {
+		for _, id := range cy.Meta.DependsOn {
+			if d := c.Cycle(id); d == nil || !d.Done {
+				cy.WaitsOn = append(cy.WaitsOn, id)
+			}
+		}
+	}
 	c.members()
+	c.follows()
 	return c, nil
+}
+
+// follows reports each depends_on of a cycle not done that names no cycle,
+// or a cycle that waits on it in turn, directly or through other cycles.
+func (c *Collection) follows() {
+	for _, cy := range c.Cycles {
+		if cy.Done {
+			continue
+		}
+		seen := map[*Cycle]bool{}
+		var reaches func(from *Cycle) bool
+		reaches = func(from *Cycle) bool {
+			if from == cy {
+				return true
+			}
+			if seen[from] {
+				return false
+			}
+			seen[from] = true
+			for _, id := range from.WaitsOn {
+				if d := c.Cycle(id); d != nil && reaches(d) {
+					return true
+				}
+			}
+			return false
+		}
+		for _, id := range cy.Meta.DependsOn {
+			switch d := c.Cycle(id); {
+			case d == nil:
+				cy.report(cy.Path, cy.lines["depends_on"], "depends_on: "+id+" is no cycle")
+			case !d.Done && reaches(d):
+				cy.report(cy.Path, cy.lines["depends_on"], "depends_on: "+id+" waits on this cycle in turn, so neither can run")
+			}
+		}
+	}
 }
 
 // members reports each cycle's member that is no change, or that a cycle

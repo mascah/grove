@@ -184,9 +184,9 @@ func eligible(p project, ip instruct.Project) (*doc.Cycle, []*doc.Change) {
 }
 
 // runnable returns cycle cy's members in build order, or why grove run
-// cannot build it: it is done, names a member in needs_human, has a member
-// waiting on a change neither in it nor archived as finished, or has a
-// member that is not as its plan read it.
+// cannot build it: it is done, names a member in needs_human, waits on a
+// cycle not done, has a member waiting on a change neither in it nor
+// archived as finished, or has a member that is not as its plan read it.
 func runnable(p project, ip instruct.Project, cy *doc.Cycle) ([]*doc.Change, error) {
 	ordered, waiting := buildable(ip.Agreed, ip.Agreed, cy)
 	if len(ordered)+len(waiting) == 0 {
@@ -196,6 +196,9 @@ func runnable(p project, ip instruct.Project, cy *doc.Cycle) ([]*doc.Change, err
 		if _, ok := cy.Meta.NeedsHuman[id]; ok {
 			return nil, fmt.Errorf("%s needs a person, as cycle %s's needs_human says; build the cycle with /grove-implement %s", id, cy.ID, cy.ID)
 		}
+	}
+	if len(cy.WaitsOn) > 0 {
+		return nil, fmt.Errorf("cycle %s waits on cycle %s, which is not done", cy.ID, strings.Join(cy.WaitsOn, " and "))
 	}
 	if len(waiting) > 0 {
 		return nil, fmt.Errorf("%s waits on %s, neither in cycle %s nor archived as finished", waiting[0].ID, strings.Join(waiting[0].WaitsOn, " and "), cy.ID)

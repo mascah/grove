@@ -723,6 +723,9 @@ func (p Project) index(b *strings.Builder) {
 		if cy.Meta.Goal != "" {
 			more = append(more, "goal: "+cy.Meta.Goal)
 		}
+		if len(cy.Meta.DependsOn) > 0 {
+			more = append(more, "follows "+strings.Join(cy.Meta.DependsOn, ", "))
+		}
 		for _, id := range slices.Sorted(maps.Keys(cy.Meta.NeedsHuman)) {
 			more = append(more, "needs a person: "+id+", "+cy.Meta.NeedsHuman[id])
 		}

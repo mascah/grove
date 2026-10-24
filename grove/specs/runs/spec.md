@@ -12,8 +12,10 @@ fetched target" is the target branch as just fetched from `origin`, or,
 in a checkout with no remote named `origin`, the local target branch; in
 both, with the `grove.yaml` it holds. "A buildable cycle" is a cycle on
 the fetched target that is not done, is not stale, has no member
-`needs_human` names, and has no member that waits on a change neither in
-the cycle nor archived as finished (`grove/specs/cycles/spec.md`); "an
+`needs_human` names, has no member that waits on a change neither in
+the cycle nor archived as finished, and waits on no cycle, that is, the
+fetched target holds done every cycle its `depends_on` names
+(`grove/specs/cycles/spec.md`); "an
 eligible cycle" is a buildable cycle that holds `unattended: true`.
 
 ## Boundaries
@@ -74,6 +76,13 @@ and wait for the session to end.
 - WHEN the operator runs `grove run`
 - THEN the attempt selects K only
 
+#### Scenario: The older marked cycle waits on the newer
+
+- GIVEN `origin`'s target holds cycles K and L, both marked `unattended`,
+  K's `created` the earlier, K's `depends_on` naming L, and L not done
+- WHEN the operator runs `grove run`
+- THEN the attempt selects L only
+
 #### Scenario: A given cycle not marked
 
 - GIVEN `origin`'s target holds buildable cycle K without `unattended`,
@@ -118,8 +127,9 @@ and wait for the session to end.
 If the operator gives `grove run` a cycle ID that is not a buildable cycle
 on the fetched target, then the system shall launch no session, create no
 branch, and say in one sentence why: there is no such cycle, it is done, a
-member is under `needs_human`, its plan is stale, or a member waits on a
-change neither in the cycle nor archived as finished.
+member is under `needs_human`, it waits on a cycle its `depends_on` names
+that is not done, its plan is stale, or a member waits on a change neither
+in the cycle nor archived as finished.
 
 #### Scenario: A member needs a person
 
@@ -134,6 +144,14 @@ change neither in the cycle nor archived as finished.
   target after K's `planned` commit
 - WHEN the operator runs `grove run K`
 - THEN no session is launched, and Grove says K's plan is stale
+
+#### Scenario: A cycle it follows not done
+
+- GIVEN `origin`'s target holds cycle K, whose `depends_on` names cycle
+  L, and L's change C is not archived
+- WHEN the operator runs `grove run K`
+- THEN no branch is created and no session is launched, and Grove says K
+  waits on cycle L, which is not done
 
 #### Scenario: No such cycle
 

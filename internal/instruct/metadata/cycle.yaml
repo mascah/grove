@@ -2,6 +2,7 @@ title: <title>
 created: {{created}}
 # goal: <one line: what finishing the cycle achieves; optional>
 changes: [<the IDs of the approved changes in the cycle>]
+# depends_on: [<the IDs of the cycles not done it follows, only as the owner names them; optional>]
 # needs_human:
 #   <change-id>: <the owner's reason, in their words; only the changes the owner says need a person>
 planned: {{commit}}
