@@ -69,3 +69,27 @@ Status: done
   `record-editing`. `TestApprove` still sees a draft not yet built as
   future work, and `TestArchive` an approved change archived on its
   branch as "approves no new change".
+
+### T-04 — Document one merge for small changes
+
+Status: done
+
+- `docs/concepts.md`: "Approval is a merge" says a small change proposed
+  and built on one branch with the owner is approved with its code by one
+  merge, Grove setting no size, and that `--unattended` and `grove run`
+  build only changes the target holds; the loop's step 4 offers skipping
+  the first merge.
+- `docs/getting-started.md`: after step 3, the two next steps the agent
+  offers, building on `rename-projects` with `/grove-implement`, and
+  review's line "approves change 261015-k3m9q with its code".
+- `docs/reference.md`: the `grove instructions implement <change-id>` row
+  takes a draft, read from the working tree; the `--unattended` row only a
+  change the target holds; the `grove review` row names a change approved
+  with its code; the `grove instructions propose` row offers both next
+  steps.
+- `dev/walkthrough.md`: "Implement refuses a draft" is now "One merge for a
+  small change": proposed, built and archived on `rename`, review's line,
+  one merge, `grove changes` and `grove specs` after it, and
+  `--unattended` refusing the draft. `TestOneMerge` and
+  `TestImplementInstructions` follow it; it was not walked by hand in
+  Claude Code in this run.

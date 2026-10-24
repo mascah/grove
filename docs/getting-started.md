@@ -111,6 +111,18 @@ it changed, and asks you about the rest. It runs
 also propose without exploring: `/grove-propose <description>`. To revise a
 drafted change later, run `/grove-propose <change-id>`.
 
+When it is done, the agent offers two next steps and picks neither: merge
+the change now to approve it, as §4 does, or build it on this branch first,
+so one merge approves it with its code. For the second, stay on
+`rename-projects` and run `/grove-implement 261015-k3m9q` there, as §5
+describes; the agent treats the change as a draft and edits it only with
+your agreement. After the archive, `grove review` says
+
+> Merging rename-projects into main approves change 261015-k3m9q with its code.
+
+and one merge lands everything. The rest of this page takes the two-merge
+path.
+
 ## 4. Review and approve
 
 **Terminal:**
