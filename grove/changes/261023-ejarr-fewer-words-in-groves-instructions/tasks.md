@@ -21,7 +21,7 @@ Files: `internal/instruct/instruct.go`,
 `internal/instruct/schemas/default/skills/prototype.md`,
 `internal/instruct/schemas/default/skills/implement.md`,
 `internal/instruct/schemas/bugfix/skills/propose.md`,
-`internal/cli/walkthrough_test.go`
+`internal/cli/walkthrough_test.go`, `dev/trials/run.sh`
 
 Interfaces: none; it is instruction text.
 

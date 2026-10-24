@@ -32,6 +32,10 @@ Status: done
   prototype 717 → 626, propose 3,201 → 2,719, plan 1,087 → 921, implement
   a change 3,108 → 3,003 and unattended 2,867 → 2,770, a cycle 863 → 772
   and unattended 623 → 540, archive 1,613 → 1,561.
+- `dev/trials/run.sh`, added to T-01's `Files:` with the owner's
+  agreement: case (a)'s setup kept a spec `.grove.yaml` that this branch's
+  Grove reports, because its check read `grove check`'s pipe status under
+  `pipefail`; it now reads the output. `SETUP_ONLY=1` case (a): clean.
 - The trials before are 261023-kh3gg's baseline; after: see T-01's line in
   the pull request.
 
