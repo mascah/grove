@@ -36,18 +36,17 @@ Evidence of the hand-run version, before the revision:
 
 ### T-02 — Record the baseline
 
-Status: in progress
+Status: done
 
 Was blocked on who runs the ten trials by hand; the revision of
 2026-10-23 answers it: `just trials` (T-03).
 
-`just trials` on 2026-10-23, on Grove as cycle B leaves it (8454724's
-code and instructions; the script at 8d146e7 to 8fdd968, which changed
-only `dev/trials/`): nine of the ten trials are in the pull request's
-description. Codex's (c) is left: its rerun, after the script's
-unattended fix, hit Codex's usage limit ("try again at Oct 24th, 2026
-2:20 AM"), so it waits for `HARNESSES=codex just trials c`. No setup
-needed correcting.
+`just trials` on 2026-10-23 and 24, on Grove as cycle B leaves it
+(8454724's code and instructions; the script at 8d146e7 to 4d5de5f, which
+changed only `dev/trials/`): all ten trials, five cases in Claude Code and
+in Codex, are in the pull request's description, with a line for each
+count that is not zero. Codex's (c) ran last, after its first rerun hit
+Codex's usage limit. No setup needed correcting.
 
 Found while preparing it: in a git worktree, `just build` gives a binary
 whose `grove version` prints `grove dev`, with no build info from Git;
