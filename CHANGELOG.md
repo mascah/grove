@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.5.0](https://github.com/mascah/grove/compare/v0.4.0...v0.5.0) (2026-10-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* the apply skill and `grove instructions apply` are removed. Replace `/grove-apply <cycle-id>` with `/grove-implement <cycle-id> --unattended` in prompts, scripts and timers. Move lines under `rules.skills.apply` to `rules.skills.implement`, then run `grove init` again. If a project schema names `apply` under `skills` or overrides `skills/apply.md`, `grove check` reports it until that text moves to implement's guide.
+* **cli:** `grove check` now reports requirements with no "shall" or no scenario, and change headings in maintained specs, on documents that were clean before. Add the missing "shall" or scenario, and fold any leftover ADDED, MODIFIED or REMOVED heading into `## Requirements`.
+
+### Features
+
+* **cli:** a cycle can depend on cycles ([#69](https://github.com/mascah/grove/issues/69)) ([8454724](https://github.com/mascah/grove/commit/8454724ba54d0f63c54283c7e333a1896b5b6085))
+* **cli:** check requirements and the archive fold ([#57](https://github.com/mascah/grove/issues/57)) ([f749c46](https://github.com/mascah/grove/commit/f749c46a7671911d9136c06f77c9e9ab468f0b04))
+* **cli:** grove run builds a cycle it is given ([#35](https://github.com/mascah/grove/issues/35)) ([8aacbb7](https://github.com/mascah/grove/commit/8aacbb78dcff4aa2fae4f165c5b8a3777933a54a))
+* **cli:** one merge for small changes ([#64](https://github.com/mascah/grove/issues/64)) ([29c5c7e](https://github.com/mascah/grove/commit/29c5c7e4b8513d57674c43a3ebbb50e3eb34bf55))
+* **cli:** restore context in grove.yaml ([#37](https://github.com/mascah/grove/issues/37)) ([ed415d2](https://github.com/mascah/grove/commit/ed415d23c7c97240ba6208fc008f9ba7454aceb0))
+* **cli:** revising a change re-plans its cycle ([#67](https://github.com/mascah/grove/issues/67)) ([9308040](https://github.com/mascah/grove/commit/9308040009674b9c0095f9844605af5a99f8c556))
+* **cli:** styled grove run output ([#36](https://github.com/mascah/grove/issues/36)) ([1441b53](https://github.com/mascah/grove/commit/1441b53ac4a50a2026d95f0be405cca487736383))
+* implement builds unattended, and apply goes ([#63](https://github.com/mascah/grove/issues/63)) ([9508c4b](https://github.com/mascah/grove/commit/9508c4be4b09037be4666fdca75afdcfed6c31e5))
+* **instruct:** a built-in bugfix schema ([#65](https://github.com/mascah/grove/issues/65)) ([3e40d51](https://github.com/mascah/grove/commit/3e40d5104439fb2c032da868524000d25cc4f27e))
+* **instruct:** propose asks what matters ([#66](https://github.com/mascah/grove/issues/66)) ([1db9cae](https://github.com/mascah/grove/commit/1db9cae3a598e196281621538f293c7edb94ac07))
+* **instruct:** verify before done ([#58](https://github.com/mascah/grove/issues/58)) ([aa245f1](https://github.com/mascah/grove/commit/aa245f140938be460365ca643081493968a749bf))
+
 ## [0.4.0](https://github.com/mascah/grove/compare/v0.3.0...v0.4.0) (2026-10-23)
 
 
