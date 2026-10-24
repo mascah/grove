@@ -247,7 +247,7 @@ show-saved changes approved. Each step names the section of
 
    Discard the edit.
 
-5. **A stale plan** ("Mark it unattended", "Re-plan a cycle"). On a branch,
+5. **A stale plan** ("Re-plan a cycle"). On a branch,
    add a sentence to show-saved's proposal, commit and merge. On main,
    `grove check`:
    > grove/cycles/\<show-saved-cycle>.yaml: planned: \<show-saved> changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan \<show-saved-cycle-id>
@@ -258,7 +258,7 @@ show-saved changes approved. Each step names the section of
    clean. Commit and merge.
 
    Then add a comment to a file show-saved's T-01 names on its `Files:`
-   line, commit and merge: `grove check` on main reports the same
+   line and the 0.4 cycle's changes do not, commit and merge: `grove check` on main reports the same
    `planned:` line, and nothing against show-saved's `base`. Re-plan it
    again as above: `grove check` is clean, and show-saved's files are
    unchanged.
@@ -268,6 +268,20 @@ show-saved changes approved. Each step names the section of
    Fast-forward main onto them (`git merge --ff-only`): `grove check`
    reports the same `planned:` line, since the revision reached main
    without the cycle file. Re-plan it as above.
+
+   Then, on a branch, add a comment to `ledger/report.py`, which budgets'
+   T-01 names; commit and merge. On main, `grove check` reports the 0.4
+   cycle, though it is not marked, and exits non-zero:
+   > grove/cycles/\<0.4-cycle>.yaml: planned: \<budgets-id> changed on main since this plan; re-plan it with /grove-plan \<0.4-cycle-id>
+
+   `grove instructions implement <budgets-id>`, and the same with
+   `--unattended`, names the file against the plan, not `base`:
+   > \- Changed on main since cycle \<0.4-cycle-id>'s plan \<sha7>: T-01's `ledger/report.py`.
+
+   `git switch -c replan-0.4`, a fresh session,
+   `/grove-plan <0.4-cycle-id>`. It asks about budgets as before and I say
+   yes again; it writes no `unattended` and sets `planned` to main's
+   commit. `grove check` is clean. Commit and merge.
 
 6. **One change in two cycles** ("Re-plan a cycle"). Copy the 0.4 cycle to
    `grove/cycles/261099-zzzzz-later.yaml`. `grove check` reports

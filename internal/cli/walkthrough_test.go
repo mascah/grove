@@ -1380,18 +1380,28 @@ func TestMovedFiles(t *testing.T) {
 		}
 	}
 
-	// A member of a marked cycle: reported against the plan, not base.
-	k := "261023-k0000"
-	planCycle(t, dir, k, "2026-10-23T09:00:00Z", true, cid)
+	// A member of a cycle: reported against the plan, not base, whether or
+	// not the cycle is marked.
+	k, plan := "261023-k0000", strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))
+	planCycle(t, dir, k, "2026-10-23T09:00:00Z", false, cid)
 	checks("No problems in grove/.\n")
 	edit("ledger/cli.py", "Yet another change")
-	checks("grove/cycles/" + k + "-cycle.yaml: planned: " + cid + " changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan " + k + "\n")
+	stale, cycle := "grove/cycles/"+k+"-cycle.yaml: planned: "+cid+" changed on main since this plan", filepath.Join(dir, "grove/cycles", k+"-cycle.yaml")
+	checks(stale + "; re-plan it with /grove-plan " + k + "\n")
+	for _, args := range [][]string{{cid}, {cid, "--unattended"}} {
+		if out := grove(t, append([]string{"instructions", "implement"}, args...)...); !strings.Contains(out, "\n- Changed on main since cycle "+k+"'s plan "+plan[:7]+": T-01's `ledger/cli.py`.\n") || strings.Contains(out, "since base") {
+			t.Errorf("implement %v does not name the file moved since the plan, alone:\n%.3000s", args, out)
+		}
+	}
+	planned := read(t, cycle)
+	os.WriteFile(cycle, []byte(regexp.MustCompile(`planned: \w+`).ReplaceAllString(planned, "planned: 0000000")), 0o644)
+	checks("grove/cycles/" + k + "-cycle.yaml: planned: 0000000 is not a commit in this repository\n")
+	os.WriteFile(cycle, []byte(planned+"unattended: true\n"), 0o644)
+	commitAll(t, dir, "Mark")
+	checks(stale + ", so grove run skips this cycle; re-plan it with /grove-plan " + k + "\n")
 	p, _ := openProject()
 	if ip, err := p.agreed(); err != nil || func() bool { cy, _ := eligible(p, ip); return cy != nil }() {
 		t.Errorf("grove run would build a cycle whose member's file moved: %v", err)
-	}
-	if out := grove(t, "instructions", "implement", cid); strings.Contains(out, "since base") {
-		t.Errorf("implement instructions for a member name a moved file against base:\n%.3000s", out)
 	}
 
 	// A Files: line Grove cannot read.
@@ -1402,7 +1412,8 @@ func TestMovedFiles(t *testing.T) {
 
 // TestFollows follows the walkthrough's steps on a cycle that follows
 // another: run waits on it, and the merges archiving its changes, or those
-// of a cycle it follows in turn, leave the plan fresh; nothing else does.
+// of a cycle it follows in turn, leave the plan fresh, and the implement
+// instructions naming no moved file; nothing else does, but a re-plan.
 func TestFollows(t *testing.T) {
 	dir := setUp(t)
 	b, bDir := approve(t, dir, "b", "Add ledger delete ID", "")
@@ -1436,6 +1447,12 @@ func TestFollows(t *testing.T) {
 		}
 		if stdout.String() != want || got != selects {
 			t.Errorf("%s: check printed %q, grove run selects %q, want %q", how, stdout.String(), got, selects)
+		}
+	}
+	names := func(want bool, how string) {
+		t.Helper()
+		if out := grove(t, "instructions", "implement", b); strings.Contains(out, "\n- Changed on main since cycle "+k+"'s plan ") != want {
+			t.Errorf("%s: implement %s names a moved file: %v, want %v", how, b, !want, want)
 		}
 	}
 	edit := func(msg string) {
@@ -1481,11 +1498,18 @@ func TestFollows(t *testing.T) {
 	git(t, dir, "reset", "-q", "--hard", "HEAD~1")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Land "+d, "land-"+d)
 	state(clean, k, "L's last change archived in a merge commit")
+	names(false, "L's last change archived")
 
-	// Any other commit still counts.
+	// Any other commit still counts, until K is re-planned.
 	edit("Another change")
 	state(stale, "", "a commit archiving nothing")
+	names(true, "a commit archiving nothing")
 	git(t, dir, "reset", "-q", "--hard", "HEAD~1")
 	land(f, fDir, false)
 	state(stale, "", "an archive of a cycle K does not follow")
+	file := filepath.Join(dir, "grove/cycles", k+"-cycle.yaml")
+	os.WriteFile(file, []byte(regexp.MustCompile(`planned: \w+`).ReplaceAllString(read(t, file), "planned: "+strings.TrimSpace(git(t, dir, "rev-parse", "HEAD")))), 0o644)
+	commitAll(t, dir, "Re-plan "+k)
+	state(clean, k, "re-planned")
+	names(false, "re-planned")
 }

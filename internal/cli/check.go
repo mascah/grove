@@ -137,13 +137,13 @@ func shapes(root fs.FS, c *doc.Collection) {
 	}
 }
 
-// stalePlans reports each member of a cycle in c, marked unattended and
-// not done, that changed on the target since the cycle's plan. Only then is
-// the target read, so a project with no such cycle checks without it.
+// stalePlans reports each member of a cycle in c, not done, that changed
+// on the target since the cycle's plan. Only then is the target read, so a
+// project with no such cycle checks without it.
 func stalePlans(p project, c *doc.Collection) error {
 	var target instruct.Project
 	for _, cy := range c.Cycles {
-		if !cy.Meta.Unattended || cy.Done || cy.Meta.Planned == "" {
+		if cy.Done || cy.Meta.Planned == "" {
 			continue
 		}
 		if target.Agreed == nil {
@@ -158,7 +158,7 @@ func stalePlans(p project, c *doc.Collection) error {
 		}
 		for _, id := range changed {
 			cy.Diagnostics = append(cy.Diagnostics, doc.Diagnostic{Path: cy.Path,
-				Message: fmt.Sprintf("planned: %s changed on %s since this plan, so grove run skips this cycle; re-plan it with /grove-plan %s", id, p.Target, cy.ID)})
+				Message: fmt.Sprintf("planned: %s changed on %s since this plan%s; re-plan it with /grove-plan %s", id, p.Target, map[bool]string{true: ", so grove run skips this cycle"}[cy.Meta.Unattended], cy.ID)})
 		}
 	}
 	return nil
@@ -205,7 +205,12 @@ func moved(p project, commit string, ch *doc.Change) ([]doc.Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	changed := strings.Split(diff, "\n")
+	return naming(ch, strings.Split(diff, "\n")), nil
+}
+
+// naming returns ch's tasks that name a file in changed, each with only
+// those files.
+func naming(ch *doc.Change, changed []string) []doc.Task {
 	var out []doc.Task
 	for _, t := range ch.Tasks {
 		t.Files = slices.DeleteFunc(slices.Clone(t.Files), func(f string) bool { return !slices.Contains(changed, f) })
@@ -213,7 +218,7 @@ func moved(p project, commit string, ch *doc.Change) ([]doc.Task, error) {
 			out = append(out, t)
 		}
 	}
-	return out, nil
+	return out
 }
 
 // named returns every file ch's tasks name.
@@ -226,14 +231,32 @@ func named(ch *doc.Change) []string {
 }
 
 // changedSincePlan returns each member of cy that at, the documents at
-// commit, holds open, whose folder, or a file its tasks name, a commit on
-// commit's first-parent history since cy's planned commit changed without
-// also editing the cycle file, or archiving a change of a cycle cy depends
-// on, directly or through others. A commit that edits both is the plan
-// checking that member, so a squash or merge commit of a revision and its
-// re-plan leaves the plan fresh; one that archives is a merge the plan
-// expected.
+// commit, holds open, whose folder, or a file its tasks name, sincePlan
+// lists.
 func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]string, error) {
+	paths, err := sincePlan(p, commit, at, cy)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, id := range cy.Meta.Changes {
+		if ch := at.Change(id); ch != nil && slices.ContainsFunc(paths, func(f string) bool {
+			return strings.HasPrefix(f, p.Root+"/"+ch.Dir+"/") || slices.Contains(named(ch), f)
+		}) {
+			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+// sincePlan returns the paths changed by each commit on commit's
+// first-parent history since cy's planned commit that neither edits the
+// cycle file nor archives a change of a cycle cy depends on, directly or
+// through others, as at, the documents at commit, holds them. A commit that
+// edits the cycle file is the plan checking what it changed, so a squash or
+// merge commit of a revision and its re-plan leaves the plan fresh; one
+// that archives is a merge the plan expected.
+func sincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]string, error) {
 	planned, err := gitx.Run(p.Top, "rev-parse", "--verify", "--end-of-options", cy.Meta.Planned+"^{commit}")
 	if err != nil {
 		return nil, err
@@ -269,18 +292,9 @@ func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycl
 		})
 	}
 	var out []string
-	for _, id := range cy.Meta.Changes {
-		ch := at.Change(id)
-		if ch == nil {
-			continue
-		}
-		touches := func(f string) bool {
-			return strings.HasPrefix(f, p.Root+"/"+ch.Dir+"/") || slices.Contains(named(ch), f)
-		}
-		if slices.ContainsFunc(commits, func(files []string) bool {
-			return slices.ContainsFunc(files, touches) && !expected(files)
-		}) {
-			out = append(out, id)
+	for _, files := range commits {
+		if !expected(files) {
+			out = append(out, files...)
 		}
 	}
 	return out, nil
