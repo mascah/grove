@@ -223,12 +223,23 @@ func named(ch *doc.Change) []string {
 }
 
 // changedSincePlan returns each member of cy that at, the documents at
-// commit, holds open with a folder, or a file its tasks name, that differs
-// from it at cy's planned commit.
+// commit, holds open, whose folder, or a file its tasks name, a commit on
+// commit's first-parent history since cy's planned commit changed without
+// also editing the cycle file. A commit that edits both is the plan
+// checking that member, so a squash or merge commit of a revision and its
+// re-plan leaves the plan fresh.
 func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]string, error) {
 	planned, err := gitx.Run(p.Top, "rev-parse", "--verify", "--end-of-options", cy.Meta.Planned+"^{commit}")
 	if err != nil {
 		return nil, err
+	}
+	log, err := gitx.Run(p.Top, "log", "--first-parent", "--diff-merges=first-parent", "--name-only", "--format=%x00", strings.TrimSpace(planned)+".."+commit)
+	if err != nil {
+		return nil, err
+	}
+	var commits [][]string // the files each commit changed
+	for _, c := range strings.Split(log, "\x00")[1:] {
+		commits = append(commits, strings.Split(strings.TrimSpace(c), "\n"))
 	}
 	var out []string
 	for _, id := range cy.Meta.Changes {
@@ -236,11 +247,12 @@ func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycl
 		if ch == nil {
 			continue
 		}
-		diff, err := gitx.Run(p.Top, append([]string{"diff", "--name-only", strings.TrimSpace(planned), commit, "--", p.Root + "/" + ch.Dir}, named(ch)...)...)
-		if err != nil {
-			return nil, err
+		touches := func(f string) bool {
+			return strings.HasPrefix(f, p.Root+"/"+ch.Dir+"/") || slices.Contains(named(ch), f)
 		}
-		if diff != "" {
+		if slices.ContainsFunc(commits, func(files []string) bool {
+			return slices.ContainsFunc(files, touches) && !slices.Contains(files, p.Root+"/"+cy.Path)
+		}) {
 			out = append(out, id)
 		}
 	}

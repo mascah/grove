@@ -1228,6 +1228,64 @@ func TestRun(t *testing.T) {
 	runs(`^Nothing to apply on main at [0-9a-f]{7}\.\n$`)
 }
 
+// TestReplan follows the walkthrough's planning step 5 and running step 6:
+// a member revised with its re-plan in one squash or merge commit leaves
+// the plan fresh; as two commits on main, or before a later mark, stale.
+func TestReplan(t *testing.T) {
+	dir := setUp(t)
+	b, bDir := approve(t, dir, "b", "Add ledger delete ID", "")
+	k := "261023-k0000"
+	planCycle(t, dir, k, "2026-10-23T09:00:00Z", true, b)
+	stale := "grove/cycles/" + k + "-cycle.yaml: planned: " + b + " changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan " + k + "\n"
+	fresh := func(want bool, how string) {
+		t.Helper()
+		var stdout, stderr strings.Builder
+		run([]string{"check"}, &stdout, &stderr)
+		p, _ := openProject()
+		ip, _ := p.agreed()
+		cy, _ := eligible(p, ip)
+		wantOut := map[bool]string{true: "No problems in grove/.\n", false: stale}[want]
+		if got := stdout.String(); got != wantOut || (cy != nil) != want {
+			t.Errorf("%s: check printed %q, grove run would build the cycle: %v", how, got, cy != nil)
+		}
+	}
+	revise := func(branch, words string, commits int) {
+		t.Helper()
+		main := strings.TrimSpace(git(t, dir, "rev-parse", "main")) // the target commit propose names
+		git(t, dir, "switch", "-q", "-c", branch)
+		os.WriteFile(filepath.Join(bDir, "proposal.md"), []byte("# Add ledger delete ID\n\n"+words+"\n"), 0o644)
+		if commits == 2 {
+			commitAll(t, dir, "Revise "+b)
+		}
+		os.WriteFile(filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"), []byte("title: Cycle "+k+"\ncreated: 2026-10-23T09:00:00Z\nchanges: ["+b+"]\nplanned: "+main+"\nunattended: true\n"), 0o644)
+		commitAll(t, dir, "Re-plan "+k)
+		git(t, dir, "switch", "-q", "main")
+	}
+	fresh(true, "planned")
+	revise("squash", "Squashed.", 1)
+	git(t, dir, "merge", "-q", "--squash", "squash")
+	commitAll(t, dir, "Revise and re-plan, squashed")
+	fresh(true, "a squash merge")
+	revise("merge", "Merged.", 2)
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Revise and re-plan", "merge")
+	fresh(true, "a merge commit")
+	revise("ff", "Fast-forwarded.", 2)
+	git(t, dir, "merge", "-q", "--ff-only", "ff")
+	fresh(false, "two commits fast-forwarded")
+
+	// A member changed in one merge, the cycle marked in a later one.
+	planCycle(t, dir, k, "2026-10-23T09:00:00Z", false, b)
+	git(t, dir, "switch", "-q", "-c", "later")
+	os.WriteFile(filepath.Join(bDir, "proposal.md"), []byte("# Add ledger delete ID\n\nLater.\n"), 0o644)
+	commitAll(t, dir, "Revise "+b)
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Revise", "later")
+	cycle := filepath.Join(dir, "grove/cycles", k+"-cycle.yaml")
+	os.WriteFile(cycle, []byte(read(t, cycle)+"unattended: true\n"), 0o644)
+	commitAll(t, dir, "Mark")
+	fresh(false, "marked after a member changed")
+}
+
 // TestMovedFiles follows the walkthrough's steps on a task's named file
 // changing on main: a change alone reported against its base, a member of
 // a marked cycle against its plan, and a Files: line Grove cannot read.

@@ -31,3 +31,28 @@ Status: in progress
   cycle document with `planned: <main's commit>`, the rule never to write
   or remove `unattended` and the cycle's file; that a change in no cycle
   gets no cycle; and that `instructions plan` names the shorter way.
+
+### T-02 — The stale check counts a member changed with its plan
+
+Status: done
+
+- `internal/cli/check.go`: `changedSincePlan`, which `stalePlans` and
+  `runnable` in `internal/cli/run.go` share, reads the target's
+  first-parent history since `planned` once per cycle with `git log
+  --first-parent --diff-merges=first-parent --name-only`, so a merge commit
+  counts as one change against its first parent, as a squash does; a
+  member is stale when some commit there changed its folder or a named
+  file without also editing the cycle file. Its messages are unchanged.
+- `internal/cli/walkthrough_test.go`: `TestReplan`, on the fixture, with a
+  marked cycle of one member: the revision and a re-plan setting `planned`
+  to main's commit, squash-merged, leave `grove check` clean and
+  `eligible`, which `grove run` and `grove run --retry` select by, picks
+  the cycle; as two commits merged with `--no-ff`, the same; as two
+  commits fast-forwarded onto main, `grove check` reports the cycle stale
+  with its old message and `eligible` picks nothing; a member revised in a
+  merge and the cycle marked in a later commit is reported stale. The
+  existing stale-plan tests in `TestCycles`, `TestMovedFiles` and
+  `TestRun` pass unchanged.
+- The pause after an attempt is not replayed with a stub session here;
+  `--retry` starts any attempt `eligible` or `runnable` allows, which the
+  test checks after the squash merge.
