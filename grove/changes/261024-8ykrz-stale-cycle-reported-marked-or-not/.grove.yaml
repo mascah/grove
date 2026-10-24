@@ -1,0 +1,5 @@
+title: A stale cycle is reported whether or not it is marked
+created: 2026-10-24T06:09:27Z
+description: grove check reports a stale cycle not marked unattended, and grove instructions implement names a cycle member's task files changed since the plan.
+schema: bugfix
+base: 2d074330ba6cabfa90acca3dcd7e15bce0e5d798
