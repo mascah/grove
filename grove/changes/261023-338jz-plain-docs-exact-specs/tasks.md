@@ -1,8 +1,8 @@
 ## T-01 — Move the docs' exact rules into the maintained specs
 
 Result: each exact rule `docs/` states is held by a maintained
-requirement, and the page that stated it explains it in a plain sentence
-and links the spec instead, as amended rule 8 says.
+requirement, and the page that states it explains it in plain words and
+links the spec, as rule 8, amended in #78, says.
 
 Files: `docs/index.md`, `docs/install.md`, `docs/getting-started.md`,
 `docs/concepts.md`, `docs/coordinating.md`, `docs/planning.md`,
@@ -27,19 +27,24 @@ Constraints:
   schema problems; the folder layout and main-document checks; `grove
   review`'s labels; `grove specs`, `grove version`, the reader and IDs.
 - A page keeps its steps, examples and quoted messages; the walkthrough
-  runs them (rule 8). It drops restated conditions, such as the
-  selection rule in `docs/running.md`, "An ordinary run", step 2, which
-  `grove/specs/runs/spec.md` holds.
+  runs them (rule 8). It keeps a restated rule only where a reader needs
+  it to act, such as the selection rule in `docs/running.md`, "An
+  ordinary run", step 2, which `grove/specs/runs/spec.md` holds;
+  otherwise it gives one plain sentence and the link. The implementer
+  proposes which restatements stay, and the owner agrees in the session.
+- A page links a spec with a full GitHub link to the spec on `main`.
 - The `config` spec's Boundaries stops sending the reader to
   `docs/reference.md` for the rest of `grove.yaml`.
 - This change edits no Go code. A scenario the code does not meet is
   raised with the owner before archiving.
 
 Acceptance:
-- For each page, a list in `implementation.md` names each rule removed
-  and the requirement, by spec and name, that holds it.
-- No page restates a requirement's conditions. Each links its spec where
-  it used to.
+- For each page, a list in `implementation.md` names each rule the page
+  states, the requirement, by spec and name, that holds it, whether the
+  page kept, shortened or dropped it, and any difference fixed.
+- Each rule a page states is held by a maintained requirement, and the
+  page links it. Where the page and the spec differ, the page is fixed to
+  match the spec.
 - On the ledger fixture, each scenario of the requirements this change
   ADDs holds as written.
 - `grove check` on Grove's own repository stays clean, and archiving
@@ -62,16 +67,17 @@ Acceptance:
   `grove run`. README's second paragraph no longer brings in unattended
   runs.
 - The steps in the order the owner decided: propose, review and merge,
-  implement, merge.
+  implement, merge. After the README's four steps, one sentence says a
+  small change can be proposed and built in one merge.
 - Every link in both files resolves, and `docs/index.md`'s "Where to go
   next" still names every page in `mkdocs.yml`.
 
 ## T-03 — A plain-language pass, page by page
 
 Result: every page in `docs/` says one idea per sentence and breaks up
-long conditional sentences, each term it gives a meaning is defined once,
-in `docs/concepts.md`, "Glossary", and `dev/walkthrough.md` still runs
-every step the docs give.
+long conditional sentences, each term it gives a meaning is defined in
+`docs/concepts.md`, "Glossary", which holds where a page differs, and
+`dev/walkthrough.md` still runs every step the docs give.
 
 Files: `README.md`, `docs/index.md`, `docs/install.md`,
 `docs/getting-started.md`, `docs/concepts.md`, `docs/coordinating.md`,
@@ -96,8 +102,9 @@ Acceptance:
   and makes no commits; it names `grove run` as the one command that
   starts an agent.
 - Each term the pages give a meaning, such as cycle, unattended, attempt,
-  base, stale and dropped, is defined in the glossary and nowhere else;
-  other pages use it or link it.
+  base, stale and dropped, is defined in the glossary. Another page may
+  say what it means where a reader needs it, agreeing with the glossary,
+  and otherwise uses it or links it.
 - `dev/walkthrough.md` no longer calls the documentation the
   specification; it says, as amended rule 8 does, that it runs the
   documentation's steps. Each of its steps names the page section it

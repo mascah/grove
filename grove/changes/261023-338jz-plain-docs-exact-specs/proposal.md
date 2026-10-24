@@ -12,17 +12,20 @@ The docs are hard to read. Many sentences carry several conditions. One
 example from `docs/planning.md`: "A change that waits on one outside the
 cycle keeps `grove run` from the cycle until that one is archived as
 finished." Terms such as cycle, attempt, base and stale have their
-meaning given where they are used, in several places, and the glossary in
-`docs/concepts.md` defines few of them. One sentence is now false:
+meaning given where they are used, and the glossary in `docs/concepts.md`
+defines few of them, so no page says which meaning holds. One sentence is now false:
 `docs/concepts.md`, "Two halves", says "Grove starts no agent and makes
 no commits", and `grove run` starts one.
 
-The same rules are written twice. The amendment to rule 8 (PR #47) makes
-the maintained specs in `grove/specs/` the specification and has `docs/`
-explain them and link them. At 0c6f419 the docs restate rules the specs
-hold: `docs/running.md` gives the conditions for selecting a cycle that
-`grove/specs/runs/spec.md`, "Start one attempt", holds. Other exact rules
-are in the docs and in no spec. Examples: what `grove check` reports on
+The docs and the specs can disagree with nothing saying which one holds.
+Rule 8, amended in #78, makes the maintained specs in `grove/specs/` the
+specification, has `docs/` explain them in plain words and link them,
+lets a page restate a rule where a reader needs it to act, and says the
+spec holds where the two differ. At 0c6f419 the docs restate rules the
+specs hold without linking them: `docs/running.md` gives the conditions
+for selecting a cycle that `grove/specs/runs/spec.md`, "Start one
+attempt", holds. Other exact rules are in the docs and in no spec, so no
+spec holds when the page is wrong. Examples: what `grove check` reports on
 `depends_on` and on a stale requirement (`docs/coordinating.md`), the
 JSON that `grove changes --json` prints, when `grove archive` refuses, and
 how `grove init` chooses harnesses and writes their files
@@ -35,11 +38,12 @@ how `grove init` chooses harnesses and writes their files
 propose, review and merge, implement, merge. Cycles and `grove run` come
 after, under "Doing more".
 
-Every page says one idea per sentence. A term is defined once, in the
-glossary, and other pages use it.
+Every page says one idea per sentence. Each term is defined in the
+glossary, which holds where a page's wording differs.
 
 Each exact rule lives in a maintained spec. A page explains it plainly
-and links the spec. The rules found so far that no spec holds become
+and links the spec; it may restate the rule where a reader needs it to
+act, and where the two differ, the spec holds and the page is fixed. The rules found so far that no spec holds become
 agreed here: two `grove check` reports in `propose`, and two new
 capabilities, `changes` and `init`. The code already does what they say.
 Rules found later while auditing are added to this change, with the
@@ -54,8 +58,9 @@ The rules are in [specs/propose/spec.md](specs/propose/spec.md),
 ### In scope
 
 - `README.md` and every page in `docs/`, guides included.
-- Moving each exact rule from `docs/` into a maintained spec, adding a
-  requirement where none holds it.
+- Holding each exact rule `docs/` states in a maintained spec, adding a
+  requirement where none holds it, and fixing a page that differs from
+  its spec.
 - The `config` spec's Boundaries line that points to `docs/reference.md`.
 - `dev/walkthrough.md`, so it still runs the docs' steps (rule 8), and
   `mkdocs.yml` where a page title changes.
@@ -80,13 +85,26 @@ every answer below in one round ("yes to C & D").
   change, and today the second paragraph of `README.md` is about
   unattended runs.
 - **A plain-language pass over `docs/`:** one idea per sentence, each term
-  defined once in the glossary (`docs/concepts.md`, "Glossary"), long
+  defined in the glossary (`docs/concepts.md`, "Glossary"), long
   conditional sentences broken up. The sentence in "Two halves" that
   `grove run` made false is fixed. Reason: the docs explain; precision
-  belongs to the specs.
-- **Each exact rule taken out of `docs/` is kept in `grove/specs/`,** with
-  a requirement there if no maintained requirement holds it. The docs
-  link the spec instead of restating its rules. Reason: amended rule 8.
+  belongs to the specs. Revised on 2026-10-24 (below): the glossary is
+  the authority for a term, not its only definition.
+- **Each exact rule a page states is held in `grove/specs/`,** with a
+  requirement there if no maintained requirement holds it, and the page
+  links the spec. Reason: amended rule 8. Revised on 2026-10-24 (below):
+  a page may keep a rule it restates.
+- **The spec is the authority, not the only copy (2026-10-24).** The
+  owner said "Agreed" to this principle: "repeats cause bugs when copies
+  disagree, not when they exist. So the rule should say which copy is the
+  authority, not forbid copies." Rule 8, amended in #78, says so for the
+  docs. So a page may restate a rule where a reader needs it to act, and
+  links the spec. Where page and spec differ, the page is fixed to match
+  the spec. The implementer proposes which restatements stay, and the
+  owner agrees in the session. Likewise a page may say what a term means
+  where a reader needs it, agreeing with the glossary. This replaces
+  saying each thing once, and no page restating a requirement's
+  conditions. The owner agreed to these revisions in this session.
 - **Scoped as three tasks:** audit and move the rules, restructure the
   README and home page, and the plain-language pass. The requirements
   found now are ADDED here. Others found while auditing go in a revision
@@ -95,20 +113,19 @@ every answer below in one round ("yes to C & D").
 - **It comes last in cycle C.** It depends on 261023-kh3gg, 261023-ejarr
   and 261023-d6r79, and follows cycle B, because all of them edit the
   docs.
+- **Docs link a spec with a full GitHub link to it on `main`
+  (2026-10-24).** The owner said "yes". Reason: the docs site is built
+  from `docs/` alone, so a relative link to `grove/specs/` does not
+  resolve there. It decides the links in T-01.
+- **The README names one merge for a small change (2026-10-24).** The
+  owner said "yes": after the README's four steps, one sentence says a
+  small change can be proposed and built in one merge. Reason: change
+  261023-6yafg lets a change drafted on its implementing branch be
+  approved with its code in one merge. It decides that sentence in T-02.
 
 ## Open questions
 
-None must be answered before review.
-
-- **How a docs page links a spec.** The docs site is built from `docs/`
-  alone, so a relative link to `grove/specs/` does not resolve there.
-  Recommended: a full GitHub link to the spec on `main`. It can wait; it
-  decides the link form in T-01.
-- **Whether the lead names one merge for a small change.** Change
-  261023-6yafg lets a change drafted on its implementing branch be
-  approved with its code in one merge. Recommended: one sentence after the
-  four steps, saying a small change can be one merge. It can wait; it
-  decides a sentence of T-02.
+None.
 
 ## Related documents
 

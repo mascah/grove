@@ -5,5 +5,5 @@ changes: [261023-kh3gg, 261023-d6r79, 261023-ejarr, 261023-338jz]
 needs_human:
   261023-kh3gg: the trials need a tester answering the agent
   261023-ejarr: the trials need a tester answering the agent
-  261023-338jz: the open questions and plain-language judgment are the owner's
-planned: e3173bb8ab18d3a6fb76b41b7f5af8c33d0eb53d
+  261023-338jz: the plain-language judgment and which restatements stay are the owner's
+planned: 512de168dcc415fda01518302140a7e7302d695f
