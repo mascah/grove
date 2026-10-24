@@ -10,11 +10,11 @@ nav:
   - Concepts: concepts.md
   - Coordinating changes: coordinating.md
   - Planning cycles: planning.md
-  - Running apply unattended: running.md
+  - Running unattended: running.md
   - Guides:
       - Push to a tracker: guides/push-to-a-tracker.md
       - Run Grove in CI: guides/run-grove-in-ci.md
-      - Run apply on a timer: guides/run-apply-on-a-timer.md
+      - Run on a timer: guides/run-on-a-timer.md
       - A glossary and decision records: guides/glossary-and-decisions.md
   - Reference: reference.md
 

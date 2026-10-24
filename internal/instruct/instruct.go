@@ -36,7 +36,8 @@ func embedded(name string) string {
 
 // Skill is one of Grove's skills: the description of the skill init writes
 // for it, and what that skill passes to `instructions <skill>`. What Grove
-// requires of it is requires/<name>.md, the same in every change schema.
+// requires of it is requires/<name>.md, the same in every change schema;
+// implement's adds one mode's part.
 type Skill struct{ Name, Description, Args string }
 
 // Skills returns Grove's skills, in order.
@@ -515,30 +516,42 @@ func Revise(p Project, c *doc.Change, files map[string]string) (Instructions, er
 	return build(p, c.Meta.Schema, "propose", task, fill(p, c), c, files)
 }
 
-// Apply returns the instructions for applying change c, which the target
-// holds; files are c.Files as read from there.
-func Apply(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
-	task := fmt.Sprintf("You are applying approved change %s, %q%s, as %s@%s holds it, in your own working tree.",
-		c.ID, c.Meta.Title, with(c.Meta.Schema), p.Target, short(p.Commit))
-	return build(p, c.Meta.Schema, "apply", task, fill(p, c), c, files)
-}
-
 // Implement returns the instructions for implementing change c, which the
-// target holds, with the owner; files are c.Files as read from there.
-func Implement(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
-	task := fmt.Sprintf("You are implementing approved change %s, %q%s, as %s@%s holds it, with the owner, in their own working tree.",
-		c.ID, c.Meta.Title, with(c.Meta.Schema), p.Target, short(p.Commit))
-	return build(p, c.Meta.Schema, "implement", task, fill(p, c), c, files)
+// target holds, with the owner or, unattended, asking no one; files are
+// c.Files as read from there.
+func Implement(p Project, c *doc.Change, files map[string]string, unattended bool) (Instructions, error) {
+	task := fmt.Sprintf("You are implementing approved change %s, %q%s, as %s@%s holds it, %s.",
+		c.ID, c.Meta.Title, with(c.Meta.Schema), p.Target, short(p.Commit), who(unattended))
+	in, err := build(p, c.Meta.Schema, "implement", task, fill(p, c), c, files)
+	in.Requires += mode(unattended)
+	return in, err
 }
 
-// Cycle returns the instructions for building cycle cy, whose file holds
-// content, with skill, apply or implement: the members ordered, in that
-// order and one at a time, each with its own instructions, and what each
-// member in waiting waits on.
-func Cycle(p Project, skill string, cy *doc.Cycle, content string, ordered, waiting []*doc.Change) (Instructions, error) {
-	each, task := "instructions implement <change-id>", "You are implementing cycle %s, %q, as %s@%s holds it, with the owner, in their own working tree."
-	if skill == "apply" {
-		each, task = "instructions apply "+cy.ID+" <change-id>", "You are applying cycle %s, %q, as %s@%s holds it, in your own working tree."
+// who says who is in the session and whose working tree it is.
+func who(unattended bool) string {
+	if unattended {
+		return "asking no one, in your own working tree"
+	}
+	return "with the owner, in their own working tree"
+}
+
+// mode is the part of implement's requires text for one mode, after the
+// shared rules for a change or a cycle.
+func mode(unattended bool) string {
+	if unattended {
+		return embedded("requires/implement-unattended.md")
+	}
+	return embedded("requires/implement-owner.md")
+}
+
+// Cycle returns the instructions for implementing cycle cy, whose file
+// holds content, with the owner or, unattended, asking no one: the members
+// ordered, in that order and one at a time, each with its own
+// instructions, and what each member in waiting waits on.
+func Cycle(p Project, cy *doc.Cycle, content string, ordered, waiting []*doc.Change, unattended bool) (Instructions, error) {
+	each := "instructions implement <change-id>"
+	if unattended {
+		each += " --unattended"
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "Build these changes in this order, one at a time, each after the changes it depends on. For each, run Grove's `%s` and follow what it prints to the end; then the next.\n\n", each)
@@ -551,8 +564,9 @@ func Cycle(p Project, skill string, cy *doc.Cycle, content string, ordered, wait
 	for _, c := range waiting {
 		fmt.Fprintf(&b, "\nLeave out %s, %q: it waits on %s, which is neither being built nor archived as finished. Grove's `check` says why.\n", c.ID, c.Meta.Title, strings.Join(c.WaitsOn, " and "))
 	}
-	return Instructions{Project: p, Skill: skill, Task: fmt.Sprintf(task, cy.ID, cy.Meta.Title, p.Target, short(p.Commit)),
-		Requires: embedded("requires/" + skill + "-cycle.md"), Guide: b.String(), Cycle: []File{{p.Root + "/" + cy.Path, content}}}, nil
+	task := fmt.Sprintf("You are implementing cycle %s, %q, as %s@%s holds it, %s.", cy.ID, cy.Meta.Title, p.Target, short(p.Commit), who(unattended))
+	return Instructions{Project: p, Skill: "implement", Task: task, Requires: embedded("requires/implement-cycle.md") + mode(unattended),
+		Guide: b.String(), Cycle: []File{{p.Root + "/" + cy.Path, content}}}, nil
 }
 
 // InCycle adds to in, the instructions for member current of cycle cy, the

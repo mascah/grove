@@ -6,14 +6,16 @@
 session, and `/grove-implement <cycle-id>` each change of a cycle in turn. Where the change does not settle how a task is built, it asks the
 owner instead of blocking, and with their agreement revises the change on
 its implementation branch, so the merge approves the revision with the
-code. "The owner" is the person in whose session the skill runs.
+code. With `--unattended` it builds a change or a cycle the same way but
+asks no one: what it cannot settle is marked blocked, and the change stays
+as approved. "The owner" is the person in whose session the skill runs.
 
 ## Boundaries
 
-This covers the implement instructions and, by contrast, the rule that
-apply asks no one. Building a cycle without asking anyone, and building
-without anyone watching, belong to apply (`grove/specs/apply/spec.md`)
-and to `grove run`
+This covers the implement instructions, with the owner and with
+`--unattended`, `grove.yaml`'s rules for implement, and the removal of the
+apply skill that `--unattended` replaced. Starting a session with no one
+watching, and what it refuses, belong to `grove run`
 (`grove/specs/runs/spec.md`). Revising a change outside its implementation
 branch belongs to `/grove-propose`. What makes a revision approved is the
 merge into the target (`CONSTITUTION.md` rule 4).
@@ -22,12 +24,12 @@ merge into the target (`CONSTITUTION.md` rule 4).
 
 ### Requirement: Implement an approved change
 
-When the owner runs `/grove-implement <change-id>` for a change the target
-approves and that waits on nothing the working tree has not archived as
-finished, the system shall print instructions for building its tasks in
-the owner's session, on a branch other than the target, recording each
-task's status in `implementation.md` and archiving the change when every
-task is done.
+When the owner runs `/grove-implement <change-id>`, without
+`--unattended`, for a change the target approves and that waits on
+nothing the working tree has not archived as finished, the system shall
+print instructions for building its tasks in the owner's session, on a
+branch other than the target, recording each task's status in
+`implementation.md` and archiving the change when every task is done.
 
 #### Scenario: A change with two tasks
 
@@ -40,7 +42,8 @@ task is done.
 #### Scenario: A change that is only a draft
 
 - GIVEN change D exists in the working tree but not in the target
-- WHEN the owner runs `/grove-implement D`
+- WHEN the owner runs `/grove-implement D`, with or without
+  `--unattended`
 - THEN nothing is built, and Grove says the target holds no approved change
   D
 
@@ -53,10 +56,10 @@ task is done.
 
 ### Requirement: Ask the owner instead of blocking
 
-When a task is decided by an open question in the change, or cannot be
-built as the change says, the implement instructions shall have the agent
-ask the owner and wait for the answer, instead of marking the task
-blocked.
+When, without `--unattended`, a task is decided by an open question in the
+change, or cannot be built as the change says, the implement instructions
+shall have the agent ask the owner and wait for the answer, instead of
+marking the task blocked.
 
 #### Scenario: An open question decides a task
 
@@ -94,26 +97,12 @@ clean, and then build to the revised change.
 - WHEN the owner declines it
 - THEN C's files are unchanged and the agent builds what C says
 
-### Requirement: Apply asks no one
-
-The apply instructions shall keep their rule: a task an open question
-decides, or that cannot be built as the change says, is marked
-`Status: blocked` without asking anyone, and the change's files other than
-`implementation.md` are not edited.
-
-#### Scenario: The same open question under apply
-
-- GIVEN cycle K lists change C, whose open question decides T-02
-- WHEN K is built with `/grove-apply K` and the agent reaches C's T-02
-- THEN T-02 is marked `Status: blocked` with the question, nobody is asked,
-  and C's proposal, change specs and tasks are unchanged
-
 ### Requirement: Implement a cycle
 
-When the owner runs `/grove-implement <cycle-id>` for a cycle the target
-holds, the system shall print instructions for building each member not yet
-archived, in build order, each as `/grove-implement <change-id>` builds it,
-in the owner's session.
+When the owner runs `/grove-implement <cycle-id>`, without
+`--unattended`, for a cycle the target holds, the system shall print
+instructions for building each member not yet archived, in build order,
+each as `/grove-implement <change-id>` builds it, in the owner's session.
 
 #### Scenario: A cycle the owner builds
 
@@ -159,14 +148,15 @@ before building that task, instead of building on the file as it was.
 
 ### Requirement: Verify before finishing
 
-When the agent has built every task it can of a change with the owner,
-the implement instructions shall have it, before it finishes, run the
-project's tests, re-read each done task's evidence against the code as it
-now is and set a task whose evidence no longer holds back to `Status: in
-progress`, and write a `## Scenarios` section in `implementation.md` with
-one line per scenario of the change specs naming the check that shows it
-and its result, or `unverified` and why; its finishing report names each
-unverified scenario.
+When the agent has built every task it can of a change, with the owner or
+with `--unattended`, the implement instructions shall have it, before it
+finishes, run the project's tests, re-read each done task's evidence
+against the code as it now is and set a task whose evidence no longer
+holds back to `Status: in progress`, and write a `## Scenarios` section in
+`implementation.md` with one line per scenario of the change specs naming
+the check that shows it and its result, or `unverified` and why; its
+finishing report names each unverified scenario, and with `--unattended`
+it asks no one.
 
 #### Scenario: Every scenario has a test
 
@@ -190,6 +180,14 @@ unverified scenario.
 - THEN that line says `unverified` and why, and the finishing report
   names it
 
+#### Scenario: A scenario no test shows, unattended
+
+- GIVEN a member, built with `--unattended`, whose change spec has a
+  scenario no test checks
+- WHEN the agent finishes the member
+- THEN that line says `unverified` and why, the report names it, and the
+  agent goes on without asking
+
 ### Requirement: Archive names unverified scenarios
 
 When the agent runs the archive instructions for a finished change, they
@@ -202,6 +200,137 @@ shall have it tell the owner each scenario `implementation.md` marks
   `unverified`
 - WHEN the agent archives it
 - THEN it names that scenario to the owner, then folds and archives
+
+### Requirement: Build unattended
+
+When `/grove-implement <id> --unattended` is run for a change the target
+approves or a cycle the target holds, the system shall print instructions
+that have the agent build it as `/grove-implement <id>` would but ask no
+one: a task an open question decides, or that cannot be built as the
+change says, is marked `Status: blocked` with the question or the reason;
+in a change in no cycle that is not done, a task naming a file the target
+changed since the change's `base` is marked `Status: blocked` with the
+file and is not built on it;
+a file no task names is left as it is and named in that task's evidence;
+the change's files other than `implementation.md` are not edited; and a
+cycle is built whether or not it is marked `unattended` and whatever its
+`needs_human` says.
+
+#### Scenario: One change, by hand
+
+- GIVEN the target approves change C, in no cycle, with tasks T-01 and
+  T-02 that no open question decides
+- WHEN `/grove-implement C --unattended` is run on the target branch
+- THEN the agent creates a branch, builds T-01 and T-02 without asking
+  anyone, records both as done in `implementation.md`, and archives C on
+  that branch
+
+#### Scenario: An open question decides a task
+
+- GIVEN cycle K lists change C, whose open question decides T-02
+- WHEN `/grove-implement K --unattended` is run and the agent reaches C's
+  T-02
+- THEN T-02 is marked `Status: blocked` with the question, nobody is
+  asked, and C's proposal, change specs and tasks are unchanged
+
+#### Scenario: A named file moved since base
+
+- GIVEN the target approves change C, in no cycle, whose T-02 names
+  `internal/cli/run.go`, which the target changed after C's `base`
+- WHEN `/grove-implement C --unattended` is run
+- THEN Grove's instructions name T-02 and `internal/cli/run.go` as changed
+  since base, T-01 is built, and T-02 is marked `Status: blocked` naming
+  that file, unbuilt, with nobody asked
+
+#### Scenario: Two members, one waiting on the other
+
+- GIVEN cycle K lists A and B, B depending on A, neither archived
+- WHEN `/grove-implement K --unattended` is run
+- THEN A is built and archived, then B, on one branch, each by
+  `grove instructions implement <change-id> --unattended`
+
+#### Scenario: A cycle that needs a person, by hand
+
+- GIVEN cycle K lists A and B, is not marked `unattended`, and
+  `needs_human` names B
+- WHEN `/grove-implement K --unattended` is run by hand
+- THEN A and B are built asking no one; only `grove run` refuses K
+
+#### Scenario: A change that waits
+
+- GIVEN the target approves change B with `depends_on: [A]`, and the
+  working tree does not hold A archived as finished
+- WHEN `/grove-implement B --unattended` is run
+- THEN nothing is built, and Grove says B waits on A
+
+### Requirement: A member gets its cycle's plan
+
+When `/grove-implement <change-id>` is run, with or without
+`--unattended`, for a member of a cycle the target holds that is not
+done, the system shall print that change's instructions with the cycle's
+plan, naming the member's place in build order.
+
+#### Scenario: The second member, unattended
+
+- GIVEN cycle K lists A and B, B depending on A, and A is archived as
+  finished on this branch
+- WHEN `grove instructions implement B --unattended` is run
+- THEN B's instructions are printed with K's plan, naming B as the second
+  of two
+
+#### Scenario: A member built with the owner
+
+- GIVEN cycle K lists A and B, neither archived
+- WHEN the owner runs `/grove-implement A`
+- THEN A's instructions are printed with K's plan, naming A as the first
+  of two
+
+### Requirement: Implement's rules in both modes
+
+Where `grove.yaml` holds lines under `rules.skills.implement`, the system
+shall print them with the implement instructions, for a change and for a
+cycle, with and without `--unattended`.
+
+#### Scenario: A rule for both modes
+
+- GIVEN `rules.skills.implement` holds "Commit after each task, naming its
+  task ID."
+- WHEN `grove instructions implement C` runs, and then
+  `grove instructions implement C --unattended`
+- THEN both print that line with the implement instructions
+
+### Requirement: Report rules for apply
+
+When the owner runs `grove check` and `grove.yaml` holds a
+`rules.skills.apply` key, the system shall report that line, saying its
+lines go under `rules.skills.implement`.
+
+#### Scenario: A project that kept its apply rules
+
+- GIVEN `grove.yaml` holds two lines under `rules.skills.apply`
+- WHEN the owner runs `grove check`
+- THEN it reports the `apply` line, pointing to `implement`
+
+### Requirement: No apply skill
+
+The system shall write no apply skill or command for any harness, `grove
+init` shall remove the apply skill and command files an earlier Grove
+wrote, and `grove instructions apply` shall print the usage and exit with
+status 2.
+
+#### Scenario: Init after upgrading
+
+- GIVEN a project whose `.claude/skills/grove-apply/SKILL.md` an earlier
+  Grove wrote
+- WHEN the owner runs `grove init`
+- THEN that folder is removed, and init names `grove-apply` among what it
+  removed
+
+#### Scenario: The old command
+
+- GIVEN cycle K on the target
+- WHEN `grove instructions apply K` is run
+- THEN no instructions are printed, and Grove prints the usage
 
 ## Known discrepancies
 

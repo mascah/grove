@@ -12,7 +12,7 @@ open. Or `grove run` does it unattended: `/grove-plan` puts approved
 changes in a cycle, and once you mark the cycle `unattended`, `grove run`,
 in a checkout you keep for the project, starts one time-limited Claude
 Code session that builds it on a new branch, then waits until you merge. See
-[Running apply unattended](docs/running.md).
+[Running unattended](docs/running.md).
 
 To install the `grove` command, see [Install](docs/install.md).
 

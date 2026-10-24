@@ -3,7 +3,7 @@
 [Getting started](getting-started.md) takes one change from an idea to an
 updated spec. When several changes are approved at once, some must land
 before others. This page shows how a change says what it waits on, how one
-session applies a cycle of changes in order, what happens when two
+session builds a cycle of changes in order without you, what happens when two
 changes rewrite the same requirement, and how to get the whole picture as
 data.
 
@@ -36,7 +36,7 @@ grove changes
 > 261019-r2w7k  Add ledger delete ID  approved  waits on 261019-p4x8d
 
 A change waits on each change in its `depends_on` until it is archived as
-finished. `grove changes` reads your main branch; applying reads your
+finished. `grove changes` reads your main branch; implementing reads your
 working tree, which on a branch holds everything main held when the branch
 started, plus what you archived on it. A dropped change never finishes.
 
@@ -62,41 +62,46 @@ changes that wait on each other in a loop.
 
 > grove/changes/261019-r2w7k-add-ledger-delete/.grove.yaml:4: depends_on: 260101-zzzzz is no change, open or archived
 
-The order comes from `depends_on`: a change can be applied once every
+The order comes from `depends_on`: a change can be built once every
 change it waits on is archived as finished, and changes that do not wait on
 each other can be built in parallel, on separate branches.
 
-## Applying a cycle
+## Building a cycle unattended
 
 One session can build every change of a cycle (see
-[Planning cycles](planning.md)), on one branch, and you merge once.
-**Terminal:** `git switch -c apply-0.4`. **Chat:**
+[Planning cycles](planning.md)), on one branch, without asking you, and
+you merge once. **Terminal:** `git switch -c build-0.4`. **Chat:**
 
 ```text
-/grove-apply 261020-m4k8t
+/grove-implement 261020-m4k8t --unattended
 ```
-
-Apply takes only a cycle's ID. Given a change's ID, or none, it builds
-nothing and says
-> grove: apply takes a cycle ID; build 261019-r2w7k with the owner with /grove-implement 261019-r2w7k
 
 Grove lists the cycle's changes your working tree has not archived, in
 build order: each after the changes it depends on, otherwise oldest first.
 The agent takes them one at a time. For each it runs
-`grove instructions apply 261020-m4k8t <change-id>`, which prints that
-change's apply instructions with the cycle's list, naming its place in it,
-and when the change's tasks are all done it archives the change on the
+`grove instructions implement <change-id> --unattended`, which prints that
+change's instructions with the cycle's list, naming its place in it, and
+when the change's tasks are all done it archives the change on the
 branch. The next change in the list then finds its dependency archived as
-finished. Apply builds a cycle whether or not it is marked `unattended`;
-only `grove run` reads the mark.
+finished. A change in a cycle that is not done always gets the cycle's
+list, with you or without, so `/grove-implement 261019-p4x8d` shows you
+its place too.
 
-Apply changes only the files a change's tasks name on their `Files:` lines.
-A file it finds should change too is left as it is and named in that
-task's evidence in `implementation.md`; implementing with you, the agent
-asks to add it to the task instead.
+`--unattended` builds a cycle whether or not it is marked `unattended`,
+and whatever its `needs_human` says; only `grove run` reads them. Given a
+change's ID, `/grove-implement 261019-p4x8d --unattended` builds that one
+change the same way, with no cycle to plan first.
 
-`/grove-implement 261020-m4k8t` builds the same cycle with you, each
-change as `/grove-implement <change-id>` does.
+Unattended, the agent changes only the files a change's tasks name on
+their `Files:` lines. A file it finds should change too is left as it is
+and named in that task's evidence in `implementation.md`; implementing
+with you, the agent asks to add it to the task instead. For a change in no
+cycle, a task naming a file that changed on your main branch since the
+change's `base` is marked blocked, naming the file, and not built; with
+you, the agent asks what to do.
+
+Without `--unattended`, `/grove-implement 261020-m4k8t` builds the same
+cycle with you, each change as `/grove-implement <change-id>` does.
 
 A change that waits on a change that is neither in the cycle nor archived
 as finished, because it was dropped or does not exist, is left out and named;
@@ -108,15 +113,16 @@ out.
 
 The branch holds the code, the updated specs and each archived change.
 Review the pull request and merge once. A blocked change is finished by
-revising it with `/grove-propose <change-id>`, merging, and applying again: a
+revising it with `/grove-propose <change-id>`, merging, and building again: a
 task its `implementation.md` already marks done is not built twice.
 
 Nothing in the session needs you. It creates a branch if it is on your main
 branch, settles no question itself, and commits only when a rule in
 `grove.yaml` asks, such as `Commit after each task, naming its task ID.`
-under `rules.skills.apply` (see [Reference](reference.md), "grove.yaml").
-`grove run` starts such a session for a cycle you mark `unattended` (see
-[Running apply unattended](running.md)).
+under `rules.skills.implement`, which counts with you and without (see
+[Reference](reference.md), "grove.yaml"). `grove run` starts such a
+session for a cycle you name or mark `unattended` (see
+[Running unattended](running.md)).
 
 ## When the plan is stale
 
@@ -137,7 +143,7 @@ not plan for is.
 
 Because `grove check` reads your working tree, the branch that archives the
 first change is where the second is reported, before anything is merged,
-whether one session applies them both or not. `/grove-archive` runs `grove
+whether one session builds them both or not. `/grove-archive` runs `grove
 check` first, and stops if it reports the change being archived.
 
 To bring the change up to date, revise it on a branch. **Chat:**

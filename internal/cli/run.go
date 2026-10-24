@@ -45,7 +45,8 @@ type attempt struct {
 // runAttempt starts one attempt: it updates the target from origin, if the
 // checkout has one, and,
 // unless the latest attempt's changes are still open or retry is set,
-// launches one Claude Code session on the apply skill for cycle id, or,
+// launches one Claude Code session on the implement skill, unattended,
+// for cycle id, or,
 // when id is empty, the oldest eligible cycle, on a new branch, within
 // timeout.
 func runAttempt(stdout io.Writer, id string, retry bool, timeout time.Duration) error {
@@ -102,7 +103,7 @@ func runAttempt(stdout io.Writer, id string, retry bool, timeout time.Duration) 
 	if p, err = parseProject(p.Top, []byte(config)); err != nil {
 		return err
 	}
-	skill := map[string]string{"skills": "/grove-apply", "commands": "/grove:apply"}[p.Agents["claude"]]
+	skill := map[string]string{"skills": "/grove-implement", "commands": "/grove:implement"}[p.Agents["claude"]]
 	if skill == "" {
 		return errors.New("run needs Claude Code listed under agents in grove.yaml, as skills or commands")
 	}
@@ -142,7 +143,7 @@ func runAttempt(stdout io.Writer, id string, retry bool, timeout time.Duration) 
 	if _, err := gitx.Run(p.Top, "switch", "-q", "-c", a.Branch, commit); err != nil {
 		return err
 	}
-	// The apply instructions read the local target, so it moves too.
+	// The implement instructions read the local target, so it moves too.
 	if _, err := gitx.Run(p.Top, "update-ref", "refs/heads/"+p.Target, commit, local); err != nil {
 		return err
 	}
@@ -154,7 +155,7 @@ func runAttempt(stdout io.Writer, id string, retry bool, timeout time.Duration) 
 		return err
 	}
 	defer out.Close()
-	a.Outcome = session(stdout, out, p.Top, skill+" "+cy.ID, timeout)
+	a.Outcome = session(stdout, out, p.Top, skill+" "+cy.ID+" --unattended", timeout)
 	a.Ended = time.Now()
 	if err := a.save(dir); err != nil {
 		return err

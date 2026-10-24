@@ -1,15 +1,15 @@
-# Running apply unattended
+# Running unattended
 
 `grove run` builds a cycle you name, or else one you have marked
-`unattended`, without anyone typing `/grove-apply`. In a checkout you set
-up for one project, it starts one Claude Code session on the apply skill
-for that cycle, waits for it within a time limit, and then pauses the
+`unattended`, without anyone typing `/grove-implement <cycle-id>
+--unattended`. In a checkout you set up for one project, it starts one
+Claude Code session that types it for that cycle, waits for it within a time limit, and then pauses the
 project until the cycle is merged or dropped. It builds nothing else: an
-approved change in no cycle is yours to build with `/grove-implement`. To
-send it one change, plan a cycle of one (see
-[Planning cycles](planning.md)). Grove does not
+approved change in no cycle is yours to build with `/grove-implement`,
+with `--unattended` or not. To send `grove run` one change, plan a cycle
+of one (see [Planning cycles](planning.md)). Grove does not
 schedule itself: run it by hand, or from a timer as in
-[Run apply on a timer](guides/run-apply-on-a-timer.md).
+[Run on a timer](guides/run-on-a-timer.md).
 
 ## Set up a checkout
 
@@ -27,9 +27,9 @@ What you prepare, since Grove does not:
   pushes nothing. A checkout with no `origin` works too: see
   "Without a remote".
 - **The harness.** `grove.yaml` on the target lists `claude` under
-  `agents`. `grove run` types the apply skill as that form has it,
-  `/grove-apply` for skills or `/grove:apply` for commands, followed by the
-  cycle's ID.
+  `agents`. `grove run` types the implement skill as that form has it,
+  `/grove-implement <cycle-id> --unattended` for skills or
+  `/grove:implement <cycle-id> --unattended` for commands.
 - **Claude Code's permissions.** The session asks you nothing, so it can do
   only what its settings allow, and Grove passes it no permission flags.
   Put them in `.claude/settings.local.json` in the checkout, such as
@@ -64,13 +64,15 @@ add these under `rules` in `grove.yaml` and merge them into the target:
 ```yaml
 rules:
   skills:
-    apply:
+    implement:
       - Commit after each task, naming its task ID.
       - When you are done, push the branch to origin and open a pull request with gh pr create, listing the changes archived and each blocked task with its question.
 ```
 
 `grove run` reads `grove.yaml` from the target it fetched, not from the
-checkout's branch, so the rules count once they are merged.
+checkout's branch, so the rules count once they are merged. Lines under
+`implement` are given with you in the session too; word them so they hold
+for both.
 
 ## An ordinary run
 
@@ -95,10 +97,10 @@ it has uncommitted changes. Then it:
 3. Creates the branch `grove/run-<attempt>` from the fetched target,
    `<attempt>` being a new ID such as `261021-6jbj1`, fast-forwards the
    local target branch to it, and starts
-   `claude -p "/grove-apply 261020-m4k8t" --output-format stream-json --verbose`
+   `claude -p "/grove-implement 261020-m4k8t --unattended" --output-format stream-json --verbose`
    on the new branch.
 
-The agent builds the cycle's changes in turn, as "Applying a cycle" in
+The agent builds the cycle's changes in turn, as "Building a cycle unattended" in
 [Coordinating changes](coordinating.md) says, archives each one it finishes,
 commits, pushes and opens the pull request, as the rules say. While it
 works, Grove prints one row per event, with the time it read it and a mark
@@ -113,7 +115,7 @@ that row instead of printed again:
 ```text
 09:12:40 ▶ started: model claude-opus-5-5
 09:12:43 • I'll build cycle 261020-m4k8t, starting with 261019-p4x8d.
-09:12:44 › Bash grove instructions apply 261020-m4k8t 261019-p4x8d
+09:12:44 › Bash grove instructions implement 261019-p4x8d --unattended
 09:12:47 · thinking (×3)
 09:12:52 › Read /Users/you/grove-runs/ledger/ledger.py
 09:13:20 › Bash python3 -m pytest

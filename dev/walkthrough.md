@@ -28,7 +28,7 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    an agent, so `grove.yaml` lists `claude: skills` and `codex: skills`
    under `agents`. `.claude/skills/` and `.agents/skills/` each hold
    `grove-explore`, `grove-prototype`, `grove-propose`, `grove-plan`,
-   `grove-implement`, `grove-apply` and `grove-archive`, and
+   `grove-implement` and `grove-archive`, and
    every `SKILL.md` has the same body after its name. Under `context` in
    `grove.yaml`, write "Run python3 -m unittest before saying a task is
    done." Then `git add -A && git commit -m "Set up Grove"`. Every skill's
@@ -157,7 +157,7 @@ It starts where the main line's step 6 ends: one archived change and the
    Commit and merge. Then
    `git switch main && git switch -c show-saved`, a fresh session,
    `/grove-propose Editing a record prints what was saved`, which MODIFIES
-   the same requirement from the same text. Commit and merge. Apply
+   the same requirement from the same text. Commit and merge. Implement
    `recategorize` on `recategorize-impl`; the `grove check` its archive runs
    after reconciling the spec reports show-saved, not recategorize, and
    exits non-zero:
@@ -263,32 +263,30 @@ show-saved changes approved. Each step names the section of
 
    and the same for budgets. Delete the copy.
 
-7. **Applying a cycle** (coordinating, "Applying a cycle"). From main,
-   `git switch -c apply-0.4`, a fresh session, `/grove-apply <delete-id>`.
-   Grove prints
-   > grove: apply takes a cycle ID; build \<delete-id> with the owner with /grove-implement \<delete-id>
-
-   and `/grove-apply` with no ID says the same with `<change-id>`; the
-   session builds nothing. Then `/grove-apply <0.4-cycle-id>`. Its
-   instructions list delete and budgets in build order. The session runs
-   `grove instructions apply <0.4-cycle-id> <delete-id>`, whose
+7. **Building a cycle unattended** (coordinating, "Building a cycle
+   unattended"). From main, `git switch -c build-0.4`, a fresh session,
+   `/grove-implement <0.4-cycle-id> --unattended`. Its instructions list
+   delete and budgets in build order, each to be built with
+   `grove instructions implement <change-id> --unattended`. The session
+   runs `grove instructions implement <delete-id> --unattended`, whose
    `## The cycle` lists both and marks delete `this change`, builds and
    archives delete, then does the same for budgets, whose list marks delete
    `archived in this working tree`; it builds budgets though `needs_human`
-   names it, and asks nothing. `grove instructions apply <0.4-cycle-id>`
-   on the branch then lists nothing to build. One commit, one merge;
+   names it, and asks nothing. `grove instructions implement
+   <0.4-cycle-id> --unattended` on the branch then lists nothing to build.
+   One commit, one merge;
    `grove changes` lists neither. `/grove-implement <0.4-cycle-id>` on
    another branch instead builds the two with me, asking me where each
    change's instructions say. `git branch -D delete-impl`.
 
-## Running apply unattended
+## Running unattended
 
 Each step names the section of
-[Running apply unattended](../docs/running.md) it tests. Claude Code only.
+[Running unattended](../docs/running.md) it tests. Claude Code only.
 
 1. **Set up a checkout** ("Set up a checkout", "Tell the agent to commit and
    open a pull request"). `just fixture ~/tmp/ledger`, `grove init`, add
-   the two `rules.skills.apply` lines from the page to `grove.yaml`, commit.
+   the two `rules.skills.implement` lines from the page to `grove.yaml`, commit.
    Create a private, disposable GitHub repository, add it as `origin` and
    push `main`. `git clone` it to `~/tmp/ledger-run`, the operator's
    checkout, and in it write `.claude/settings.local.json` and the
@@ -309,7 +307,7 @@ Each step names the section of
    and `grove run` in another project's checkout proceeds. While the first
    runs, it prints one row per event as it comes, each with a time and a
    mark: a green `▶` start naming the model, `•` messages, cyan `›` tool
-   calls such as `› Bash grove instructions apply <cycle-id> <change-id>`,
+   calls such as `› Bash grove instructions implement <change-id> --unattended`,
    no row for a tool result unless it is a red `✗` error, faint `·`
    thinking whose `(×N)` count goes up in place, and a `■` result with its
    turns and cost. Narrow the terminal: new rows are cut to its width. It
@@ -320,8 +318,9 @@ Each step names the section of
 
    The checkout is on `grove/run-<attempt>`, whose commits build and archive
    both changes, the unknown-ID one first, each task with its ID. The
-   output shows the session ran `grove instructions apply <cycle-id>
-   <change-id>` once for each. The pull request lists both.
+   record's prompt was `/grove-implement <cycle-id> --unattended`, and the
+   output shows the session ran `grove instructions implement <change-id>
+   --unattended` once for each. The pull request lists both.
    `.git/grove/<attempt>.json` names the cycle, both changes and `main`'s
    commit, and `git status` shows nothing.
 
@@ -373,14 +372,14 @@ Each step names the section of
 
    and `git branch` lists no new branch. `grove run --retry 261099-zzzzz`
    says `main` holds no such cycle. `grove run --retry <show-saved-cycle-id>`
-   starts a session on `/grove-apply <show-saved-cycle-id>` though the
+   starts a session on `/grove-implement <show-saved-cycle-id> --unattended` though the
    budgets cycle is marked, and its record names the show-saved cycle.
 
 7. **Without a remote** ("Without a remote"). `just fixture
    ~/tmp/ledger-local`, `grove init`, commit, approve the unknown-ID
    change, plan it as a cycle of one, mark it `unattended` and merge, with
    `Commit after each task, naming its task ID.` and the page's
-   commit-what-is-left line under `rules.skills.apply`; write `.claude/settings.local.json` and the
+   commit-what-is-left line under `rules.skills.implement`; write `.claude/settings.local.json` and the
    `.git/info/exclude` line from the page. `git remote` lists nothing.
    `grove run` fetches nothing, ends `exit status 0`, and its record holds
    `main`'s commit. `grove run` says the project is paused. Merge
@@ -419,7 +418,7 @@ Each step names the section of
   asked whether it should exit 2 like other errors, defer it. The proposal
   names T-01 as blocked by that question. Merge it, plan it as a cycle of
   one with `/grove-plan <change-id>` and merge that, then, on another
-  branch, run apply headless: `claude -p "/grove-apply <cycle-id>"`. It builds
+  branch, build it headless: `claude -p "/grove-implement <cycle-id> --unattended"`. It builds
   nothing, `implementation.md` says `Status: blocked` under T-01 with the
   question, and its last message names the question. `grove archive
   <change-id>` refuses.
@@ -499,20 +498,20 @@ Each step names the section of
   > Wrote grove.yaml and the Grove skills for claude and opencode; nothing is committed.
 
   `grove.yaml` lists `claude: skills` and `opencode: skills`;
-  `.claude/skills/` and `.agents/skills/` hold the seven skills, the same
+  `.claude/skills/` and `.agents/skills/` hold the six skills, the same
   file in each.
 - **Commands** (reference, "Harnesses"). Continuing, add an `AGENTS.md`,
   set `claude: commands` in `grove.yaml`, and run `grove init`. Later runs
   read only `grove.yaml`, so codex stays out:
-  > Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement, grove-plan, grove-propose and grove-prototype from .claude/skills; nothing is committed.
+  > Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-archive, grove-explore, grove-implement, grove-plan, grove-propose and grove-prototype from .claude/skills; nothing is committed.
 
   `.claude/commands/grove/` holds `explore.md`, `prototype.md`,
-  `propose.md`, `plan.md`, `implement.md`, `apply.md` and `archive.md`. In Claude Code, `/grove:propose Editing a missing record
+  `propose.md`, `plan.md`, `implement.md` and `archive.md`. In Claude Code, `/grove:propose Editing a missing record
   should print an error` runs `grove instructions propose "Editing a
   missing record should print an error"`.
 - **Drop a harness** (reference, "Harnesses"). Continuing, delete the
   `opencode` line and run `grove init`:
-  > Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement, grove-plan, grove-propose and grove-prototype from .agents/skills; nothing is committed.
+  > Kept grove.yaml and wrote the Grove commands for claude, and removed grove-archive, grove-explore, grove-implement, grove-plan, grove-propose and grove-prototype from .agents/skills; nothing is committed.
 
   A skill of my own, `.agents/skills/notes/`, is still there.
 - **A harness Grove does not have** (reference, "grove.yaml"). Set
@@ -534,20 +533,38 @@ Each step names the section of
   > grove/changes/\<delete-id>-\<slug>/.grove.yaml:\<line>: depends_on: \<other-id> waits on this change in turn, so neither can be applied
 
   `grove changes` still works. Discard the edits.
-- **A change left out of a cycle** (coordinating, "Applying a cycle").
-  With an approved change whose `depends_on` names `260101-zzzzz` in a
-  cycle, `grove instructions apply <cycle-id>` ends its list with
+- **A change left out of a cycle** (coordinating, "Building a cycle
+  unattended"). With an approved change whose `depends_on` names
+  `260101-zzzzz` in a cycle, `grove instructions implement <cycle-id>
+  --unattended` ends its list with
   > Leave out \<id>, "\<title>": it waits on 260101-zzzzz, which is neither being built nor archived as finished. Grove's `check` says why.
-- **Apply unattended** (coordinating, "Applying a cycle").
-  From main with a cycle of two changes planned, `claude -p "/grove-apply <cycle-id>"` with
-  `apply: [Commit after each task, naming its task ID.]` under
+- **Implement a cycle unattended, headless** (coordinating, "Building a
+  cycle unattended"). From main with a cycle of two changes planned,
+  `claude -p "/grove-implement <cycle-id> --unattended"` with
+  `implement: [Commit after each task, naming its task ID.]` under
   `rules: skills:` in `grove.yaml`. It creates a branch, builds and
   archives both, commits, asks nothing, and its last message says which
   changes were archived.
 - **Commit as you go** (reference, `rules`). With
-  `apply: [Commit after each task, naming its task ID.]` under
-  `rules: skills:` in `grove.yaml`, `/grove-apply <cycle-id>` commits T-01
-  with its ID in the message.
+  `implement: [Commit after each task, naming its task ID.]` under
+  `rules: skills:` in `grove.yaml`, `/grove-implement <cycle-id>
+  --unattended` commits T-01 with its ID in the message, and so does
+  `/grove-implement <change-id>` with me.
+- **One change, unattended** (coordinating, "Building a cycle
+  unattended"). Approve a change in no cycle whose proposal has an open
+  question naming T-02, and from main, `claude -p "/grove-implement
+  <change-id> --unattended"`. It creates a branch, builds T-01, marks T-02
+  `Status: blocked` with the question, asks nothing, leaves the proposal,
+  specs and tasks as they were, and does not archive.
+- **Upgrading from apply** (reference, "grove.yaml", "Harnesses"). In a
+  project set up by a Grove that still had apply, whose `grove.yaml` keeps
+  its rules under `rules.skills.apply`, `grove check` reports
+  > grove.yaml:\<line>: unknown rules.skills key "apply"; its lines go under rules.skills.implement
+
+  With a `.claude/skills/grove-apply/` an earlier Grove wrote, `grove init`
+  removes it and names `grove-apply` among what it removed. Moved under
+  `rules.skills.implement`, the lines are given with the implement
+  instructions, and `grove check` says there are no problems.
 - **Archive checks the fold** (reference, `grove archive`). After the main
   line, propose and merge a change that MODIFIES the requirement the main
   line added, and on `fold-impl` mark its task done and paste the
@@ -609,7 +626,7 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
   `.agents/skills`, keeps its skills.
 - `init`'s message groups harnesses by form, skills first ("the Grove
   skills for opencode and commands for claude"), and names what it removed
-  by folder ("grove-apply, … from .claude/skills"). It leaves a folder it
+  by folder ("grove-archive, … from .claude/skills"). It leaves a folder it
   emptied, such as `.claude/commands/grove/`, in place; Git ignores it.
 - Detection looks only at the top of the repository, and a `CLAUDE.md` or
   `AGENTS.md` there counts even when it is a link to the other.
@@ -635,8 +652,8 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
 - Every skill commits only when the owner or its `rules` ask; otherwise
   the owner commits after archiving (getting started §6).
 - A blocked task's question is answered by revising the change with
-  propose and merging it, not by the owner telling the applying session.
-- Apply leaves files no task names, such as the README or a changelog,
+  propose and merging it, not by the owner telling the unattended session.
+- Implementing unattended leaves files no task names, such as the README or a changelog,
   as they are; propose makes such updates tasks when the owner wants them.
 - `changes` lists approved changes that are not archived; drafts on the
   current branch are shown by `review`, not by `changes`.
@@ -659,7 +676,7 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
 - `base` comes from `{{commit}}`, a placeholder only Grove's `.grove.yaml`
   template fills; `{{base}}` stays the short commit in schema templates.
 - The docs page for coordinating changes is `docs/coordinating.md`.
-- `check` and `instructions apply` look for what `depends_on` names among
+- `check` and `instructions implement` look for what `depends_on` names among
   the working tree's changes, open and archived, and not on the target; a
   branch holds the target's archive as of where it started. `changes` reads
   the target.
@@ -669,13 +686,15 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
   on, directly or through others, gives it. One missing from the working
   tree was removed. A requirement the maintained spec did not have at
   `base` is not compared. A `base` that is not a commit is reported.
-- `instructions apply <cycle-id>` orders the target cycle's changes that
-  the working tree has not archived: each after its dependencies, otherwise
-  by `created`. It prints the list, the loop and the cycle file; each
-  change's own instructions come from `instructions apply <cycle-id>
-  <change-id>`, run by the session, with the cycle's members in build order
-  and that change's place among them.
-- Apply ends by running the archive instructions; `/grove-archive` stays
+- `instructions implement <cycle-id>` orders the target cycle's changes
+  that the working tree has not archived: each after its dependencies,
+  otherwise by `created`. It prints the list, the loop and the cycle file;
+  each change's own instructions come from `instructions implement
+  <change-id>`, with `--unattended` when the cycle's had it, run by the
+  session, with the cycle's members in build order and that change's place
+  among them. A member of a cycle the target holds that is not done gets
+  that list whichever way it is run.
+- Implement ends by running the archive instructions; `/grove-archive` stays
   for dropping a change and for archiving by hand.
 - `grove changes --json` gives paths under the root, with `root` at the
   top, rather than from the repository's top; `state` is worked out when

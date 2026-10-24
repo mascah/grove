@@ -3,9 +3,10 @@
 ## Purpose
 
 `grove run` builds a cycle the operator gives it, or else one the owner
-marked `unattended`, without anyone typing `/grove-apply`: in a checkout
-an operator prepared for one project, it starts one bounded Claude Code
-session on the apply skill for that cycle, records the attempt, and then
+marked `unattended`, without anyone typing `/grove-implement <cycle-id>
+--unattended`: in a checkout an operator prepared for one project, it
+starts one bounded Claude Code session on the implement skill, unattended,
+for that cycle, records the attempt, and then
 pauses the project until the cycle is archived. "The checkout" is the Git checkout `grove run` is run in. "The
 fetched target" is the target branch as just fetched from `origin`, or,
 in a checkout with no remote named `origin`, the local target branch; in
@@ -19,8 +20,8 @@ eligible cycle" is a buildable cycle that holds `unattended: true`.
 
 This covers `grove run`, its cycle argument, `--retry` and `--timeout`:
 starting, refusing, stopping, recording and pausing attempts. What the session builds, and how
-task progress is recorded, belong to the apply instructions and
-`implementation.md`. Recovering an interrupted attempt, creating checkouts,
+task progress is recorded, belong to the implement instructions with
+`--unattended` (`grove/specs/implement/spec.md`) and `implementation.md`. Recovering an interrupted attempt, creating checkouts,
 pushing, opening pull requests, scheduling and harnesses other than Claude
 Code are outside it (`CONSTITUTION.md` rules 2 and 11); the agent pushes
 and opens pull requests only as the project's `rules` tell it, and launchd
@@ -37,8 +38,11 @@ shall, when the checkout has a remote named `origin`, fetch the target from
 it and fast-forward the local target branch to it; then create the
 attempt's branch from the fetched target, record the attempt for the given
 cycle, or else for the oldest eligible cycle, the one whose `created` is
-earliest, launch one Claude Code session on the apply skill with that
-cycle's ID, and wait for the session to end.
+earliest, launch one Claude Code session on the implement skill with that
+cycle's ID and `--unattended`, typed `/grove-implement <cycle-id>
+--unattended` where the project lists Claude Code as skills and
+`/grove:implement <cycle-id> --unattended` where it lists it as commands,
+and wait for the session to end.
 
 #### Scenario: Local target has commits of its own
 
@@ -53,8 +57,15 @@ cycle's ID, and wait for the session to end.
   approved changes A and B, B depending on A, neither archived
 - WHEN the operator runs `grove run`
 - THEN the checkout is on a new branch from the fetched target, one Claude
-  Code session is launched on the apply skill with K's ID, and the
+  Code session is launched on `/grove-implement K --unattended`, and the
   attempt's record names K, A then B, and the target commit
+
+#### Scenario: Claude Code listed as commands
+
+- GIVEN the fetched target's `grove.yaml` has `agents` with `claude:
+  commands`, and eligible cycle K
+- WHEN the operator runs `grove run`
+- THEN one session is launched on `/grove:implement K --unattended`
 
 #### Scenario: Two marked cycles
 
@@ -68,8 +79,8 @@ cycle's ID, and wait for the session to end.
 - GIVEN `origin`'s target holds buildable cycle K without `unattended`,
   and eligible cycle L
 - WHEN the operator runs `grove run K`
-- THEN one session is launched on the apply skill with K's ID, and the
-  attempt's record names K
+- THEN one session is launched on the implement skill with K's ID and
+  `--unattended`, and the attempt's record names K
 
 #### Scenario: A given cycle while paused
 
@@ -92,8 +103,8 @@ cycle's ID, and wait for the session to end.
   branch holds eligible cycle K
 - WHEN the operator runs `grove run`
 - THEN nothing is fetched, the checkout is on a new branch from the local
-  target, one session is launched on the apply skill with K's ID, and the
-  attempt's record holds the local target's commit
+  target, one session is launched on the implement skill with K's ID and
+  `--unattended`, and the attempt's record holds the local target's commit
 
 #### Scenario: The branch merged locally
 
@@ -346,7 +357,8 @@ latest attempt selected.
   question, the owner merged a revision of B answering it, and re-planned K
 - WHEN the operator runs `grove run --retry`
 - THEN a new branch is created from the fetched target and a session is
-  launched on the apply skill with K's ID, which builds B
+  launched on the implement skill with K's ID and `--unattended`, which
+  builds B
 
 ## Known discrepancies
 

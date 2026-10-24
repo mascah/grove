@@ -27,18 +27,15 @@ With no command, open the reader on the maintained specs and approved changes.
                              print the instructions for planning a new cycle
   instructions plan <cycle-id>
                              print the instructions for revising a cycle
-  instructions implement <change-id> | <cycle-id>
+  instructions implement <change-id> | <cycle-id> [--unattended]
                              print the instructions for implementing an approved change,
-                             or each change of a cycle, with the owner
-  instructions apply <cycle-id> [<change-id>]
-                             print the instructions for applying each change of a cycle,
-                             or one change of it
+                             or each change of a cycle, with the owner or asking no one
   instructions archive <change-id>
                              print the instructions for archiving a change
   run [--retry] [--timeout <duration>] [<cycle-id>]
-                             apply the cycle given, or else the oldest marked unattended,
-                             in one Claude Code session on a new branch, then pause until
-                             it is archived
+                             implement the cycle given, or else the oldest marked
+                             unattended, in one Claude Code session asking no one on a new
+                             branch, then pause until it is archived
   archive <change-id>        move a change to changes/archive/
   review                     show what merging this branch into the target would approve
   specs                      list the maintained specs
@@ -73,10 +70,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = instructionsPlan(stdout, "")
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "plan":
 		err = instructionsPlan(stdout, args[2])
-	case len(args) >= 2 && len(args) <= 4 && args[0] == "instructions" && args[1] == "apply":
-		err = instructionsApply(stdout, args[2:]...)
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "implement":
-		err = instructionsImplement(stdout, args[2])
+		err = instructionsImplement(stdout, args[2], false)
+	case len(args) == 4 && args[0] == "instructions" && args[1] == "implement" && args[3] == "--unattended":
+		err = instructionsImplement(stdout, args[2], true)
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "archive":
 		err = instructionsArchive(stdout, args[2])
 	case len(args) > 0 && args[0] == "run":

@@ -350,7 +350,9 @@ func unknownConfig(top string, ip instruct.Project) ([]string, error) {
 				continue
 			}
 			for n := 0; n+1 < len(names.Content); n += 2 {
-				if k := names.Content[n]; !slices.Contains(valid, k.Value) {
+				if k := names.Content[n]; section.Value == "skills" && k.Value == "apply" {
+					out = append(out, fmt.Sprintf("grove.yaml:%d: unknown rules.skills key \"apply\"; its lines go under rules.skills.implement", k.Line))
+				} else if !slices.Contains(valid, k.Value) {
 					out = append(out, fmt.Sprintf("grove.yaml:%d: unknown rules.%s key %q; %s are %s", k.Line, section.Value, k.Value, noun, strings.Join(valid, ", ")))
 				}
 			}

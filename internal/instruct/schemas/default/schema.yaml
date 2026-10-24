@@ -42,9 +42,6 @@ skills:
   implement:
     guide: skills/implement.md
     writes: [proposal, change-spec, tasks, implementation]
-  apply:
-    guide: skills/apply.md
-    writes: [implementation]
   archive:
     guide: skills/archive.md
     writes: [spec, implementation]

@@ -71,7 +71,7 @@ func TestInit(t *testing.T) {
 		t.Errorf("init said %q, want %q", got, want)
 	}
 	for _, h := range []string{".claude", ".agents"} {
-		for _, w := range []string{"explore", "prototype", "propose", "plan", "implement", "apply", "archive"} {
+		for _, w := range []string{"explore", "prototype", "propose", "plan", "implement", "archive"} {
 			if skill := read(t, filepath.Join(dir, h, "skills", "grove-"+w, "SKILL.md")); !strings.Contains(skill, "name: grove-"+w+"\n") || !strings.Contains(skill, " instructions "+w) {
 				t.Errorf("%s skill grove-%s:\n%s", h, w, skill)
 			}
@@ -111,13 +111,13 @@ func TestHarnesses(t *testing.T) {
 		t.Errorf("init said %q, want %q", got, want)
 	}
 	yaml := read(t, filepath.Join(dir, "grove.yaml"))
-	if !strings.Contains(yaml, "agents:\n  claude: skills\n  opencode: skills\n#") || read(t, filepath.Join(dir, ".claude/skills/grove-apply/SKILL.md")) != read(t, filepath.Join(dir, ".agents/skills/grove-apply/SKILL.md")) {
+	if !strings.Contains(yaml, "agents:\n  claude: skills\n  opencode: skills\n#") || read(t, filepath.Join(dir, ".claude/skills/grove-implement/SKILL.md")) != read(t, filepath.Join(dir, ".agents/skills/grove-implement/SKILL.md")) {
 		t.Errorf("init chose other agents, or skills that differ:\n%s", yaml)
 	}
 
 	os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Agents\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "claude: skills", "claude: commands", 1)), 0o644)
-	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement, grove-plan, grove-propose and grove-prototype from .claude/skills; nothing is committed.\n"; got != want {
+	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove skills for opencode and commands for claude, and removed grove-archive, grove-explore, grove-implement, grove-plan, grove-propose and grove-prototype from .claude/skills; nothing is committed.\n"; got != want {
 		t.Errorf("init with claude's commands said %q, want %q", got, want)
 	}
 	if cmd := read(t, filepath.Join(dir, ".claude/commands/grove/propose.md")); !strings.HasPrefix(cmd, "---\ndescription: ") || !strings.Contains(cmd, "Run `grove instructions propose \"$ARGUMENTS\"` and follow what it prints, in this conversation.\n") {
@@ -125,7 +125,7 @@ func TestHarnesses(t *testing.T) {
 	}
 
 	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "  claude: skills\n  opencode: skills\n", "  claude: commands\n", 1)), 0o644)
-	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove commands for claude, and removed grove-apply, grove-archive, grove-explore, grove-implement, grove-plan, grove-propose and grove-prototype from .agents/skills; nothing is committed.\n"; got != want {
+	if got, want := grove(t, "init"), "Kept grove.yaml and wrote the Grove commands for claude, and removed grove-archive, grove-explore, grove-implement, grove-plan, grove-propose and grove-prototype from .agents/skills; nothing is committed.\n"; got != want {
 		t.Errorf("init without opencode said %q, want %q", got, want)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".agents/skills/notes")); err != nil {
@@ -160,13 +160,14 @@ func TestCheck(t *testing.T) {
 		t.Errorf("check printed %q", got)
 	}
 	config := read(t, filepath.Join(dir, "grove.yaml"))
-	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(config, "rules: {}", "rules:\n  derp: [x]\n  documents:\n    propsal: [x]\nrule: {}", 1)), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(config, "rules: {}", "rules:\n  derp: [x]\n  documents:\n    propsal: [x]\n  skills:\n    apply: [x]\nrule: {}", 1)), 0o644)
 	var stdout, stderr strings.Builder
 	code := run([]string{"check"}, &stdout, &stderr)
 	want := "grove.yaml:30: unknown rules key \"derp\"; rules takes documents and skills\n" +
 		"grove.yaml:32: unknown rules.documents key \"propsal\"; kinds are proposal, change-spec, tasks, implementation, spec\n" +
-		"grove.yaml:33: unknown field \"rule\"; grove.yaml takes root, target, agents, schema, context and rules\n"
-	if code != 1 || stdout.String() != want || stderr.String() != "grove: 3 problems found\n" {
+		"grove.yaml:34: unknown rules.skills key \"apply\"; its lines go under rules.skills.implement\n" +
+		"grove.yaml:35: unknown field \"rule\"; grove.yaml takes root, target, agents, schema, context and rules\n"
+	if code != 1 || stdout.String() != want || stderr.String() != "grove: 4 problems found\n" {
 		t.Errorf("check of grove.yaml: status %d\n%s%s", code, stdout.String(), stderr.String())
 	}
 	grove(t, "changes")
@@ -277,8 +278,8 @@ func TestPrototype(t *testing.T) {
 	if strings.Contains(out, "## Documents") {
 		t.Error("prototype instructions offer a document to fill in")
 	}
-	if out := grove(t, "instructions", "propose"); !strings.Contains(out, "citing the prototype branch and the commit") {
-		t.Error("propose instructions do not say to cite a prototype")
+	if out := grove(t, "instructions", "propose"); !strings.Contains(out, "citing the prototype branch and the commit") || strings.Contains(out, "## Project context") {
+		t.Error("propose instructions do not say to cite a prototype, or have a context the project has not")
 	}
 }
 
@@ -338,63 +339,74 @@ func TestApprove(t *testing.T) {
 	}
 }
 
-func TestApplyInstructions(t *testing.T) {
+func TestImplementInstructions(t *testing.T) {
 	dir := fixture(t)
-	grove(t, "init")
-	if !strings.Contains(read(t, filepath.Join(dir, ".claude/skills/grove-apply/SKILL.md")), "Run `grove instructions apply <args>`") {
-		t.Error("the skill does not run instructions apply")
+	os.MkdirAll(filepath.Join(dir, ".claude/skills/grove-apply"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".claude/commands/grove"), 0o755)
+	os.WriteFile(filepath.Join(dir, ".claude/skills/grove-apply/SKILL.md"), []byte("old"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".claude/commands/grove/apply.md"), []byte("old"), 0o644)
+	if got := grove(t, "init"); !strings.Contains(got, ", and removed apply.md from .claude/commands/grove and grove-apply from .claude/skills;") {
+		t.Errorf("init after upgrading said %q", got)
 	}
+	if !strings.Contains(read(t, filepath.Join(dir, ".claude/skills/grove-implement/SKILL.md")), "Run `grove instructions implement <args>`") {
+		t.Error("the skill does not run instructions implement")
+	}
+	yaml := strings.Replace(read(t, filepath.Join(dir, "grove.yaml")), `context: ""`, "context: Run python3 -m unittest before saying a task is done.", 1)
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "rules: {}", "rules:\n  skills:\n    implement:\n      - Commit after each task, naming its task ID.", 1)), 0o644)
 	commitAll(t, dir, "Set up Grove")
 	cid, _ := propose(t, dir, "older-edits", "Allow editing older records", "")
 	commitAll(t, dir, "Propose")
 
 	var stdout, stderr strings.Builder
-	if code := run([]string{"instructions", "implement", cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove: main holds no approved change "+cid+"\n" {
-		t.Errorf("implement before the merge: status %d, %q", code, stderr.String())
+	for _, args := range [][]string{{"implement", cid}, {"implement", cid, "--unattended"}} {
+		stderr.Reset()
+		if code := run(append([]string{"instructions"}, args...), &stdout, &stderr); code != 1 || stderr.String() != "grove: main holds no approved change "+cid+"\n" {
+			t.Errorf("%v before the merge: status %d, %q", args, code, stderr.String())
+		}
 	}
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
-
-	// Apply takes only a cycle.
 	k := "261022-k0000"
-	for args, want := range map[string]string{
-		cid: "apply takes a cycle ID; build " + cid + " with the owner with /grove-implement " + cid,
-		"":  "apply takes a cycle ID; build a change with the owner with /grove-implement <change-id>",
-		k:   "main holds no cycle " + k,
-	} {
-		stderr.Reset()
-		if code := run(append([]string{"instructions", "apply"}, strings.Fields(args)...), &stdout, &stderr); code != 1 || stderr.String() != "grove: "+want+"\n" {
-			t.Errorf("apply %q: status %d, %q", args, code, stderr.String())
-		}
-	}
-	planCycle(t, dir, k, "2026-10-22T09:00:00Z", false, cid)
-	out := grove(t, "instructions", "apply", k)
-	for _, s := range []string{"You are applying cycle " + k + ", \"Cycle " + k + "\"", "## What Grove requires of apply\n\n- Work in",
-		"run Grove's `instructions apply " + k + " <change-id>`", "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n"} {
-		if !strings.Contains(out, s) {
-			t.Errorf("cycle apply instructions lack %q:\n%s", s, out)
-		}
-	}
-	out = grove(t, "instructions", "apply", k, cid)
-	for _, s := range []string{"/implementation.md\">\n# Implementation: Allow editing older records", "### Requirement: Edit older records", "even if you could\n  ask", "A file no\n  task names stays as it is", "Before you finish, run the project's tests, re-read each done task's", "and why. Ask no one.", "## Scenarios\n",
-		", change 1 of 1 in cycle " + k + ".", "## The cycle\n\nCycle " + k + ", \"Cycle " + k + "\", in build order:\n\n1. " + cid + " \"Allow editing older records\" — this change\n"} {
-		if !strings.Contains(out, s) {
-			t.Errorf("apply instructions for a member lack %q:\n%s", s, out)
-		}
-	}
 	stderr.Reset()
-	if code := run([]string{"instructions", "apply", k, "260101-zzzzz"}, &stdout, &stderr); code != 1 || stderr.String() != "grove: 260101-zzzzz is not in cycle "+k+"\n" {
-		t.Errorf("apply of a change outside the cycle: status %d, %q", code, stderr.String())
+	if code := run([]string{"instructions", "apply", k}, &stdout, &stderr); code != 2 || !strings.HasPrefix(stderr.String(), "usage: grove") {
+		t.Errorf("instructions apply: status %d, %q", code, stderr.String())
 	}
-	out = grove(t, "instructions", "implement", cid)
-	for _, s := range []string{"You are implementing approved change " + cid, "## What Grove requires of implement\n", "ask the owner and\n  wait", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. Commit", "with their agreement add it to that task's `Files:` line", "### change-spec: ", "### Requirement: Edit older records"} {
-		if !strings.Contains(out, s) {
-			t.Errorf("implement instructions lack %q", s)
+
+	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. Commit",
+		"The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n"}
+	owner := []string{"ask the owner and\n  wait", "with their agreement add it to that task's `Files:`", "tell the owner how to try it"}
+	alone := []string{"ask no one and wait for no one's answer", "A file no task names stays as it is", "mark that task `Status: blocked`, naming the file", "whatever its\n  `needs_human` says"}
+	has := func(what, out string, want, not []string) {
+		t.Helper()
+		for _, s := range want {
+			if !strings.Contains(out, s) {
+				t.Errorf("%s lack %q:\n%.4000s", what, s, out)
+			}
+		}
+		for _, s := range not {
+			if strings.Contains(out, s) {
+				t.Errorf("%s have %q", what, s)
+			}
 		}
 	}
-	if out := grove(t, "instructions", "implement", k); !strings.Contains(out, "You are implementing cycle "+k) || !strings.Contains(out, "run Grove's `instructions implement <change-id>`") {
-		t.Errorf("implement instructions for a cycle:\n%s", out)
+	out := grove(t, "instructions", "implement", cid)
+	has("implement instructions", out, append(append([]string{"You are implementing approved change " + cid + ", \"Allow editing older records\", as main@", "with the owner, in their own working tree.", "### change-spec: ", "### Requirement: Edit older records"}, shared...), owner...), alone)
+	out = grove(t, "instructions", "implement", cid, "--unattended")
+	has("unattended instructions", out, append(append([]string{"asking no one, in your own working tree.", "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n"}, shared...), alone...), owner)
+
+	// A member of a cycle, not marked, that needs a person, gets its plan.
+	planCycle(t, dir, k, "2026-10-22T09:00:00Z", false, cid)
+	cycle := read(t, filepath.Join(dir, "grove/cycles", k+"-cycle.yaml")) + "needs_human:\n  " + cid + ": the owner judges it\n"
+	os.WriteFile(filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"), []byte(cycle), 0o644)
+	commitAll(t, dir, "Needs a person")
+	for _, args := range [][]string{{cid}, {cid, "--unattended"}} {
+		out := grove(t, append([]string{"instructions", "implement"}, args...)...)
+		has(strings.Join(args, " "), out, []string{", change 1 of 1 in cycle " + k + ".", "## The cycle\n\nCycle " + k + ", \"Cycle " + k + "\", in build order:\n\n1. " + cid + " \"Allow editing older records\" — this change\n"}, nil)
 	}
+	out = grove(t, "instructions", "implement", k)
+	has("cycle instructions", out, []string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "with the owner", "run Grove's `instructions implement <change-id>` and", "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n", shared[3]}, alone)
+	out = grove(t, "instructions", "implement", k, "--unattended")
+	has("unattended cycle instructions", out, append([]string{"asking no one", "run Grove's `instructions implement <change-id> --unattended` and", "\n1. " + cid + " \"Allow editing older records\"\n", shared[3]}, alone...), owner)
 }
 
 func TestDropChange(t *testing.T) {
@@ -572,7 +584,7 @@ func TestSchemas(t *testing.T) {
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
 	planCycle(t, dir, "261022-k0000", "2026-10-22T09:00:00Z", false, cid)
-	for skill, s := range map[string]string{"apply 261022-k0000": "One task at a time", "archive": "Reconcile the specs"} {
+	for skill, s := range map[string]string{"implement": "One task at a time", "archive": "Reconcile the specs"} {
 		if out := grove(t, append(append([]string{"instructions"}, strings.Fields(skill)...), cid)...); !strings.Contains(out, ", with change schema bugfix, ") || !strings.Contains(out, s) {
 			t.Errorf("bugfix %s instructions:\n%.2000s", skill, out)
 		}
@@ -659,24 +671,23 @@ func TestCoordinating(t *testing.T) {
 		t.Errorf("explore's index does not say what delete waits on:\n%s", out)
 	}
 
-	// Apply and implement refuse an unmet dependency.
+	// Implement refuses an unmet dependency, with the owner or not.
 	k := "261022-k0000"
 	planCycle(t, dir, k, "2026-10-22T09:00:00Z", false, del, unknown)
 	var stdout, stderr strings.Builder
-	for _, args := range [][]string{{"apply", k, del}, {"implement", del}} {
+	for _, args := range [][]string{{"implement", del, "--unattended"}, {"implement", del}} {
 		stderr.Reset()
 		if code := run(append([]string{"instructions"}, args...), &stdout, &stderr); code != 1 || stderr.String() != "grove: "+del+" waits on "+unknown+", which this working tree has not archived as finished\n" {
 			t.Errorf("%v before its dependency is archived: status %d, %q", args, code, stderr.String())
 		}
 	}
 
-	// Applying a cycle lists its changes in dependency order
-	// ("Applying a cycle").
-	out = grove(t, "instructions", "apply", k)
-	for _, s := range []string{"## What Grove requires of apply\n\n- Work in this working tree on a branch other than the target",
-		"## How to apply\n\nBuild these changes in this order", "\n1. " + unknown + " \"Editing an unknown ID prints an error\"\n2. " + del + " \"Add ledger delete ID\"\n"} {
+	// Implementing a cycle unattended lists its changes in dependency order.
+	out = grove(t, "instructions", "implement", k, "--unattended")
+	for _, s := range []string{"## What Grove requires of implement\n\n- Work in this working tree on a branch other than the target",
+		"## How to implement\n\nBuild these changes in this order", "\n1. " + unknown + " \"Editing an unknown ID prints an error\"\n2. " + del + " \"Add ledger delete ID\"\n"} {
 		if !strings.Contains(out, s) {
-			t.Errorf("cycle apply instructions lack %q:\n%s", s, out)
+			t.Errorf("cycle instructions lack %q:\n%s", s, out)
 		}
 	}
 
@@ -685,12 +696,12 @@ func TestCoordinating(t *testing.T) {
 	os.WriteFile(filepath.Join(unknownDir, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
 	maintain(t, dir, keep+olderEdits)
 	grove(t, "archive", unknown)
-	if out := grove(t, "instructions", "apply", k, del); !strings.Contains(out, "You are applying approved change "+del) || !strings.Contains(out, ", change 2 of 2 in cycle "+k+".") ||
+	if out := grove(t, "instructions", "implement", del, "--unattended"); !strings.Contains(out, "You are implementing approved change "+del) || !strings.Contains(out, ", change 2 of 2 in cycle "+k+".") ||
 		!strings.Contains(out, "1. "+unknown+" \"Editing an unknown ID prints an error\" — archived in this working tree\n2. "+del+" \"Add ledger delete ID\" — this change\n") {
-		t.Errorf("apply after its dependency is archived on the branch:\n%s", out)
+		t.Errorf("implement after its dependency is archived on the branch:\n%s", out)
 	}
-	if out := grove(t, "instructions", "apply", k); !strings.Contains(out, "\n1. "+del+" \"Add ledger delete ID\"\n\n## Project index") {
-		t.Errorf("cycle apply after archiving on the branch:\n%s", out)
+	if out := grove(t, "instructions", "implement", k, "--unattended"); !strings.Contains(out, "\n1. "+del+" \"Add ledger delete ID\"\n\n## Project index") {
+		t.Errorf("cycle after archiving on the branch:\n%s", out)
 	}
 	git(t, dir, "checkout", "-q", "--", ".")
 	git(t, dir, "clean", "-qfd")
@@ -699,7 +710,7 @@ func TestCoordinating(t *testing.T) {
 	if out := finish(t, dir, "unknown-id-impl", unknown, unknownDir, keep+olderEdits); out != "No problems in grove/.\n" {
 		t.Errorf("check on unknown-id-impl printed %q", out)
 	}
-	grove(t, "instructions", "apply", k, del)
+	grove(t, "instructions", "implement", del, "--unattended")
 
 	// check reports broken dependencies (Other paths).
 	budgets, _ := propose(t, dir, "budgets", "Monthly budgets in report", "depends_on: ["+del+"]\n")
@@ -798,12 +809,12 @@ func TestCoordinating(t *testing.T) {
 		t.Errorf("changes --json: %+v", v)
 	}
 
-	// Applying a cycle leaves out a change that waits on a change that is
+	// Implementing a cycle leaves out a change that waits on a change that is
 	// neither being built nor finished.
 	imports, _ := approve(t, dir, "imports", "Import a CSV", "depends_on: [260101-zzzzz]\n")
 	planCycle(t, dir, "261022-m0000", "2026-10-22T10:00:00Z", false, imports, budgets, show)
-	if out := grove(t, "instructions", "apply", "261022-m0000"); !strings.Contains(out, "\nLeave out "+imports+", \"Import a CSV\": it waits on 260101-zzzzz, which is neither being built nor archived as finished.") || !strings.Contains(out, " "+budgets+" ") || !strings.Contains(out, " "+show+" ") {
-		t.Errorf("cycle apply with a change that cannot be built:\n%s", out)
+	if out := grove(t, "instructions", "implement", "261022-m0000", "--unattended"); !strings.Contains(out, "\nLeave out "+imports+", \"Import a CSV\": it waits on 260101-zzzzz, which is neither being built nor archived as finished.") || !strings.Contains(out, " "+budgets+" ") || !strings.Contains(out, " "+show+" ") {
+		t.Errorf("cycle with a change that cannot be built:\n%s", out)
 	}
 }
 
@@ -906,7 +917,7 @@ func TestCycles(t *testing.T) {
 		"grove/cycles/261099-zzzzz-later.yaml:3: changes: 260101-zzzzz is no change, open or archived\n")
 }
 
-// TestRun follows the walkthrough's "Running apply unattended" with a
+// TestRun follows the walkthrough's "Running unattended" with a
 // stand-in claude on PATH, in an operator's clone of the fixture's remote.
 func TestRun(t *testing.T) {
 	owner := setUp(t)
@@ -979,8 +990,8 @@ func TestRun(t *testing.T) {
 	// An ordinary run, with a second run while it goes, its session leaving a
 	// child behind and emitting events, which the log holds before it ends.
 	events := `{"type":"system","subtype":"init","model":"claude-opus"}
-{"type":"assistant","message":{"content":[{"type":"text","text":"Building the cycle.\nFirst A."},{"type":"tool_use","name":"Bash","input":{"description":"Read","command":"grove instructions apply\necho"}}]}}
-{"type":"user","message":{"content":[{"type":"tool_result","content":"# Grove instructions: apply\nmore"}]}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"Building the cycle.\nFirst A."},{"type":"tool_use","name":"Bash","input":{"description":"Read","command":"grove instructions implement x --unattended\necho"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","content":"# Grove instructions: implement\nmore"}]}}
 {"type":"assistant","message":{"content":[{"type":"thinking","thinking":"a"}]}}
 {"type":"assistant","message":{"content":[{"type":"thinking","thinking":"b"}]}}
 {"type":"assistant","message":{"content":[{"type":"thinking","thinking":"c"}]}}
@@ -1014,7 +1025,7 @@ func TestRun(t *testing.T) {
 		t.Errorf("while the session ran, its log held %q", got)
 	}
 	os.WriteFile(filepath.Join(stub, "release"), nil, 0o644)
-	if got := <-first; !regexp.MustCompile(`^[0-9:]{8} ▶ started: model claude-opus\n[0-9:]{8} • Building the cycle\.\n[0-9:]{8} › Bash grove instructions apply\n` +
+	if got := <-first; !regexp.MustCompile(`^[0-9:]{8} ▶ started: model claude-opus\n[0-9:]{8} • Building the cycle\.\n[0-9:]{8} › Bash grove instructions implement x --unattended\n` +
 		`[0-9:]{8} · thinking \(×3\)\n[0-9:]{8} › Read ledger\.py\n[0-9:]{8} ✗ File does not exist\.\n[0-9:]{8} ■ result: success, 3 turns, \$0\.42\nAttempt [0-9]{6}-[0-9a-z]{5} ended: exit status 0; its output is .*/\.git/grove/[0-9]{6}-[0-9a-z]{5}\.log\.\n$`).MatchString(got) {
 		t.Errorf("the first run printed %q", got)
 	}
@@ -1023,7 +1034,7 @@ func TestRun(t *testing.T) {
 	var rec attempt
 	recs, _ := filepath.Glob(filepath.Join(checkout, ".git/grove/*.json"))
 	json.Unmarshal([]byte(read(t, recs[0])), &rec)
-	if read(t, filepath.Join(stub, "args")) != "-p /grove-apply "+k+" --output-format stream-json --verbose\n" || logged() != events || rec.Cycle != k || strings.Join(rec.Changes, " ") != a+" "+b || rec.Commit != main || rec.Outcome != "exit status 0" ||
+	if read(t, filepath.Join(stub, "args")) != "-p /grove-implement "+k+" --unattended --output-format stream-json --verbose\n" || logged() != events || rec.Cycle != k || strings.Join(rec.Changes, " ") != a+" "+b || rec.Commit != main || rec.Outcome != "exit status 0" ||
 		strings.TrimSpace(git(t, checkout, "branch", "--show-current")) != rec.Branch || strings.TrimSpace(git(t, checkout, "rev-parse", "main")) != main || git(t, checkout, "status", "--porcelain") != "" {
 		t.Errorf("after the first run: %+v, %s", rec, git(t, checkout, "status"))
 	}
@@ -1084,7 +1095,8 @@ func TestRun(t *testing.T) {
 	planCycle(t, owner, n, "2026-10-23T10:00:00Z", false, e)
 	nFile := filepath.Join(owner, "grove/cycles", n+"-cycle.yaml")
 	os.WriteFile(nFile, []byte(read(t, nFile)+"needs_human:\n  "+e+": judging the export\n"), 0o644)
-	commitAll(t, owner, "Export needs a person")
+	os.WriteFile(filepath.Join(owner, "grove.yaml"), []byte(strings.Replace(config, "claude: skills", "claude: commands", 1)), 0o644)
+	commitAll(t, owner, "Export needs a person, and Claude Code as commands")
 	git(t, owner, "push", "-q", "origin", "main")
 	branches := git(t, checkout, "branch")
 	runs(`^grove: main at [0-9a-f]{7} holds no cycle 261099-zzzzz\n$`, "--retry", "261099-zzzzz")
@@ -1093,7 +1105,7 @@ func TestRun(t *testing.T) {
 		t.Errorf("a refused run left branches %q, want %q", got, branches)
 	}
 	runs(`^Attempt .* ended: exit status 0;`, "--retry", m)
-	if last, _ := latest(filepath.Join(checkout, ".git/grove")); last.Cycle != m || read(t, filepath.Join(stub, "args")) != "-p /grove-apply "+m+" --output-format stream-json --verbose\n" {
+	if last, _ := latest(filepath.Join(checkout, ".git/grove")); last.Cycle != m || read(t, filepath.Join(stub, "args")) != "-p /grove:implement "+m+" --unattended --output-format stream-json --verbose\n" {
 		t.Errorf("the run given %s selected %s", m, last.Cycle)
 	}
 
@@ -1156,8 +1168,10 @@ func TestMovedFiles(t *testing.T) {
 	edit("tests/test_cli.py", "Another change")
 	rel := "grove/changes/" + filepath.Base(folder) + "/tasks.md"
 	checks(rel + ": T-01's tests/test_cli.py changed on main since base " + base[:7] + "; revise the change with propose\n")
-	if out := grove(t, "instructions", "implement", cid); !strings.Contains(out, "\n- Changed on main since base "+base[:7]+": T-01's `tests/test_cli.py`.\n") {
-		t.Errorf("implement instructions do not name the moved file:\n%.3000s", out)
+	for _, args := range [][]string{{cid}, {cid, "--unattended"}} {
+		if out := grove(t, append([]string{"instructions", "implement"}, args...)...); !strings.Contains(out, "\n- Changed on main since base "+base[:7]+": T-01's `tests/test_cli.py`.\n") {
+			t.Errorf("implement %v does not name the moved file:\n%.3000s", args, out)
+		}
 	}
 
 	// A member of a marked cycle: reported against the plan, not base.

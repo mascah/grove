@@ -30,7 +30,7 @@ rules:
       - "If this change introduces or sharpens a domain term, write glossary.md in the change folder in the glossary format below, holding only the terms this change adds or changes."
       - "Glossary format: '# Glossary', one or two sentences naming the domain, then '## Terms': each term in bold, a definition of one or two sentences, and an '_Avoid_:' line of rejected synonyms. Only words specific to this project; no implementation details."
       - "In the proposal's decisions, mark a decision '(ADR)' only if all three hold: it is hard to reverse, it would surprise a reader without context, and it came from a real trade-off. Most decisions are not ADRs."
-    apply:
+    implement:
       - "If building a task shows that a term in grove/glossary.md or the change's glossary.md is wrong or missing, say so under '## Glossary' in implementation.md."
     archive:
       - "Fold the change folder's glossary.md, if any, into grove/glossary.md, creating it if needed; a changed term replaces the old one. Leave the change's own copy in place."
