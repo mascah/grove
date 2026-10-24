@@ -8,9 +8,18 @@ write "Status: dropped" here with their reason. -->
 
 ### T-01 — Say each rule once
 
-Status: in progress
+Status: done
 
-Left: check each acceptance line against the revised acceptance.
+- Acceptance, checked on 4bafd7f's code and #73's description: the
+  description lists each removed line and where its rule still prints; the
+  repeats left between a requires file and its guide are each one that
+  can't go without rewording the copy that stays, and the description
+  lists them ("What 801eda2 cut that stays"); the opening text is shorter
+  and says what a maintained spec, a change, observed behavior and a draft
+  are, that Grove commits nothing and that approval is the proposal being
+  in the target branch; the per-skill table shows none longer after;
+  trials before and after are in the description; `go test ./...` passes;
+  `grove check` prints "No problems in grove/.".
 
 The owner's decisions, 2026-10-24:
 
