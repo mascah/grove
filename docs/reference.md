@@ -160,7 +160,7 @@ implementer may take without asking the owner, and its status a `Status:`
 line in `implementation.md`, which `grove archive` reads. So every schema has `tasks` and `implementation` at
 those paths, keeps the `Status:` lines of Grove's implementation template,
 and has one kind with `metadata: changes/<change>/.grove.yaml`, the change's
-main document. Its other kinds are in the change folder, except `spec`.
+main document; no other kind has `metadata`. Its other kinds are in the change folder, except `spec`.
 
 To add lines to Grove's instructions rather than replace a file, use `rules`
 in `grove.yaml`.
@@ -255,7 +255,6 @@ grove/
     documents/<kind>/template.md, guide.md
     skills/<skill>.md
   specs/<capability>/
-    .grove.yaml
     spec.md
   changes/<id>-<slug>/
     .grove.yaml
@@ -267,18 +266,22 @@ grove/
   cycles/<id>-<slug>.yaml
 ```
 
-A folder under `changes/` or `specs/` is a change or a maintained spec when
-it holds a `.grove.yaml`; `grove check` reports one without its main
-document: `spec.md`, or the change's schema's, `proposal.md` in `default`.
-A maintained spec's `.grove.yaml` holds its `title`; a change's holds its
-`title`, when it was `created`, its `schema`, and `base`, the full commit of
-the target it was proposed from, which propose writes from Grove's template.
-Either may add a one-line `description`, shown in lists. A change may add
+A folder under `specs/` is a maintained spec when it holds `spec.md`. Its
+title is the file's first `# ` heading, which `grove check` reports when
+there is none, and its description, in each skill's project index, is the
+first sentence of its `## Purpose`. A spec has no `.grove.yaml`; `grove
+check` reports one left in a spec folder as no longer read until it is
+deleted. A folder under `changes/` is a change when it holds a
+`.grove.yaml`; `grove check` reports one without its main document, the
+change's schema's, `proposal.md` in `default`. A change's `.grove.yaml`
+holds its `title`, when it was `created`, its `schema`, and `base`, the
+full commit of the target it was proposed from, which propose writes from
+Grove's template. It may add a one-line `description`, shown in lists, and
 `depends_on`, the list of change IDs it waits on (see
 [Coordinating changes](coordinating.md)). The folder name gives the ID: a spec's is the
-whole name, a change's the start of it. A main document starts with the
-title as its heading, and `grove check` reports one whose first heading is
-not `# ` and the title. A change's other files have no metadata: their
+whole name, a change's the start of it. A change's main document starts
+with the title as its heading, and `grove check` reports one whose first
+heading is not `# ` and the title. A change's other files have no metadata: their
 folder names their change. A cycle file's name starts with its ID, and it
 holds its `title`, when it was `created`, an optional one-line `goal`, `changes`, the list of
 approved change IDs in it, an optional `depends_on`, the IDs of the cycles it

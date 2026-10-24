@@ -2,9 +2,11 @@
 
 ## Purpose
 
-A requirement is one `### Requirement: <name>` block of a maintained spec or
-a change spec: a rule that says "shall", with at least one scenario.
-Archive folds a change's ADDED, MODIFIED and REMOVED
+`grove check` wants "shall" and a scenario in each requirement, and `grove
+archive` refuses a fold that does not hold the change's requirements word
+for word. A requirement is one `### Requirement: <name>` block of a
+maintained spec or a change spec: a rule that says "shall", with at least
+one scenario. Archive folds a change's ADDED, MODIFIED and REMOVED
 requirements into the maintained specs; "where this branch left the
 target" is the merge base of the current branch and the target.
 

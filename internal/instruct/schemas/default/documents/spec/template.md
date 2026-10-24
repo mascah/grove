@@ -7,7 +7,8 @@ they differ, keep the rule and record the difference under "Known discrepancies"
 ## Purpose
 
 <!-- One short paragraph: the enduring area of behavior this covers, who relies
-on it, and any term a reader needs defined. -->
+on it, and any term a reader needs defined. Its first sentence is the spec's
+description in lists, so make it one line saying what the spec covers. -->
 
 ## Boundaries
 

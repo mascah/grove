@@ -1,2 +1,0 @@
-title: Cycles
-description: "A cycle lists approved changes to build together; /grove-plan writes it, asking which need a person, and grove run <cycle-id>, or unattended: true for a grove run given no cycle, hands it to grove run."

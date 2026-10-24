@@ -44,8 +44,8 @@ describes future work. It does not plan or perform the implementation.
 
 ### 4. Write the change
 
-Write `design.md` only when a decision needs more room than the proposal's
-decisions section. Each task names the files it touches and the interfaces
+Write every decision in the proposal, however much room it needs. Each
+task names the files it touches and the interfaces
 it produces, as the tasks guide says, so where the change goes in the code
 is settled here, not left to whoever builds it. No code, commands or steps,
 no sequencing, no estimates.
