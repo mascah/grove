@@ -137,7 +137,8 @@ trial() {
     before=$(snapshot) sid="" last=""
     turn "$prompt"
     local k=0
-    while [ $((k += 1)) -le "$turns" ] && waiting; do reply && turn "$answer"; done
+    # An unattended run has no owner to answer it.
+    [[ $prompt == *--unattended* ]] || while [ $((k += 1)) -le "$turns" ] && waiting; do reply && turn "$answer"; done
     after=$(snapshot)
     while read -r p; do
       [[ $p == grove/* ]] || grep -qxF "$p" <(allowed) || outside+=("$p")
