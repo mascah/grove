@@ -104,6 +104,10 @@ $last" --model haiku --setting-sources project,local --tools "" --output-format 
   grep -qi '^yes' <<< "$verdict"
 }
 
+# changes lists the change folders, open and archived, so a change a run
+# proposes and archives is found too.
+changes() { ls grove/changes grove/changes/archive 2> /dev/null | grep -E '^[0-9]{6}-' | sort || true; }
+
 # allowed lists the paths the Files: and Delegated: lines of every tasks.md name.
 allowed() {
   find grove/changes -name tasks.md -exec awk '/^(Files|Delegated):/{on=1} /^$/{on=0} on' {} + |
@@ -136,7 +140,7 @@ trial() {
   for run in "${runs[@]}"; do
     branch=${run%% => *} prompt=${run#* => }
     [ "$(git branch --show-current)" = "$branch" ] || { git diff --quiet HEAD && [ -z "$(git ls-files -o --exclude-standard)" ] || commit "After the last run"; git switch -q "$branch" 2> /dev/null || git switch -q -c "$branch" main; }
-    had=$(ls grove/changes 2> /dev/null || true)
+    had=$(changes)
     prompt=${prompt//\{id\}/$id}
     [ "$h" = codex ] && prompt=${prompt/\/grove-/\$grove-}
     before=$(snapshot) sid="" last=""
@@ -148,7 +152,7 @@ trial() {
     while read -r p; do
       [[ $p == grove/* ]] || grep -qxF "$p" <(allowed) || outside+=("$p")
     done < <(diff <(echo "$before") <(echo "$after") | sed -n 's/^[<>] [0-9a-f]*  //p' | sort -u)
-    new=$(comm -13 <(echo "$had") <(ls grove/changes 2> /dev/null) | grep -v '^archive$' | head -1 || true)
+    new=$(comm -13 <(echo "$had") <(changes) | head -1 || true)
     [ -z "$new" ] || id=${new:0:12}
   done
   printf '%s\n' "${outside[@]:-}" | sed '/^$/d' | sort -u > "$dir/outside.txt"
