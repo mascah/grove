@@ -45,7 +45,8 @@ edit() { python3 -c 'import sys; p,o,n=sys.argv[1:]; s=open(p).read(); assert o 
 snapshot() { git ls-files -co --exclude-standard -z | xargs -0 shasum 2> /dev/null | sort -k2 || true; }
 
 # turn sends msg to the agent, resuming session sid when set, and sets sid,
-# last (the agent's last message) and words (the words of its messages).
+# last (the agent's last message), said (all its messages this turn) and
+# words (the words of its messages).
 turn() {
   local msg=$1 log=$dir/turn-$((n += 1)).jsonl
   echo "OWNER: $msg" >> "$dir/transcript.txt"
@@ -58,7 +59,7 @@ turn() {
       if .type=="text" then "AGENT: " + .text
       elif .type=="tool_use" then "TOOL: " + .name + " " + ((.input.command // .input.file_path // .input.skill // .input.pattern // "") | tostring)
       else empty end' "$log" >> "$dir/transcript.txt"
-    words=$((words + $(jq -r 'select(.type=="assistant" and .parent_tool_use_id==null) | .message.content[]? | select(.type=="text") | .text' "$log" | wc -w)))
+    said=$(jq -r 'select(.type=="assistant" and .parent_tool_use_id==null) | .message.content[]? | select(.type=="text") | .text' "$log")
   else
     local cfg=(--json -c allow_login_shell=false)
     if [ -z "$sid" ]; then
@@ -73,20 +74,22 @@ turn() {
       elif .type=="command_execution" then "TOOL: " + .command + " (exit \(.exit_code))"
       elif .type=="file_change" then "TOOL: edit " + ([.changes[]?.path] | join(", "))
       else empty end' "$log" >> "$dir/transcript.txt"
-    words=$((words + $(jq -r 'select(.type=="item.completed" and .item.type=="agent_message") | .item.text' "$log" | wc -w)))
+    said=$(jq -r 'select(.type=="item.completed" and .item.type=="agent_message") | .item.text' "$log")
   fi
+  words=$((words + $(wc -w <<< "$said")))
   # A turn the harness failed, such as at a usage limit, fails the trial rather than scoring it.
   failed=$(jq -rs '[.[] | select(.type=="turn.failed" or (.type=="result" and .is_error==true)) | .error.message // .result // "error"] | first // ""' "$log")
   [ -z "$failed" ] || { echo "| ($c) | $h | failed: $failed | | | | |" > "$dir/row.md"; return 1; }
 }
 
 # reply sets answer to the case's first unused answer whose pattern matches
-# the agent's last message, or the fallback.
+# any of the agent's messages this turn, or the fallback: Codex can split a
+# turn into several messages, the question in an earlier one.
 reply() {
   local i
   answer=$fallback
   for i in "${!answers[@]}"; do
-    if [ -z "${used[$i]:-}" ] && grep -Eiq -- "${answers[$i]%% => *}" <<< "$last"; then
+    if [ -z "${used[$i]:-}" ] && grep -Eiq -- "${answers[$i]%% => *}" <<< "$said"; then
       used[$i]=1 answer=${answers[$i]#* => }
       return
     fi
