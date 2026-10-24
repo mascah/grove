@@ -10,7 +10,7 @@ Files: `internal/doc/doc.go`, `internal/doc/meta.go`,
 `internal/instruct/schemas/default/documents/spec/guide.md`,
 `internal/instruct/schemas/default/documents/spec/template.md`,
 `internal/instruct/schemas/default/skills/archive.md`,
-`internal/cli/walkthrough_test.go`
+`internal/cli/check.go`, `internal/cli/walkthrough_test.go`
 
 Interfaces: `doc.Load` finds specs by `specs/*/spec.md` and fills a
 spec's `Meta.Title` from its first `# ` heading and `Meta.Description`

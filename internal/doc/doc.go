@@ -1,9 +1,9 @@
 // Package doc reads Grove's documents through an fs.FS rooted at the
 // document root: Markdown files, and the .grove.yaml beside them.
 //
-// Under the root are maintained specs (specs/<id>/) and changes
-// (changes/<id>-<slug>/, archived in changes/archive/), each folder found by
-// its .grove.yaml, and cycles (cycles/<id>-<slug>.yaml). Problems inside a document
+// Under the root are maintained specs (specs/<id>/, found by its spec.md),
+// changes (changes/<id>-<slug>/, archived in changes/archive/, found by its
+// .grove.yaml), and cycles (cycles/<id>-<slug>.yaml). Problems inside a document
 // are Diagnostics, never errors, so one broken document does not hide the
 // others.
 package doc
@@ -98,6 +98,8 @@ type Collection struct {
 	Changes  []*Change
 	Archived []*Change
 	Cycles   []*Cycle // oldest first, by created
+
+	Diagnostics []Diagnostic // problems in no document: a spec folder's leftover .grove.yaml
 }
 
 // Layout returns where change schema schema puts a change's main document
@@ -109,19 +111,27 @@ type Layout func(schema string) (main string, capabilities []string, problem str
 // Load reads the collection under fsys.
 func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 	c := &Collection{}
-	specs, err := fs.Glob(fsys, "specs/*/.grove.yaml") // sorted
+	specs, err := fs.Glob(fsys, "specs/*/spec.md") // sorted
 	if err != nil {
 		return nil, err
 	}
 	for _, name := range specs {
-		d := &Document{ID: path.Base(path.Dir(name)), Dir: path.Dir(name), Path: path.Dir(name) + "/spec.md"}
-		if _, err := d.read(fsys, []string{"title"}, "description"); err != nil {
+		b, err := fs.ReadFile(fsys, name)
+		if err != nil {
 			return nil, err
 		}
-		if err := d.heading(fsys, d.Dir+"/spec.md", "missing; it is the spec's main document"); err != nil {
-			return nil, err
+		d := &Document{ID: path.Base(path.Dir(name)), Dir: path.Dir(name), Path: name}
+		if d.Meta.Title, d.Meta.Description = specMeta(string(b)); d.Meta.Title == "" {
+			d.report(name, 0, `no "# " heading to give the spec its title`)
 		}
 		c.Specs = append(c.Specs, d)
+	}
+	leftovers, err := fs.Glob(fsys, "specs/*/.grove.yaml")
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range leftovers {
+		c.Diagnostics = append(c.Diagnostics, Diagnostic{Path: name, Message: "no longer read, since a spec's title and description come from its spec.md; delete it"})
 	}
 	for _, glob := range []string{"changes/*/.grove.yaml", "changes/archive/*/.grove.yaml"} {
 		metas, err := fs.Glob(fsys, glob)

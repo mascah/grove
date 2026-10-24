@@ -55,7 +55,10 @@ func check(stdout io.Writer) error {
 	for _, cy := range c.Cycles {
 		docs = append(docs, &cy.Document)
 	}
-	n := len(unknown)
+	for _, diag := range c.Diagnostics {
+		fmt.Fprintf(stdout, "%s/%s\n", p.Root, diag)
+	}
+	n := len(unknown) + len(c.Diagnostics)
 	for _, d := range docs {
 		for _, diag := range d.Diagnostics {
 			fmt.Fprintf(stdout, "%s/%s\n", p.Root, diag)

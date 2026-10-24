@@ -176,7 +176,11 @@ func TestCheck(t *testing.T) {
 	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
 	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte("# Record editing\n\n## ADDED Requirements\n\n"+
 		"### Requirement: Keep a category\n\nThe system shall keep it.\n\n### Requirement: Delete a record\n\nUsers can delete a record.\n\n#### Scenario: Delete\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", ".grove.yaml"), []byte("description: Editing records.\nowner: me\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", ".grove.yaml"), []byte("title: Record editing\nowner: me\n"), 0o644)
+	for file, body := range map[string]string{"notes/ideas.md": "# Ideas\n", "old/.grove.yaml": "title: Old\n", "untitled/spec.md": "## Purpose\n\nUntitled.\n"} {
+		os.MkdirAll(filepath.Join(dir, "grove", "specs", filepath.Dir(file)), 0o755)
+		os.WriteFile(filepath.Join(dir, "grove", "specs", file), []byte(body), 0o644)
+	}
 	for folder, meta := range map[string]string{"261015-k3m9q-no-proposal": "title: T\ncreated: x\n", "261015-p4x8d-extra-field": "title: T\ncreated: x\nowner: me\n",
 		"261015-q7r2s-drifted": "title: New title\ncreated: x\n", "no-id": "title: T\ncreated: x\n"} {
 		os.MkdirAll(filepath.Join(dir, "grove", "changes", folder), 0o755)
@@ -195,17 +199,22 @@ func TestCheck(t *testing.T) {
 	stdout.Reset()
 	stderr.Reset()
 	code = run([]string{"check"}, &stdout, &stderr)
-	want = "grove/specs/record-editing/.grove.yaml:2: unknown field \"owner\"; this file takes title and description\n" +
-		"grove/specs/record-editing/.grove.yaml: title: required field is missing\n" +
+	want = "grove/specs/old/.grove.yaml: no longer read, since a spec's title and description come from its spec.md; delete it\n" +
+		"grove/specs/record-editing/.grove.yaml: no longer read, since a spec's title and description come from its spec.md; delete it\n" +
 		"grove/specs/record-editing/spec.md:5: requirement \"Keep a category\" has no scenario\n" +
 		"grove/specs/record-editing/spec.md:9: requirement \"Delete a record\" has no \"shall\"\n" +
 		"grove/specs/record-editing/spec.md:3: this heading belongs in a change spec; a maintained spec lists its requirements under ## Requirements\n" +
+		"grove/specs/untitled/spec.md: no \"# \" heading to give the spec its title\n" +
 		"grove/changes/261015-k3m9q-no-proposal/proposal.md: missing; it is the change's main document in schema default\n" +
 		"grove/changes/261015-p4x8d-extra-field/.grove.yaml:3: unknown field \"owner\"; this file takes title, created, schema, description, depends_on and base\n" +
 		"grove/changes/261015-q7r2s-drifted/proposal.md:1: the first heading should be \"# New title\", the title in .grove.yaml\n" +
 		"grove/changes/no-id/: the folder name must start with a change ID, such as 261015-k3m9q\n"
-	if code != 1 || stdout.String() != want || stderr.String() != "grove: 9 problems found\n" {
+	if code != 1 || stdout.String() != want || stderr.String() != "grove: 10 problems found\n" {
 		t.Errorf("check: status %d\n%s%s", code, stdout.String(), stderr.String())
+	}
+	commitAll(t, dir, "Specs")
+	if got := grove(t, "specs"); strings.Contains(got, "notes") || !strings.Contains(got, "untitled    grove/specs/untitled/spec.md\n") {
+		t.Errorf("specs printed %q", got)
 	}
 }
 
@@ -482,15 +491,15 @@ func TestArchive(t *testing.T) {
 		}
 	}
 	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
-	for _, name := range []string{".grove.yaml", "spec.md"} {
-		m := regexp.MustCompile(`(?s)<file path="grove/specs/<capability>/` + regexp.QuoteMeta(name) + `">\n(.*?)\n</file>`).FindStringSubmatch(out)
-		if m == nil {
-			t.Fatalf("no %s template in:\n%s", name, out)
-		}
-		filled := regexp.MustCompile(`(?s)### Requirement: \[.*?\n\n## Known`).ReplaceAllString(m[1], olderEdits+"\n## Known")
-		filled = strings.NewReplacer("<capability>", "record-editing", "<title>", "Record editing").Replace(filled)
-		os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", name), []byte(filled), 0o644)
+	m := regexp.MustCompile(`(?s)<file path="grove/specs/<capability>/spec.md">\n(.*?)\n</file>`).FindStringSubmatch(out)
+	if m == nil || strings.Contains(out, "grove/specs/<capability>/.grove.yaml") {
+		t.Fatalf("no spec.md template, or a .grove.yaml one, in:\n%s", out)
 	}
+	purpose := "Editing a record in `records.json` keeps its category.\nA record is one line of the ledger.\n"
+	filled := regexp.MustCompile(`(?s)### Requirement: \[.*?\n\n## Known`).ReplaceAllString(m[1], olderEdits+"\n## Known")
+	filled = regexp.MustCompile(`(?s)(## Purpose\n\n)<!--.*?-->\n`).ReplaceAllString(filled, "${1}"+purpose)
+	filled = strings.NewReplacer("<capability>", "record-editing", "<title>", "Record editing").Replace(filled)
+	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte(filled), 0o644)
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
 		t.Errorf("check printed %q", got)
 	}
@@ -513,7 +522,7 @@ func TestArchive(t *testing.T) {
 	}
 	next := grove(t, "instructions", "explore")
 	for _, s := range []string{
-		"Maintained specs (agreed behavior):\n- record-editing \"Record editing\": `grove/specs/record-editing/spec.md`",
+		"Maintained specs (agreed behavior):\n- record-editing \"Record editing\": `grove/specs/record-editing/spec.md` — Editing a record in `records.json` keeps its category.\n",
 		"Approved changes (future work; implementation is not established):\n- None.",
 	} {
 		if !strings.Contains(next, s) {
@@ -522,6 +531,12 @@ func TestArchive(t *testing.T) {
 	}
 	if len(next) >= 12<<10 {
 		t.Errorf("explore instructions are %d bytes, want under 12 KiB", len(next))
+	}
+
+	os.WriteFile(filepath.Join(dir, "grove/specs/record-editing/spec.md"), []byte(strings.Replace(filled, "## Purpose\n\n"+purpose, "", 1)), 0o644)
+	commitAll(t, dir, "No purpose")
+	if out, got := grove(t, "instructions", "explore"), grove(t, "check"); !strings.Contains(out, "`grove/specs/record-editing/spec.md`\n") || got != "No problems in grove/.\n" {
+		t.Errorf("a spec with no Purpose: check printed %q, and explore's index:\n%s", got, out)
 	}
 }
 
@@ -677,7 +692,7 @@ func TestSchemas(t *testing.T) {
 	os.WriteFile(filepath.Join(schemas, "bugfix/schema.yaml"), []byte("description: A fix for behavior that is wrong.\ninstrution: x\n"), 0o644)
 	os.WriteFile(filepath.Join(folder, ".grove.yaml"), []byte("title: Allow editing older records\ncreated: 2026-10-14T00:00:00Z\nschema: bugfx\n"), 0o644)
 	os.MkdirAll(filepath.Join(schemas, "notasks"), 0o755)
-	os.WriteFile(filepath.Join(schemas, "notasks/schema.yaml"), []byte("description: N.\ndocuments:\n  - {kind: proposal, path: changes/<change>/proposal.md, template: documents/proposal/template.md, guide: documents/proposal/guide.md, metadata: changes/<change>/.grove.yaml}\n"), 0o644)
+	os.WriteFile(filepath.Join(schemas, "notasks/schema.yaml"), []byte("description: N.\ndocuments:\n  - {kind: proposal, path: changes/<change>/proposal.md, template: documents/proposal/template.md, guide: documents/proposal/guide.md, metadata: changes/<change>/.grove.yaml}\n  - {kind: spec, path: specs/<capability>/spec.md, template: t.md, guide: g.md, metadata: specs/<capability>/.grove.yaml}\n"), 0o644)
 	stdout.Reset()
 	stderr.Reset()
 	code := run([]string{"check"}, &stdout, &stderr)
@@ -685,6 +700,7 @@ func TestSchemas(t *testing.T) {
 		"grove/schemas/bugfix/schema.yaml:2: unknown field \"instrution\"; schema.yaml takes description, documents and skills\n",
 		"grove/schemas/bugfix/documents/propsal/template.md: schema bugfix does not use this file\n",
 		"grove/schemas/notasks/schema.yaml: tasks must be at changes/<change>/tasks.md; Grove reads it to archive\n",
+		"grove/schemas/notasks/schema.yaml: spec: metadata must be changes/<change>/.grove.yaml\n",
 		"grove/changes/" + cid + "-allow-editing-older-records/.grove.yaml:3: schema \"bugfx\" is not a change schema; schemas are default, bugfix, notasks and short\n",
 	} {
 		if code != 1 || !strings.Contains(stdout.String(), s) {
@@ -722,7 +738,6 @@ func finish(t *testing.T, dir, branch, id, folder, spec string) string {
 func maintain(t *testing.T, dir, reqs string) {
 	t.Helper()
 	os.MkdirAll(filepath.Join(dir, "grove/specs/record-editing"), 0o755)
-	os.WriteFile(filepath.Join(dir, "grove/specs/record-editing/.grove.yaml"), []byte("title: Record editing\n"), 0o644)
 	os.WriteFile(filepath.Join(dir, "grove/specs/record-editing/spec.md"), []byte("# Record editing\n\n## Requirements\n\n"+reqs), 0o644)
 }
 

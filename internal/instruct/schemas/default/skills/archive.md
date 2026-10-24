@@ -10,6 +10,6 @@ one over the requirement of the same name, word for word, scenarios and
 all; delete each REMOVED one; change no other requirement. The
 ADDED/MODIFIED/REMOVED headings never appear in a maintained spec. Remove the
 known discrepancies the work resolved. Where there is no maintained spec,
-create it, and its `.grove.yaml`, from the templates under "Documents" below.
+create it from the template under "Documents" below.
 List each reconciled spec under "Reconciliation" in `implementation.md`. Then
 run Grove's `check` and fix what it reports.
