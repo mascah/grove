@@ -95,7 +95,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    T-01's evidence, and writes `## Scenarios` there, naming each scenario's
    test and "passed", or `unverified` and why; its report names each
    unverified one, and so does the archive before it folds the spec.
-   `python3 -m unittest` passes. With every task
+   `python3 -m unittest` passes. I corrected nothing, so it suggests no
+   line for `grove.yaml`. With every task
    done, the same session runs `grove instructions archive 261015-k3m9q`,
    adds the requirement to a new `grove/specs/record-editing/spec.md`, with
    no `.grove.yaml` beside it, ending with a `## History` line
@@ -532,6 +533,15 @@ Each step names the section of
   `grove review` shows the edited change spec beside the code. Had I
   declined, the change's files would stay as they are. Had I said to leave
   it, T-01 would be `Status: blocked` with the question.
+- **A line for next time** (§5; reference, "grove.yaml"). On a new branch,
+  a fresh `claude`, `/grove-implement <change-id>`. While it builds, I
+  correct it twice, each in a way that would apply to future work, such as
+  "Name each test after the requirement it checks". When it finishes, it
+  suggests one line for `grove.yaml`, not two, quoting a correction. I
+  agree: `grove.yaml` on the branch holds it under `rules: skills:
+  implement:`, no task's `Files:` line names `grove.yaml`, and `grove
+  check` prints "No problems in grove/." Had I declined, `grove.yaml`
+  would be unchanged.
 - **One merge for a small change** (§3, §4; concepts, "Approval is a
   merge"). From main, `git switch -c rename`, a fresh session,
   `/grove-propose Editing a missing record should print an error`. Its

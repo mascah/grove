@@ -215,6 +215,11 @@ and it never edits the change. Given a cycle's ID, it builds each change of
 the cycle the same way (see [Planning cycles](planning.md)). `grove run`
 uses it too (see [Running unattended](running.md)).
 
+If you corrected the agent in a way that would apply to future work, such
+as how to name tests, it suggests one line for `context` or `rules` in
+`grove.yaml` when it finishes, quoting you. It adds the line on this branch
+only if you agree.
+
 When every task is done, the agent archives the change. It merges the
 change's specs into the maintained specs in `grove/specs/`. Then it runs
 `grove archive`, which moves the change to `grove/changes/archive/`.
