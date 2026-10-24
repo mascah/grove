@@ -26,7 +26,7 @@ is in `CLAUDE.md`; how to build, test, commit and release is in
 
 ## Size and shape
 
-12. Budget: 5,000 non-test Go lines, 3,000 test lines, and 7,000 words of instruction text in `internal/instruct` (its Markdown and YAML files), counted by `just check`, which fails above them. Raising the budget is a change to this file.
+12. Budget: 5,000 non-test Go lines, 3,000 test lines, and 8,000 words of instruction text in `internal/instruct` (its Markdown and YAML files), counted by `just check`, which fails above them. Raising the budget is a change to this file.
 13. No guard or fallback for a state no documented step can reach, unless a failure was reproduced on the fixture and named in the commit message. Handling an error that a call returns is not a guard.
 14. A user-facing message is one sentence. Explanation lives in the guides and the walkthrough, not in Go strings.
 15. Each package has one job, stated in its package comment, and a new package is named in the message of the commit that adds it. No interface with one implementation, no converter between two structs that mean the same thing.
