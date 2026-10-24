@@ -73,6 +73,9 @@ turn() {
       else empty end' "$log" >> "$dir/transcript.txt"
     words=$((words + $(jq -r 'select(.type=="item.completed" and .item.type=="agent_message") | .item.text' "$log" | wc -w)))
   fi
+  # A turn the harness failed, such as at a usage limit, fails the trial rather than scoring it.
+  failed=$(jq -rs '[.[] | select(.type=="turn.failed" or (.type=="result" and .is_error==true)) | .error.message // .result // "error"] | first // ""' "$log")
+  [ -z "$failed" ] || { echo "| ($c) | $h | failed: $failed | | | | |" > "$dir/row.md"; return 1; }
 }
 
 # reply sets answer to the case's first unused answer whose pattern matches
