@@ -8,19 +8,17 @@ is what approves it.
 Grove has two halves:
 
 - **In your terminal**, the `grove` command sets up a project, lists and
-  checks specs and changes, shows what a merge would approve, opens a
-  reader, and can run a cycle unattended.
+  checks specs and changes, shows what a merge would approve, and opens a
+  reader.
 - **In your agent's chat** (Claude Code, Codex, Cursor, OpenCode, Pi or
-  Hermes), Grove's skills explore an idea, prototype it on a throwaway branch,
-  propose a change, implement it
-  with you or without you, and archive it. Each skill asks `grove` for instructions and follows them in
-  the conversation you are already in.
+  Hermes), Grove's skills explore an idea, prototype it on a throwaway
+  branch, propose a change, implement it with you, and archive it. Each
+  skill asks `grove` for instructions and follows them in the conversation
+  you are already in.
 
-Grove never commits. It starts an agent only when you run `grove run`,
-which launches one Claude Code session to build what is approved; otherwise
-you run your agent. You commit, or your agent does when a rule asks.
+You run your agent, and you commit, or your agent does when a rule asks.
 
-## The short version
+## One change
 
 ```text
 terminal  grove init                            set up, then commit
@@ -33,13 +31,19 @@ chat      /grove-implement <change-id>          builds it with you, updates the 
 terminal  merge
 ```
 
-Or, once several changes are approved, `/grove-plan` puts them in a cycle,
-`/grove-implement <cycle-id> --unattended` builds them all in order
-without asking you, and you merge once.
-Mark the cycle `unattended` and `grove run` builds it for you.
+A small change can be proposed and built on one branch, so one merge
+approves it with its code.
 
 Some agents type skills another way, such as `$grove-explore`; the
 [Reference](reference.md) lists how each is typed.
+
+## Doing more
+
+Once several changes are approved, `/grove-plan` puts them in a cycle.
+`/grove-implement <cycle-id>` builds them in order with you, and
+`--unattended` builds them without asking you; you merge once. Mark the
+cycle `unattended`, and `grove run` builds it for you in one Claude Code
+session. `grove run` is the only command that starts an agent.
 
 ## Where to go next
 

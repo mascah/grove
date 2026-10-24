@@ -285,6 +285,85 @@ proposal's decisions section, and that name no `design.md`.
 - THEN the decision and its reasons are in `proposal.md` under
   Decisions, and the change folder has no `design.md`
 
+### Requirement: Report a dependency that can never be met
+
+When the owner runs `grove check`, the system shall report, for each open
+change, each ID in its `depends_on` that names no change, open or
+archived, that names a change archived as dropped, or that names an open
+change which waits on this one in turn, directly or through other open
+changes, at the `depends_on` line of the change's `.grove.yaml`.
+
+#### Scenario: No such change
+
+- GIVEN open change B's `.grove.yaml` holds `depends_on: [260101-zzzzz]`,
+  and no change, open or archived, has that ID
+- WHEN the owner runs `grove check`
+- THEN it reports B's `.grove.yaml` at its `depends_on` line, saying
+  260101-zzzzz is no change, open or archived, and exits non-zero
+
+#### Scenario: A dropped change
+
+- GIVEN open change B depends on A, and A is archived with
+  `implementation.md` saying `Status: dropped`
+- WHEN the owner runs `grove check`
+- THEN it reports B's `depends_on`, saying A was dropped, so B could never
+  be applied
+
+#### Scenario: A loop
+
+- GIVEN open change A depends on B, and open change B depends on A
+- WHEN the owner runs `grove check`
+- THEN it reports the `depends_on` of each, saying the other waits on it in
+  turn
+
+#### Scenario: A dependency archived as finished
+
+- GIVEN open change B depends on A, and A is archived with every task
+  `Status: done`
+- WHEN the owner runs `grove check`
+- THEN B's `depends_on` is not reported
+
+### Requirement: Report a stale requirement
+
+When the owner runs `grove check`, the system shall report each
+requirement an open change MODIFIES or REMOVES whose text in the working
+tree's maintained spec is neither its text at the change's `base`, nor
+the text this change gives it, nor the text a change it depends on gives
+it, naming the change spec's file and line, saying whether the
+requirement was rewritten or removed since `base`, and saying to revise
+the change with propose.
+
+#### Scenario: Rewritten by another change
+
+- GIVEN change S, proposed at `base` 4f1c2a9, MODIFIES "Keep a category"
+  of `record-editing`, and change T, which S does not depend on, rewrote
+  that requirement in the maintained spec and was archived
+- WHEN the owner runs `grove check`
+- THEN it reports S's change spec at the requirement's line, saying "Keep
+  a category" was rewritten since base 4f1c2a9, and to revise the change
+  with propose
+
+#### Scenario: Removed by another change
+
+- GIVEN change S MODIFIES "Keep a category", and another change it does
+  not depend on removed that requirement from the maintained spec
+- WHEN the owner runs `grove check`
+- THEN it reports that "Keep a category" was removed since S's `base`
+
+#### Scenario: Rewritten by a change it depends on
+
+- GIVEN change S depends on T, and T's archive gave "Keep a category" the
+  text T's change spec gives it
+- WHEN the owner runs `grove check`
+- THEN S is not reported
+
+#### Scenario: Already reconciled
+
+- GIVEN the maintained spec gives "Keep a category" the text S's own
+  change spec gives it, as archiving S leaves it
+- WHEN the owner runs `grove check`
+- THEN S is not reported
+
 ## Known discrepancies
 
 None recorded.

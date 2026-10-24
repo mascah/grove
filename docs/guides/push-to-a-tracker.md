@@ -6,13 +6,13 @@ it is not part of what Grove does. Use it if it helps.
 ## What it is for
 
 Some teams plan from a tracker, such as GitHub issues, rather than from the
-repository. This recipe keeps one issue per change, so the tracker shows
-what is approved and what is done, while Git stays the source of truth.
+repository. This recipe keeps one issue per change. The tracker then shows
+what is approved and what is done, and Git stays the source of truth.
 
 Grove pushes nothing to GitHub or any other tracker. Your agent does, from
 `grove changes --json` (see [Coordinating changes](../coordinating.md),
 "The project as data"), with the tools it already has. Each run replaces
-issue bodies whole, so edit the change, not the issue, and discuss in the
+issue bodies whole. So edit the change, not the issue, and discuss in the
 issue's comments.
 
 ## What to copy
@@ -46,11 +46,11 @@ uses whatever tools it has for that tracker.
 
 ## What to expect
 
-The first run creates one issue per change, each labelled `grove`, its body
-the change's proposal ending with `<!-- grove:<id> -->`. The issues of
-archived and dropped changes are closed.
+The first run creates one issue per change, each labelled `grove`. Its
+body is the change's proposal, ending with `<!-- grove:<id> -->`. The
+issues of archived and dropped changes are closed.
 
 Run the prompt again after each merge into your main branch, or let a
 workflow do it on each push: see [Run Grove in CI](run-grove-in-ci.md). An
-issue whose change was archived since the last run closes, and the markers
+issue whose change was archived since the last run is closed. The markers
 keep the agent from creating a second issue for a change it has seen.

@@ -9,8 +9,8 @@ session `grove run` starts, and no other session.
 ## Boundaries
 
 This covers `context` in `grove.yaml`: how instructions show it, and how
-`grove check` and `grove init` treat it. The rest of `grove.yaml` is
-specified by `docs/reference.md`. Project facts every session needs belong
+`grove check` and `grove init` treat it. The rest of `grove.yaml` has no
+maintained spec yet; `docs/reference.md` explains it. Project facts every session needs belong
 in `CLAUDE.md` or `AGENTS.md`, which Grove does not read.
 
 ## Requirements

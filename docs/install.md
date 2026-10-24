@@ -14,7 +14,7 @@ your project's `mise.toml`:
 ```
 
 Then run `mise install`. Everyone who works on the project, and its CI, runs
-the same version, and upgrading is a one-line pull request. In GitHub
+the same version. Upgrading is a one-line pull request. In GitHub
 Actions, `jdx/mise-action` installs what `mise.toml` lists, and later steps
 can run `grove`:
 
@@ -31,9 +31,9 @@ curl -fsSL https://raw.githubusercontent.com/mascah/grove/main/install.sh | sh
 ```
 
 The script installs the latest release in `~/.local/bin`, or in the folder
-`GROVE_INSTALL_DIR` names, and says when that folder is not on your PATH. It
-checks the download against the release's checksums and installs nothing if
-they differ. To install a given version, name its tag:
+`GROVE_INSTALL_DIR` names. It tells you when that folder is not on your
+PATH. It checks the download against the release's checksums, and installs
+nothing if they differ. To install a given version, name its tag:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/mascah/grove/main/install.sh | sh -s -- v0.1.0
