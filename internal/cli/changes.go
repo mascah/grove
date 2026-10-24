@@ -40,6 +40,9 @@ func listChanges(stdout io.Writer, asJSON bool) error {
 		for _, cy := range ip.Agreed.Cycles {
 			if !cy.Done && slices.Contains(cy.Meta.Changes, c.ID) {
 				waits += "  in cycle " + cy.ID + map[bool]string{true: ", unattended"}[cy.Meta.Unattended]
+				if len(cy.WaitsOn) > 0 {
+					waits += ", waits on cycle " + strings.Join(cy.WaitsOn, ", ")
+				}
 			}
 		}
 		fmt.Fprintf(stdout, "%s  %s  approved%s\n", c.ID, c.Meta.Title, waits)

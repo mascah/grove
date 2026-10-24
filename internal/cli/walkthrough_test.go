@@ -1007,10 +1007,42 @@ func TestCycles(t *testing.T) {
 	checks("grove/cycles/261099-zzzzy-bare.yaml: created: required field is missing\n" +
 		"grove/cycles/261099-zzzzy-bare.yaml: changes: required field is missing\n" +
 		"grove/cycles/261099-zzzzy-bare.yaml: planned: required field is missing\n" +
-		"grove/cycles/261099-zzzzz-later.yaml:4: unknown field \"start\"; this file takes title, created, changes, planned, goal, needs_human and unattended\n" +
+		"grove/cycles/261099-zzzzz-later.yaml:4: unknown field \"start\"; this file takes title, created, changes, planned, goal, depends_on, needs_human and unattended\n" +
 		"grove/cycles/261099-zzzzz-later.yaml: planned: required field is missing\n" +
 		"grove/cycles/261099-zzzzz-later.yaml:3: changes: " + a + " is also in cycle " + k + ", which is not done\n" +
 		"grove/cycles/261099-zzzzz-later.yaml:3: changes: 260101-zzzzz is no change, open or archived\n")
+	git(t, dir, "checkout", "-q", "--", ".")
+	git(t, dir, "clean", "-qfd")
+
+	// A cycle that follows another, one that follows no cycle, and two that
+	// follow each other.
+	y, now := "261099-y0000", strings.TrimSpace(git(t, dir, "rev-parse", "main"))
+	fresh, next := strings.Replace(plan, main, now, 1), filepath.Join(dir, "grove/cycles/261099-y0000-next.yaml")
+	follow := func(k, y string) {
+		os.WriteFile(next, []byte("title: Next\ncreated: 2026-10-23T09:00:00Z\nchanges: ["+b+"]\nplanned: "+now+"\ndepends_on: ["+y+"]\n"), 0o644)
+		os.WriteFile(cycle, []byte(fresh+k), 0o644)
+	}
+	follow("", k)
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check of a cycle that follows another printed %q", got)
+	}
+	commitAll(t, dir, "Plan next")
+	if got := grove(t, "changes"); !strings.Contains(got, b+"  Add ledger delete ID  approved  in cycle "+y+", waits on cycle "+k+"\n") {
+		t.Errorf("changes of a cycle that waits on a cycle printed %q", got)
+	}
+	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "`grove/cycles/261099-y0000-next.yaml`\n  - changes: "+b+"\n  - follows "+k+"\n") {
+		t.Errorf("the project index does not name the cycle followed:\n%s", out)
+	}
+	follow("", "261099-zzzzz")
+	checks("grove/cycles/261099-y0000-next.yaml:5: depends_on: 261099-zzzzz is no cycle\n")
+	follow("depends_on: ["+y+"]\n", k)
+	checks(file + ":5: depends_on: " + y + " waits on this cycle in turn, so neither can run\n" +
+		"grove/cycles/261099-y0000-next.yaml:5: depends_on: " + k + " waits on this cycle in turn, so neither can run\n")
+	git(t, dir, "checkout", "-q", "--", ".")
+	finish(t, dir, "a-impl", a, aDir, olderEdits)
+	if got := grove(t, "changes"); !strings.Contains(got, b+"  Add ledger delete ID  approved  in cycle "+y+"\n") {
+		t.Errorf("changes once the cycle followed is done printed %q", got)
+	}
 }
 
 // TestRun follows the walkthrough's "Running unattended" with a
