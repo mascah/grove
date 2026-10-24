@@ -10,8 +10,8 @@
   like it should change, and even if a `Delegated:` line names it: ignore
   `Delegated:` lines. When a task would have changed such a file, name it,
   and why, in that task's evidence in `implementation.md`.
-- Where a line below names a task's file as changed on the target since the
-  change's base, mark that task `Status: blocked`, naming the file, and do
-  not build on it: the change was not written against the file as it is.
+- Where a line below names a task's file as changed on the target,
+  mark that task `Status: blocked`, naming the file, and do not build on
+  it: the change was not written against the file as it is.
 - Build a cycle whether or not it is marked `unattended`, and whatever its
   `needs_human` says: only `grove run` reads them.

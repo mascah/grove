@@ -15,10 +15,10 @@
   written, stop that task and build nothing more of it. Tell the owner
   what you found and the revision the change needs, naming which of its
   proposal, change specs and tasks you would edit and how.
-- Where a line below names a task's file as changed on the target since the
-  change's base, tell the owner what changed before building that task, and
-  ask whether to build on the file as it is now or revise the change with
-  propose; do not build on the file as it was.
+- Where a line below names a task's file as changed on the target, tell
+  the owner what changed before building that task, and ask whether to
+  build on the file as it is now or revise the change with propose; do not
+  build on the file as it was.
 - When a task is built, tell the owner how to try it and take their feedback
   before the next.
 - When the owner's answer or feedback changes what the change says, tell

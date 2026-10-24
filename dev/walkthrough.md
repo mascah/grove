@@ -274,6 +274,10 @@ show-saved changes approved. Each step names the section of
    cycle, though it is not marked, and exits non-zero:
    > grove/cycles/\<0.4-cycle>.yaml: planned: \<budgets-id> changed on main since this plan; re-plan it with /grove-plan \<0.4-cycle-id>
 
+   `grove instructions implement <budgets-id>`, and the same with
+   `--unattended`, names the file against the plan, not `base`:
+   > \- Changed on main since cycle \<0.4-cycle-id>'s plan \<sha7>: T-01's `ledger/report.py`.
+
    `git switch -c replan-0.4`, a fresh session,
    `/grove-plan <0.4-cycle-id>`. It asks about budgets as before and I say
    yes again; it writes no `unattended` and sets `planned` to main's

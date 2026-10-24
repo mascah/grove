@@ -171,8 +171,9 @@ func instructionsImplement(stdout io.Writer, id string, unattended bool) error {
 // unattended, for change id as the target holds it, or, with the owner, as
 // this working tree holds a draft the target does not, with cycle cy's plan
 // when it is not nil, unless it waits on a change tree has not archived as
-// finished (D-56). For a change in no cycle that is not done, they name
-// each task's file that changed on the target since the change's base.
+// finished (D-56). They name each task's file that changed on the target
+// since cy's plan or, for a change in no cycle that is not done, since the
+// change's base.
 func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *doc.Collection, id string, unattended bool, cy *doc.Cycle) error {
 	c, fsys := ip.Agreed.Change(id), fs.FS(nil)
 	if c == nil && !unattended {
@@ -195,18 +196,24 @@ func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *
 		return err
 	}
 	in, err := instruct.Implement(ip, c, files, unattended)
+	var tasks []doc.Task
+	since := ""
 	if err == nil && cy == nil && !inOpenCycle(tree, id) && c.Meta.Base != "" {
-		var tasks []doc.Task
 		tasks, err = moved(p, ip.Commit, c)
-		var named []string
-		for _, t := range tasks {
-			for _, f := range t.Files {
-				named = append(named, fmt.Sprintf("%s's `%s`", t.ID, f))
-			}
+		since = "base " + c.Meta.Base[:min(7, len(c.Meta.Base))]
+	} else if err == nil && cy != nil && cy.Meta.Planned != "" {
+		var paths []string
+		paths, err = sincePlan(p, ip.Commit, ip.Agreed, cy)
+		tasks, since = naming(c, paths), "cycle "+cy.ID+"'s plan "+cy.Meta.Planned[:min(7, len(cy.Meta.Planned))]
+	}
+	var named []string
+	for _, t := range tasks {
+		for _, f := range t.Files {
+			named = append(named, fmt.Sprintf("%s's `%s`", t.ID, f))
 		}
-		if len(named) > 0 {
-			in.Requires += fmt.Sprintf("- Changed on %s since base %s: %s.\n", p.Target, c.Meta.Base[:min(7, len(c.Meta.Base))], strings.Join(named, ", "))
-		}
+	}
+	if len(named) > 0 {
+		in.Requires += fmt.Sprintf("- Changed on %s since %s: %s.\n", p.Target, since, strings.Join(named, ", "))
 	}
 	if err == nil && cy != nil {
 		var b []byte

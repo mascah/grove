@@ -35,7 +35,39 @@ Status: done
 
 ### T-02 — Implement names a member's files moved since the plan
 
-Status: not started
+Status: done
+
+- `internal/cli/check.go`: `sincePlan` counts the commits since a cycle's
+  plan, as "Count a member changed with its plan" says, and returns the
+  paths they changed. `changedSincePlan`, which check and `grove run`
+  call, derives the stale members from those paths, as before. `naming`
+  filters a change's tasks by changed paths, and `moved` uses it too.
+- `internal/cli/instructions.go`: for a member of a cycle the target
+  holds that is not done, `instructionsChange` adds
+  ``- Changed on main since cycle <cycle-id>'s plan <sha7>: T-01's `<file>`.``
+  It does this with the owner and with `--unattended`. A change in no
+  cycle still gets the line against `base`. `grove instructions implement
+  <cycle-id>` is unchanged.
+- `internal/instruct/requires/implement-owner.md`,
+  `implement-unattended.md`: the rule reads "changed on the target",
+  without "since the change's base", so it covers both lines. That is
+  three fewer words in each file.
+- `internal/cli/walkthrough_test.go`: `TestMovedFiles` checks that an
+  unmarked member's moved file is named against the plan, with and without
+  `--unattended`, and not against `base`. `TestFollows` checks three
+  things: after the merges that archive L's and M's changes, which edit
+  B's file, B's instructions name nothing. After a commit that archives
+  nothing, they name the file. After K is re-planned, they name nothing.
+  Both tests failed with `instructions.go` reverted, and pass with it.
+- `docs/coordinating.md`: says a cycle member's file that changed since
+  the plan is named as one changed since `base` is, quotes the line, and
+  points to "Re-plan a cycle" instead of "Mark it unattended". T-01 moved
+  the stale report into that section.
+- `dev/walkthrough.md`: Planning cycles step 5 shows
+  `grove instructions implement <budgets-id>` naming T-01's
+  `ledger/report.py` against the 0.4 cycle's plan before the re-plan.
+- `just check`: passed (3902 Go lines, 1603 test lines, 7697 instruction
+  words).
 
 ## Scenarios
 

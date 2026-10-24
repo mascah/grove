@@ -107,10 +107,10 @@ Unattended, the agent changes only the files a change's tasks name on
 their `Files:` lines. It may find another file that should change too.
 It leaves that file as it is and names it in the task's evidence in
 `implementation.md`. With you, the agent asks to add it to the task
-instead. A change in no cycle may have a task naming a file that changed
-on your main branch since the change's `base`. Unattended, that task is
-marked blocked, naming the file, and is not built. With you, the agent
-asks what to do.
+instead. A task may name a file that changed on your main branch since
+the change's `base`, or, for a change in a cycle, since the cycle's plan.
+Unattended, that task is marked blocked, naming the file, and is not
+built. With you, the agent asks what to do.
 
 Without `--unattended`, `/grove-implement 261020-m4k8t` builds the same
 cycle with you, each change as `/grove-implement <change-id>` does.
@@ -184,10 +184,15 @@ file. The agent tells you what changed and asks before building that task.
 
 A change in a cycle that is not done is not reported against its `base`.
 A moved file makes its cycle stale instead (see
-[Planning cycles](planning.md), "Mark it unattended"). Re-planning the
-cycle is then enough to build on the new text. Revising a change in such
-a cycle with `/grove-propose <change-id>` re-plans the cycle on the same
-branch (see "Re-plan a cycle" there).
+[Planning cycles](planning.md), "Re-plan a cycle"). The change's
+instructions name the task and file as changed since the cycle's plan,
+and the agent tells you and asks, as for a file changed since `base`:
+
+> - Changed on main since cycle 261020-m4k8t's plan 8f2d6c1: T-01's `ledger/cli.py`.
+
+Re-planning the cycle is then enough to build on the new text. Revising a
+change in such a cycle with `/grove-propose <change-id>` re-plans the
+cycle on the same branch (see "Re-plan a cycle" there).
 
 In a change spec, each REMOVED requirement keeps its heading,
 `### Requirement: <name>`, followed by why it goes. That way `grove check`
