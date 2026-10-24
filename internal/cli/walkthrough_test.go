@@ -583,6 +583,12 @@ func TestSchemas(t *testing.T) {
 		!strings.Contains(out, "\n- `bugfix`: A fix for behavior that is wrong, whether or not a maintained spec describes it.\n") {
 		t.Errorf("propose instructions do not list Grove's schemas:\n%s", out)
 	}
+	if out := grove(t, "instructions", "propose", "Editing a missing record crashes"); !strings.Contains(out, "describes behavior that is wrong, suggest the `bugfix` change schema") || !strings.Contains(out, "Once the owner confirms it") {
+		t.Errorf("propose instructions do not suggest bugfix:\n%.3000s", out)
+	}
+	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "\n- `bugfix`: A fix for behavior that is wrong") || !strings.Contains(out, "describes behavior that is wrong, suggest the `bugfix`\n  change schema") || !strings.Contains(out, "If the owner has\n  confirmed `bugfix`") {
+		t.Errorf("explore instructions do not suggest bugfix:\n%.3000s", out)
+	}
 	own := func(name, content string) {
 		os.MkdirAll(filepath.Dir(filepath.Join(dir, "grove/schemas", name)), 0o755)
 		os.WriteFile(filepath.Join(dir, "grove/schemas", name), []byte(content), 0o644)

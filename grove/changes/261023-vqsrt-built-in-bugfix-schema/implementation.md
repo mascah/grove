@@ -41,3 +41,21 @@ Status: done
   `grove instructions propose --schema bugfix "x"` printed the project's
   guide.
 - `grove check` on Grove's own repository prints "No problems in grove/.".
+
+### T-02 — Explore and propose suggest bugfix
+
+Status: in progress
+
+- `internal/instruct/requires/explore.md`: when the owner describes
+  behavior that is wrong, suggest the `bugfix` schema listed below, used
+  only once the owner confirms; the proposal then adds `--schema bugfix`.
+- `internal/instruct/requires/propose.md`: for a new change whose
+  instructions do not follow `bugfix`, suggest it when the owner describes
+  wrong behavior, and run `instructions propose --schema <name>` once the
+  owner confirms it or names another listed kind. The old condition, "if
+  the project's change schemas are listed", is gone: with `bugfix` built in
+  they always are.
+- `internal/cli/walkthrough_test.go`: `TestSchemas` checks that `grove
+  instructions explore` and `grove instructions propose "Editing a missing
+  record crashes"`, on the fixture with no `grove/schemas/`, list both
+  schemas and say to suggest `bugfix` and use it once the owner confirms.
