@@ -20,7 +20,17 @@ cycle <id>`; the project index adds `follows <id>` under a cycle.
 
 ### T-02 — Run waits on the cycles a cycle depends on
 
-Status: not started
+Status: done
+
+`runnable` refuses a cycle whose `WaitsOn` is not empty ("cycle K waits on
+cycle L, which is not done"), so `eligible` passes it over.
+`changedSincePlan` also leaves out a commit on the first-parent history
+that touches the archived folder of a change listed by a cycle `cy` depends
+on, directly or through others; bgtcb's cycle-file exception stays.
+`TestFollows` covers each acceptance line, including that implement lists
+the member of a waiting cycle. With the new exception disabled, four of its
+checks fail. `TestReplan`, `TestMovedFiles`, `TestCycles` and `TestRun` pass
+unchanged; `just check` passed.
 
 ### T-03 — Plan asks, and the docs say it
 

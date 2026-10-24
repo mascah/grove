@@ -225,9 +225,11 @@ func named(ch *doc.Change) []string {
 // changedSincePlan returns each member of cy that at, the documents at
 // commit, holds open, whose folder, or a file its tasks name, a commit on
 // commit's first-parent history since cy's planned commit changed without
-// also editing the cycle file. A commit that edits both is the plan
+// also editing the cycle file, or archiving a change of a cycle cy depends
+// on, directly or through others. A commit that edits both is the plan
 // checking that member, so a squash or merge commit of a revision and its
-// re-plan leaves the plan fresh.
+// re-plan leaves the plan fresh; one that archives is a merge the plan
+// expected.
 func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]string, error) {
 	planned, err := gitx.Run(p.Top, "rev-parse", "--verify", "--end-of-options", cy.Meta.Planned+"^{commit}")
 	if err != nil {
@@ -241,6 +243,28 @@ func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycl
 	for _, c := range strings.Split(log, "\x00")[1:] {
 		commits = append(commits, strings.Split(strings.TrimSpace(c), "\n"))
 	}
+	var archived []string // the folders the changes of the cycles cy depends on are archived in
+	seen := map[string]bool{cy.ID: true}
+	var follow func(ids []string)
+	follow = func(ids []string) {
+		for _, id := range ids {
+			if d := at.Cycle(id); d != nil && !seen[id] {
+				seen[id] = true
+				for _, ch := range at.Archived {
+					if slices.Contains(d.Meta.Changes, ch.ID) {
+						archived = append(archived, p.Root+"/"+ch.Dir+"/")
+					}
+				}
+				follow(d.Meta.DependsOn)
+			}
+		}
+	}
+	follow(cy.Meta.DependsOn)
+	expected := func(files []string) bool {
+		return slices.Contains(files, p.Root+"/"+cy.Path) || slices.ContainsFunc(files, func(f string) bool {
+			return slices.ContainsFunc(archived, func(dir string) bool { return strings.HasPrefix(f, dir) })
+		})
+	}
 	var out []string
 	for _, id := range cy.Meta.Changes {
 		ch := at.Change(id)
@@ -251,7 +275,7 @@ func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycl
 			return strings.HasPrefix(f, p.Root+"/"+ch.Dir+"/") || slices.Contains(named(ch), f)
 		}
 		if slices.ContainsFunc(commits, func(files []string) bool {
-			return slices.ContainsFunc(files, touches) && !slices.Contains(files, p.Root+"/"+cy.Path)
+			return slices.ContainsFunc(files, touches) && !expected(files)
 		}) {
 			out = append(out, id)
 		}
