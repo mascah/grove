@@ -80,23 +80,24 @@ whether these go, reworded, or the acceptance line is revised.
 
 ### T-02 — `just check` counts the instruction words
 
-Status: in progress
-
-Left: the budget is 8,000, as the owner agreed (2026-10-24); the
-`justfile` still fails above 7,000.
+Status: done
 
 - `justfile`: `check` counts the words of `internal/instruct`'s Markdown
   and YAML files, prints them beside the line counts, and fails above
-  7,000 saying "over the word budget"; its comment names both budgets.
+  8,000 saying "over the word budget"; its comment names both budgets.
+  It failed above 7,000 until the owner agreed to 8,000 (2026-10-24).
   `CONTRIBUTING.md`'s `just check` line names the line and word budgets,
   with no number.
 - `just check`: `lines: 3877 Go, 1579 test; words: 6979 instruction`,
   passed. With a 100-word file added under `internal/instruct/requires/`:
   `words: 7079 instruction`, `over the word budget`, failed. With it
   removed: passed.
-- With T-01 redone without rewording, `just check` prints `words: 7705
-  instruction` and fails, saying `over the word budget`, until the rule 12
-  amendment raises the budget.
+- At 7,000, with T-01 redone without rewording, `just check` printed
+  `words: 7705 instruction` and failed, saying `over the word budget`.
+- At 8,000: `just check`: `lines: 3881 Go, 1579 test; words: 7705
+  instruction`, passed. With a 300-word file added under
+  `internal/instruct/requires/`: `words: 8005 instruction`, `over the word
+  budget`, failed. With it removed: passed.
 
 ## Scenarios
 
