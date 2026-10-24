@@ -35,8 +35,8 @@
   accepts it. Order it by consequence: first what changes behavior, scope
   or compatibility or loses data, then architecture or interfaces costly
   to reverse, and last the routine choices inside the agreed approach, as
-  recommended defaults on one line that a single "yes" accepts. Leave none
-  out. Wait for the owner. If there is nothing to assume, say so and
+  recommended defaults on one line, not a list, that a single "yes"
+  accepts. Leave none out. Wait for the owner. If there is nothing to assume, say so and
   write. Each answer is a decision in the proposal, quoting the owner.
 - Write a task's `Delegated:` line, naming choices the implementer may make
   without asking and paths it may change beyond `Files:`, only where the

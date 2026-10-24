@@ -32,8 +32,9 @@ describes future work. It does not plan or perform the implementation.
 - Put first the decisions that change what users see, what is in scope,
   compatibility, or that could lose data, such as an exit status; then
   architecture or interfaces costly to reverse, such as which function
-  holds a check; last, on one line of recommended defaults, routine choices
-  inside the agreed approach, such as a test's name and place.
+  holds a check; last, on one line of recommended defaults, not a list,
+  routine choices inside the agreed approach, such as a test's name and
+  place.
 - Where small choices are not worth a question while building, such as
   test layout, private helpers or a new test file, you may recommend
   delegating them to the implementer; a task carries them on a `Delegated:`

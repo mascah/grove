@@ -411,6 +411,32 @@ Each step names the section of
   round. Before presenting the change, the session checks that a task's
   acceptance covers each requirement, deleting and printing alike; where
   one did not, it says what it added.
+- **The round in order** (§3). From main, `git switch -c unknown-id`, a
+  fresh session, `/grove-propose Editing an unknown ID prints an error`,
+  keeping the `default` schema. Its round asks the exit status before
+  whether `find` or `ledger/cli.py` holds the check, and puts the test's
+  name and place on a last line of defaults that one "yes" accepts. Say
+  "Yes, and let the implementer lay out tests and add
+  `tests/test_records.py` without asking": T-01 gets a `Delegated:` line
+  naming them, and its `Files:` line does not name `tests/test_records.py`.
+  Answering just "Yes" to a round that offers no delegation leaves no task
+  with a `Delegated:` line. `grove check` is clean.
+- **Split a change** (§3). From main, `git switch -c delete`, a fresh
+  session, `/grove-propose Add ledger delete ID, and an error for an
+  unknown ID`. While confirming scope, the session says these are two
+  changes I could agree separately. Say to split it: it runs `grove
+  instructions propose` once for each and writes both on `delete`, the
+  delete change naming the unknown-ID change in `depends_on`. `grove check`
+  is clean.
+- **Delegated with me, ignored unattended** (§5; coordinating, "Building a
+  cycle unattended"). Approve a change whose T-01 names `ledger/records.py`
+  and `tests/test_cli.py` on its `Files:` line and `tests/test_records.py`
+  on a `Delegated:` line right after it. `/grove-implement <change-id>`
+  creates `tests/test_records.py` for `find`'s own tests without asking.
+  On a fresh fixture with the same change in a cycle of one,
+  `grove run <cycle-id>` leaves `tests/test_records.py` uncreated, puts
+  `find`'s tests in `tests/test_cli.py`, and T-01's evidence names
+  `tests/test_records.py` and why it was left.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
   is given that change's files in full and edits them.
 - **A question that blocks a task** (§5). On a new branch,
