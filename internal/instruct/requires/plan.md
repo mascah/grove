@@ -17,6 +17,8 @@
 - Tell the owner of each member that waits on a change neither in the
   cycle nor archived as finished: an unattended run will not build the
   cycle until it is.
+- A new cycle: when the project index lists cycles not done, ask the owner
+  whether it follows any of them.
 - Keep `created` as the template has it. Set `planned` to the commit the
   template shows: the target commit you read the members at. Change it
   only so.
@@ -40,6 +42,9 @@
   - A member waiting on a change neither in the cycle nor archived as
     finished: `grove run` builds nothing of the cycle until that change is
     archived as finished.
+  - A cycle `depends_on` names that is not done: `grove run` builds
+    nothing of the cycle until it is, and the merges archiving its
+    changes leave the plan fresh.
   - Something the runner's checkout must have, such as a login the owner
     said the runner has: name it.
   With no obstacle, say `grove run <cycle-id>` would build the cycle.

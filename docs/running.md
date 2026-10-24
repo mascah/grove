@@ -87,7 +87,9 @@ it has uncommitted changes. Then it:
    local target branch has commits `origin`'s does not, it refuses and
    leaves them alone.
 2. Selects one cycle on the fetched target: the one with the earliest
-   `created` that is marked `unattended`, is not done, has no change under
+   `created` that is marked `unattended`, is not done, follows no cycle
+   that is not done (see [Planning cycles](planning.md), "Follow another
+   cycle"), has no change under
    `needs_human`, has no change waiting on one neither in the cycle nor
    archived as finished, and whose changes are as its plan read them. With
    none, it says
@@ -157,11 +159,14 @@ A `grove run` given no cycle, such as a timer's, still builds only marked
 ones.
 
 If the cycle cannot be built, Grove starts nothing, creates no branch and
-says why: there is no such cycle on the target, it is done, a change in
-it waits on one neither in the cycle nor archived as finished, its plan is
-stale, or a change in it needs a person:
+says why: there is no such cycle on the target, it is done, it follows a
+cycle that is not done, a change in it waits on one neither in the cycle
+nor archived as finished, its plan is stale, or a change in it needs a
+person:
 
 > grove: 261019-p4x8d needs a person, as cycle 261020-m4k8t's needs_human says; build the cycle with /grove-implement 261020-m4k8t
+>
+> grove: cycle 261021-q2w9e waits on cycle 261020-m4k8t, which is not done
 
 ## Without a remote
 

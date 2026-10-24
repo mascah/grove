@@ -922,7 +922,8 @@ func TestCycles(t *testing.T) {
 	out := grove(t, "instructions", "plan", "0.4 release")
 	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.yaml`").FindStringSubmatch(out)
 	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
-		"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n"} {
+		"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n",
+		"\n# depends_on: [", "ask the owner\n  whether it follows any of them", "`grove run` builds\n    nothing of the cycle until it is"} {
 		if m == nil || !strings.Contains(out, s) {
 			t.Errorf("plan instructions lack %q:\n%s", s, out)
 		}

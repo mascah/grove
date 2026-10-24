@@ -204,7 +204,8 @@ show-saved changes approved. Each step names the section of
    lists the approved changes and I agree to delete and budgets. It asks
    about budgets, whose task has the report read clearly beside each
    category's total, whether it needs a person; I say yes, to judge the
-   wording. It asks nothing about delete. It writes
+   wording. It asks nothing about delete, nor about other cycles, there
+   being none. It writes
    `grove/cycles/<cycle-id>-<slug>.yaml` with both under `changes`,
    budgets under `needs_human` with my reason, `created:` with the time,
    `planned:` with main's full commit and no `unattended`. `git status` shows only that file, and
@@ -270,7 +271,35 @@ show-saved changes approved. Each step names the section of
 
    and the same for budgets. Delete the copy.
 
-7. **Building a cycle unattended** (coordinating, "Building a cycle
+7. **A cycle that follows another** ("Follow another cycle", "Re-plan a
+   cycle"). Approve `/grove-propose Import records from a CSV` (import), its
+   task naming a file show-saved's T-01 names. `git switch -c plan-0.5`, a
+   fresh session, `/grove-plan 0.5: import`. It asks whether the new cycle
+   follows the 0.4 or the show-saved cycle; I name show-saved. It writes
+   `depends_on: [<show-saved-cycle-id>]`, and ends saying `grove run` would
+   not build it until the show-saved cycle is done, and that the merges
+   archiving its changes leave the plan fresh. Commit and merge, then add
+   `unattended: true` in a merge of its own. `grove changes` ends import's line with
+   `in cycle <0.5-cycle-id>, unattended, waits on cycle <show-saved-cycle-id>`.
+
+   Set the 0.5 cycle's `depends_on` to `[261099-zzzzz]`: `grove check` reports
+   > grove/cycles/\<0.5-cycle>.yaml:\<line>: depends_on: 261099-zzzzz is no cycle
+
+   Put it back, and add `depends_on: [<0.5-cycle-id>]` to the show-saved
+   cycle: `grove check` reports each one's `depends_on` line, as
+   > grove/cycles/\<0.5-cycle>.yaml:\<line>: depends_on: \<show-saved-cycle-id> waits on this cycle in turn, so neither can run
+
+   Discard both edits. On a branch, a fresh session,
+   `/grove-implement <show-saved-cycle-id>` builds and archives show-saved,
+   editing the file import names; squash-merge it. On main, `grove check`
+   is clean, and `grove changes` ends import's line with
+   `in cycle <0.5-cycle-id>, unattended`. Then add a comment to that file,
+   commit and merge: `grove check` reports
+   > grove/cycles/\<0.5-cycle>.yaml: planned: \<import> changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan \<0.5-cycle-id>
+
+   Re-plan it as step 5 does.
+
+8. **Building a cycle unattended** (coordinating, "Building a cycle
    unattended"). From main, `git switch -c build-0.4`, a fresh session,
    `/grove-implement <0.4-cycle-id> --unattended`. Its instructions list
    delete and budgets in build order, each to be built with
@@ -387,7 +416,13 @@ Each step names the section of
    `~/tmp/ledger-run`, `grove run --retry <export-cycle-id>` starts a
    session; stop it with Ctrl-C and discard what it left.
    `grove run --retry 261099-zzzzz`
-   says `main` holds no such cycle. `grove run --retry <show-saved-cycle-id>`
+   says `main` holds no such cycle. In `~/tmp/ledger`, approve
+   `/grove-propose Import records from a CSV` (import), plan it as a cycle
+   of one that follows the export cycle, merge and push. In
+   `~/tmp/ledger-run`, `grove run --retry <import-cycle-id>`:
+   > grove: cycle \<import-cycle-id> waits on cycle \<export-cycle-id>, which is not done
+
+   and `git branch` lists no new branch. `grove run --retry <show-saved-cycle-id>`
    starts a session on `/grove-implement <show-saved-cycle-id> --unattended` though the
    budgets cycle is marked, and its record names the show-saved cycle.
 

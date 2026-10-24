@@ -64,6 +64,23 @@ To send one change on its own, plan a cycle of one from its ID:
 
 The cycle takes the change's title unless you give another.
 
+## Follow another cycle
+
+When other cycles are not done, the agent asks whether the new one
+follows any of them, and writes only those you name:
+
+```yaml
+depends_on: [261020-m4k8t]
+```
+
+`grove run` builds nothing of the cycle while a cycle it follows is not
+done, and `grove changes` says so: `in cycle 261021-q2w9e, waits on cycle
+261020-m4k8t`. The merges that archive the changes of a cycle it follows,
+directly or through others, leave its plan fresh, though they edit files
+its changes' tasks name, and the agent's finish says both.
+`/grove-implement <cycle-id>` ignores `depends_on`: attended work you order
+yourself.
+
 ## Merge the plan
 
 **Terminal:** commit, then `grove review` labels the file `cycle`:
@@ -101,7 +118,7 @@ No skill writes or removes the line, and re-planning keeps it.
 And one whose plan is stale, because the folder of a change in it that is
 not archived, or a file one of its tasks names on its `Files:` line, was
 changed on your main branch since `planned` by a commit that did not also
-edit the cycle file. Grove reads main's first-parent history, so a squash
+edit the cycle file, or archive a change of a cycle it follows. Grove reads main's first-parent history, so a squash
 or a merge commit counts as one commit:
 
 > grove/cycles/261020-m4k8t-0-4-release.yaml: planned: 261019-p4x8d changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan 261020-m4k8t
@@ -134,3 +151,8 @@ its file stays. A change is in at most one cycle that is not done.
 change, or lists one that another cycle not done lists:
 
 > grove/cycles/261021-q2w9e-later.yaml:3: changes: 261019-p4x8d is also in cycle 261020-m4k8t, which is not done
+
+For a cycle not done, it also reports a `depends_on` that names no cycle,
+and cycles that follow each other in a loop:
+
+> grove/cycles/261021-q2w9e-later.yaml:5: depends_on: 261020-m4k8t waits on this cycle in turn, so neither can run
