@@ -30,7 +30,7 @@ belong in the change specs; summarize them here. -->
 owner decided it. Each constrains the
 work or would be costly to reverse, and has its reason. What the author infers
 or proposes is not a decision: ask it in the round before writing, or put it
-under Open questions. Use design.md only when one needs more room. -->
+under Open questions. A decision that needs room is written out here. -->
 
 ## Open questions
 

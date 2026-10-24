@@ -34,7 +34,15 @@ Status: done
 
 ### T-02 — No design.md
 
-Status: not started
+Status: done
+
+- The propose guide's "Write the change" says to write every decision in
+  the proposal, however much room it needs; the proposal template's
+  Decisions comment says a decision that needs room is written out there.
+- On a fresh ledger fixture with this build, `grove instructions propose
+  "x"` and `grove instructions propose --schema bugfix "x"` each contain
+  no `design.md` (`grep -c` printed 0), and `grep -rn design.md internal`
+  finds nothing.
 
 ### T-03 — Grove's own specs move over
 
