@@ -81,4 +81,22 @@ Status: done
 
 ## Scenarios
 
+All tests in `internal/cli/walkthrough_test.go`, run by `just check`.
+
+- maintained-specs "A spec with no .grove.yaml": TestArchive, `grove specs` prints `record-editing  Record editing  grove/specs/record-editing/spec.md` for a spec written with no `.grove.yaml`, passed
+- maintained-specs "A folder with no spec.md": TestCheck, `notes/ideas.md` neither in `grove specs` nor reported by `grove check`, passed
+- maintained-specs "A Purpose of two sentences": TestArchive, explore's index line ends with the first of two sentences over two lines, passed
+- maintained-specs "A full stop inside a name": TestArchive, the full stop in `records.json` does not end the sentence (the scenario's `grove.yaml` follows the same rule), passed
+- maintained-specs "A spec with no Purpose": TestArchive, index line with no description and `grove check` clean, passed
+- maintained-specs "No heading": TestCheck, `untitled/spec.md` reported and exit status 1, passed
+- maintained-specs "A spec folder from before": TestCheck, a `.grove.yaml` with `owner: me` reported once, no unknown field, exit status 1, passed
+- maintained-specs "Deleted": walkthrough "A spec from before" by hand on a fresh fixture, `No problems in grove/.` once deleted, passed
+- maintained-specs "Archiving a new capability": TestArchive, archive instructions hold the `spec.md` template and no `grove/specs/<capability>/.grove.yaml`, passed
+- maintained-specs "A schema with spec metadata": TestSchemas, `spec: metadata must be changes/<change>/.grove.yaml`, passed
+- propose "A new change": `grove instructions propose "x"` on a fresh fixture, no `design.md` (by hand; T-02 names no test file), passed
+- propose "A decision that needs room": unverified; it is what an agent writes from the instructions, which only a session can show
+
 ## Reconciliation
+
+- maintained-specs: applied to specs/maintained-specs/spec.md, a new spec
+- propose: applied to specs/propose/spec.md
