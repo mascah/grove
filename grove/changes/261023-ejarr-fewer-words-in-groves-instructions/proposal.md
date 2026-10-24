@@ -34,8 +34,10 @@ each time a skill runs.
 
 Each rule in Grove's instructions is said once. The opening text printed
 for every skill is shorter. Where a line is in both a skill's requires
-file and its schema guide, only the requires file keeps it. No rule is
-dropped: the agent is asked to do the same things in fewer words.
+file and its schema guide, only the requires file keeps it, unless
+removing it would need the copy that stays reworded; the implementing
+pull request lists each repeat kept so. No rule is dropped: the agent is
+asked to do the same things in fewer words.
 
 `just check` counts the words of `internal/instruct`'s Markdown and YAML
 files and fails above 8,000.
@@ -93,6 +95,12 @@ every answer below in one round ("yes to C & D").
   after, and the results of the trials of 261023-kh3gg (`dev/trials.md`)
   run before and after. Reason: fewer words must not change what the
   agent does.
+- **A repeat that can't go without rewording stays.** Where removing a
+  line from a schema guide would need the copy in the requires file
+  reworded, both stay, and the implementing pull request lists the line.
+  Asked on 2026-10-24, the owner said "Revise T-01's acceptance
+  (recommended) preferred". Reason: T-01 removes repetition only, without
+  rewording.
 
 The owner answered the proposal's two open questions with "yes"
 (2026-10-23):

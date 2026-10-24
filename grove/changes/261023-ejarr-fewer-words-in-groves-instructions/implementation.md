@@ -10,16 +10,22 @@ write "Status: dropped" here with their reason. -->
 
 Status: in progress
 
-Left: the second acceptance line. Some rules a requires file states are
-still stated again in the same skill's guide, kept because removing them
-needed the surviving line reworded: in `skills/propose.md`, §3's numbered
-round answered by "yes" and its order by consequence, the `Delegated:`
-line and §5's check, all in `requires/propose.md`; in `skills/plan.md`,
-"It puts approved changes in a cycle", "Read each one" and "Ask about each
-change that may need a person"; in `skills/prototype.md`, "answers one
-question"; in `skills/archive.md`, landing in one merge. The owner decides
-whether these go, reworded, or the acceptance line is revised.
+Left: check each acceptance line against the revised acceptance.
 
+The owner's decisions, 2026-10-24:
+
+- Some rules a requires file states are still stated again in the same
+  skill's guide, kept because removing them needed the surviving line
+  reworded: in `skills/propose.md`, §3's numbered round answered by "yes"
+  and its order by consequence, the `Delegated:` line and §5's check, all
+  in `requires/propose.md`; in `skills/plan.md`, "It puts approved changes
+  in a cycle", "Read each one" and "Ask about each change that may need a
+  person"; in `skills/prototype.md`, "answers one question"; in
+  `skills/archive.md`, landing in one merge. Asked whether to reword them
+  away or revise T-01's acceptance to accept them, the owner said "Revise
+  T-01's acceptance (recommended) preferred". T-01's result and second
+  acceptance line, and the proposal's intended outcome and decisions, now
+  accept a repeat that can't go without rewording the copy that stays.
 - The budget is 8,000 words: asked on 2026-10-24 whether it becomes 8,000,
   the owner said "yes", and constitution rule 12 says so as PR #75 amends
   it. `internal/instruct` holds 7,705 words. The trials were rerun as a

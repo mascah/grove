@@ -1,8 +1,9 @@
 ## T-01 — Say each rule once
 
 Result: the opening text every skill prints is shorter, no line is in
-both a skill's requires file and its default schema guide, and every rule
-the instructions held before is still printed for its skill.
+both a skill's requires file and its default schema guide unless removing
+it would need the copy that stays reworded, and every rule the
+instructions held before is still printed for its skill.
 
 Files: `internal/instruct/instruct.go`,
 `internal/instruct/requires/propose.md`,
@@ -39,7 +40,8 @@ Acceptance:
   maintained specs up to date" stays in `requires/implement.md` only.
 - No rule a file in `requires/` states is stated again in the schema
   guide of the same skill in `schemas/default/skills/`, or in
-  `schemas/bugfix/skills/propose.md`.
+  `schemas/bugfix/skills/propose.md`, except where removing it would need
+  the copy that stays reworded; the pull request lists each such repeat.
 - The opening text, printed before "What Grove requires of", is shorter
   and still says what a maintained spec, a change, observed behavior and
   a draft are, that Grove commits nothing and that merging is the only
