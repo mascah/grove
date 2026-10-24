@@ -1,3 +1,5 @@
+- Work in this working tree on a branch other than the target; create one if
+  you are on the target.
 - Build each change below in the order given, one at a time, by running the
   Grove command the list names for it and following what it prints to the
   end: it archives the change when every task is done. Then the next. A
