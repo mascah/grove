@@ -33,7 +33,7 @@ Skills run these; you do not need to:
 | `grove instructions implement <change-id> --unattended` | Build an approved change as above but ask no one: what it cannot settle is marked blocked, and the change itself is not edited. |
 | `grove instructions implement <cycle-id>` | Build each change of the cycle this working tree has not archived with the owner, in build order, one at a time, each as `grove instructions implement <change-id>` does. |
 | `grove instructions implement <cycle-id> --unattended` | Build each change of the cycle the same way without asking anyone, marked `unattended` or not (see [Coordinating changes](coordinating.md), "Building a cycle unattended"). |
-| `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs word for word, then run `grove archive`, fixing the specs and running it again if it refuses ([requirements spec](https://github.com/mascah/grove/blob/main/grove/specs/requirements/spec.md)). |
+| `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs word for word, adding the change's line to each one's History, then run `grove archive`, fixing the specs and running it again if it refuses ([requirements spec](https://github.com/mascah/grove/blob/main/grove/specs/requirements/spec.md)). |
 
 ## Harnesses
 

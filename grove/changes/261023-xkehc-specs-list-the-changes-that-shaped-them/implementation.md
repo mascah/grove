@@ -23,7 +23,16 @@ words.
 
 ### T-02 — Document History
 
-Status: not started
+Status: done
+
+`docs/concepts.md`, "Why archive folds a change into the specs", says each
+maintained spec's History links the archived changes that shaped it, where
+the reasons are. `docs/reference.md`'s `grove instructions archive` row
+says the fold adds the change's History line. `dev/walkthrough.md` step 5
+has the session end the new `record-editing` spec with 261015-k3m9q's
+History line, step 6 shows it in the merged spec, and "A bug" has
+`/grove-archive` add the bugfix change's line below it. Read against the
+acceptance; documentation only, no test.
 
 ### T-03 — History for Grove's own specs
 
