@@ -52,4 +52,22 @@ grove/."
 
 ## Scenarios
 
+- requirements "The archive instructions": internal/cli/walkthrough_test.go
+  TestArchive, passed. It checks the printed form
+  `- [<change-id>](../../changes/archive/<folder>/) <title>`; the folder
+  itself is the agent's to fill from the change's path in the same
+  instructions, since a skill guide is not filled with the change's values.
+- requirements "A new maintained spec": TestArchive (the printed template
+  ends with `## History`), passed.
+- requirements "A second change": unverified; that the line goes at the
+  end of History is instruction text an agent follows, and no session
+  archived a second change. T-03's backfill follows it.
+- requirements "A dropped change": unverified by a test; the History step
+  is under "Reconcile the specs", which `requires/archive.md` says a
+  dropped change skips.
+- requirements "A line added": TestArchive, passed.
+- requirements "No line added": TestFold, passed.
+
 ## Reconciliation
+
+- requirements: applied to specs/requirements/spec.md
