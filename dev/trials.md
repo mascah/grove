@@ -28,8 +28,9 @@ Then each of the case's runs, on its branch, in a fresh headless session:
 `codex exec` in its workspace-write sandbox, without a login shell so that
 PATH keeps this build first, typing `$grove-…` where Claude Code types
 `/grove-…`. Codex's sandbox cannot write `.git`, so the script makes the
-branches. When the agent's turn ends, a small model says whether it waits
-for the owner; while it does, up to `TURNS` times, the script replies with
+branches. When the agent's turn ends, a model (Sonnet) says whether it
+waits for the owner's answer; next steps it leaves to the owner, such as
+committing or running another skill, get no reply. While it waits, up to `TURNS` times, the script replies with
 the case's first unused answer whose pattern matches the agent's last
 message, or else "Yes, go with what you recommend." An `--unattended`
 run gets no reply. Between runs the
