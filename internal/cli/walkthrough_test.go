@@ -72,7 +72,7 @@ func TestInit(t *testing.T) {
 	}
 	for _, h := range []string{".claude", ".agents"} {
 		for _, w := range []string{"explore", "prototype", "propose", "plan", "implement", "archive"} {
-			if skill := read(t, filepath.Join(dir, h, "skills", "grove-"+w, "SKILL.md")); !strings.Contains(skill, "name: grove-"+w+"\n") || !strings.Contains(skill, " instructions "+w) {
+			if skill := read(t, filepath.Join(dir, h, "skills", "grove-"+w, "SKILL.md")); !strings.Contains(skill, "name: grove-"+w+"\n") || !strings.Contains(skill, " instructions "+w) || w == "implement" && !strings.Contains(skill, "Implement an approved or drafted change") {
 				t.Errorf("%s skill grove-%s:\n%s", h, w, skill)
 			}
 		}
@@ -306,6 +306,10 @@ func TestPropose(t *testing.T) {
 		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 5. Check the change") || strings.Contains(out, "Assumptions to confirm") {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
+	if !strings.Contains(out, "offer both next steps and choose neither") || !strings.Contains(out, "`/grove-implement <change-id>` on this branch so one merge approves it\n  with its code") ||
+		!strings.Contains(out, "For a change it lists as approved, the next step is\n  merging the revision") {
+		t.Errorf("propose's finish does not offer one merge or two:\n%.3000s", out)
+	}
 
 	os.MkdirAll(filepath.Join(dir, "grove/schemas/default/documents/tasks"), 0o755)
 	os.WriteFile(filepath.Join(dir, "grove/schemas/default/documents/tasks/template.md"), []byte("## T-01 — [title]\n\nRollback: [how to undo this task]\n"), 0o644)
@@ -339,6 +343,27 @@ func TestApprove(t *testing.T) {
 	}
 }
 
+// TestOneMerge follows the walkthrough's "One merge for a small change": a
+// change drafted, built and archived on one branch, approved by one merge.
+func TestOneMerge(t *testing.T) {
+	dir := setUp(t)
+	cid, folder := propose(t, dir, "rename", "Allow editing older records", "")
+	commitAll(t, dir, "Propose")
+	grove(t, "instructions", "implement", cid)
+	os.WriteFile(filepath.Join(folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
+	maintain(t, dir, olderEdits)
+	grove(t, "archive", cid)
+	commitAll(t, dir, "Implement and archive "+cid)
+	if out := grove(t, "review"); !strings.HasPrefix(out, "Merging rename into main approves change "+cid+" with its code.\n\n") {
+		t.Errorf("review of a draft built on its branch:\n%.1000s", out)
+	}
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Merge rename", "rename")
+	if changes, specs := grove(t, "changes"), grove(t, "specs"); changes != "" || !strings.Contains(specs, "record-editing") {
+		t.Errorf("after one merge, changes printed %q and specs %q", changes, specs)
+	}
+}
+
 func TestImplementInstructions(t *testing.T) {
 	dir := fixture(t)
 	os.MkdirAll(filepath.Join(dir, ".claude/skills/grove-apply"), 0o755)
@@ -357,13 +382,25 @@ func TestImplementInstructions(t *testing.T) {
 	cid, _ := propose(t, dir, "older-edits", "Allow editing older records", "")
 	commitAll(t, dir, "Propose")
 
+	// A draft: built with the owner on its branch, refused unattended or
+	// while it waits.
 	var stdout, stderr strings.Builder
-	for _, args := range [][]string{{"implement", cid}, {"implement", cid, "--unattended"}} {
-		stderr.Reset()
-		if code := run(append([]string{"instructions"}, args...), &stdout, &stderr); code != 1 || stderr.String() != "grove: main holds no approved change "+cid+"\n" {
-			t.Errorf("%v before the merge: status %d, %q", args, code, stderr.String())
+	if code := run([]string{"instructions", "implement", cid, "--unattended"}, &stdout, &stderr); code != 1 || stderr.String() != "grove: main holds no approved change "+cid+"\n" {
+		t.Errorf("unattended before the merge: status %d, %q", code, stderr.String())
+	}
+	draft := grove(t, "instructions", "implement", cid)
+	for _, s := range []string{"You are implementing drafted change " + cid + ", \"Allow editing older records\", as this working tree holds it, with the owner", "Merging this branch into the\n  target approves it with its code, so edit its proposal, change specs and\n  tasks only with the owner's agreement", "### Requirement: Edit older records"} {
+		if !strings.Contains(draft, s) {
+			t.Errorf("draft instructions lack %q:\n%.3000s", s, draft)
 		}
 	}
+	later, _ := propose(t, dir, "later", "Show saved records", "depends_on: ["+cid+"]\n")
+	stderr.Reset()
+	if code := run([]string{"instructions", "implement", later}, &stdout, &stderr); code != 1 || stderr.String() != "grove: "+later+" waits on "+cid+", which this working tree has not archived as finished\n" {
+		t.Errorf("a draft that waits: status %d, %q", code, stderr.String())
+	}
+	git(t, dir, "checkout", "-q", "--", ".")
+	git(t, dir, "clean", "-qfd")
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
 	k := "261022-k0000"

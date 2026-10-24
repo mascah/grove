@@ -154,21 +154,27 @@ func instructionsImplement(stdout io.Writer, id string, unattended bool) error {
 }
 
 // instructionsChange prints the implement instructions, with the owner or
-// unattended, for change id as the target holds it, with cycle cy's plan
+// unattended, for change id as the target holds it, or, with the owner, as
+// this working tree holds a draft the target does not, with cycle cy's plan
 // when it is not nil, unless it waits on a change tree has not archived as
 // finished (D-56). For a change in no cycle that is not done, they name
 // each task's file that changed on the target since the change's base.
 func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *doc.Collection, id string, unattended bool, cy *doc.Cycle) error {
-	c := ip.Agreed.Change(id)
+	c, fsys := ip.Agreed.Change(id), fs.FS(nil)
+	if c == nil && !unattended {
+		c, fsys = tree.Change(id), os.DirFS(filepath.Join(p.Top, p.Root))
+	}
 	if c == nil {
 		return fmt.Errorf("%s holds no approved change %s", p.Target, id)
 	}
 	if waits := slices.DeleteFunc(slices.Clone(c.Meta.DependsOn), tree.Finished); len(waits) > 0 {
 		return fmt.Errorf("%s waits on %s, which this working tree has not archived as finished", id, strings.Join(waits, " and "))
 	}
-	fsys, err := gitx.TreeFS(p.Top, ip.Commit, p.Root)
-	if err != nil {
-		return err
+	var err error
+	if fsys == nil {
+		if fsys, err = gitx.TreeFS(p.Top, ip.Commit, p.Root); err != nil {
+			return err
+		}
 	}
 	c, files, err := change(fsys, ip.Layout, id)
 	if err != nil {

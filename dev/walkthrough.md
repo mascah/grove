@@ -434,8 +434,19 @@ Each step names the section of
   `grove review` shows the edited change spec beside the code. Had I
   declined, the change's files would stay as they are. Had I said to leave
   it, T-01 would be `Status: blocked` with the question.
-- **Implement refuses a draft** (§5). `grove instructions implement
-  <change-id>` for a change only on the current branch:
+- **One merge for a small change** (§3, §4; concepts, "Approval is a
+  merge"). From main, `git switch -c rename`, a fresh session,
+  `/grove-propose Editing a missing record should print an error`. Its
+  finish offers both next steps and picks neither. Commit, then
+  `/grove-implement <change-id>` on `rename`: the instructions call the
+  change a draft that merging `rename` approves with its code, and the
+  session builds T-01 with a test and archives the change. Commit.
+  `grove review` says
+  > Merging rename into main approves change \<change-id> with its code.
+
+  Merge `rename` once: `grove changes` does not list the change, and
+  `grove specs` lists `record-editing`. Before that merge,
+  `grove instructions implement <change-id> --unattended` on `rename` said
   > grove: main holds no approved change \<change-id>
 - **A title that drifted** (reference, "Files"). Change `title` in a
   change's `.grove.yaml` and run `grove check`:

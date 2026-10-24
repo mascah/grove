@@ -1,5 +1,10 @@
 - The change below is approved as the target branch holds it. Build what it
   says, nothing more.
+- Where the line above calls the change a draft, the target does not hold
+  it: build it as this working tree holds it. Merging this branch into the
+  target approves it with its code, so edit its proposal, change specs and
+  tasks only with the owner's agreement, as for revising a change on its
+  branch.
 - Work in this working tree on a branch other than the target; create one if
   you are on the target.
 - Change only the files the tasks name on their `Files:` lines.

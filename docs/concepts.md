@@ -39,6 +39,13 @@ saving or ending a conversation approves nothing. Merge commits and squash
 merges both count. If you commit a proposal straight onto your main branch,
 that commit approves it.
 
+A small change can take one merge instead of two. Propose it on a branch,
+then build it there with `/grove-implement <change-id>`, with you in the
+session: merging that branch approves the change with its code, and lands
+the updated specs and the archived change too. Grove sets no size; you
+decide what is small. `--unattended` and `grove run` build only changes
+your main branch already holds.
+
 Your team already reviews and merges work into the main branch, and Git
 already records who merged what and when. Making the merge the approval
 means agreeing on a change uses the review you already do, and leaves no
@@ -73,7 +80,9 @@ flowchart LR
    recommended answer to each, every decision it would otherwise assume;
    what you leave open becomes an open question, never an assumption.
 4. **Review and merge.** You read the change and merge it. Now it is
-   approved.
+   approved. Or, for a small change, skip this merge: implement it on the
+   same branch with you, and the one merge after step 6 approves it with
+   its code.
 5. **Implement.** The agent builds the change on a branch with you and
    records progress. It asks you what the change leaves open and, with
    your agreement, revises the change on that branch; your merge then
