@@ -13,7 +13,7 @@ Install Go, at the version `go.mod` names, Git, and
 ```sh
 just build                 # bin/grove
 eval "$(just dev-path)"    # build, and put this checkout's bin/ first on PATH
-just check                 # gofmt, vet, tests and the line budget; run before every commit
+just check                 # gofmt, vet, tests, and the line and word budgets; run before every commit
 just fixture ~/tmp/ledger  # a fresh fixture repository to walk through
 just install               # this checkout's build as your everyday grove, in ~/.local/bin
 ```

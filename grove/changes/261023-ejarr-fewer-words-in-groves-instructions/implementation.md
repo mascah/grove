@@ -37,7 +37,17 @@ Status: done
 
 ### T-02 — `just check` counts the instruction words
 
-Status: not started
+Status: done
+
+- `justfile`: `check` counts the words of `internal/instruct`'s Markdown
+  and YAML files, prints them beside the line counts, and fails above
+  7,000 saying "over the word budget"; its comment names both budgets.
+  `CONTRIBUTING.md`'s `just check` line names the line and word budgets,
+  with no number.
+- `just check`: `lines: 3877 Go, 1579 test; words: 6979 instruction`,
+  passed. With a 100-word file added under `internal/instruct/requires/`:
+  `words: 7079 instruction`, `over the word budget`, failed. With it
+  removed: passed.
 
 ## Scenarios
 
