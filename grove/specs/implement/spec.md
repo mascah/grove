@@ -2,14 +2,18 @@
 
 ## Purpose
 
-`/grove-implement <change-id>` builds an approved change, or a draft on the
-branch that proposed it, which one merge then approves with its code, in
-the owner's own session, and `/grove-implement <cycle-id>` each change of a cycle in turn. Where the change does not settle how a task is built, it asks the
-owner instead of blocking, and with their agreement revises the change on
-its implementation branch, so the merge approves the revision with the
-code. With `--unattended` it builds a change or a cycle the same way but
-asks no one: what it cannot settle is marked blocked, and the change stays
-as approved. "The owner" is the person in whose session the skill runs.
+`/grove-implement` builds an approved change, or each change of a cycle,
+in the owner's session, asking the owner instead of blocking and revising
+the change on its branch with their agreement; with `--unattended` it asks
+no one. `/grove-implement <change-id>` also builds a draft on the branch
+that proposed it, which one merge then approves with its code, and
+`/grove-implement <cycle-id>` builds each change of a cycle in turn. Where
+the change does not settle how a task is built, it asks the owner instead
+of blocking, and with their agreement revises the change on its
+implementation branch, so the merge approves the revision with the code.
+With `--unattended` it builds a change or a cycle the same way but asks no
+one: what it cannot settle is marked blocked, and the change stays as
+approved. "The owner" is the person in whose session the skill runs.
 
 ## Boundaries
 

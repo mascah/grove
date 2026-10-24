@@ -2,10 +2,9 @@
 
 ## Purpose
 
-A project's `grove.yaml` configures Grove for it. This spec covers its
-`context`: instructions the owner gives every skill, so they reach agents
-working through Grove, including the session `grove run` starts, and no
-other session.
+The `context` in a project's `grove.yaml` is instructions the owner gives
+every skill, so they reach agents working through Grove, including the
+session `grove run` starts, and no other session.
 
 ## Boundaries
 
