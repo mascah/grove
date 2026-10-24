@@ -211,14 +211,15 @@ branch approves the revision with the code, and `grove review` shows it.
 
 `/grove-implement 261015-k3m9q --unattended` builds the change without
 you. It asks no one. It marks blocked a task that an open question decides,
-and it never edits the change. Given a cycle's ID, it builds each change of
+and it never edits the change, or `grove.yaml`. Given a cycle's ID, it builds each change of
 the cycle the same way (see [Planning cycles](planning.md)). `grove run`
 uses it too (see [Running unattended](running.md)).
 
 If you corrected the agent in a way that would apply to future work, such
 as how to name tests, it suggests one line for `context` or `rules` in
 `grove.yaml` when it finishes, quoting you. It adds the line on this branch
-only if you agree.
+only if you agree. `--unattended` may name such a line in its report, for
+you to add yourself.
 
 When every task is done, the agent archives the change. It merges the
 change's specs into the maintained specs in `grove/specs/`. Then it runs

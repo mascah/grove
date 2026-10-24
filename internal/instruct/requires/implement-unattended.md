@@ -15,3 +15,6 @@
   it: the change was not written against the file as it is.
 - Build a cycle whether or not it is marked `unattended`, and whatever its
   `needs_human` says: only `grove run` reads them.
+- If you found something that would apply to future work, your report may
+  name one line per change to add to `context`, or under a key of `rules`,
+  in `grove.yaml`, with what you found. Do not add it to `grove.yaml`.

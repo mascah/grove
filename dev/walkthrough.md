@@ -675,7 +675,8 @@ Each step names the section of
   `implement: [Commit after each task, naming its task ID.]` under
   `rules: skills:` in `grove.yaml`. It creates a branch, builds and
   archives both, commits, asks nothing, and its last message says which
-  changes were archived.
+  changes were archived. `grove.yaml` is unchanged; a line it suggests for
+  `context` or `rules` is in that message.
 - **Commit as you go** (reference, `rules`). With
   `implement: [Commit after each task, naming its task ID.]` under
   `rules: skills:` in `grove.yaml`, `/grove-implement <cycle-id>
