@@ -27,7 +27,7 @@ A maintained spec is a folder under `specs/` holding `spec.md`. Its title
 is its first `# ` heading, and its description, in the instructions'
 project index, is the first sentence of its `## Purpose`. Archive writes
 no `.grove.yaml` for a new spec, and `grove check` reports one left in a
-spec folder as no longer read. Grove's own seven specs lose theirs, each
+spec folder as no longer read. Grove's own specs lose theirs, each
 Purpose opening with a sentence that reads as its one-line description.
 Propose and the proposal template no longer mention `design.md`: a
 decision that needs room is written out in the proposal. Changes keep
@@ -82,7 +82,7 @@ every answer below in one round ("yes to C & D").
   longer read, in one sentence saying to delete it.** It is a new `check`
   problem on documents that were clean and removes a `.grove.yaml`, so
   the change is breaking (`CONTRIBUTING.md`, "Breaking changes"). Grove's
-  own seven specs in `grove/specs/` move over in the same change: their
+  own specs in `grove/specs/` move over in the same change: their
   `.grove.yaml` is deleted, and each Purpose's first sentence is made to
   read well as a one-line description, compared with today's.
 - **`design.md` leaves the propose guide and the proposal template;

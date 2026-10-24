@@ -119,6 +119,37 @@ func (d *Document) heading(fsys fs.FS, file, missing string) error {
 	return nil
 }
 
+// specMeta returns a maintained spec's title, its first "# " heading, and
+// its description, the first sentence of the first paragraph under
+// "## Purpose", or the whole paragraph when no full stop ends a sentence.
+func specMeta(src string) (title, description string) {
+	lines := strings.Split(src, "\n")
+	for _, l := range lines {
+		if strings.HasPrefix(l, "# ") {
+			title = strings.TrimSpace(l[2:])
+			break
+		}
+	}
+	i := slices.IndexFunc(lines, func(l string) bool { return strings.TrimSpace(l) == "## Purpose" })
+	if i < 0 {
+		return title, ""
+	}
+	var para []string
+	for _, l := range lines[i+1:] {
+		if l = strings.TrimSpace(l); l == "" && len(para) > 0 || strings.HasPrefix(l, "#") {
+			break
+		}
+		if l != "" {
+			para = append(para, l)
+		}
+	}
+	text := strings.Join(para, " ")
+	if j := strings.Index(text+" ", ". "); j >= 0 {
+		text = text[:j+1]
+	}
+	return title, text
+}
+
 var yamlErrorLine = regexp.MustCompile(`^yaml: line ([0-9]+): (.*)$`)
 
 func (d *Document) report(file string, line int, msg string) {

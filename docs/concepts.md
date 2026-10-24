@@ -18,7 +18,8 @@ Markdown, so people and agents read the same thing.
 
 - **A maintained spec** says how one part of your system should behave. It
   lives at `grove/specs/<capability>/spec.md` on your main branch, and it is
-  agreed: someone merged it.
+  agreed: someone merged it. Its first heading is its title, and the first
+  sentence of its Purpose describes it.
 - **A change** is a proposal for future work. It lives in
   `grove/changes/<id>-<slug>/`. Once it is merged into your main branch it is
   approved, which means agreed, not built.

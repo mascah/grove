@@ -94,7 +94,7 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    `python3 -m unittest` passes. With every task
    done, the same session runs `grove instructions archive 261015-k3m9q`,
    adds the requirement to a new `grove/specs/record-editing/spec.md`, with
-   `grove/specs/record-editing/.grove.yaml` beside it, runs `grove check`,
+   no `.grove.yaml` beside it, runs `grove check`,
    then `grove archive 261015-k3m9q`:
    > Archived 261015-k3m9q to grove/changes/archive/261015-k3m9q-allow-editing-older-records/; nothing is committed.
 
@@ -528,6 +528,15 @@ Each step names the section of
 - **A title that drifted** (reference, "Files"). Change `title` in a
   change's `.grove.yaml` and run `grove check`:
   > grove/changes/<change-id>-<slug>/proposal.md:1: the first heading should be "# <new title>", the title in .grove.yaml
+- **A spec from before** (reference, "Files"). After the main line, write
+  `grove/specs/record-editing/.grove.yaml` holding `title: Record editing`
+  and `owner: me`, as an earlier Grove kept beside a spec. `grove check`
+  reports it once, and no unknown field, and exits non-zero:
+  > grove/specs/record-editing/.grove.yaml: no longer read, since a spec's title and description come from its spec.md; delete it
+
+  Delete it: `grove check` prints `No problems in grove/.`, and the
+  explore instructions' index gives `record-editing` the first sentence of
+  its Purpose.
 - **A change without its proposal** (reference, "Files"). After step 3,
   delete the change's `proposal.md` and run `grove check`. It exits non-zero:
   > grove/changes/<change-id>-<slug>/proposal.md: missing; it is the change's main document in schema default

@@ -2,9 +2,11 @@
 
 ## Purpose
 
-A cycle is approved changes the owner means to build together, in a file
-`<root>/cycles/<id>-<slug>.yaml`. Its members are the changes its
-`changes` lists. A cycle is done when the target holds every member
+A cycle lists approved changes to build together: `/grove-plan` writes it,
+asking which need a person, and `grove run <cycle-id>` builds it, as does
+a `grove run` given no cycle once it holds `unattended: true`. A cycle is
+a file `<root>/cycles/<id>-<slug>.yaml`, and its members are the changes
+its `changes` lists. A cycle is done when the target holds every member
 archived, finished or dropped. A member "needs a person" when the cycle's
 `needs_human` names it. A cycle "depends on" each cycle its optional
 `depends_on` names, and "waits on" each of those the target does not hold
