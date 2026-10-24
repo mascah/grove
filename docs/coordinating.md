@@ -62,6 +62,9 @@ changes that wait on each other in a loop.
 
 > grove/changes/261019-r2w7k-add-ledger-delete/.grove.yaml:4: depends_on: 260101-zzzzz is no change, open or archived
 
+The [propose spec](https://github.com/mascah/grove/blob/main/grove/specs/propose/spec.md), "Report a dependency that can never be met", has
+the exact rule.
+
 The order comes from `depends_on`: a change can be built once every
 change it waits on is archived as finished, and changes that do not wait on
 each other can be built in parallel, on separate branches.
@@ -109,7 +112,7 @@ as finished, because it was dropped or does not exist, is left out and named;
 stays open, with the question in its `implementation.md`; a change that
 waits on it is refused and stays as it is. The agent's report says which
 changes were archived, which are blocked and on what, and which were left
-out.
+out. The [implement spec](https://github.com/mascah/grove/blob/main/grove/specs/implement/spec.md) has the exact rules for building a cycle.
 
 The branch holds the code, the updated specs and each archived change.
 Review the pull request and merge once. A blocked change is finished by
@@ -139,7 +142,8 @@ change gives it, nor what a change it depends on gives it. So a change whose
 MODIFIED text has been reconciled into the spec is not reported, and a
 change that names the rewriting change in `depends_on` is not reported
 either: its author planned against that text. Only a rewrite the change did
-not plan for is.
+not plan for is. The [propose spec](https://github.com/mascah/grove/blob/main/grove/specs/propose/spec.md), "Report a stale requirement",
+has the exact rule.
 
 Because `grove check` reads your working tree, the branch that archives the
 first change is where the second is reported, before anything is merged,
@@ -216,6 +220,8 @@ prints your main branch's changes as JSON, archived changes included, for your a
   usually reaches your main branch with the archive merge, so an approved
   change's tasks mostly have none.
 - A field with no value is left out.
+
+The [changes spec](https://github.com/mascah/grove/blob/main/grove/specs/changes/spec.md) has the exact rules.
 
 To keep a tracker's issues in step with this data, see the guide
 [Push to a tracker](guides/push-to-a-tracker.md).

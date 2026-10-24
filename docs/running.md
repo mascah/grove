@@ -9,7 +9,8 @@ approved change in no cycle is yours to build with `/grove-implement`,
 with `--unattended` or not. To send `grove run` one change, plan a cycle
 of one (see [Planning cycles](planning.md)). Grove does not
 schedule itself: run it by hand, or from a timer as in
-[Run on a timer](guides/run-on-a-timer.md).
+[Run on a timer](guides/run-on-a-timer.md). The [runs spec](https://github.com/mascah/grove/blob/main/grove/specs/runs/spec.md) has the
+exact rules.
 
 ## Set up a checkout
 
@@ -91,8 +92,9 @@ it has uncommitted changes. Then it:
    that is not done (see [Planning cycles](planning.md), "Follow another
    cycle"), has no change under
    `needs_human`, has no change waiting on one neither in the cycle nor
-   archived as finished, and whose changes are as its plan read them. With
-   none, it says
+   archived as finished, and whose plan is not stale (see
+   [Planning cycles](planning.md), "Mark it unattended"). With none, it
+   says
    > Nothing to apply on main at 243a63d.
 
    `grove check` says why a marked cycle is skipped.

@@ -23,12 +23,13 @@ grove init
 It chooses the agents from what your repository holds, such as `.claude/`
 or `AGENTS.md`, and Claude Code and Codex when it finds none. `agents` in
 `grove.yaml` lists them; change it and run `grove init` again to add an
-agent, or to have Claude Code's as commands, `/grove:explore`.
+agent, or to have Claude Code's as commands, `/grove:explore`. The
+[init spec](https://github.com/mascah/grove/blob/main/grove/specs/init/spec.md) has the exact rules.
 
 Open `grove.yaml` and write, under `context`, what an agent working through
 Grove should always do, such as how to show a task is done. It is given to
 every skill, and to no other session; project facts every session needs
-stay in `CLAUDE.md` or `AGENTS.md`. Keep it short:
+stay in `CLAUDE.md` or `AGENTS.md` ([config spec](https://github.com/mascah/grove/blob/main/grove/specs/config/spec.md)). Keep it short:
 
 ```yaml
 context: Run python3 -m unittest before saying a task is done.
@@ -81,7 +82,8 @@ push it if you want to keep it.
 
 When you go on to propose, the agent switches back to `rename-projects` and
 writes the findings into the proposal, citing the prototype's branch and
-commit. A prototype that kills the idea leaves only its branch.
+commit. A prototype that kills the idea leaves only its branch. The
+[prototype spec](https://github.com/mascah/grove/blob/main/grove/specs/prototype/spec.md) has the exact rules.
 
 ## 3. Propose
 
@@ -129,7 +131,7 @@ your agreement. After the archive, `grove review` says
 > Merging rename-projects into main approves change 261015-k3m9q with its code.
 
 and one merge lands everything. The rest of this page takes the two-merge
-path.
+path. The [propose spec](https://github.com/mascah/grove/blob/main/grove/specs/propose/spec.md) has the exact rules for proposing.
 
 ## 4. Review and approve
 
@@ -195,7 +197,9 @@ When every task is done, the agent archives the change: it merges the
 change's specs into the maintained specs in `grove/specs/`, then runs
 `grove archive`, which moves the change to `grove/changes/archive/`.
 `/grove-archive 261015-k3m9q` does the same by hand, and is how a change
-you will not build is dropped.
+you will not build is dropped. The exact rules are in the
+[implement spec](https://github.com/mascah/grove/blob/main/grove/specs/implement/spec.md) and, for archiving, the
+[requirements spec](https://github.com/mascah/grove/blob/main/grove/specs/requirements/spec.md).
 
 ## 6. Merge
 

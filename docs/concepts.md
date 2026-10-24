@@ -19,7 +19,8 @@ Markdown, so people and agents read the same thing.
 - **A maintained spec** says how one part of your system should behave. It
   lives at `grove/specs/<capability>/spec.md` on your main branch, and it is
   agreed: someone merged it. Its first heading is its title, and the first
-  sentence of its Purpose describes it.
+  sentence of its Purpose describes it
+  ([maintained-specs spec](https://github.com/mascah/grove/blob/main/grove/specs/maintained-specs/spec.md)).
 - **A change** is a proposal for future work. It lives in
   `grove/changes/<id>-<slug>/`. Once it is merged into your main branch it is
   approved, which means agreed, not built.
@@ -150,7 +151,8 @@ behavior that is wrong, whose proposal shows the bug and whose first task
 is a test that fails before the fix. When you describe a bug, the agent
 suggests `bugfix`, and uses it once you confirm. A project can replace any
 of their files and add schemas of its own; a change keeps the schema it was
-proposed with (see [Reference](reference.md), "Change schemas").
+proposed with (see [Reference](reference.md), "Change schemas", and the
+[schemas spec](https://github.com/mascah/grove/blob/main/grove/specs/schemas/spec.md)).
 
 A schema cannot change what Grove requires at each step, listed under "The
 loop": every schema keeps the same approval, the same tasks in `tasks.md`
@@ -160,9 +162,13 @@ and the same progress in `implementation.md`.
 
 The `grove` command runs in your terminal: it sets up, lists, checks, reviews
 and reads. Skills run in your agent's chat: each one runs
-`grove instructions <skill>` and follows what it prints. Grove starts no
-agent and makes no commits, so it works with the agent you already use, in
-the checkout and branch you already have.
+`grove instructions <skill>` and follows what it prints, so Grove works with
+the agent you already use, in the checkout and branch you already have.
+
+Grove makes no commits. `grove run` is the one command that starts an
+agent: one Claude Code session that builds a cycle unattended (see
+[Running unattended](running.md)). Every other command leaves running
+your agent to you.
 
 ## IDs
 

@@ -4,7 +4,8 @@ A cycle is approved changes you mean to build together, such as a release.
 Planning one finds out, with you, which of its changes need a person. A
 cycle is also how work reaches `grove run`: it builds a cycle you name or
 have marked `unattended`, never a change on its own (see
-[Running unattended](running.md)).
+[Running unattended](running.md)). The [cycles spec](https://github.com/mascah/grove/blob/main/grove/specs/cycles/spec.md) has the exact
+rules for cycles.
 
 ## Plan a cycle
 
