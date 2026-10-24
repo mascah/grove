@@ -113,20 +113,19 @@ every answer below in one round ("yes to C & D").
 - **It comes last in cycle C.** It depends on 261023-kh3gg, 261023-ejarr
   and 261023-d6r79, and follows cycle B, because all of them edit the
   docs.
+- **Docs link a spec with a full GitHub link to it on `main`
+  (2026-10-24).** The owner said "yes". Reason: the docs site is built
+  from `docs/` alone, so a relative link to `grove/specs/` does not
+  resolve there. It decides the links in T-01.
+- **The README names one merge for a small change (2026-10-24).** The
+  owner said "yes": after the README's four steps, one sentence says a
+  small change can be proposed and built in one merge. Reason: change
+  261023-6yafg lets a change drafted on its implementing branch be
+  approved with its code in one merge. It decides that sentence in T-02.
 
 ## Open questions
 
-None must be answered before review.
-
-- **How a docs page links a spec.** The docs site is built from `docs/`
-  alone, so a relative link to `grove/specs/` does not resolve there.
-  Recommended: a full GitHub link to the spec on `main`. It can wait; it
-  decides the link form in T-01.
-- **Whether the lead names one merge for a small change.** Change
-  261023-6yafg lets a change drafted on its implementing branch be
-  approved with its code in one merge. Recommended: one sentence after the
-  four steps, saying a small change can be one merge. It can wait; it
-  decides a sentence of T-02.
+None.
 
 ## Related documents
 

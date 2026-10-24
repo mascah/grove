@@ -32,6 +32,7 @@ Constraints:
   ordinary run", step 2, which `grove/specs/runs/spec.md` holds;
   otherwise it gives one plain sentence and the link. The implementer
   proposes which restatements stay, and the owner agrees in the session.
+- A page links a spec with a full GitHub link to the spec on `main`.
 - The `config` spec's Boundaries stops sending the reader to
   `docs/reference.md` for the rest of `grove.yaml`.
 - This change edits no Go code. A scenario the code does not meet is
@@ -66,7 +67,8 @@ Acceptance:
   `grove run`. README's second paragraph no longer brings in unattended
   runs.
 - The steps in the order the owner decided: propose, review and merge,
-  implement, merge.
+  implement, merge. After the README's four steps, one sentence says a
+  small change can be proposed and built in one merge.
 - Every link in both files resolves, and `docs/index.md`'s "Where to go
   next" still names every page in `mkdocs.yml`.
 
