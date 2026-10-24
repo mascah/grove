@@ -8,7 +8,9 @@ write "Status: dropped" here with their reason. -->
 
 ### T-01 — Say each rule once
 
-Status: done
+Status: in progress
+
+Left: the trials before and after, rerun with the fixed script (below).
 
 - Built on the files as cycle B and 261023-d6r79 leave them (this branch
   is stacked on 261023-d6r79's). At the start, `internal/instruct` held
@@ -36,8 +38,18 @@ Status: done
   agreement: case (a)'s setup kept a spec `.grove.yaml` that this branch's
   Grove reports, because its check read `grove check`'s pipe status under
   `pipefail`; it now reads the output. `SETUP_ONLY=1` case (a): clean.
-- The trials before are 261023-kh3gg's baseline; after: see T-01's line in
-  the pull request.
+- `dev/trials/run.sh` and `dev/trials.md`, both added to T-01's `Files:`
+  with the owner's agreement. In the first "after" run, case (a) in Codex,
+  the scripted owner answered propose's finish ("either merge … or run
+  `/grove-implement`") with the fallback reply, so the agent built and
+  archived the change in the propose session. The waiting check now uses
+  Sonnet and gives no reply to next steps left to the owner (Haiku's
+  answers varied between runs); a run needing an earlier run's change ID
+  fails the trial if there is none.
+- Trials: the baseline (261023-kh3gg) and nine "after" trials used the old
+  waiting check, which also took two commit offers for the owner. The
+  owner chose to finish in a new session; the comparison is to be rerun
+  with the fixed script, before (on #70's Grove) and after (this branch).
 
 ### T-02 — `just check` counts the instruction words
 
