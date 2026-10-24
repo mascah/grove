@@ -37,3 +37,21 @@ Status: done
   a draft whose `depends_on` names the unfinished first draft is refused as
   waiting. The approved change's checks are as before. `TestInit` checks the
   description in both skill files.
+
+### T-02 — Propose offers one merge or two
+
+Status: done
+
+- `internal/instruct/requires/propose.md`: the finish says, for a change
+  the project index does not list as approved, to offer both next steps and
+  choose neither for the owner: merge it to approve it, or run
+  `/grove-implement <change-id>` on this branch so one merge approves it
+  with its code; for a change it lists as approved, the next step is
+  merging the revision, since `/grove-implement` builds it as the target
+  holds it. The requires text is the same for every propose session, so
+  the revise instructions for an approved change hold the offer only under
+  its condition; the agent tells the two apart from the project index,
+  which lists the change as approved.
+- `internal/cli/walkthrough_test.go`: `TestPropose` checks the two next
+  steps and the approved-change case in `grove instructions propose
+  "<description>"`.

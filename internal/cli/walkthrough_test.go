@@ -306,6 +306,10 @@ func TestPropose(t *testing.T) {
 		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 5. Check the change") || strings.Contains(out, "Assumptions to confirm") {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
+	if !strings.Contains(out, "offer both next steps and choose neither") || !strings.Contains(out, "`/grove-implement <change-id>` on this branch so one merge approves it\n  with its code") ||
+		!strings.Contains(out, "For a change it lists as approved, the next step is\n  merging the revision") {
+		t.Errorf("propose's finish does not offer one merge or two:\n%.3000s", out)
+	}
 
 	os.MkdirAll(filepath.Join(dir, "grove/schemas/default/documents/tasks"), 0o755)
 	os.WriteFile(filepath.Join(dir, "grove/schemas/default/documents/tasks/template.md"), []byte("## T-01 — [title]\n\nRollback: [how to undo this task]\n"), 0o644)
