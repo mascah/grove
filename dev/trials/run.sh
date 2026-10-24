@@ -39,7 +39,8 @@ spec() {
 edit() { python3 -c 'import sys; p,o,n=sys.argv[1:]; s=open(p).read(); assert o in s, (p,o); open(p,"w").write(s.replace(o,n,1))' "$@"; }
 
 # snapshot lists every file of the fixture with its hash, to tell what a run changed.
-snapshot() { git ls-files -co --exclude-standard -z | xargs -0 shasum | sort -k2; }
+# A file the run moved or deleted is left out, so it shows as changed.
+snapshot() { git ls-files -co --exclude-standard -z | xargs -0 shasum 2> /dev/null | sort -k2 || true; }
 
 # turn sends msg to the agent, resuming session sid when set, and sets sid,
 # last (the agent's last message) and words (the words of its messages).
