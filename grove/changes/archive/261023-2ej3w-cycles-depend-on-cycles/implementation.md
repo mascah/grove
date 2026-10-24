@@ -98,3 +98,6 @@ runs:
 - "No such cycle": TestRun, passed
 
 ## Reconciliation
+
+- cycles: applied to specs/cycles/spec.md, with the Purpose's "depends on", "waits on" and stale definition
+- runs: applied to specs/runs/spec.md, with the Purpose's "a buildable cycle"
