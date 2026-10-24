@@ -24,7 +24,17 @@ Status: done
 
 ### T-02 — Record the baseline
 
-Status: not started
+Status: blocked
+
+Question: who runs the ten baseline trials (five cases in Claude Code and
+in Codex)? This session's auto mode refused to start headless `claude -p`
+and `codex exec` sessions, and the owner said to leave T-02 blocked.
+
+Found while preparing it: in a git worktree, `just build` gives a binary
+whose `grove version` prints `grove dev`, with no build info from Git;
+the main checkout's build prints `grove 0.4.1-0.20261024005345-8454724ba54d`.
+So the commit `dev/trials.md` asks for may have to come from `git rev-parse
+HEAD` when the trials run from a worktree.
 
 ## Scenarios
 
