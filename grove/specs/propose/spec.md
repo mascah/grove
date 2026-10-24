@@ -265,6 +265,26 @@ write or remove `unattended`.
 - WHEN the owner runs `/grove-propose D`
 - THEN the instructions print no cycle file, and the agent edits no cycle
 
+### Requirement: Decisions go in the proposal
+
+When the agent runs `grove instructions propose`, the system shall print
+instructions that put every decision, however much room it needs, in the
+proposal's decisions section, and that name no `design.md`.
+
+#### Scenario: A new change
+
+- GIVEN the default schema with none of the project's own files
+- WHEN the agent runs `grove instructions propose "Delete a record"`
+- THEN the instructions, the propose guide and the proposal template among
+  them, contain no `design.md`
+
+#### Scenario: A decision that needs room
+
+- GIVEN the owner's answer to a decision needs several paragraphs
+- WHEN the agent writes the change from the propose instructions
+- THEN the decision and its reasons are in `proposal.md` under
+  Decisions, and the change folder has no `design.md`
+
 ## Known discrepancies
 
 None recorded.
