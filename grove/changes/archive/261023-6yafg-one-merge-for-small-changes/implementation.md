@@ -93,3 +93,26 @@ Status: done
   `--unattended` refusing the draft. `TestOneMerge` and
   `TestImplementInstructions` follow it; it was not walked by hand in
   Claude Code in this run.
+- Recheck before finishing: T-01 to T-04's evidence holds against the code
+  as it now is. `just check` passes (3721 Go lines, 1320 test lines);
+  `grove check` prints "No problems in grove/.".
+
+## Scenarios
+
+- implement "Drafted and built on one branch": `walkthrough_test.go` `TestOneMerge` (instructions, archive on the branch, review) and `TestImplementInstructions` (the draft's instructions), passed; an agent building it with the owner is unverified, no owner in this run.
+- implement "Unattended refuses a draft": `TestImplementInstructions`, passed.
+- implement "Building shows the draft is wrong": unverified, needs an owner trying the build; the draft rule pointing to revising with the owner's agreement is checked by `TestImplementInstructions`.
+- implement "A large draft": unverified by test; the code prints nothing about size, as `instructionsChange` and `Implement` show.
+- implement "A draft that waits": `TestImplementInstructions`, passed.
+- implement "Drafted, built and archived on one branch": `TestOneMerge`, passed.
+- implement "A draft not yet built": `TestApprove`, passed.
+- implement "An approved change archived on its branch": `TestArchive`, passed.
+- implement "A change with two tasks": unverified, needs an owner in the session; the instructions are `TestImplementInstructions`'s, passed.
+- implement "A change that waits": `TestCoordinating`, passed.
+- propose "A new change on its branch": `TestPropose`, passed, for the instructions; an agent's finish is unverified.
+- propose "Revising an approved change": unverified; the requires text gives the offer only for a change the index does not list as approved, checked by `TestPropose`, and an agent's finish was not tried.
+
+## Reconciliation
+
+- implement: applied to specs/implement/spec.md; Purpose and Boundaries name drafts and review's line.
+- propose: applied to specs/propose/spec.md
