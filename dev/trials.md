@@ -31,7 +31,8 @@ PATH keeps this build first, typing `$grove-…` where Claude Code types
 branches. When the agent's turn ends, a small model says whether it waits
 for the owner; while it does, up to `TURNS` times, the script replies with
 the case's first unused answer whose pattern matches the agent's last
-message, or else "Yes, go with what you recommend." Between runs the
+message, or else "Yes, go with what you recommend." An `--unattended`
+run gets no reply. Between runs the
 script commits what the last one left.
 
 Each trial's folder holds the fixture (`repo/`), every turn's events
