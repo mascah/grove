@@ -354,7 +354,8 @@ latest attempt selected.
 #### Scenario: A blocked change revised
 
 - GIVEN cycle K's A was merged as finished, B was blocked by an open
-  question, the owner merged a revision of B answering it, and re-planned K
+  question, and the owner merged, in one squash merge, a revision of B
+  answering it that re-planned K
 - WHEN the operator runs `grove run --retry`
 - THEN a new branch is created from the fetched target and a session is
   launched on the implement skill with K's ID and `--unattended`, which

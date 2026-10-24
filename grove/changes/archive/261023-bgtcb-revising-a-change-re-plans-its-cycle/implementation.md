@@ -8,7 +8,7 @@ write "Status: dropped" here with their reason. -->
 
 ### T-01 — Propose re-plans the cycle of a revised member
 
-Status: in progress
+Status: done
 
 - `internal/cli/instructions.go`: `instructionsPropose`, revising a
   change, finds the cycle not done in the working tree that lists it and
@@ -31,6 +31,17 @@ Status: in progress
   cycle document with `planned: <main's commit>`, the rule never to write
   or remove `unattended` and the cycle's file; that a change in no cycle
   gets no cycle; and that `instructions plan` names the shorter way.
+- Trial in Claude Code 2.1.310 on a fresh ledger fixture with this build
+  first on PATH, headless over three turns: an approved "Monthly budgets in
+  report" in a cycle whose `needs_human` names it for judging how the
+  report reads. `/grove-propose <budgets-id>` on a branch printed
+  "re-planning cycle <id>", asked unprompted whether the `needs_human`
+  entry should stay, and, asked to make the acceptance checkable by a test
+  and told budgets no longer needs a person, revised the proposal, change
+  spec and tasks, removed the entry, set `planned` to main's head, added no
+  `unattended`, and told the owner the revision and re-plan must land as
+  one commit. `grove check` was clean on the branch, and on main after a
+  squash merge, the cycle not stale.
 
 ### T-02 — The stale check counts a member changed with its plan
 
@@ -78,3 +89,25 @@ Status: done
   cycle stale; running step 6 revises export with `/grove-propose
   <export-id>`, re-planning its cycle on the same branch, one squash merge,
   and `grove run --retry <export-cycle-id>` then starts a session.
+- Recheck before finishing: T-01 to T-03's evidence holds against the code
+  as it now is. `just check` passes (3767 Go lines, 1441 test lines);
+  `grove check` prints "No problems in grove/.".
+
+## Scenarios
+
+- propose "A blocked member answered": unverified as a blocked member; the trial revised a member that needed a person, with the same instructions (`TestCycles` checks them for a marked cycle, leaving `unattended` as it is).
+- propose "A member that no longer needs a person": the trial above, passed (entry removed, `planned` set, `grove check` clean after a squash merge); `TestReplan` shows `grove run` would then select the cycle.
+- propose "A change in no cycle": `walkthrough_test.go` `TestCycles`, passed.
+- cycles "Revised and re-planned in one squash merge": `TestReplan`, passed.
+- cycles "Revised and re-planned in one merge commit": `TestReplan`, passed.
+- cycles "Marked after a member changed": `TestReplan`, passed.
+- cycles "Revision and re-plan as two commits on the target": `TestReplan`, passed (check reports it stale and `eligible` selects nothing; `grove run K` refuses through the same `runnable`).
+- cycles "Nothing in the way", "A member waits on a change outside the cycle", "The runner needs something set up": unverified here, unchanged by this change; the finish text is printed, as `TestCycles` checks.
+- cycles "A member needs a person": `TestCycles`, passed, for the finish naming the re-plan by `/grove-propose` and one merge; an agent's finish was not tried.
+- runs "A blocked change revised": `TestReplan`, passed, for a squash merge of a revision and re-plan leaving the cycle eligible; the full pause and `--retry` with a stub session was not replayed.
+
+## Reconciliation
+
+- propose: applied to specs/propose/spec.md
+- cycles: applied to specs/cycles/spec.md; its Purpose's definition of stale names the exception, as the change spec says.
+- runs: applied to specs/runs/spec.md
