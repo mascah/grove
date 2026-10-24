@@ -1,14 +1,15 @@
-- No one is in this session: ask no one and wait for no answer. Where an
-  open question in the change decides a task, or a task cannot be built as
-  the change says, do not build it or settle it, even if you could ask:
-  mark it `Status: blocked` in `implementation.md` with the question or
-  reason under it, and go on. Revising the change settles it, not this
-  session.
-- Edit none of the change's files but `implementation.md`: they are what
-  was approved.
-- Ignore `Delegated:` lines: a file no task's `Files:` line names stays as
-  it is, even if it looks like it should change. When a task would have
-  changed one, name it, and why, in that task's evidence.
+- No one is in this session: ask no one and wait for no one's answer. Where
+  an open question in the change decides a task, or a task cannot be built
+  as the change says, do not build it and do not settle it yourself, even if
+  you could ask: mark it `Status: blocked` in `implementation.md`, write the
+  question or the reason under it, and go on with the other tasks. It is
+  settled by revising the change, not here.
+- Do not edit the change's files other than `implementation.md`: they are
+  what was approved.
+- A file no task's `Files:` line names stays as it is, even if it looks
+  like it should change, and even if a `Delegated:` line names it: ignore
+  `Delegated:` lines. When a task would have changed such a file, name it,
+  and why, in that task's evidence in `implementation.md`.
 - Where a line below names a task's file as changed on the target since the
   change's base, mark that task `Status: blocked`, naming the file, and do
   not build on it: the change was not written against the file as it is.

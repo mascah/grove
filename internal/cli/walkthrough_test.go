@@ -265,7 +265,7 @@ func TestExplore(t *testing.T) {
 	setUp(t)
 	out := grove(t, "instructions", "explore")
 	for _, s := range []string{"# Grove instructions: explore", "Interview before you conclude anything",
-		"Maintained specs (agreed behavior):\n- None.", "prototype \"<question>\"`"} {
+		"Maintained specs (agreed behavior):\n- None.", "`instructions prototype \"<question>\"`"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("explore instructions lack %q", s)
 		}
@@ -287,7 +287,7 @@ func TestPrototype(t *testing.T) {
 	if strings.Contains(out, "## Documents") {
 		t.Error("prototype instructions offer a document to fill in")
 	}
-	if out := grove(t, "instructions", "propose"); !strings.Contains(out, "Write a prototype's findings from this conversation into the proposal") || strings.Contains(out, "## Project context") {
+	if out := grove(t, "instructions", "propose"); !strings.Contains(out, "citing the prototype branch and the commit") || strings.Contains(out, "## Project context") {
 		t.Error("propose instructions do not say to cite a prototype, or have a context the project has not")
 	}
 }
@@ -312,17 +312,17 @@ func TestPropose(t *testing.T) {
 	req, how := strings.Index(out, "## What Grove requires of propose\n\n- Write the documents below"), strings.Index(out, "## How to propose\n\n**Propose says")
 	if !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") || req < 0 || how < req ||
 		!strings.Contains(out, "on a `Files:` line after `Result:`") || !strings.Contains(out, "\nFiles: [`path/to/file`") || strings.Contains(out, "file-by-file") ||
-		!strings.Contains(out, "and before writing, ask\n  one round") || !strings.Contains(out, "worded so \"yes\" accepts it") || !strings.Contains(out, "Before telling the owner the change is written, read its documents") || !strings.Contains(out, "ADDED or MODIFIED one has a task whose acceptance shows it") || strings.Contains(out, "Assumptions to confirm") {
+		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 5. Check the change") || strings.Contains(out, "Assumptions to confirm") {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
-	for _, s := range []string{"could agree separately, ask whether to", "`depends_on`", "Order it by consequence: first what changes behavior, scope or\n  compatibility or loses data", "on one line of defaults a single \"yes\" accepts",
-		"Write a task's `Delegated:` line", "only where the owner agreed.", "A task may have a `Delegated:` line, right after `Files:`", "Delegated: test layout and private helpers"} {
+	for _, s := range []string{"say so and ask\n  whether to split it", "`depends_on`", "Order it by consequence: first what changes behavior, scope\n  or compatibility or loses data", "as\n  recommended defaults on one line, not a list, that a single \"yes\"\n  accepts",
+		"Write a task's `Delegated:` line", "only where the\n  owner agreed to it in the round", "A task may have a `Delegated:` line, right after `Files:`", "Delegated: test layout and private helpers"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("propose instructions lack %q", s)
 		}
 	}
-	if !strings.Contains(out, "offer both next steps and choose neither") || !strings.Contains(out, "`/grove-implement <change-id>` on this branch so one merge approves") ||
-		!strings.Contains(out, "For an approved one, the next step is merging the") {
+	if !strings.Contains(out, "offer both next steps\n  and choose neither") || !strings.Contains(out, "`/grove-implement <change-id>` on this branch so one merge\n  approves it with its code") ||
+		!strings.Contains(out, "For a change it lists as approved, the next\n  step is merging the revision") {
 		t.Errorf("propose's finish does not offer one merge or two:\n%.3000s", out)
 	}
 
@@ -404,7 +404,7 @@ func TestImplementInstructions(t *testing.T) {
 		t.Errorf("unattended before the merge: status %d, %q", code, stderr.String())
 	}
 	draft := grove(t, "instructions", "implement", cid)
-	for _, s := range []string{"You are implementing drafted change " + cid + ", \"Allow editing older records\", as this working tree holds it, with the owner", "merging this branch approves it with its code, so edit its", "### Requirement: Edit older records"} {
+	for _, s := range []string{"You are implementing drafted change " + cid + ", \"Allow editing older records\", as this working tree holds it, with the owner", "Merging this branch into the\n  target approves it with its code, so edit its proposal, change specs and\n  tasks only with the owner's agreement", "### Requirement: Edit older records"} {
 		if !strings.Contains(draft, s) {
 			t.Errorf("draft instructions lack %q:\n%.3000s", s, draft)
 		}
@@ -424,11 +424,11 @@ func TestImplementInstructions(t *testing.T) {
 		t.Errorf("instructions apply: status %d, %q", code, stderr.String())
 	}
 
-	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. When every task is done", "commit only when the owner or the project's rules ask",
+	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. When every task is done", "Commit only when the owner or the project's\nrules ask.",
 		"The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n"}
 	owner := []string{"ask the owner and\n  wait", "with their agreement add it to that task's `Files:`", "tell the owner how to try it",
-		"Make the choices and change the paths a task's `Delegated:` line names\n  without asking.", "stop and build nothing more of it"}
-	alone := []string{"ask no one and wait for no answer", "a file no task's `Files:` line names stays as", "Ignore `Delegated:` lines", "mark that task `Status: blocked`, naming the file", "whatever its\n  `needs_human` says"}
+		"Make the choices and change the paths a task's `Delegated:` line names\n  without asking the owner", "stop that task and build nothing more of it"}
+	alone := []string{"ask no one and wait for no one's answer", "A file no task's `Files:` line names stays as it is", "ignore\n  `Delegated:` lines", "mark that task `Status: blocked`, naming the file", "whatever its\n  `needs_human` says"}
 	has := func(what, out string, want, not []string) {
 		t.Helper()
 		for _, s := range want {
@@ -485,7 +485,7 @@ func TestArchive(t *testing.T) {
 	// The session reconciles the change spec into a new maintained spec,
 	// from the template its instructions give, then archives the change.
 	out := grove(t, "instructions", "archive", cid)
-	for _, s := range []string{"Reconcile the specs", "word for word", "`archive` again", "marks `unverified`; it does\n  not stop the archive", "Status: done", "### Requirement: Edit older records"} {
+	for _, s := range []string{"Reconcile the specs", "word for word", "run `archive` again", "marks `unverified`; it does\n  not stop the archive", "Status: done", "### Requirement: Edit older records"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("archive instructions lack %q", s)
 		}
@@ -605,10 +605,10 @@ func TestSchemas(t *testing.T) {
 		!strings.Contains(out, "\n- `bugfix`: A fix for behavior that is wrong, whether or not a maintained spec describes it.\n") {
 		t.Errorf("propose instructions do not list Grove's schemas:\n%s", out)
 	}
-	if out := grove(t, "instructions", "propose", "Editing a missing record crashes"); !strings.Contains(out, "describes wrong behavior, suggest the `bugfix` schema listed below") || !strings.Contains(out, "the owner confirms it, or names another listed kind") {
+	if out := grove(t, "instructions", "propose", "Editing a missing record crashes"); !strings.Contains(out, "describes behavior that is wrong, suggest the `bugfix` change schema") || !strings.Contains(out, "Once the owner confirms it") {
 		t.Errorf("propose instructions do not suggest bugfix:\n%.3000s", out)
 	}
-	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "\n- `bugfix`: A fix for behavior that is wrong") || !strings.Contains(out, "When the owner describes wrong behavior, suggest the `bugfix` schema") || !strings.Contains(out, "adding `--schema <name>` if the owner confirmed") {
+	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "\n- `bugfix`: A fix for behavior that is wrong") || !strings.Contains(out, "describes behavior that is wrong, suggest the `bugfix`\n  change schema") || !strings.Contains(out, "If the owner has\n  confirmed `bugfix`") {
 		t.Errorf("explore instructions do not suggest bugfix:\n%.3000s", out)
 	}
 	own := func(name, content string) {
@@ -617,7 +617,7 @@ func TestSchemas(t *testing.T) {
 	}
 	own("default/documents/tasks/template.md", "## T-01 — [title]\n\nRollback: [how to undo this task]\n")
 	out := grove(t, "instructions", "propose", "--schema", "bugfix", "x")
-	for _, s := range []string{"## How to propose\n\n**Propose a bug fix: \"This is wrong; make it right.\"**", "reproduces the bug and fails before the", "write no change spec",
+	for _, s := range []string{"## How to propose\n\n**Propose a bug fix: \"This is wrong; make it right.\"**", "fails before the\n  fix", "Write no change spec",
 		"## Observed\n", "## Expected\n", "## Reproduction\n", "## The requirement it breaks\n", "## Open questions\n", "Rollback: [how to undo this task]", "schema: bugfix\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("Grove's bugfix propose instructions lack %q:\n%.3000s", s, out)
@@ -752,7 +752,7 @@ func TestCoordinating(t *testing.T) {
 	// Propose records depends_on and base; lists show what waits.
 	main := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	out := grove(t, "instructions", "propose", "Add ledger delete ID")
-	for _, s := range []string{"ask whether another open change, approved or drafted, must", "\nbase: " + main + "\n",
+	for _, s := range []string{"ask the owner whether it needs another open change", "\nbase: " + main + "\n",
 		"- " + unknown + " \"Editing an unknown ID prints an error\": `grove/changes/" + unknown + "-editing-an-unknown-id-prints-an-error/`\n  - capabilities: record-editing\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("propose instructions lack %q:\n%s", s, out)
@@ -779,7 +779,7 @@ func TestCoordinating(t *testing.T) {
 
 	// Implementing a cycle unattended lists its changes in dependency order.
 	out = grove(t, "instructions", "implement", k, "--unattended")
-	for _, s := range []string{"## What Grove requires of implement\n\n- Build each change below in the order given",
+	for _, s := range []string{"## What Grove requires of implement\n\n- Work in this working tree on a branch other than the target",
 		"## How to implement\n\nBuild these changes in this order", "\n1. " + unknown + " \"Editing an unknown ID prints an error\"\n2. " + del + " \"Add ledger delete ID\"\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("cycle instructions lack %q:\n%s", s, out)
@@ -872,7 +872,7 @@ func TestCoordinating(t *testing.T) {
 	git(t, dir, "checkout", "-q", "--", ".")
 	main = strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	git(t, dir, "switch", "-q", "-c", "show-saved-revise")
-	if out := grove(t, "instructions", "propose", show); !strings.Contains(out, "\nbase: "+main+"\n") || !strings.Contains(out, "Change `base` only so, never to clear the") {
+	if out := grove(t, "instructions", "propose", show); !strings.Contains(out, "\nbase: "+main+"\n") || !strings.Contains(out, "never clear the report by hand") {
 		t.Errorf("revise instructions for a stale change:\n%s", out)
 	}
 	modify(showDir, strings.Replace(recatText, "save the edit", "save the edit and print what was saved", 1))
@@ -938,13 +938,13 @@ func TestCycles(t *testing.T) {
 	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.yaml`").FindStringSubmatch(out)
 	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
 		"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n",
-		"\n# depends_on: [", "lists cycles not done, ask whether it", "`grove run` builds nothing\n    of this one until it is"} {
+		"\n# depends_on: [", "ask the owner\n  whether it follows any of them", "`grove run` builds\n    nothing of the cycle until it is"} {
 		if m == nil || !strings.Contains(out, s) {
 			t.Errorf("plan instructions lack %q:\n%s", s, out)
 		}
 	}
 	// The finish names implement, then run given the cycle, then the mark.
-	if i, r, u := strings.Index(out, "that `/grove-implement <cycle-id>`"), strings.Index(out, "whether `grove run <cycle-id>` would"), strings.Index(out, "`unattended: true`, added in a merge"); i < 0 || i > r || r > u {
+	if i, r, u := strings.Index(out, "say `/grove-implement <cycle-id>`"), strings.Index(out, "say whether `grove run <cycle-id>`"), strings.Index(out, "say `unattended: true`"); i < 0 || i > r || r > u {
 		t.Errorf("plan's finish is not in order:\n%s", out)
 	}
 	if out := grove(t, "instructions", "plan", a); !strings.Contains(out, "with approved change "+a+", \"Editing an unknown ID prints an error\", as its only member") {
@@ -986,7 +986,7 @@ func TestCycles(t *testing.T) {
 	marked, rel := strings.TrimSpace(git(t, dir, "rev-parse", "main")), "grove/cycles/"+k+"-0-4-release.yaml"
 	revise := grove(t, "instructions", "propose", a)
 	for _, s := range []string{", and re-planning cycle " + k + ", \"0.4 release\", which lists it.", "### cycle: `" + rel + "`", "\nplanned: " + marked + "\n",
-		"change nothing else; never write or remove", "## The cycle\n\n<file path=\"" + rel + "\">\n" + plan + "unattended: true\n</file>"} {
+		"never write or remove `unattended`", "## The cycle\n\n<file path=\"" + rel + "\">\n" + plan + "unattended: true\n</file>"} {
 		if !strings.Contains(revise, s) {
 			t.Errorf("revising a member lacks %q:\n%.4000s", s, revise)
 		}
@@ -994,7 +994,7 @@ func TestCycles(t *testing.T) {
 	if out := grove(t, "instructions", "propose", b); strings.Contains(out, "## The cycle") || strings.Contains(out, "### cycle: ") {
 		t.Errorf("revising a change in no cycle prints a cycle:\n%.3000s", out)
 	}
-	if out := grove(t, "instructions", "plan"); !strings.Contains(out, "re-plans the cycle on the\n    same branch, and one merge removes the obstacle") {
+	if out := grove(t, "instructions", "plan"); !strings.Contains(out, "that re-plans the cycle on\n    the same branch, and one merge removes the obstacle") {
 		t.Errorf("plan's finish does not name the shorter way:\n%.3000s", out)
 	}
 	checks := func(want string) {
