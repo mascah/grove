@@ -25,7 +25,7 @@ Trial, 2026-10-24, Claude Code headless (`claude -p`, the tool list of
 `dev/trials/run.sh`), on a fresh ledger fixture on branch `record-edit`,
 the implementer answering as owner from the guide:
 
-- `/grove-propose Record what \`ledger edit\` does today, ...` wrote
+- ``/grove-propose Record what `ledger edit` does today, ...`` wrote
   change 261024-3tcgj with five requirements under ADDED, what the code
   does under "Observed current behavior", and a `tasks.md` holding a note
   and no `T-NN` task. Its first answer for the `edit 99` traceback was
@@ -45,4 +45,18 @@ The guide's "What to expect" holds what the trial taught.
 
 ## Scenarios
 
+- propose "Recording what edit does": the T-02 trial on the ledger
+  fixture, Claude Code; `tasks.md` held no `T-NN` task and `grove check`
+  printed "No problems in grove/.", passed. No Go test covers it: what
+  the agent writes is judged, not computed.
+- propose "Implemented with no tasks": the T-02 trial; `/grove-implement`
+  on the draft's branch built nothing, folded the change spec into the
+  maintained spec and archived the change, and `grove review` named it
+  approved by the merge, passed.
+- propose "The owner wants the code changed too": unverified; the trial
+  kept the traceback as a known discrepancy and did not try asking for
+  the code to change too.
+
 ## Reconciliation
+
+- propose: applied to specs/propose/spec.md
