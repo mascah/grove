@@ -198,10 +198,12 @@ Merging the pull request archives the changes and ends the pause; the next
 `grove run` selects the next eligible cycle. Other merges, even of another
 marked cycle, do not end it. A change left blocked by a question stays
 open, so the project stays paused: answer the question with
-`/grove-propose <change-id>`, merge the revision, re-plan the cycle with
-`/grove-plan <cycle-id>` and merge that, since the revision made its plan
-stale, then run `grove run --retry`; or drop the change with
-`/grove-archive <change-id>` and merge that.
+`/grove-propose <change-id>`, which re-plans the cycle on the same branch,
+merge that, then run `grove run --retry`; or drop the change with
+`/grove-archive <change-id>` and merge that. The revision and the re-plan
+must reach main as one commit, a squash or a merge commit: rebased or
+fast-forwarded as two, the revision makes the plan stale (see
+[Planning cycles](planning.md), "Re-plan a cycle").
 
 ## When a session is stopped
 

@@ -46,7 +46,7 @@ with you, then saying whether `grove run <cycle-id>` would build it, and
 that `unattended: true`, merged on its own, hands it to a `grove run` given
 no cycle, and what removes each obstacle. For this one:
 
-> Build this cycle with `/grove-implement 261020-m4k8t`. grove run would refuse it, given as `grove run 261020-m4k8t` or marked: 261019-r2w7k needs a person. To remove that, revise it with `/grove-propose 261019-r2w7k` so its acceptance can be checked without a person, merge it, and re-plan with `/grove-plan 261020-m4k8t`.
+> Build this cycle with `/grove-implement 261020-m4k8t`. grove run would refuse it, given as `grove run 261020-m4k8t` or marked: 261019-r2w7k needs a person. To remove that, revise it with `/grove-propose 261019-r2w7k` so its acceptance can be checked without a person; that re-plans the cycle on the same branch, and one merge removes it.
 
 For a cycle with nothing in the way:
 
@@ -99,8 +99,10 @@ No skill writes or removes the line, and re-planning keeps it.
 > grove/cycles/261020-m4k8t-0-4-release.yaml:8: unattended: 261019-r2w7k needs a person, as needs_human says, so grove run skips this cycle; remove unattended, or build the cycle with /grove-implement 261020-m4k8t
 
 And one whose plan is stale, because the folder of a change in it that is
-not archived, or a file one of its tasks names on its `Files:` line,
-differs on your main branch from what it was at `planned`:
+not archived, or a file one of its tasks names on its `Files:` line, was
+changed on your main branch since `planned` by a commit that did not also
+edit the cycle file. Grove reads main's first-parent history, so a squash
+or a merge commit counts as one commit:
 
 > grove/cycles/261020-m4k8t-0-4-release.yaml: planned: 261019-p4x8d changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan 261020-m4k8t
 
@@ -115,6 +117,15 @@ branch holds them, asks about them as for a new plan, and sets `planned`
 to your main branch's commit. Merge it. When a file a change's task names
 moved and you are content to build the change on the new text, re-planning
 is all it takes; the change itself stays as it is.
+
+Revising a change in the cycle re-plans it too.
+`/grove-propose 261019-r2w7k` prints the cycle's file beside the change,
+and on the same branch the agent asks whether the change needs a person,
+as planning does, and sets `planned` to your main branch's commit; it
+never writes or removes `unattended`. Merge the branch as one commit, a
+squash or a merge commit, and the plan holds. If the revision and the
+re-plan reach main as two commits, by rebase or fast-forward, the
+revision is a change the plan did not check, and the cycle is stale.
 
 A cycle is done when every change in it is archived, finished or dropped;
 its file stays. A change is in at most one cycle that is not done.

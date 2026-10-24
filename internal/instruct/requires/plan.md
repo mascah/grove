@@ -35,8 +35,8 @@
   For each obstacle, say what removes it:
   - A member `needs_human` names: `grove run` refuses the cycle, given or
     marked. Revise the member with `/grove-propose <change-id>` so that its
-    acceptance can be checked without a person, merge that, and re-plan
-    the cycle with `/grove-plan <cycle-id>`.
+    acceptance can be checked without a person; that re-plans the cycle on
+    the same branch, and one merge removes the obstacle.
   - A member waiting on a change neither in the cycle nor archived as
     finished: `grove run` builds nothing of the cycle until that change is
     archived as finished.

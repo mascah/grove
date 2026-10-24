@@ -18,6 +18,15 @@
   for and leave the rest as it is. If the project index lists it as
   approved, tell the owner that editing it changes approved work before you
   do.
+- Revising a change that a cycle not done lists: the cycle's file is below,
+  and you re-plan it on this branch, so one merge brings the revision and
+  the plan. Ask the owner whether the change needs a person, as planning
+  does: name it under `needs_human`, with their reason in their words, only
+  when they say it does, and take it out only when they say it no longer
+  does. Set `planned` to the commit the cycle template below shows, and
+  change nothing else in the file; never write or remove `unattended`. Tell
+  the owner the revision and the re-plan must reach the target as one
+  commit, a squash or a merge, or the plan is stale.
 - Revising a change that Grove's `check` reports as stale on a
   requirement: bring that MODIFIED or REMOVED requirement up to date with
   the target's maintained spec, keeping what this change alters, then set

@@ -43,7 +43,8 @@ func instructionsPrototype(stdout io.Writer, question string) error {
 
 // instructionsPropose prints the propose instructions: for a new change in
 // change schema schema, or grove.yaml's when it is empty, when arg is empty
-// or a description, or for revising the drafted change whose ID arg is.
+// or a description, or for revising the drafted change whose ID arg is,
+// with the cycle not done in this working tree that lists it, to re-plan.
 func instructionsPropose(stdout io.Writer, schema, arg string) error {
 	p, err := openProject()
 	if err != nil {
@@ -60,11 +61,24 @@ func instructionsPropose(stdout io.Writer, schema, arg string) error {
 	if schema != "" {
 		return errors.New("a change keeps its schema; to change it, edit schema in the change's .grove.yaml")
 	}
-	c, files, err := change(os.DirFS(filepath.Join(p.Top, p.Root)), ip.Layout, arg)
+	fsys := os.DirFS(filepath.Join(p.Top, p.Root))
+	c, files, err := change(fsys, ip.Layout, arg)
 	if err != nil {
 		return err
 	}
-	return show(stdout)(instruct.Revise(ip, c, files))
+	tree, err := doc.Load(fsys, ip.Layout)
+	if err != nil {
+		return err
+	}
+	var cy *doc.Cycle
+	var content []byte
+	if i := slices.IndexFunc(tree.Cycles, func(cy *doc.Cycle) bool { return !cy.Done && slices.Contains(cy.Meta.Changes, arg) }); i >= 0 {
+		cy = tree.Cycles[i]
+		if content, err = fs.ReadFile(fsys, cy.Path); err != nil {
+			return err
+		}
+	}
+	return show(stdout)(instruct.Revise(ip, c, files, cy, string(content)))
 }
 
 // instructionsPlan prints the plan instructions: for a new cycle when arg
