@@ -143,11 +143,13 @@ except in a revision you agree to while implementing; progress goes in
 ## Change schemas
 
 Not every change is the same kind of work. A change schema decides which
-documents a change holds and how each step goes for it. Grove's built-in
-schema, `default`, is the software change this page describes. A project
-can replace any of its files and add schemas of its own, such as one for
-bug fixes; a change keeps the schema it was proposed with (see
-[Reference](reference.md), "Change schemas").
+documents a change holds and how each step goes for it. Grove has two:
+`default`, the software change this page describes, and `bugfix`, for
+behavior that is wrong, whose proposal shows the bug and whose first task
+is a test that fails before the fix. When you describe a bug, the agent
+suggests `bugfix`, and uses it once you confirm. A project can replace any
+of their files and add schemas of its own; a change keeps the schema it was
+proposed with (see [Reference](reference.md), "Change schemas").
 
 A schema cannot change what Grove requires at each step, listed under "The
 loop": every schema keeps the same approval, the same tasks in `tasks.md`
@@ -175,7 +177,7 @@ capability's ID is a short lowercase name, such as `projects`.
 - **Capability:** one area of behavior, with one maintained spec.
 - **Change:** a folder proposing future work.
 - **Change schema:** what a kind of change consists of and how each skill
-  goes for it; Grove's is `default`.
+  goes for it; Grove's are `default` and `bugfix`.
 - **Context:** instructions in `grove.yaml` given to every skill, so they
   reach agents working through Grove and no other session.
 - **Harness:** the program you run your coding agent in. `grove init` writes

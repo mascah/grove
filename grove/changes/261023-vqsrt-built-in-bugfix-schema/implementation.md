@@ -59,3 +59,25 @@ Status: in progress
   instructions explore` and `grove instructions propose "Editing a missing
   record crashes"`, on the fixture with no `grove/schemas/`, list both
   schemas and say to suggest `bugfix` and use it once the owner confirms.
+
+### T-03 — Document the built-in
+
+Status: done
+
+- `docs/reference.md`, "Change schemas": Grove has `bugfix` and `default`;
+  "A schema of your own" keeps a short example (a schema whose propose
+  writes no change specs), says the instructions always list the schemas,
+  Grove's first, and that the agent suggests `bugfix` for wrong behavior;
+  "Example: a bug schema" is now "Grove's bugfix", describing the built-in,
+  the four places a `bugfix` file comes from, and replacing one of its files
+  in `grove/schemas/bugfix/`. `check`'s "none of the three places" is "none
+  of its places".
+- `docs/concepts.md`, "Change schemas" and the glossary: Grove has
+  `default` and `bugfix`, and the agent suggests `bugfix` for a bug.
+- `dev/walkthrough.md`: "A bug" starts from a fixture with no
+  `grove/schemas/`, and the session suggests `bugfix` itself; "A mistake in
+  a schema" writes a `grove/schemas/bugfix/` of the tester's own with the
+  same two mistakes and gets the same messages, and is where review's
+  `change schema` label is seen.
+- `CLAUDE.md`'s layout table names `schemas/default/` and
+  `schemas/bugfix/`.

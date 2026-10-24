@@ -466,26 +466,28 @@ Each step names the section of
   propose "x"` now gives that template. `/grove-propose Editing a missing
   record should print an error` writes `tasks.md` with a `Rollback:` line in
   each task, and `grove check` is clean.
-- **A bug** (reference, "Change schemas"). On a new branch, write
-  `grove/schemas/bugfix/` from the reference's example. In a fresh
-  session, `/grove-propose Editing a missing record crashes. It's a bug.`
-  The session sees `bugfix` under "Change schemas", confirms with me that
-  this is a bug, runs `grove instructions propose --schema bugfix "..."`,
-  and follows that: it reproduces the `StopIteration` traceback of
+- **A bug** (reference, "Grove's bugfix"). From a fixture with no
+  `grove/schemas/`, on a new branch, in a fresh session,
+  `/grove-propose Editing a missing record crashes`. The session sees
+  `default` and `bugfix` under "Change schemas", suggests `bugfix` itself,
+  and waits; I confirm. It runs `grove instructions propose --schema bugfix
+  "..."`, and follows that: it reproduces the `StopIteration` traceback of
   `ledger edit 99 --note x`, and finds no maintained requirement for a
   missing record, so it asks whether the corrected behavior should be
   agreed. I say yes. It writes `proposal.md` with Observed, Expected,
   Reproduction and The requirement it breaks, a change spec adding "editing
   a missing record prints an error" to `record-editing`, `tasks.md` whose
   T-01 starts with a test that reproduces the crash, and `.grove.yaml` with
-  `schema: bugfix`. Commit; `grove review` labels the schema's files
-  `change schema`, not `maintained spec`. Merge it, then on another branch
+  `schema: bugfix`. Commit; `grove check` is clean. Merge it, then on another branch
   `/grove-implement <change-id>` builds it (its instructions name schema
   `bugfix`) and `/grove-archive <change-id>` adds the requirement to
   `grove/specs/record-editing/spec.md` and archives the change.
-- **A mistake in a schema** (reference, "Change schemas"). After "A bug",
-  rename `grove/schemas/bugfix/documents/proposal/template.md` to
-  `documents/propsal/template.md` and add `instrution: x` to its `schema.yaml`.
+- **A mistake in a schema** (reference, "Change schemas", "Grove's
+  bugfix"). After "A bug", write a `grove/schemas/bugfix/` of my own: a
+  `schema.yaml` of `description: A fix.` and `instrution: x`, and a
+  proposal template at `documents/propsal/template.md`, misspelled. Commit;
+  `grove review` labels the schema's files `change schema`, not
+  `maintained spec`.
   `grove check` reports both and exits non-zero:
   > grove/schemas/bugfix/schema.yaml:2: unknown field "instrution"; schema.yaml takes description, documents and skills
 
