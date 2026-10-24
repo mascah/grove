@@ -71,15 +71,21 @@ Status: done
 
 ## Scenarios
 
-<!-- Before finishing, one line per scenario of the change specs: the check
-that shows it and its result, or `unverified` and why:
-
-    - record-editing "Update the note on a legacy record": tests/test_cli.py test_edit_legacy, passed
--->
+- implement "With the owner": `internal/cli/walkthrough_test.go`
+  `TestMovedFiles` (the instructions name T-01 and the file since the
+  cycle's plan), passed. That the agent then tells the owner and asks is
+  `unverified`: it is agent behavior, which only the requires rule in
+  `implement-owner.md` and a run of the walkthrough show.
+- implement "Unattended": `TestMovedFiles` with `--unattended` (the
+  instructions name the file since the plan), passed;
+  `TestImplementInstructions` (the unattended rule to mark the task
+  `Status: blocked`, naming the file), passed. That the agent marks T-01
+  blocked is `unverified`: it is agent behavior.
+- implement "The cycle it depends on lands": `TestFollows`, "L's last
+  change archived", passed.
+- implement "Re-planned": `TestFollows`, "re-planned", passed.
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- implement: applied to specs/implement/spec.md, adding "Tell the owner of
+  a file moved since the plan" after "Tell the owner of a moved file"
