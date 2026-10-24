@@ -278,8 +278,8 @@ func TestPrototype(t *testing.T) {
 	if strings.Contains(out, "## Documents") {
 		t.Error("prototype instructions offer a document to fill in")
 	}
-	if out := grove(t, "instructions", "propose"); !strings.Contains(out, "citing the prototype branch and the commit") {
-		t.Error("propose instructions do not say to cite a prototype")
+	if out := grove(t, "instructions", "propose"); !strings.Contains(out, "citing the prototype branch and the commit") || strings.Contains(out, "## Project context") {
+		t.Error("propose instructions do not say to cite a prototype, or have a context the project has not")
 	}
 }
 

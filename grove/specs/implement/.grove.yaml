@@ -1,2 +1,2 @@
 title: Implement
-description: /grove-implement builds an approved change in the owner's session, asking the owner instead of blocking, and revises the change on its branch with their agreement; apply asks no one.
+description: /grove-implement builds an approved change in the owner's session, asking the owner instead of blocking, and revises the change on its branch with their agreement; with --unattended it asks no one.

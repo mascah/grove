@@ -12,7 +12,7 @@ files are the repo-relative paths on its `Files:` line.
 
 This covers the documents `/grove-propose` writes and `grove check`'s
 reports on a change. Building a change belongs to
-`grove/specs/implement/spec.md` and `grove/specs/apply/spec.md`, and a
+`grove/specs/implement/spec.md`, and a
 cycle's staleness to `grove/specs/cycles/spec.md`.
 
 ## Requirements
@@ -93,8 +93,8 @@ it blocks.
 - GIVEN the round lists where the check goes
 - WHEN the owner says to leave that one open
 - THEN the proposal lists it under open questions, naming the task it
-  decides, and `/grove-apply` leaves that task blocked while
-  `/grove-implement` asks
+  decides, and `/grove-implement --unattended` leaves that task blocked
+  while `/grove-implement` asks
 
 #### Scenario: Nothing to assume
 

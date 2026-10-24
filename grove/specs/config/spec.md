@@ -22,14 +22,14 @@ Where `grove.yaml` on the target holds a non-empty `context`, the system
 shall print it, under a "Project context" heading before what Grove
 requires of the skill, in the instructions of every skill.
 
-#### Scenario: Applying a cycle
+#### Scenario: Building unattended
 
 - GIVEN the target's `grove.yaml` holds `context: Run python3 -m unittest
   before saying a task is done.`
-- WHEN `grove instructions apply <cycle-id> <change-id>` runs, as the
-  session `grove run` starts does
+- WHEN `grove instructions implement <change-id> --unattended` runs, as
+  the session `grove run` starts does for each member of its cycle
 - THEN its output has a "Project context" section with that line, before
-  "What Grove requires of apply"
+  "What Grove requires of implement"
 
 #### Scenario: No context
 
