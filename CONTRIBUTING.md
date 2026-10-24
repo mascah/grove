@@ -33,8 +33,8 @@ make a fresh fixture with `just fixture`, and follow the steps a change
 touches in Claude Code and in Codex.
 
 When a pull request changes instruction text in `internal/instruct`, run
-the trials in `dev/trials.md` by hand, in Claude Code and in Codex, and put
-their counts in its description.
+`just trials` (`dev/trials.md`), which runs the skill trials in Claude
+Code and in Codex, and put the table it prints in its description.
 
 ## Commits and pull requests
 
