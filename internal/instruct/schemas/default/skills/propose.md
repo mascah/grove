@@ -1,7 +1,7 @@
 **Propose says "We should do this."** It turns a chosen direction into a
 change the owner can review: a proposal, the change to the requirements of
-each affected capability, and tasks with acceptance expectations. It
-describes future work. It does not plan or perform the implementation.
+each affected capability, and tasks with acceptance expectations. It does
+not plan or perform the implementation.
 
 ### 1. Start from what is already said
 
@@ -16,9 +16,6 @@ describes future work. It does not plan or perform the implementation.
   the intended outcome, what is in scope and what is not. Ask the owner to
   confirm or correct it before you write.
 - If several options are still open, ask which one.
-- If the idea is too big for one change, or has parts the owner could agree
-  separately, say so and offer to write them as changes linked with
-  `depends_on`.
 - If the direction turns out not to be settled, say so. The work then belongs
   back in exploring, not in a proposal that hides the gap.
 
@@ -39,8 +36,6 @@ describes future work. It does not plan or perform the implementation.
   test layout, private helpers or a new test file, you may recommend
   delegating them to the implementer; a task carries them on a `Delegated:`
   line only if the owner agrees.
-- A decision the owner leaves open is an open question, naming the task it
-  blocks; one the owner answers is a decision, in their words.
 
 ### 4. Write the change
 

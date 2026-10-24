@@ -11,11 +11,10 @@
   not stop the archive. Then do the finishing work "How to archive"
   describes.
 - Then run Grove's `archive <change-id>`. It moves the change's folder to
-  `changes/archive/`, commits nothing, and refuses a change that is neither
-  finished nor dropped. For a finished change it also refuses, printing
+  `changes/archive/` and refuses a change that is neither finished nor
+  dropped. For a finished change it also refuses, printing
   each requirement as `path:line: message`, when a maintained spec does not
   hold what this branch and the change give it; fix the spec as the
   messages say and run `archive` again.
-- Tell the owner what changed and where the change went. Commit only when
-  the owner or the project's rules ask. The owner merges this branch, which
-  lands the work and the archived change together.
+- Tell the owner what changed and where the change went. The owner merges
+  this branch, which lands the work and the archived change together.

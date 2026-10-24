@@ -34,11 +34,13 @@ each time a skill runs.
 
 Each rule in Grove's instructions is said once. The opening text printed
 for every skill is shorter. Where a line is in both a skill's requires
-file and its schema guide, only the requires file keeps it. No rule is
-dropped: the agent is asked to do the same things in fewer words.
+file and its schema guide, only the requires file keeps it, unless
+removing it would need the copy that stays reworded; the implementing
+pull request lists each repeat kept so. No rule is dropped: the agent is
+asked to do the same things in fewer words.
 
 `just check` counts the words of `internal/instruct`'s Markdown and YAML
-files and fails above 7,000.
+files and fails above 8,000.
 
 This change has no change spec. No requirement a user or caller observes
 changes: the instructions keep every rule, and the budget is a rule about
@@ -84,14 +86,21 @@ every answer below in one round ("yes to C & D").
   every removed rule still lives. No rule is dropped. Reason: the agent
   reads each rule once, and a reviewer can check nothing was lost.
 - **`just check` counts the words of `internal/instruct` (Markdown and
-  YAML) and fails above 7,000,** as rule 12 says once PR #47 amends it.
-  Reason: the instruction text has a budget the way the Go code does, and
-  the check keeps it.
+  YAML) and fails above 8,000,** as rule 12 says once PR #75 amends it.
+  The budget was 7,000, as PR #47 set it; asked on 2026-10-24 whether it
+  becomes 8,000, the owner said "yes". Reason: the instruction text has a
+  budget the way the Go code does, and the check keeps it.
 - **Measured before and after.** The implementing pull request's
   description gives each skill's word count on the fixture before and
   after, and the results of the trials of 261023-kh3gg (`dev/trials.md`)
   run before and after. Reason: fewer words must not change what the
   agent does.
+- **A repeat that can't go without rewording stays.** Where removing a
+  line from a schema guide would need the copy in the requires file
+  reworded, both stay, and the implementing pull request lists the line.
+  Asked on 2026-10-24, the owner said "Revise T-01's acceptance
+  (recommended) preferred". Reason: T-01 removes repetition only, without
+  rewording.
 
 The owner answered the proposal's two open questions with "yes"
 (2026-10-23):
@@ -100,8 +109,8 @@ The owner answered the proposal's two open questions with "yes"
   `internal/instruct/schemas/bugfix/skills/propose.md` (261023-vqsrt)
   repeats no line already in a requires file. Reason: it replaces the
   default propose guide, so the same repetition would come back there.
-- **Over 7,000 words, cut further; else stop and ask.** If
-  `internal/instruct` still holds more than 7,000 words once cycle B has
+- **Over 8,000 words, cut further; else stop and ask.** If
+  `internal/instruct` still holds more than 8,000 words once cycle B has
   landed and T-01 is done, the implementer makes more cuts first; failing
   that, it stops and asks the owner. Only a constitution amendment raises
   the budget (rule 12). Reason: the budget is the constitution's, not the

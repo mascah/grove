@@ -33,7 +33,9 @@ commit() { git add -A && git commit -qm "$1"; }
 spec() {
   put "grove/specs/$1/spec.md"
   printf 'title: %s\n' "$2" > "grove/specs/$1/.grove.yaml"
-  if grove check 2>/dev/null | grep -q "specs/$1/.grove.yaml: no longer read"; then rm "grove/specs/$1/.grove.yaml"; fi
+  local out
+  out=$(grove check 2> /dev/null || true)
+  if grep -q "specs/$1/.grove.yaml: no longer read" <<< "$out"; then rm "grove/specs/$1/.grove.yaml"; fi
 }
 # edit replaces old with new, both literal, once in file.
 edit() { python3 -c 'import sys; p,o,n=sys.argv[1:]; s=open(p).read(); assert o in s, (p,o); open(p,"w").write(s.replace(o,n,1))' "$@"; }
@@ -43,7 +45,8 @@ edit() { python3 -c 'import sys; p,o,n=sys.argv[1:]; s=open(p).read(); assert o 
 snapshot() { git ls-files -co --exclude-standard -z | xargs -0 shasum 2> /dev/null | sort -k2 || true; }
 
 # turn sends msg to the agent, resuming session sid when set, and sets sid,
-# last (the agent's last message) and words (the words of its messages).
+# last (the agent's last message), said (all its messages this turn) and
+# words (the words of its messages).
 turn() {
   local msg=$1 log=$dir/turn-$((n += 1)).jsonl
   echo "OWNER: $msg" >> "$dir/transcript.txt"
@@ -56,7 +59,7 @@ turn() {
       if .type=="text" then "AGENT: " + .text
       elif .type=="tool_use" then "TOOL: " + .name + " " + ((.input.command // .input.file_path // .input.skill // .input.pattern // "") | tostring)
       else empty end' "$log" >> "$dir/transcript.txt"
-    words=$((words + $(jq -r 'select(.type=="assistant" and .parent_tool_use_id==null) | .message.content[]? | select(.type=="text") | .text' "$log" | wc -w)))
+    said=$(jq -r 'select(.type=="assistant" and .parent_tool_use_id==null) | .message.content[]? | select(.type=="text") | .text' "$log")
   else
     local cfg=(--json -c allow_login_shell=false)
     if [ -z "$sid" ]; then
@@ -71,33 +74,36 @@ turn() {
       elif .type=="command_execution" then "TOOL: " + .command + " (exit \(.exit_code))"
       elif .type=="file_change" then "TOOL: edit " + ([.changes[]?.path] | join(", "))
       else empty end' "$log" >> "$dir/transcript.txt"
-    words=$((words + $(jq -r 'select(.type=="item.completed" and .item.type=="agent_message") | .item.text' "$log" | wc -w)))
+    said=$(jq -r 'select(.type=="item.completed" and .item.type=="agent_message") | .item.text' "$log")
   fi
+  words=$((words + $(wc -w <<< "$said")))
   # A turn the harness failed, such as at a usage limit, fails the trial rather than scoring it.
   failed=$(jq -rs '[.[] | select(.type=="turn.failed" or (.type=="result" and .is_error==true)) | .error.message // .result // "error"] | first // ""' "$log")
   [ -z "$failed" ] || { echo "| ($c) | $h | failed: $failed | | | | |" > "$dir/row.md"; return 1; }
 }
 
 # reply sets answer to the case's first unused answer whose pattern matches
-# the agent's last message, or the fallback.
+# any of the agent's messages this turn, or the fallback: Codex can split a
+# turn into several messages, the question in an earlier one.
 reply() {
   local i
   answer=$fallback
   for i in "${!answers[@]}"; do
-    if [ -z "${used[$i]:-}" ] && grep -Eiq -- "${answers[$i]%% => *}" <<< "$last"; then
+    if [ -z "${used[$i]:-}" ] && grep -Eiq -- "${answers[$i]%% => *}" <<< "$said"; then
       used[$i]=1 answer=${answers[$i]#* => }
       return
     fi
   done
 }
 
-# waiting asks a small model whether the agent's last message waits for the
-# owner's answer, as against reporting what it did or offering more work.
+# waiting asks a model whether the agent's last message waits for the
+# owner's answer, as against reporting what it did and leaving the next step
+# to the owner, which a scripted reply would otherwise take for them.
 waiting() {
   local verdict
-  verdict=$(claude -p "Here is the last message an AI coding agent sent the person it works for. Does it stop to wait for that person to answer or decide something before it can go on with the task it was given? Offers of optional further work, such as committing or a next step, do not count. Reply with only yes or no.
+  verdict=$(claude -p "Here is the last message an AI coding agent sent the person it works for. Does it stop to wait for that person to answer or decide something before it can go on with the task it was given? A step the agent says it will take itself once the person answers or gives feedback counts. Next steps it leaves for the person to take, such as committing, merging, reviewing or running another command or skill, do not count, and neither do offers of optional further work, such as a commit. Reply with only yes or no.
 
-$last" --model haiku --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" | jq -r '.result')
+$last" --model sonnet --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" | jq -r '.result')
   echo "turn $n: waiting: $verdict" >> "$dir/waits.txt"
   grep -qi '^yes' <<< "$verdict"
 }
@@ -135,6 +141,10 @@ trial() {
     branch=${run%% => *} prompt=${run#* => }
     [ "$(git branch --show-current)" = "$branch" ] || { git diff --quiet HEAD && [ -z "$(git ls-files -o --exclude-standard)" ] || commit "After the last run"; git switch -q "$branch" 2> /dev/null || git switch -q -c "$branch" main; }
     had=$(ls grove/changes 2> /dev/null || true)
+    if [[ $prompt == *"{id}"* && -z $id ]]; then
+      echo "| ($c) | $h | failed: no change for \"$prompt\"; the run before it proposed none | | | | |" > "$dir/row.md"
+      return 1
+    fi
     prompt=${prompt//\{id\}/$id}
     [ "$h" = codex ] && prompt=${prompt/\/grove-/\$grove-}
     before=$(snapshot) sid="" last=""

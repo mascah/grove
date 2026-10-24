@@ -1,8 +1,7 @@
 **Propose a bug fix: "This is wrong; make it right."** It turns a bug into a
 change the owner can review: a proposal that shows the bug, tasks that start
 with a test reproducing it, and a change spec only when the owner agrees the
-corrected behavior. It describes future work. It does not plan or perform
-the implementation.
+corrected behavior. It does not plan or perform the implementation.
 
 ### 1. Reproduce it
 

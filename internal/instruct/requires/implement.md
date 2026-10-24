@@ -19,7 +19,6 @@
   specs, naming the check that shows it and its result, or `unverified`
   and why.
 - Finish: report what was done, what is left, the question that blocks
-  each blocked task, and each unverified scenario. Commit only when the
-  owner or the project's rules ask. When every task is done, run Grove's
-  `instructions archive <change-id>` and follow what it prints: archiving
-  brings the maintained specs up to date on this branch.
+  each blocked task, and each unverified scenario. When every task is done,
+  run Grove's `instructions archive <change-id>` and follow what it prints:
+  archiving brings the maintained specs up to date on this branch.
