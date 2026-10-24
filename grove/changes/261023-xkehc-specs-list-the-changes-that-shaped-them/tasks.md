@@ -50,10 +50,12 @@ Result: each maintained spec in `grove/specs/` ends with a History
 listing the changes in `grove/changes/archive/` that have a change spec
 for it, as "Archive adds a History line" gives the line.
 
-Files: `grove/specs/apply/spec.md`, `grove/specs/config/spec.md`,
+Files: `grove/specs/changes/spec.md`, `grove/specs/config/spec.md`,
 `grove/specs/cycles/spec.md`, `grove/specs/implement/spec.md`,
+`grove/specs/init/spec.md`, `grove/specs/maintained-specs/spec.md`,
 `grove/specs/propose/spec.md`, `grove/specs/prototype/spec.md`,
-`grove/specs/runs/spec.md`, `grove/specs/requirements/spec.md`
+`grove/specs/requirements/spec.md`, `grove/specs/runs/spec.md`,
+`grove/specs/schemas/spec.md`
 
 Interfaces: none.
 
