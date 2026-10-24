@@ -306,6 +306,12 @@ func TestPropose(t *testing.T) {
 		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 5. Check the change") || strings.Contains(out, "Assumptions to confirm") {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
+	for _, s := range []string{"say so and ask\n  whether to split it", "`depends_on`", "Order it by consequence: first what changes behavior, scope\n  or compatibility or loses data", "as\n  recommended defaults on one line that a single \"yes\" accepts",
+		"Write a task's `Delegated:` line", "only where the\n  owner agreed to it in the round", "A task may have a `Delegated:` line, right after `Files:`", "Delegated: test layout and private helpers"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("propose instructions lack %q", s)
+		}
+	}
 	if !strings.Contains(out, "offer both next steps and choose neither") || !strings.Contains(out, "`/grove-implement <change-id>` on this branch so one merge approves it\n  with its code") ||
 		!strings.Contains(out, "For a change it lists as approved, the next step is\n  merging the revision") {
 		t.Errorf("propose's finish does not offer one merge or two:\n%.3000s", out)
@@ -1212,7 +1218,7 @@ func TestMovedFiles(t *testing.T) {
 	dir := setUp(t)
 	base := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	cid, folder := propose(t, dir, "older-edits", "Allow editing older records", "base: "+base+"\n")
-	tasks := "## T-01 — Allow editing older records\n\nResult: older records can be edited.\n\nFiles: `ledger/cli.py`,\n`tests/test_cli.py`\n\nAcceptance:\n- An older record saves.\n"
+	tasks := "## T-01 — Allow editing older records\n\nResult: older records can be edited.\n\nFiles: `ledger/cli.py`,\n`tests/test_cli.py`\nDelegated: test layout; `tests/test_records.py`\n\nAcceptance:\n- An older record saves.\n"
 	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(tasks), 0o644)
 	commitAll(t, dir, "Propose")
 	git(t, dir, "switch", "-q", "main")
@@ -1230,7 +1236,11 @@ func TestMovedFiles(t *testing.T) {
 		commitAll(t, dir, msg)
 	}
 
-	// Unchanged on main, or changed only on the branch building it.
+	// Unchanged on main, or changed only on the branch building it; a path
+	// only the Delegated: line names is not watched.
+	checks("No problems in grove/.\n")
+	os.WriteFile(filepath.Join(dir, "tests/test_records.py"), []byte("# Records\n"), 0o644)
+	commitAll(t, dir, "Add test_records")
 	checks("No problems in grove/.\n")
 	git(t, dir, "switch", "-q", "-c", "older-edits-impl")
 	edit("ledger/cli.py", "Build T-01")

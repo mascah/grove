@@ -154,7 +154,9 @@ its instructions give first, such as propose asking one round of every
 decision it would otherwise assume before it writes; that a merge approves a change; a change's
 `.grove.yaml`; or how progress is recorded: each task is a `T-NN` heading in
 `tasks.md`, naming the files it touches on a `Files:` line and the
-interfaces it produces on an `Interfaces:` line, and its status a `Status:`
+interfaces it produces on an `Interfaces:` line, with an optional
+`Delegated:` line, which Grove does not read, naming choices and paths the
+implementer may take without asking the owner, and its status a `Status:`
 line in `implementation.md`, which `grove archive` reads. So every schema has `tasks` and `implementation` at
 those paths, keeps the `Status:` lines of Grove's implementation template,
 and has one kind with `metadata: changes/<change>/.grove.yaml`, the change's
