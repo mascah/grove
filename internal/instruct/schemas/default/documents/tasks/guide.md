@@ -1,5 +1,6 @@
 - Simple work is usually one task. Add another only for a part that could be
   delivered and accepted on its own.
+- A change that only records behavior the code already has has no tasks.
 - A task states the result wanted and the acceptance expectations someone else
   could check. It refers to requirements instead of repeating them.
 - A task names, on a `Files:` line after `Result:`, the repo-relative paths it
