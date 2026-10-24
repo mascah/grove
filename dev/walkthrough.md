@@ -10,11 +10,14 @@ only where it carries meaning.
 Setup: in the checkout or worktree under test, `eval "$(just dev-path)"`
 in the shell the agent is started from. It builds `bin/grove` and puts that
 `bin/` first on PATH, so `grove` there is this build and the agent inherits
-it; other shells keep the everyday `grove` from `just install`. `grove version`
-(reference, "Terminal commands") shows which one runs: this build prints a
-pseudo-version naming the checkout's commit, such as
-`grove 0.0.0-<date>-<commit>`, ending `+dirty` when there are
-uncommitted changes. After
+it; other shells keep the everyday `grove` from `just install`. Start Codex
+as `codex -c allow_login_shell=false`: otherwise it runs commands in a login
+shell, whose profile can put another `grove` first. `grove version`
+(reference, "Terminal commands") shows which one runs: a build in a checkout
+prints a pseudo-version naming its commit, such as
+`grove 0.4.1-0.<date>-<commit>`, ending `+dirty` when there are
+uncommitted changes; a build in a worktree prints `grove dev`, since Go
+reads the commit only where `.git` is a folder. After
 changing a guide, template or a schema, `just build` is enough; after
 changing skill text, run `grove init` again in the fixture. `just fixture ~/tmp/ledger`, `cd ~/tmp/ledger`. For
 Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
