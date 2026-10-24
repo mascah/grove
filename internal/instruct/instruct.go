@@ -518,10 +518,14 @@ func Revise(p Project, c *doc.Change, files map[string]string) (Instructions, er
 
 // Implement returns the instructions for implementing change c, which the
 // target holds, with the owner or, unattended, asking no one; files are
-// c.Files as read from there.
+// c.Files as read from there. A change the target does not hold is a draft,
+// read from the working tree, which only the owner builds (rule 4).
 func Implement(p Project, c *doc.Change, files map[string]string, unattended bool) (Instructions, error) {
 	task := fmt.Sprintf("You are implementing approved change %s, %q%s, as %s@%s holds it, %s.",
 		c.ID, c.Meta.Title, with(c.Meta.Schema), p.Target, short(p.Commit), who(unattended))
+	if p.Agreed.Change(c.ID) == nil {
+		task = fmt.Sprintf("You are implementing drafted change %s, %q%s, as this working tree holds it, %s.", c.ID, c.Meta.Title, with(c.Meta.Schema), who(false))
+	}
 	in, err := build(p, c.Meta.Schema, "implement", task, fill(p, c), c, files)
 	in.Requires += mode(unattended)
 	return in, err
