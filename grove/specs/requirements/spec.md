@@ -161,3 +161,7 @@ None recorded.
 ## Open questions
 
 None.
+
+## History
+
+- [261023-bfwp5](../../changes/archive/261023-bfwp5-check-requirements-and-the-fold/) Check requirements and the archive fold

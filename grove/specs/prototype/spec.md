@@ -95,3 +95,7 @@ None recorded.
 ## Open questions
 
 None.
+
+## History
+
+- [261022-ka8bx](../../changes/archive/261022-ka8bx-prototype-before-proposing/) Prototype before proposing

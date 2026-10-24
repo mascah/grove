@@ -36,7 +36,19 @@ acceptance; documentation only, no test.
 
 ### T-03 — History for Grove's own specs
 
-Status: not started
+Status: done
+
+The owner agreed to fix T-03's `Files:` line: `grove/specs/apply/spec.md`
+no longer exists, and `changes`, `init`, `maintained-specs` and `schemas`
+were missing. Each of the 11 specs in `grove/specs/` now ends with a
+History listing the archived changes with a `specs/<capability>/` folder
+for it, ordered by the first-parent commit on main that archived each, by
+ID within one merge; 261023-psd1b, archived on this branch, is last in
+`propose`. Each list begins with the acceptance's list for 0c6f419 (less
+`apply`, which has no spec; 261022-1grb0, 261023-g0a3h and 261023-m2she
+had `apply` change specs). `git diff` adds lines only; every link names a
+folder in `grove/changes/archive/`; `grove check`: "No problems in
+grove/."
 
 ## Scenarios
 

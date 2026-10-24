@@ -165,3 +165,7 @@ None recorded.
 ## Open questions
 
 None.
+
+## History
+
+- [261023-vqsrt](../../changes/archive/261023-vqsrt-built-in-bugfix-schema/) A built-in bugfix schema
