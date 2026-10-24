@@ -3,11 +3,12 @@
 - Write the documents below in the change folder their paths name, with its
   `.grove.yaml` from its template. For a new change, replace `<slug>` with a
   few lowercase words of its title joined by hyphens.
-- A new change: if the project's change schemas are listed below and the
-  owner says the work is of another kind than these instructions follow,
-  confirm it with them, run Grove's `instructions propose --schema <name>`
-  with the owner's description in quotes, if there is one, and follow what
-  it prints instead.
+- A new change: if these instructions do not follow `bugfix` and the owner
+  describes behavior that is wrong, suggest the `bugfix` change schema
+  listed below. Once the owner confirms it, or says the work is of another
+  listed kind than these instructions follow, run Grove's `instructions
+  propose --schema <name>` with the owner's description in quotes, if there
+  is one, and follow what it prints instead.
 - A new change: ask the owner whether it needs another open change, approved
   or drafted, to land first. Name any in the project index that touches the
   same capabilities or code. Write each change the owner names in

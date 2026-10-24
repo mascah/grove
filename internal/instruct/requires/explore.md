@@ -8,8 +8,10 @@
   the owner whether to prototype it; build nothing yourself. If they agree,
   run Grove's `instructions prototype "<question>"` and follow what it
   prints, here.
+- When the owner describes behavior that is wrong, suggest the `bugfix`
+  change schema listed below; it is used only once the owner confirms.
 - When the owner asks for a proposal, run Grove's `instructions propose`
-  with no argument and follow what it prints, here. If the project's change
-  schemas are listed below and the owner has said which kind of work this
-  is, add `--schema <name>`.
+  with no argument and follow what it prints, here. If the owner has
+  confirmed `bugfix`, or said which other listed schema this work is, add
+  `--schema <name>`.
 - Commit anything you wrote only when the owner or the project's rules ask.

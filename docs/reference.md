@@ -133,8 +133,9 @@ asks, as `implement` does above.
 
 A change schema says what a change consists of and how each skill goes: its
 kinds of document, each with a path, a template and a guide, and for each
-skill its guide and the kinds of document it writes. Grove's built-in schema
-is `default`, the software change [Concepts](concepts.md) describes:
+skill its guide and the kinds of document it writes. Grove has two built-in
+schemas: `bugfix`, for behavior that is wrong (see "Grove's bugfix"), and
+`default`, the software change [Concepts](concepts.md) describes:
 
 | Kind | Path, under the root | Written by |
 | --- | --- | --- |
@@ -177,7 +178,15 @@ them back where you copy one.
 ### A schema of your own
 
 A project adds a schema in `grove/schemas/<name>/`, with a `schema.yaml`
-that names only what differs from `default`:
+that names only what differs from `default`, such as a schema for changes
+too small for change specs:
+
+```yaml
+description: A small change with no change specs.
+skills:
+  propose:
+    writes: [proposal, tasks]
+```
 
 | Field | Meaning |
 | --- | --- |
@@ -192,126 +201,47 @@ for `default` is so your other schemas' too, unless they have their own.
 A change has a schema, which its `.grove.yaml` names as `schema`, and keeps
 it: revising, implementing and archiving the change use it. A change without
 one has `default`. A new change has `grove.yaml`'s `schema`, unless the owner
-says which kind of work it is while exploring or proposing: when the project
-has schemas other than `default`, the instructions list them, and the agent
-asks for `grove instructions propose --schema <name>`. To change a change's
-schema, edit its `.grove.yaml`. Schemas are shared by copying their folder.
+says which kind of work it is while exploring or proposing: the
+instructions list the project's schemas, Grove's two first, the agent
+suggests `bugfix` when the owner describes behavior that is wrong, and once
+the owner confirms a schema it asks for `grove instructions propose
+--schema <name>`. To change a change's schema, edit its `.grove.yaml`.
+Schemas are shared by copying their folder.
 
 `grove check` reports a mistake in a schema: an unknown field in its
 `schema.yaml`, a kind a skill writes that the schema does not list, a file
-it names that is in none of the three places, a file in its folder that it
+it names that is in none of its places, a file in its folder that it
 does not use (often a misspelled path), `tasks` or `implementation` missing
 or moved, and a `schema` in `grove.yaml` or a change's `.grove.yaml` that
 names no schema. A skill's instructions are not built from a schema with
 any of these but the unknown field and the unused file.
 
-### Example: a bug schema
+### Grove's bugfix
 
-This schema is for fixing behavior that is wrong. It keeps `default`'s kinds
-and each skill's `writes`, and replaces the propose guide, the proposal's
-template and its guide; everything else is `default`'s.
+`bugfix` is for fixing behavior that is wrong. Every project has it, with
+no file to write. It keeps `default`'s kinds and each skill's `writes`, and
+has its own description, propose guide, and proposal template and guide:
 
-`grove/schemas/bugfix/schema.yaml`:
+- **Proposal.** Its sections are Observed, Expected, Reproduction, The
+  requirement it breaks and Open questions.
+- **Propose guide.** Reproduce the bug first, keeping the command and what
+  it printed. If a maintained requirement says what should happen, cite it
+  and write no change spec: what is agreed does not change. If none covers
+  the behavior, ask in the round whether the corrected behavior should
+  become agreed, and write a change spec that ADDs it only if the owner
+  says yes. If the maintained spec itself is wrong, it is not a bug but a
+  `default` change. The first task adds a test that reproduces the bug and
+  fails before the fix.
 
-```yaml
-description: A fix for behavior that is wrong, whether or not a maintained spec describes it.
-```
-
-`grove/schemas/bugfix/skills/propose.md`:
-
-```markdown
-**Propose a bug fix: "This is wrong; make it right."** It turns a bug into a
-change the owner can review: a proposal that shows the bug, tasks that start
-with a test reproducing it, and a change spec only when the owner agrees the
-corrected behavior. It describes future work. It does not plan or perform
-the implementation.
-
-### 1. Reproduce it
-
-- Read the code and the maintained specs in the project index that the bug
-  touches.
-- Reproduce it, and keep the exact command and what it printed. If you
-  cannot, ask the owner how; do not propose a fix for a bug nobody has seen.
-
-### 2. Find what says what should happen
-
-Tell the owner which of these it is:
-
-- A maintained requirement says what should happen, and the code breaks it.
-  Cite the requirement in the proposal. Write no change spec: what is agreed
-  does not change.
-- No maintained requirement covers the behavior. Ask, in the round before
-  writing, whether the corrected behavior should become agreed. If yes, write a change spec that
-  ADDs it; archiving folds it into the maintained spec. If no, write none,
-  and the fix stays observed behavior.
-- The maintained spec itself is wrong. That is not a bug: tell the owner it
-  changes agreed behavior and belongs to proposing with the `default`
-  schema.
-
-### 3. Write the change
-
-- The first task adds a test that reproduces the bug and fails before the
-  fix. A simple fix is that one task: its `Files:` line names the test and
-  the file under fix, and its `Interfaces:` line what the fix changes that
-  callers see.
-- No code, commands or steps, no sequencing, no estimates.
-```
-
-`grove/schemas/bugfix/documents/proposal/template.md`:
-
-```markdown
-# <title>
-
-<!-- A bug fix describes future work. It becomes approved future work when
-it is merged into the target branch, which says nothing about
-implementation. -->
-
-## Observed
-
-<!-- What happens today: the command, what it printed, and the source
-(file path and revision). -->
-
-## Expected
-
-<!-- What should happen instead, and who says so. -->
-
-## Reproduction
-
-<!-- Steps someone else can follow from a clean checkout. -->
-
-## The requirement it breaks
-
-<!-- The maintained requirement, by spec and name; or that none covers this
-behavior, and what the owner decided about agreeing one. -->
-
-## Open questions
-
-<!-- Say which must be answered before review and which can wait. Name the
-task a question blocks when it decides how that task is built. -->
-
-## Related documents
-
-- Tasks: [tasks.md](tasks.md)
-- Requirements: [the change spec, if the owner agreed one]
-```
-
-`grove/schemas/bugfix/documents/proposal/guide.md`:
-
-```markdown
-`proposal.md` shows the bug: what is observed, what is expected, how to
-reproduce it, and the requirement it breaks.
-
-- Title: write it in `.grove.yaml` and repeat it as the proposal's first
-  heading. Name the corrected behavior, such as "Editing a missing record
-  prints an error".
-- Observed: cite each observation by its source instead of restating it as
-  fact.
-- Expected: a maintained requirement, cited, or the owner's words, quoted.
-- The requirement it breaks: the one cited, or that none covers the
-  behavior and whether the owner agreed to one.
-- Open questions: name the task a question blocks when it decides how that
-  task is built.
-```
+`grove instructions propose --schema bugfix "x"` shows its files as a
+session gets them. Each comes from `grove/schemas/bugfix/`, else from
+Grove's `bugfix`, else from `grove/schemas/default/`, else from Grove's
+`default`, and each field of its `schema.yaml` from the first of those that
+gives it. So to replace one of its files, put yours at the same path under
+`grove/schemas/bugfix/`, such as
+`grove/schemas/bugfix/documents/proposal/template.md`; the rest stay
+Grove's. A file of your own for `default`, such as a tasks template,
+reaches `bugfix` too, unless `grove/schemas/bugfix/` has its own.
 
 ## Files
 

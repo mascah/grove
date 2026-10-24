@@ -65,9 +65,6 @@ type Step struct {
 	Writes []string
 }
 
-// builtin is Grove's change schema, default, as its schema.yaml has it.
-var builtin Schema
-
 // changeMetadata is where a change's metadata goes; the kind that names it
 // is the change's main document.
 const changeMetadata = "changes/<change>/.grove.yaml"
@@ -81,41 +78,57 @@ var metadataTemplates = map[string]string{
 }
 
 func init() {
-	for name, v := range map[string]any{"skills.yaml": &skills, "schemas/default/schema.yaml": &builtin} {
-		if err := yaml.Unmarshal([]byte(embedded(name)), v); err != nil {
-			panic(err) // embedded at build time
-		}
+	if err := yaml.Unmarshal([]byte(embedded("skills.yaml")), &skills); err != nil {
+		panic(err) // embedded at build time
 	}
 }
 
-// SchemaNames returns the project's change schemas: default, then each
-// folder of <root>/schemas/ that holds a schema.yaml.
+// builtins are Grove's own change schemas, embedded under schemas/.
+var builtins = []string{"default", "bugfix"}
+
+// SchemaNames returns the project's change schemas: Grove's, then each
+// other folder of <root>/schemas/ that holds a schema.yaml.
 func (p Project) SchemaNames() []string {
-	names := []string{"default"}
+	names := slices.Clone(builtins)
 	found, _ := fs.Glob(p.Schemas, "*/schema.yaml") // only a bad pattern fails
 	for _, f := range found {
-		if dir := path.Dir(f); dir != "default" {
+		if dir := path.Dir(f); !slices.Contains(builtins, dir) {
 			names = append(names, dir)
 		}
 	}
 	return names
 }
 
-// dirs are the folders of <root>/schemas/ that schema name's files come
-// from, first first; Grove's default comes after them (D-55).
-func dirs(name string) []string { return slices.Compact([]string{name, "default"}) }
+// place is a folder a schema's files come from: the project's, in
+// <root>/schemas/, or Grove's built-in one.
+type place struct {
+	fsys fs.FS
+	dir  string
+}
 
-// load returns change schema name: Grove's default, with the schema.yaml of
-// the project's default folder over it, then the schema's own, field by
-// field.
+// places are where schema name's files come from, first first: the
+// project's folder for it, Grove's built-in one, then the project's default
+// and Grove's (D-55).
+func (p Project) places(name string) []place {
+	var out []place
+	for _, n := range slices.Compact([]string{name, "default"}) {
+		out = append(out, place{p.Schemas, n})
+		if slices.Contains(builtins, n) {
+			out = append(out, place{files, "schemas/" + n})
+		}
+	}
+	return out
+}
+
+// load returns change schema name: the schema.yaml of each of its places,
+// the last first, field by field.
 func (p Project) load(name string) (Schema, error) {
 	if names := p.SchemaNames(); !slices.Contains(names, name) {
 		return Schema{}, errors.New(notSchema(name, names))
 	}
-	s := builtin
-	s.Name, s.Skills = name, maps.Clone(builtin.Skills)
-	for _, dir := range slices.Backward(dirs(name)) {
-		b, err := fs.ReadFile(p.Schemas, dir+"/schema.yaml")
+	s := Schema{Name: name, Skills: map[string]Step{}}
+	for _, pl := range slices.Backward(p.places(name)) {
+		b, err := fs.ReadFile(pl.fsys, pl.dir+"/schema.yaml")
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
@@ -124,7 +137,7 @@ func (p Project) load(name string) (Schema, error) {
 			err = yaml.Unmarshal(b, &l)
 		}
 		if err != nil {
-			return s, fmt.Errorf("%s/schemas/%s/schema.yaml: %w", p.Root, dir, err)
+			return s, fmt.Errorf("%s/schemas/%s/schema.yaml: %w", p.Root, pl.dir, err)
 		}
 		s.Description = cmp.Or(l.Description, s.Description)
 		if l.Documents != nil {
@@ -247,8 +260,10 @@ func (p Project) Check() []string {
 		}
 		out = append(out, p.problems(s)...)
 		for _, f := range s.files() {
-			for _, dir := range dirs(n) {
-				used[dir+"/"+f] = true
+			for _, pl := range p.places(n) {
+				if pl.fsys != fs.FS(files) { // the project's own
+					used[pl.dir+"/"+f] = true
+				}
 			}
 		}
 	}
@@ -364,24 +379,20 @@ func (s Schema) files() []string {
 	return out
 }
 
-// file returns change schema s's file name, from the first of its folders
-// that has it, else from Grove's default.
+// file returns change schema s's file name, from the first of its places
+// that has it.
 func (p Project) file(s, name string) (string, error) {
-	for _, dir := range dirs(s) {
-		b, err := fs.ReadFile(p.Schemas, dir+"/"+name)
+	for _, pl := range p.places(s) {
+		b, err := fs.ReadFile(pl.fsys, pl.dir+"/"+name)
 		if !errors.Is(err, fs.ErrNotExist) {
 			return string(b), err
 		}
 	}
-	b, err := files.ReadFile("schemas/default/" + name)
-	if err != nil {
-		also := ""
-		if s != "default" {
-			also = ", in " + p.Root + "/schemas/default"
-		}
-		return "", fmt.Errorf("%s/schemas/%s: no %s here%s or in Grove's default", p.Root, s, name, also)
+	also := ""
+	if s != "default" {
+		also = ", in " + p.Root + "/schemas/default"
 	}
-	return string(b), nil
+	return "", fmt.Errorf("%s/schemas/%s: no %s here%s or in Grove's default", p.Root, s, name, also)
 }
 
 // build returns skill name's instructions in change schema s, with its guide

@@ -1,0 +1,4 @@
+# Grove's built-in change schema bugfix (CONSTITUTION.md rule 10): only what
+# differs from default. A project replaces any of its files in
+# <root>/schemas/bugfix/.
+description: A fix for behavior that is wrong, whether or not a maintained spec describes it.

@@ -17,7 +17,7 @@ follow what it prints. What Grove does is specified by the maintained specs in `
 | --- | --- |
 | `cmd/grove` | `main`, calling `cli.Main`. |
 | `internal/cli` | Parses commands and wires the other packages together; the only package that writes to the terminal. One file per command. |
-| `internal/instruct` | The embedded `skills.yaml` and `requires/` (Grove's skills and what it requires of each), `metadata/` (the `.grove.yaml` templates), the built-in change schema in `schemas/default/`, and building one skill's instructions as a value before printing. |
+| `internal/instruct` | The embedded `skills.yaml` and `requires/` (Grove's skills and what it requires of each), `metadata/` (the `.grove.yaml` templates), the built-in change schemas in `schemas/default/` and `schemas/bugfix/`, and building one skill's instructions as a value before printing. |
 | `internal/doc` | Reads Grove's documents: `.grove.yaml`, diagnostics, IDs, the folder layout. |
 | `internal/gitx` | The only place Git runs, by argv. `TreeFS` reads a commit's tree as an `fs.FS`. |
 | `internal/tui` | The reader (Bubble Tea, Glamour). Knows nothing about Git or Grove's documents. |

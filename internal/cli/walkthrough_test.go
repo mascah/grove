@@ -578,6 +578,42 @@ func TestFold(t *testing.T) {
 // for a new change, and kept by the change.
 func TestSchemas(t *testing.T) {
 	dir := setUp(t)
+	// Grove's bugfix, with no schemas of the project's.
+	if out := grove(t, "instructions", "propose", "Editing a missing record crashes"); !strings.Contains(out, "- `default`: Software changes") ||
+		!strings.Contains(out, "\n- `bugfix`: A fix for behavior that is wrong, whether or not a maintained spec describes it.\n") {
+		t.Errorf("propose instructions do not list Grove's schemas:\n%s", out)
+	}
+	if out := grove(t, "instructions", "propose", "Editing a missing record crashes"); !strings.Contains(out, "describes behavior that is wrong, suggest the `bugfix` change schema") || !strings.Contains(out, "Once the owner confirms it") {
+		t.Errorf("propose instructions do not suggest bugfix:\n%.3000s", out)
+	}
+	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "\n- `bugfix`: A fix for behavior that is wrong") || !strings.Contains(out, "describes behavior that is wrong, suggest the `bugfix`\n  change schema") || !strings.Contains(out, "If the owner has\n  confirmed `bugfix`") {
+		t.Errorf("explore instructions do not suggest bugfix:\n%.3000s", out)
+	}
+	own := func(name, content string) {
+		os.MkdirAll(filepath.Dir(filepath.Join(dir, "grove/schemas", name)), 0o755)
+		os.WriteFile(filepath.Join(dir, "grove/schemas", name), []byte(content), 0o644)
+	}
+	own("default/documents/tasks/template.md", "## T-01 — [title]\n\nRollback: [how to undo this task]\n")
+	out := grove(t, "instructions", "propose", "--schema", "bugfix", "x")
+	for _, s := range []string{"## How to propose\n\n**Propose a bug fix: \"This is wrong; make it right.\"**", "fails before the\n  fix", "Write no change spec",
+		"## Observed\n", "## Expected\n", "## Reproduction\n", "## The requirement it breaks\n", "## Open questions\n", "Rollback: [how to undo this task]", "schema: bugfix\n"} {
+		if !strings.Contains(out, s) {
+			t.Errorf("Grove's bugfix propose instructions lack %q:\n%.3000s", s, out)
+		}
+	}
+	own("bugfix/documents/proposal/template.md", "# <title>\n\n## Seen\n")
+	if out := grove(t, "instructions", "propose", "--schema", "bugfix", "x"); !strings.Contains(out, "/proposal.md\">\n# <title>\n\n## Seen\n</file>") || !strings.Contains(out, "**Propose a bug fix: \"This is wrong") {
+		t.Errorf("bugfix with the project's proposal template:\n%.3000s", out)
+	}
+	bug, _ := propose(t, dir, "bug", "Editing a missing record prints an error", "schema: bugfix\n")
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check with change %s of schema bugfix printed %q", bug, got)
+	}
+	git(t, dir, "checkout", "-q", "--", ".")
+	git(t, dir, "clean", "-qfd")
+	git(t, dir, "switch", "-q", "main")
+	os.RemoveAll(filepath.Join(dir, "grove/schemas"))
+
 	for name, content := range map[string]string{
 		"bugfix/schema.yaml":                    "description: A fix for behavior that is wrong.\n",
 		"bugfix/skills/propose.md":              "**Propose a bug fix.**\n",
@@ -591,7 +627,7 @@ func TestSchemas(t *testing.T) {
 		!strings.Contains(out, "- `bugfix`: A fix for behavior that is wrong.\n- `short`: Short.\n") {
 		t.Errorf("propose instructions do not list the schemas:\n%s", out)
 	}
-	out := grove(t, "instructions", "propose", "--schema", "bugfix", "Editing a missing record crashes")
+	out = grove(t, "instructions", "propose", "--schema", "bugfix", "Editing a missing record crashes")
 	for _, s := range []string{", with change schema bugfix, from the owner's description", "## How to propose\n\n**Propose a bug fix.**", "/proposal.md\">\n# <title>\n\n## Observed\n",
 		"### change-spec: ", "### tasks: ", "/.grove.yaml\">\ntitle: <title>\ncreated: ", "schema: bugfix\n"} {
 		if !strings.Contains(out, s) {
