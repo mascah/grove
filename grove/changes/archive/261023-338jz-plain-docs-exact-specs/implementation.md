@@ -142,3 +142,7 @@ Each run on a fresh ledger fixture (`just fixture`) with this branch's
 - propose "Already reconciled": `No problems in grove/.`, passed
 
 ## Reconciliation
+
+- propose: applied to `grove/specs/propose/spec.md`
+- changes: applied to `grove/specs/changes/spec.md`, new
+- init: applied to `grove/specs/init/spec.md`, new
