@@ -965,6 +965,22 @@ func TestCycles(t *testing.T) {
 	if got := grove(t, "changes"); !strings.Contains(got, "  in cycle "+k+", unattended\n") {
 		t.Errorf("changes of a marked cycle printed %q", got)
 	}
+	// Revising a member re-plans its cycle on the same branch; revising a
+	// change in no cycle does not.
+	marked, rel := strings.TrimSpace(git(t, dir, "rev-parse", "main")), "grove/cycles/"+k+"-0-4-release.yaml"
+	revise := grove(t, "instructions", "propose", a)
+	for _, s := range []string{", and re-planning cycle " + k + ", \"0.4 release\", which lists it.", "### cycle: `" + rel + "`", "\nplanned: " + marked + "\n",
+		"never write or remove `unattended`", "## The cycle\n\n<file path=\"" + rel + "\">\n" + plan + "unattended: true\n</file>"} {
+		if !strings.Contains(revise, s) {
+			t.Errorf("revising a member lacks %q:\n%.4000s", s, revise)
+		}
+	}
+	if out := grove(t, "instructions", "propose", b); strings.Contains(out, "## The cycle") || strings.Contains(out, "### cycle: ") {
+		t.Errorf("revising a change in no cycle prints a cycle:\n%.3000s", out)
+	}
+	if out := grove(t, "instructions", "plan"); !strings.Contains(out, "that re-plans the cycle on\n    the same branch, and one merge removes the obstacle") {
+		t.Errorf("plan's finish does not name the shorter way:\n%.3000s", out)
+	}
 	checks := func(want string) {
 		t.Helper()
 		var stdout, stderr strings.Builder

@@ -521,10 +521,19 @@ func plan(p Project, task, path, created string) (Instructions, error) {
 }
 
 // Revise returns the instructions for revising drafted change c, read from
-// the working tree; files are c.Files as read from there.
-func Revise(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
+// the working tree; files are c.Files as read from there. With cy, the
+// cycle not done that lists c, whose file holds content, they re-plan it
+// too, so one merge brings both.
+func Revise(p Project, c *doc.Change, files map[string]string, cy *doc.Cycle, content string) (Instructions, error) {
 	task := fmt.Sprintf("You are revising drafted change %s, %q%s, in the owner's own working tree.", c.ID, c.Meta.Title, with(c.Meta.Schema))
-	return build(p, c.Meta.Schema, "propose", task, fill(p, c), c, files)
+	in, err := build(p, c.Meta.Schema, "propose", task, fill(p, c), c, files)
+	if cy != nil {
+		in.Task = strings.TrimSuffix(in.Task, ".") + fmt.Sprintf(", and re-planning cycle %s, %q, which lists it.", cy.ID, cy.Meta.Title)
+		fill := strings.NewReplacer("{{commit}}", p.Commit, "{{created}}", cy.Meta.Created)
+		in.Documents = append(in.Documents, Document{Kind: "cycle", Path: p.Root + "/" + cy.Path, Template: fill.Replace(embedded("metadata/cycle.yaml"))})
+		in.Cycle = []File{{p.Root + "/" + cy.Path, content}}
+	}
+	return in, err
 }
 
 // Implement returns the instructions for implementing change c, which the
