@@ -8,7 +8,11 @@ write "Status: dropped" here with their reason. -->
 
 ### T-01 — Write the skill trials
 
-Status: done
+Status: in progress
+
+The revision of 2026-10-23 has a script run the trials, so `dev/trials.md`
+and `CONTRIBUTING.md` must say so; the evidence below is for the hand-run
+version.
 
 - `dev/trials.md`: the common setup from `just fixture`, the five counts
   with how each is taken, a `jq … | wc -w` line per harness for the words
@@ -24,17 +28,20 @@ Status: done
 
 ### T-02 — Record the baseline
 
-Status: blocked
+Status: not started
 
-Question: who runs the ten baseline trials (five cases in Claude Code and
-in Codex)? This session's auto mode refused to start headless `claude -p`
-and `codex exec` sessions, and the owner said to leave T-02 blocked.
+Was blocked on who runs the ten trials by hand; the revision of
+2026-10-23 answers it: `just trials` (T-03).
 
 Found while preparing it: in a git worktree, `just build` gives a binary
 whose `grove version` prints `grove dev`, with no build info from Git;
 the main checkout's build prints `grove 0.4.1-0.20261024005345-8454724ba54d`.
 So the commit `dev/trials.md` asks for may have to come from `git rev-parse
 HEAD` when the trials run from a worktree.
+
+### T-03 — A script that runs the trials
+
+Status: not started
 
 ## Scenarios
 
