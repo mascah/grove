@@ -44,7 +44,7 @@ Status: done
 
 ### T-02 — Explore and propose suggest bugfix
 
-Status: in progress
+Status: done
 
 - `internal/instruct/requires/explore.md`: when the owner describes
   behavior that is wrong, suggest the `bugfix` schema listed below, used
@@ -59,6 +59,19 @@ Status: in progress
   instructions explore` and `grove instructions propose "Editing a missing
   record crashes"`, on the fixture with no `grove/schemas/`, list both
   schemas and say to suggest `bugfix` and use it once the owner confirms.
+- Trial in Claude Code 2.1.310 on a fresh ledger fixture with no
+  `grove/schemas/`, this build first on PATH, headless over three turns of
+  one session: `/grove-propose Editing a missing record crashes` ran
+  `grove instructions propose "..."` without `--schema`, reproduced the
+  `StopIteration` traceback, and asked "this is behavior that's wrong, so
+  I suggest the `bugfix` change schema instead of `default`. Use
+  `bugfix`?", writing nothing. Confirmed, it ran `grove instructions
+  propose --schema bugfix "..."`, asked its round, and on "Yes." wrote a
+  change with `schema: bugfix`, the proposal's Observed, Expected,
+  Reproduction, The requirement it breaks and Open questions, a change
+  spec ADDing the requirement since no maintained spec covers it and the
+  owner agreed, and T-01 whose acceptance says its test fails before the
+  fix. `grove check` was clean.
 
 ### T-03 — Document the built-in
 
@@ -81,3 +94,26 @@ Status: done
   `change schema` label is seen.
 - `CLAUDE.md`'s layout table names `schemas/default/` and
   `schemas/bugfix/`.
+- Recheck before finishing: T-01 to T-03's evidence holds against the code
+  as it now is. `just check` passes (3732 Go lines, 1356 test lines);
+  `grove check` prints "No problems in grove/.".
+
+## Scenarios
+
+- schemas "A project with no schemas of its own": `walkthrough_test.go` `TestSchemas`, passed.
+- schemas "Proposing with bugfix": `TestSchemas`, passed (`schema: bugfix` in the `.grove.yaml` template).
+- schemas "A change with schema bugfix": `TestSchemas`, passed.
+- schemas "A schema that does not exist": `TestSchemas`, passed.
+- schemas "The bugfix proposal template": `TestSchemas`, passed (the five headings, and the project's `default` tasks template reaching it, so the tasks template is `default`'s).
+- schemas "A fix that restores a requirement": `TestSchemas`, passed ("Write no change spec" and the failing first test in the guide).
+- schemas "Behavior no requirement gives": the trial above, passed (asked in the round, ADDed on "yes"); the guide text is the reference's example, word for word.
+- schemas "The project's own default file": `TestSchemas`, passed.
+- schemas "The project's own bugfix file": `TestSchemas`, passed.
+- schemas "A project that copied the example": by hand on a fresh fixture, passed (see T-01).
+- schemas "A mistake in the project's bugfix": `TestSchemas`, passed.
+- schemas "Proposing a bug fix": `TestSchemas`, passed; the trial above, passed.
+- schemas "Exploring a bug": `TestSchemas`, passed.
+
+## Reconciliation
+
+- schemas: created specs/schemas/spec.md and its .grove.yaml, with the change's requirements; its "Observed current behavior" is resolved and not carried over.
