@@ -16,6 +16,7 @@ nav:
       - Run Grove in CI: guides/run-grove-in-ci.md
       - Run on a timer: guides/run-on-a-timer.md
       - A glossary and decision records: guides/glossary-and-decisions.md
+      - Specs of the code you already have: guides/spec-existing-code.md
   - Reference: reference.md
 
 theme:

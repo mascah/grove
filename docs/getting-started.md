@@ -43,7 +43,8 @@ git add -A && git commit -m "Set up Grove"
 ```
 
 A new project has no specs, and that is fine: you do not need to describe
-your whole system before you change it.
+your whole system before you change it. To write down what some of it
+already does, see [Specs of the code you already have](guides/spec-existing-code.md).
 
 ## 2. Explore
 
