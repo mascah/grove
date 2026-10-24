@@ -55,3 +55,17 @@ Status: done
 - `internal/cli/walkthrough_test.go`: `TestPropose` checks the two next
   steps and the approved-change case in `grove instructions propose
   "<description>"`.
+
+### T-03 — Review names a change approved with its code
+
+Status: done
+
+- `internal/cli/review.go`: a change the branch holds archived as finished,
+  which the target holds neither open nor archived, is reported as
+  "Merging <branch> into <target> approves change <id> with its code."
+- `internal/cli/walkthrough_test.go`: `TestOneMerge` proposes, builds and
+  archives a change on `rename` and checks review's first line, then merges
+  once: `grove changes` prints nothing and `grove specs` lists
+  `record-editing`. `TestApprove` still sees a draft not yet built as
+  future work, and `TestArchive` an approved change archived on its
+  branch as "approves no new change".

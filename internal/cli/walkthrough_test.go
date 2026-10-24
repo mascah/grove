@@ -343,6 +343,27 @@ func TestApprove(t *testing.T) {
 	}
 }
 
+// TestOneMerge follows the walkthrough's "One merge for a small change": a
+// change drafted, built and archived on one branch, approved by one merge.
+func TestOneMerge(t *testing.T) {
+	dir := setUp(t)
+	cid, folder := propose(t, dir, "rename", "Allow editing older records", "")
+	commitAll(t, dir, "Propose")
+	grove(t, "instructions", "implement", cid)
+	os.WriteFile(filepath.Join(folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
+	maintain(t, dir, olderEdits)
+	grove(t, "archive", cid)
+	commitAll(t, dir, "Implement and archive "+cid)
+	if out := grove(t, "review"); !strings.HasPrefix(out, "Merging rename into main approves change "+cid+" with its code.\n\n") {
+		t.Errorf("review of a draft built on its branch:\n%.1000s", out)
+	}
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Merge rename", "rename")
+	if changes, specs := grove(t, "changes"), grove(t, "specs"); changes != "" || !strings.Contains(specs, "record-editing") {
+		t.Errorf("after one merge, changes printed %q and specs %q", changes, specs)
+	}
+}
+
 func TestImplementInstructions(t *testing.T) {
 	dir := fixture(t)
 	os.MkdirAll(filepath.Join(dir, ".claude/skills/grove-apply"), 0o755)

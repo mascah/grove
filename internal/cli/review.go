@@ -10,7 +10,7 @@ import (
 )
 
 // review shows what merging the current branch into the target would agree
-// to: each change it approves, each document it adds, changes or removes
+// to: each change it approves, as future work or with its code, each document it adds, changes or removes
 // with its meaning, and the diff.
 func review(stdout io.Writer) error {
 	p, err := openProject()
@@ -38,6 +38,12 @@ func review(stdout io.Writer) error {
 	for _, c := range head.Changes {
 		if ip.Agreed.Change(c.ID) == nil {
 			fmt.Fprintf(stdout, "Merging %s into %s approves change %s as future work; it does not implement it.\n", branch, p.Target, c.ID)
+			approves++
+		}
+	}
+	for _, c := range head.Archived { // drafted and built on this branch (rule 4)
+		if head.Finished(c.ID) && ip.Agreed.Change(c.ID) == nil && !ip.Agreed.InArchive(c.ID) {
+			fmt.Fprintf(stdout, "Merging %s into %s approves change %s with its code.\n", branch, p.Target, c.ID)
 			approves++
 		}
 	}
