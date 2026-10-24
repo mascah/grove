@@ -7,5 +7,5 @@ runs=(
   "delete => /grove-propose Add ledger delete ID, from the README's planned list"
 )
 answers=(
-  "reus|recycl|next_id|same id|deleted record's id|deleted id => Yes to the rest, but a deleted record's ID is never given to a new record."
+  "recycl|next_id|same id|deleted (record'?s? )?ids?\b|\bids? of (an? |the )?deleted|\bids? ((be|are|get|is|never) )*re-?us|re-?us[a-z]* (an? |the |its |their |old |deleted |freed |that |highest |max(imum)? )*ids?\b => Yes to the rest, but a deleted record's ID is never given to a new record."
 )

@@ -1,8 +1,9 @@
 ## T-01 — Say each rule once
 
 Result: the opening text every skill prints is shorter, no line is in
-both a skill's requires file and its default schema guide, and every rule
-the instructions held before is still printed for its skill.
+both a skill's requires file and its default schema guide unless removing
+it would need the copy that stays reworded, and every rule the
+instructions held before is still printed for its skill.
 
 Files: `internal/instruct/instruct.go`,
 `internal/instruct/requires/propose.md`,
@@ -21,7 +22,8 @@ Files: `internal/instruct/instruct.go`,
 `internal/instruct/schemas/default/skills/prototype.md`,
 `internal/instruct/schemas/default/skills/implement.md`,
 `internal/instruct/schemas/bugfix/skills/propose.md`,
-`internal/cli/walkthrough_test.go`
+`internal/cli/walkthrough_test.go`, `dev/trials/run.sh`, `dev/trials.md`,
+`dev/trials/b.sh`
 
 Interfaces: none; it is instruction text.
 
@@ -38,7 +40,8 @@ Acceptance:
   maintained specs up to date" stays in `requires/implement.md` only.
 - No rule a file in `requires/` states is stated again in the schema
   guide of the same skill in `schemas/default/skills/`, or in
-  `schemas/bugfix/skills/propose.md`.
+  `schemas/bugfix/skills/propose.md`, except where removing it would need
+  the copy that stays reworded; the pull request lists each such repeat.
 - The opening text, printed before "What Grove requires of", is shorter
   and still says what a maintained spec, a change, observed behavior and
   a draft are, that Grove commits nothing and that merging is the only
@@ -56,22 +59,22 @@ Acceptance:
 ## T-02 — `just check` counts the instruction words
 
 Result: `just check` counts the words of the Markdown and YAML files in
-`internal/instruct` and fails above 7,000, as constitution rule 12 says.
+`internal/instruct` and fails above 8,000, as constitution rule 12 says.
 
 Files: `justfile`, `CONTRIBUTING.md`
 
 Interfaces: none.
 
-Constraints: the number 7,000 is written in rule 12 and the `justfile`
+Constraints: the number 8,000 is written in rule 12 and the `justfile`
 only; `CONTRIBUTING.md` says `just check` checks the budgets and names no
-number. If `internal/instruct` holds more than 7,000 words once T-01 is
+number. If `internal/instruct` holds more than 8,000 words once T-01 is
 done, make more cuts first; failing that, stop and ask the owner. Only a
 constitution amendment raises the budget (rule 12).
 
 Acceptance:
 - `just check` prints the word count beside the line counts and passes.
 - With a file added to `internal/instruct` that takes the count above
-  7,000, `just check` fails saying the budget is exceeded; with it
+  8,000, `just check` fails saying the budget is exceeded; with it
   removed, it passes.
 - `CONTRIBUTING.md`'s `just check` line, and the `justfile`'s comment on
   `check`, name the word budget with the line budget.

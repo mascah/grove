@@ -47,7 +47,6 @@
     changes leave the plan fresh.
   - Something the runner's checkout must have, such as a login the owner
     said the runner has: name it.
-  With no obstacle, say `grove run <cycle-id>` would build the cycle.
-  Commit only when the owner or the project's rules ask. The
+  With no obstacle, say `grove run <cycle-id>` would build the cycle. The
   next step is the owner's: commit, read what Grove's `review` shows, and
   merge it into the target branch.

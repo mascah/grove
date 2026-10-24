@@ -6,4 +6,4 @@
   change Grove refuses as waiting stays as it is.
 - Finish: report, for each change, whether it was archived, what is left and
   the question that blocks each blocked task, and each change left out and
-  why. Commit only when the owner or the project's rules ask.
+  why.

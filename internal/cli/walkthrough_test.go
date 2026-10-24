@@ -309,7 +309,7 @@ func TestPropose(t *testing.T) {
 		t.Errorf("an unknown change: status %d, %q", code, stderr.String())
 	}
 	out := grove(t, "instructions", "propose", "Editing a missing record should print an error")
-	req, how := strings.Index(out, "## What Grove requires of propose\n\n- A change describes future work."), strings.Index(out, "## How to propose\n\n**Propose says")
+	req, how := strings.Index(out, "## What Grove requires of propose\n\n- Write the documents below"), strings.Index(out, "## How to propose\n\n**Propose says")
 	if !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") || req < 0 || how < req ||
 		!strings.Contains(out, "on a `Files:` line after `Result:`") || !strings.Contains(out, "\nFiles: [`path/to/file`") || strings.Contains(out, "file-by-file") ||
 		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 5. Check the change") || strings.Contains(out, "Assumptions to confirm") {
@@ -321,8 +321,8 @@ func TestPropose(t *testing.T) {
 			t.Errorf("propose instructions lack %q", s)
 		}
 	}
-	if !strings.Contains(out, "offer both next steps and choose neither") || !strings.Contains(out, "`/grove-implement <change-id>` on this branch so one merge approves it\n  with its code") ||
-		!strings.Contains(out, "For a change it lists as approved, the next step is\n  merging the revision") {
+	if !strings.Contains(out, "offer both next steps\n  and choose neither") || !strings.Contains(out, "`/grove-implement <change-id>` on this branch so one merge\n  approves it with its code") ||
+		!strings.Contains(out, "For a change it lists as approved, the next\n  step is merging the revision") {
 		t.Errorf("propose's finish does not offer one merge or two:\n%.3000s", out)
 	}
 
@@ -424,7 +424,7 @@ func TestImplementInstructions(t *testing.T) {
 		t.Errorf("instructions apply: status %d, %q", code, stderr.String())
 	}
 
-	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. Commit",
+	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. When every task is done", "Commit only when the owner or the project's\nrules ask.",
 		"The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n"}
 	owner := []string{"ask the owner and\n  wait", "with their agreement add it to that task's `Files:`", "tell the owner how to try it",
 		"Make the choices and change the paths a task's `Delegated:` line names\n  without asking the owner", "stop that task and build nothing more of it"}

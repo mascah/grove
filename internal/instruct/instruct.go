@@ -679,7 +679,7 @@ A Grove document in the working tree that the target does not hold as it is,
 is a draft: not agreed until it is merged.
 
 Grove itself commits nothing. Commit only when the owner or the project's
-rules ask; merging into the target branch is the only approval.
+rules ask.
 `
 
 func (p Project) index(b *strings.Builder) {

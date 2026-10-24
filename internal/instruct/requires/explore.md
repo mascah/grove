@@ -14,4 +14,3 @@
   with no argument and follow what it prints, here. If the owner has
   confirmed `bugfix`, or said which other listed schema this work is, add
   `--schema <name>`.
-- Commit anything you wrote only when the owner or the project's rules ask.

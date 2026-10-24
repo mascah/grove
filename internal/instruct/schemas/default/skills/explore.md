@@ -23,8 +23,7 @@ prerequisite is a complete result.
 
 ### 3. Do not narrow early
 
-Do not push toward a proposal; write no proposal, change spec, tasks or
-requirements until the owner asks. Do not settle on the first plausible
+Do not push toward a proposal. Do not settle on the first plausible
 option: the owner sees the options and open questions before anything is
 recommended.
 

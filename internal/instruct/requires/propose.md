@@ -1,5 +1,3 @@
-- A change describes future work. It is approved only when the owner merges
-  it into the target branch; nothing you do approves it.
 - Write the documents below in the change folder their paths name, with its
   `.grove.yaml` from its template. For a new change, replace `<slug>` with a
   few lowercase words of its title joined by hyphens.
@@ -67,12 +65,11 @@
   change nothing it decides until they answer.
 - Finish: run Grove's `check` and fix what it reports in the files you
   wrote. Tell the owner which files you wrote, the qualified task IDs (such
-  as `<change-id>:T-01`) and the questions still open. Commit only when the
-  owner or the project's rules ask. The next step is the owner's: commit the
-  change and read what Grove's `review` shows. For a change the project
-  index does not list as approved, offer both next steps and choose neither
-  for them: merge it into the target branch to approve it, or run
-  `/grove-implement <change-id>` on this branch so one merge approves it
-  with its code. For a change it lists as approved, the next step is
-  merging the revision; `/grove-implement` builds it as the target holds
-  it.
+  as `<change-id>:T-01`) and the questions still open. The next step is the
+  owner's: commit the change and read what Grove's `review` shows. For a
+  change the project index does not list as approved, offer both next steps
+  and choose neither for them: merge it into the target branch to approve
+  it, or run `/grove-implement <change-id>` on this branch so one merge
+  approves it with its code. For a change it lists as approved, the next
+  step is merging the revision; `/grove-implement` builds it as the target
+  holds it.
