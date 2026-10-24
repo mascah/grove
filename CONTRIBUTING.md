@@ -32,6 +32,10 @@ reader. `just check` runs both.
 make a fresh fixture with `just fixture`, and follow the steps a change
 touches in Claude Code and in Codex.
 
+When a pull request changes instruction text in `internal/instruct`, run
+the trials in `dev/trials.md` by hand, in Claude Code and in Codex, and put
+their counts in its description.
+
 ## Commits and pull requests
 
 Every commit on `main` is a squash-merged pull request whose title is a
