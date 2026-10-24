@@ -215,7 +215,8 @@ show-saved changes approved. Each step names the section of
    `grove run` would refuse the cycle, given or marked, because budgets
    needs a person, and that revising budgets with
    `/grove-propose <budgets-id>` so its acceptance can be checked without
-   a person, merging it and re-planning the cycle removes that.
+   a person, which re-plans the cycle on the same branch, and one merge
+   removes that.
 
 2. **Merge the plan** ("Merge the plan"). Commit, then `grove review`:
    > adds     cycle            grove/cycles/\<cycle-id>-\<slug>.yaml
@@ -256,6 +257,12 @@ show-saved changes approved. Each step names the section of
    `planned:` line, and nothing against show-saved's `base`. Re-plan it
    again as above: `grove check` is clean, and show-saved's files are
    unchanged.
+
+   Then, on a branch, add a sentence to show-saved's proposal and commit,
+   and set the cycle's `planned` to main's commit and commit: two commits.
+   Fast-forward main onto them (`git merge --ff-only`): `grove check`
+   reports the same `planned:` line, since the revision reached main
+   without the cycle file. Re-plan it as above.
 
 6. **One change in two cycles** ("Re-plan a cycle"). Copy the 0.4 cycle to
    `grove/cycles/261099-zzzzz-later.yaml`. `grove check` reports
@@ -370,7 +377,16 @@ Each step names the section of
    `~/tmp/ledger-run`, `grove run --retry <export-cycle-id>`:
    > grove: \<export-id> needs a person, as cycle \<export-cycle-id>'s needs_human says; build the cycle with /grove-implement \<export-cycle-id>
 
-   and `git branch` lists no new branch. `grove run --retry 261099-zzzzz`
+   and `git branch` lists no new branch. In `~/tmp/ledger`, on a branch, a
+   fresh session, `/grove-propose <export-id>`, asking for export's
+   acceptance to be checked by a test that reads the CSV back. The session
+   prints the export cycle's file with the change, revises export, asks
+   whether it still needs a person, takes it out of `needs_human` when I
+   say no, sets `planned` to main's commit and adds no `unattended`.
+   `grove check` is clean. Squash-merge the branch and push. In
+   `~/tmp/ledger-run`, `grove run --retry <export-cycle-id>` starts a
+   session; stop it with Ctrl-C and discard what it left.
+   `grove run --retry 261099-zzzzz`
    says `main` holds no such cycle. `grove run --retry <show-saved-cycle-id>`
    starts a session on `/grove-implement <show-saved-cycle-id> --unattended` though the
    budgets cycle is marked, and its record names the show-saved cycle.

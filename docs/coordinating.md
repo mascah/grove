@@ -170,7 +170,9 @@ the agent tells you what changed and asks before building that task. A
 change in a cycle that is not done is not reported against its `base`: a
 moved file makes its cycle stale instead, and re-planning the cycle is
 enough to build on the new text (see [Planning cycles](planning.md),
-"Mark it unattended").
+"Mark it unattended"). Revising a change in such a cycle with
+`/grove-propose <change-id>` re-plans the cycle on the same branch (see
+"Re-plan a cycle" there).
 
 In a change spec, each REMOVED requirement keeps its heading,
 `### Requirement: <name>`, followed by why it goes, so `grove check` can

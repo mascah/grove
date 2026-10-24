@@ -56,3 +56,25 @@ Status: done
 - The pause after an attempt is not replayed with a stub session here;
   `--retry` starts any attempt `eligible` or `runnable` allows, which the
   test checks after the squash merge.
+
+### T-03 — Document the shorter way past a pause
+
+Status: done
+
+- `docs/running.md`, "The pause": answer the question with `/grove-propose
+  <change-id>`, which re-plans the cycle on the same branch, merge, and run
+  `grove run --retry`, with no separate re-plan merge; the revision and the
+  re-plan reach main as one commit, squash or merge.
+- `docs/planning.md`: the quoted finish for a member that needs a person
+  names one merge; the definition of a stale plan names the exception, read
+  on main's first-parent history; "Re-plan a cycle" says revising a member
+  with `/grove-propose` re-plans its cycle, and that two commits by rebase
+  or fast-forward leave it stale.
+- `docs/coordinating.md`: where it names re-planning a cycle, revising a
+  member re-plans it. `docs/reference.md`: the `grove instructions propose
+  <change-id>` row says it re-plans a cycle the change is in.
+- `dev/walkthrough.md`: planning step 1's finish names the shorter way;
+  planning step 5 adds two commits fast-forwarded onto main leaving the
+  cycle stale; running step 6 revises export with `/grove-propose
+  <export-id>`, re-planning its cycle on the same branch, one squash merge,
+  and `grove run --retry <export-cycle-id>` then starts a session.
