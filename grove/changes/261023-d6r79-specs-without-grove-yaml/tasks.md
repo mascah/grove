@@ -55,14 +55,18 @@ Acceptance:
 
 ## T-03 — Grove's own specs move over
 
-Result: Grove's seven maintained specs have no `.grove.yaml`, and each
+Result: Grove's maintained specs have no `.grove.yaml`, and each
 Purpose's first sentence reads as its one-line description.
 
-Files: `grove/specs/apply/.grove.yaml`, `grove/specs/config/.grove.yaml`,
+Files: `grove/specs/config/.grove.yaml`,
 `grove/specs/cycles/.grove.yaml`, `grove/specs/implement/.grove.yaml`,
 `grove/specs/propose/.grove.yaml`, `grove/specs/prototype/.grove.yaml`,
-`grove/specs/runs/.grove.yaml`, `grove/specs/config/spec.md`,
-`grove/specs/runs/spec.md`
+`grove/specs/requirements/.grove.yaml`, `grove/specs/runs/.grove.yaml`,
+`grove/specs/schemas/.grove.yaml`, `grove/specs/config/spec.md`,
+`grove/specs/cycles/spec.md`, `grove/specs/implement/spec.md`,
+`grove/specs/propose/spec.md`, `grove/specs/prototype/spec.md`,
+`grove/specs/requirements/spec.md`, `grove/specs/runs/spec.md`,
+`grove/specs/schemas/spec.md`
 
 Interfaces: none.
 
@@ -74,7 +78,7 @@ Acceptance:
   on Grove's own repository prints `No problems in grove/.`
 - In `grove instructions explore` on Grove's repository, each spec's
   index line gives a description that says what its `.grove.yaml`
-  description said at 0c6f419 in substance: `config`'s opens with what
+  description said at 8454724 in substance: `config`'s opens with what
   `context` does, not "A project's `grove.yaml` configures Grove for
   it.", and `runs`' is one sentence short enough to read as a line.
 
