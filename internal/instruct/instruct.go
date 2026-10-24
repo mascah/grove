@@ -666,20 +666,16 @@ func (in Instructions) Markdown() string {
 	return b.String()
 }
 
-const meanings = `Grove keeps three meanings apart; keep them apart when you speak and write:
+const meanings = `Keep three meanings apart when you speak and write:
 
 - A maintained spec (` + "`specs/<id>/spec.md`" + ` in the target branch) is agreed behavior.
-- A change (` + "`changes/<id>-<slug>/`" + `) in the target branch is approved future work.
-  Approval is the proposal being in the target branch; it never means
-  implemented. Whoever applies it records progress in its
-  ` + "`implementation.md`" + `.
+- A change (` + "`changes/<id>-<slug>/`" + `) in the target branch is approved future work,
+  never implemented work.
 - What the code does is observed behavior: evidence, not a rule.
 
-A Grove document in the working tree that the target does not hold as it is,
-is a draft: not agreed until it is merged.
-
-Grove itself commits nothing. Commit only when the owner or the project's
-rules ask; merging into the target branch is the only approval.
+A Grove document in the working tree that the target does not hold as it is
+is a draft. Merging into the target branch is the only approval. Grove
+commits nothing; commit only when the owner or the project's rules ask.
 `
 
 func (p Project) index(b *strings.Builder) {
