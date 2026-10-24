@@ -1,6 +1,6 @@
 title: Plain docs, exact specs
 created: 2026-10-23T21:42:52Z
-description: The README and docs lead with the attended path and say each thing plainly once; their exact rules move to the maintained specs, which the docs link.
+description: The README and docs lead with the attended path and explain Grove in plain words; each exact rule is held by a maintained spec, which the docs link.
 schema: default
 depends_on: [261023-kh3gg, 261023-ejarr, 261023-d6r79]
 base: 0c6f419dab8187d31dd526c0a60754fbbdeeb688
