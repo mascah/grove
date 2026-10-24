@@ -93,20 +93,17 @@ reply() {
   done
 }
 
-# waiting asks a small model whether the agent's last message waits for the
-# owner's answer, as against reporting what it did or offering more work.
+# waiting asks a model whether the agent's last message waits for the
+# owner's answer, as against reporting what it did and leaving the next step
+# to the owner, which a scripted reply would otherwise take for them.
 waiting() {
   local verdict
-  verdict=$(claude -p "Here is the last message an AI coding agent sent the person it works for. Does it stop to wait for that person to answer or decide something before it can go on with the task it was given? Offers of optional further work, such as committing or a next step, do not count. Reply with only yes or no.
+  verdict=$(claude -p "Here is the last message an AI coding agent sent the person it works for. Does it stop to wait for that person to answer or decide something before it can go on with the task it was given? A step the agent says it will take itself once the person answers or gives feedback counts. Next steps it leaves for the person to take, such as committing, merging, reviewing or running another command or skill, do not count, and neither do offers of optional further work, such as a commit. Reply with only yes or no.
 
-$last" --model haiku --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" | jq -r '.result')
+$last" --model sonnet --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" | jq -r '.result')
   echo "turn $n: waiting: $verdict" >> "$dir/waits.txt"
   grep -qi '^yes' <<< "$verdict"
 }
-
-# changes lists the change folders, open and archived, so a change a run
-# proposes and archives is found too.
-changes() { ls grove/changes grove/changes/archive 2> /dev/null | grep -E '^[0-9]{6}-' | sort || true; }
 
 # allowed lists the paths the Files: and Delegated: lines of every tasks.md name.
 allowed() {
@@ -140,7 +137,11 @@ trial() {
   for run in "${runs[@]}"; do
     branch=${run%% => *} prompt=${run#* => }
     [ "$(git branch --show-current)" = "$branch" ] || { git diff --quiet HEAD && [ -z "$(git ls-files -o --exclude-standard)" ] || commit "After the last run"; git switch -q "$branch" 2> /dev/null || git switch -q -c "$branch" main; }
-    had=$(changes)
+    had=$(ls grove/changes 2> /dev/null || true)
+    if [[ $prompt == *"{id}"* && -z $id ]]; then
+      echo "| ($c) | $h | failed: no change for \"$prompt\"; the run before it proposed none | | | | |" > "$dir/row.md"
+      return 1
+    fi
     prompt=${prompt//\{id\}/$id}
     [ "$h" = codex ] && prompt=${prompt/\/grove-/\$grove-}
     before=$(snapshot) sid="" last=""
@@ -152,7 +153,7 @@ trial() {
     while read -r p; do
       [[ $p == grove/* ]] || grep -qxF "$p" <(allowed) || outside+=("$p")
     done < <(diff <(echo "$before") <(echo "$after") | sed -n 's/^[<>] [0-9a-f]*  //p' | sort -u)
-    new=$(comm -13 <(echo "$had") <(changes) | head -1 || true)
+    new=$(comm -13 <(echo "$had") <(ls grove/changes 2> /dev/null) | grep -v '^archive$' | head -1 || true)
     [ -z "$new" ] || id=${new:0:12}
   done
   printf '%s\n' "${outside[@]:-}" | sed '/^$/d' | sort -u > "$dir/outside.txt"
