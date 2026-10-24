@@ -57,22 +57,22 @@ Acceptance:
 ## T-02 — `just check` counts the instruction words
 
 Result: `just check` counts the words of the Markdown and YAML files in
-`internal/instruct` and fails above 7,000, as constitution rule 12 says.
+`internal/instruct` and fails above 8,000, as constitution rule 12 says.
 
 Files: `justfile`, `CONTRIBUTING.md`
 
 Interfaces: none.
 
-Constraints: the number 7,000 is written in rule 12 and the `justfile`
+Constraints: the number 8,000 is written in rule 12 and the `justfile`
 only; `CONTRIBUTING.md` says `just check` checks the budgets and names no
-number. If `internal/instruct` holds more than 7,000 words once T-01 is
+number. If `internal/instruct` holds more than 8,000 words once T-01 is
 done, make more cuts first; failing that, stop and ask the owner. Only a
 constitution amendment raises the budget (rule 12).
 
 Acceptance:
 - `just check` prints the word count beside the line counts and passes.
 - With a file added to `internal/instruct` that takes the count above
-  7,000, `just check` fails saying the budget is exceeded; with it
+  8,000, `just check` fails saying the budget is exceeded; with it
   removed, it passes.
 - `CONTRIBUTING.md`'s `just check` line, and the `justfile`'s comment on
   `check`, name the word budget with the line budget.

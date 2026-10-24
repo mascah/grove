@@ -10,10 +10,26 @@ write "Status: dropped" here with their reason. -->
 
 Status: in progress
 
-Left: waits on the rule 12 amendment. `internal/instruct` holds 7,705
-words, over the 7,000 budget, and the owner chose to raise the budget in a
-constitution PR of its own rather than reword (2026-10-23). Then the trials
-are rerun as a record in the pull request, not a gate.
+Left: the second acceptance line. Some rules a requires file states are
+still stated again in the same skill's guide, kept because removing them
+needed the surviving line reworded: in `skills/propose.md`, §3's numbered
+round answered by "yes" and its order by consequence, the `Delegated:`
+line and §5's check, all in `requires/propose.md`; in `skills/plan.md`,
+"It puts approved changes in a cycle", "Read each one" and "Ask about each
+change that may need a person"; in `skills/prototype.md`, "answers one
+question"; in `skills/archive.md`, landing in one merge. The owner decides
+whether these go, reworded, or the acceptance line is revised.
+
+- The budget is 8,000 words: asked on 2026-10-24 whether it becomes 8,000,
+  the owner said "yes", and constitution rule 12 says so as PR #75 amends
+  it. `internal/instruct` holds 7,705 words. The trials were rerun as a
+  record in the pull request, not a gate.
+- Two removals go beyond the proposal's listed cases: "It describes future
+  work." in `skills/propose.md` and `bugfix/skills/propose.md`, and
+  `requires/propose.md`'s first bullet ("A change describes future work. It
+  is approved only when the owner merges it into the target branch; nothing
+  you do approves it."), both covered by the opening text (`meanings`).
+  Asked whether they stay out, the owner said "keep them out" (2026-10-24).
 
 - Redone as repetition removal only, on the files as 261023-d6r79 leaves
   them (801eda2 had also reworded them; the owner separated the two). A
@@ -64,7 +80,10 @@ are rerun as a record in the pull request, not a gate.
 
 ### T-02 — `just check` counts the instruction words
 
-Status: done
+Status: in progress
+
+Left: the budget is 8,000, as the owner agreed (2026-10-24); the
+`justfile` still fails above 7,000.
 
 - `justfile`: `check` counts the words of `internal/instruct`'s Markdown
   and YAML files, prints them beside the line counts, and fails above
