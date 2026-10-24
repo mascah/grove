@@ -25,6 +25,7 @@ follow what it prints. What Grove does is specified by the maintained specs in `
 | `grove/` | Grove's own specs, changes and cycles: the specification (rule 8). |
 | `mkdocs.yml`, `.github/`, `.goreleaser.yaml`, `install.sh` | The docs site, CI, the release pipeline and the install script. |
 | `dev/walkthrough.md` | The manual test script: every docs step run on the fixture. |
+| `dev/trials.md`, `dev/trials/` | Skill trials: five cases on the fixture that count how Grove's skills behave, and the script that runs them. |
 | `dev/fixture.md`, `testdata/ledger/` | The ledger fixture, a small Python project. |
 | `dev/reuse.md` | Code copied from earlier repositories, with path and revision. |
 

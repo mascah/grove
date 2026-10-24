@@ -28,6 +28,10 @@ check:
      echo "lines: $code Go, $tests test"; \
      test "$code" -le 5000 && test "$tests" -le 3000 || { echo "over the line budget"; exit 1; }
 
+# Run the skill trials of dev/trials.md in Claude Code and Codex: just trials [case ...]
+trials *cases:
+    dev/trials/run.sh "$@"
+
 # Create the ledger fixture as a fresh Git repository at DIR, which must not exist.
 fixture dir:
     mkdir "$1"
