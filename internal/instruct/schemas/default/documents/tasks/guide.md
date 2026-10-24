@@ -7,6 +7,11 @@
   this line. On an `Interfaces:` line it names the functions, types or
   commands it produces that other tasks or callers use. A task says what and
   where, not how: no code, commands or steps.
+- A task may have a `Delegated:` line, right after `Files:`, naming choices
+  the implementer may make without asking and paths it may change beyond
+  `Files:`, only where the owner agreed in the round. Implementing with the
+  owner honors it; implementing unattended ignores it. Grove does not read
+  it.
 - Never renumber or reuse a task ID. A renamed or reordered task keeps its ID,
   a new task takes the next unused number, and a split task gets new IDs with
   a note naming the one it replaces.

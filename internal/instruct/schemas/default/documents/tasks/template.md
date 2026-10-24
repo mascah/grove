@@ -12,6 +12,8 @@ task is selected as {{change}}:T-01. Example:
 
     Files: `src/records/rules.py`, `tests/test_rules.py`
 
+    Delegated: test layout and private helpers; `tests/test_records.py`
+
     Interfaces: `validate` takes the record's previous values, if any.
 
     Constraints: new records must still meet the current rule.
@@ -22,7 +24,8 @@ task is selected as {{change}}:T-01. Example:
     - The affected behavior and its checks are identified for later reconciliation.
 
 "Interfaces:" is optional when a task produces nothing others use, and
-"Constraints:" is optional. A finished task is not a checked box: do not add
+"Constraints:" is optional. "Delegated:" is written only when the owner
+agreed to it in the round. A finished task is not a checked box: do not add
 status here. -->
 
 ## T-01 — [title]

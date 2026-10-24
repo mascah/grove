@@ -101,7 +101,15 @@ The agent writes a change folder, such as
   how to check it is done.
 
 Before writing, it lists every decision it would otherwise assume, each
-with a recommended answer, and waits for yours. It keeps anything you leave
+with a recommended answer, and waits for yours. The questions come in
+order of consequence: what changes behavior, scope or compatibility, or
+could lose data, first; then choices costly to reverse; and routine choices
+last, on one line of defaults that one "yes" accepts. If the idea is too
+big for one change, or has parts you could agree separately, it offers to
+write them as several changes on this branch, the later naming the earlier
+in `depends_on`. It may also recommend letting the implementer make some
+small choices alone, such as test layout or a new test file; if you agree,
+that task gets a `Delegated:` line naming them. It keeps anything you leave
 undecided as an open question, and says which task, if any, that question
 blocks. Before showing you the change, it checks that every requirement
 has an outcome you can observe and a task whose acceptance covers it, and
@@ -164,6 +172,13 @@ code as it now is, putting a task it no longer holds for back in progress,
 and lists each scenario of the change's specs under `## Scenarios` in
 `implementation.md` with the test that shows it, or `unverified` and why.
 Its report, and archiving, name each unverified scenario.
+
+The agent makes the choices and changes the paths a task's `Delegated:`
+line names without asking you; anything else beyond `Files:` it asks
+about. If it finds that the agreed approach is wrong, even where the task
+could still be built as written, it stops that task and tells you what it
+found and the revision the change needs. `/grove-implement --unattended`
+ignores `Delegated:` and keeps to `Files:`.
 
 When your answer or your feedback changes what the change says, the agent
 tells you which of its proposal, specs and tasks it would edit and how. Once

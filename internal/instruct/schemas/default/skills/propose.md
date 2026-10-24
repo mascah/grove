@@ -16,6 +16,9 @@ describes future work. It does not plan or perform the implementation.
   the intended outcome, what is in scope and what is not. Ask the owner to
   confirm or correct it before you write.
 - If several options are still open, ask which one.
+- If the idea is too big for one change, or has parts the owner could agree
+  separately, say so and offer to write them as changes linked with
+  `depends_on`.
 - If the direction turns out not to be settled, say so. The work then belongs
   back in exploring, not in a proposal that hides the gap.
 
@@ -26,6 +29,16 @@ describes future work. It does not plan or perform the implementation.
   goes in the code, what is out of scope, which files outside the code
   change. Number them, each with your recommended answer and its reason,
   worded so that "yes" accepts it, and wait.
+- Put first the decisions that change what users see, what is in scope,
+  compatibility, or that could lose data, such as an exit status; then
+  architecture or interfaces costly to reverse, such as which function
+  holds a check; last, on one line of recommended defaults, not a list,
+  routine choices inside the agreed approach, such as a test's name and
+  place.
+- Where small choices are not worth a question while building, such as
+  test layout, private helpers or a new test file, you may recommend
+  delegating them to the implementer; a task carries them on a `Delegated:`
+  line only if the owner agrees.
 - A decision the owner leaves open is an open question, naming the task it
   blocks; one the owner answers is a decision, in their words.
 
