@@ -2,21 +2,22 @@
 
 ## Purpose
 
-`grove run` builds a cycle the operator gives it, or else one the owner
-marked `unattended`, without anyone typing `/grove-implement <cycle-id>
---unattended`: in a checkout an operator prepared for one project, it
-starts one bounded Claude Code session on the implement skill, unattended,
-for that cycle, records the attempt, and then
-pauses the project until the cycle is archived. "The checkout" is the Git checkout `grove run` is run in. "The
-fetched target" is the target branch as just fetched from `origin`, or,
-in a checkout with no remote named `origin`, the local target branch; in
-both, with the `grove.yaml` it holds. "A buildable cycle" is a cycle on
-the fetched target that is not done, is not stale, has no member
-`needs_human` names, has no member that waits on a change neither in
-the cycle nor archived as finished, and waits on no cycle, that is, the
-fetched target holds done every cycle its `depends_on` names
-(`grove/specs/cycles/spec.md`); "an
-eligible cycle" is a buildable cycle that holds `unattended: true`.
+`grove run` builds one cycle unattended in a prepared checkout, the one it
+is given or else the oldest marked `unattended`, in one bounded Claude
+Code session, then pauses the project. In a checkout an operator prepared
+for one project, it starts one bounded Claude Code session on the
+implement skill, unattended, for that cycle, without anyone typing
+`/grove-implement <cycle-id> --unattended`, records the attempt, and then
+pauses the project until the cycle is archived. "The checkout" is the Git
+checkout `grove run` is run in. "The fetched target" is the target branch
+as just fetched from `origin`, or, in a checkout with no remote named
+`origin`, the local target branch; in both, with the `grove.yaml` it
+holds. "A buildable cycle" is a cycle on the fetched target that is not
+done, is not stale, has no member `needs_human` names, has no member that
+waits on a change neither in the cycle nor archived as finished, and waits
+on no cycle, that is, the fetched target holds done every cycle its
+`depends_on` names (`grove/specs/cycles/spec.md`); "an eligible cycle" is
+a buildable cycle that holds `unattended: true`.
 
 ## Boundaries
 

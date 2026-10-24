@@ -2,12 +2,14 @@
 
 ## Purpose
 
-A change schema says which documents a change holds and how each skill
-goes for it. Grove has two built-in schemas, `default`, the software
-change, and `bugfix`, for behavior that is wrong; a project replaces any of
-their files, and adds schemas of its own, in `<root>/schemas/`. Owners
-choosing what kind of change to propose, and agents following a schema's
-guides, rely on this.
+Grove has the change schemas `default` and `bugfix` in every project, a
+project replaces any of their files, and explore and propose suggest
+`bugfix` for wrong behavior. A change schema says which documents a change
+holds and how each skill goes for it. `default` is the software change and
+`bugfix` is for behavior that is wrong; a project replaces any of their
+files, and adds schemas of its own, in `<root>/schemas/`. Owners choosing
+what kind of change to propose, and agents following a schema's guides,
+rely on this.
 
 ## Boundaries
 

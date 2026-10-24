@@ -46,7 +46,19 @@ Status: done
 
 ### T-03 — Grove's own specs move over
 
-Status: not started
+Status: done
+
+- Deleted the `.grove.yaml` of all eight specs (config, cycles, implement,
+  propose, prototype, requirements, runs, schemas), as T-03 lists them
+  since its revision.
+- Rewrote only the first paragraph of each Purpose, opening with a
+  sentence that says what its `.grove.yaml` description said at 8454724;
+  the rest of each paragraph keeps what it said. Every `git diff` hunk is
+  inside a Purpose section; `config`'s opens with what `context` does, and
+  `runs`' first sentence is one line.
+- `grove check` on Grove's repository with this build: `No problems in
+  grove/.` `grove instructions explore`, run in a scratch clone with this
+  branch as `main`, lists each spec with its new first sentence.
 
 ### T-04 — Document specs without .grove.yaml
 

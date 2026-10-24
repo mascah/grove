@@ -3,10 +3,11 @@
 ## Purpose
 
 `/grove-prototype <question>` answers one question before a change is
-proposed, with a throwaway experiment in the owner's own session: how
-something feels, whether something is feasible, or how some logic behaves.
-Its findings reach the target only in a proposal. "The owner" is the person
-in whose session the skill runs.
+proposed, with a throwaway experiment on a prototype branch in the owner's
+own session; explore suggests one when the answer would change the
+proposal. The question may be how something feels, whether something is
+feasible, or how some logic behaves. Its findings reach the target only in
+a proposal. "The owner" is the person in whose session the skill runs.
 
 ## Boundaries
 

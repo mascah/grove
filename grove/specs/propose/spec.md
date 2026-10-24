@@ -3,10 +3,12 @@
 ## Purpose
 
 `/grove-propose` turns a chosen direction into a change the owner can
-review: a proposal, change specs and tasks. This covers how it settles
-what those documents say, what they must say, and what `grove check`
-reports on them. A task's named
-files are the repo-relative paths on its `Files:` line.
+review, asking one round of every decision it would otherwise assume, then
+writing a proposal, change specs and tasks that name their files and
+interfaces. This covers how it settles what those documents say, what they
+must say, and what `grove check` reports on them, such as a named file
+that moved since the change's base. A task's named files are the
+repo-relative paths on its `Files:` line.
 
 ## Boundaries
 
