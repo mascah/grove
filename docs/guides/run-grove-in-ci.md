@@ -8,7 +8,8 @@ it is not part of what Grove does. Use it if it helps.
 Two jobs a workflow can do without an agent:
 
 - On each pull request, `grove check` fails the build when the branch's
-  changes or specs have a problem, before anyone approves them by merging.
+  changes or specs have a problem. That is before anyone approves them by
+  merging.
 - On each push to your main branch, `grove changes --json` keeps one GitHub
   issue per change, as [Push to a tracker](push-to-a-tracker.md) does from
   chat. Grove pushes nothing; the workflow does, with `gh`.
@@ -84,13 +85,14 @@ A pull request whose changes or specs have a problem fails with the lines
 `grove check` prints, such as
 `grove/changes/261020-cr2tr-monthly-budgets-in-report/.grove.yaml:5: unknown field "cycle"; ...`.
 
-After a push to main, each change has one issue labelled `grove`, its title
-the change's title and its body the change's main document ending with
-`<!-- grove:<id> -->`. The issue of an archived or dropped change is closed,
-and one closed by hand while its change is still approved is reopened.
-Issues made by the chat recipe carry the same marker, so the workflow takes
-them over rather than creating second ones.
+After a push to main, each change has one issue labelled `grove`. Its
+title is the change's title, and its body is the change's main document
+ending with `<!-- grove:<id> -->`. The issue of an archived or dropped
+change is closed. An issue closed by hand while its change is still
+approved is reopened. Issues made by the chat recipe carry the same
+marker, so the workflow takes them over rather than creating second ones.
 
 Each push rewrites every issue's body, so edit the change, not the issue.
-Upgrade Grove by changing the pinned version in a pull request of its own:
-a release with breaking changes reaches the project only then.
+Upgrade Grove by changing the pinned version in a pull request of its own.
+Then a release with breaking changes reaches the project only through
+that pull request.

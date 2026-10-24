@@ -6,12 +6,12 @@ it is not part of what Grove does. Use it if it helps.
 ## What it is for
 
 Grove does not schedule itself. On a Mac, launchd can run `grove run` every
-so often in a checkout you keep for one project, so a cycle you mark
-`unattended` is started without anyone watching. Each firing either starts
-one attempt or does nothing: while a run is going, while the project is
-paused after an attempt, or when no marked cycle can be built. Marking a
-cycle is what puts work in front of the timer; merging a change alone does
-not. [Running
+so often in a checkout you keep for one project. A cycle you mark
+`unattended` is then started without anyone watching. Each firing either
+starts one attempt or does nothing. It does nothing while a run is going,
+while the project is paused after an attempt, or when no marked cycle can
+be built. Marking a cycle is what puts work in front of the timer; merging
+a change alone does not. [Running
 unattended](../running.md) says what one run does.
 
 ## Before the timer
@@ -20,9 +20,9 @@ Set up the checkout as "Set up a checkout" in
 [Running unattended](../running.md) says, and run `grove run` in it
 once by hand to see a session through. The timer's session has the same
 permissions, from the checkout's `.claude/settings.local.json`, and nobody
-to answer it, so a tool those settings do not allow fails and the agent
+to answer it. So a tool those settings do not allow fails, and the agent
 works around it or stops. Claude Code uses the login you made with
-`claude` in Terminal; a job in your user's launchd domain, as below, can
+`claude` in Terminal. A job in your user's launchd domain, as below, can
 read it.
 
 ## The job
@@ -61,10 +61,10 @@ your user's home in place of `/Users/you`, one label and file per project:
 
 - `PATH` is all the session gets: launchd does not read your shell's
   profile. It needs the folders holding `grove`, `claude`, `git`, `gh` and
-  your project's test tools; `which claude gh` in Terminal shows them.
+  your project's test tools. `which claude gh` in Terminal shows them.
 - `StartInterval` is in seconds. launchd starts no second copy of a job
-  that is still running, so a firing during a session is skipped, and
-  Grove's own lock refuses a `grove run` you start by hand meanwhile.
+  that is still running, so a firing during a session is skipped. Grove's
+  own lock refuses a `grove run` you start by hand meanwhile.
 - `grove run` stops its session after 2 hours. To change that, add
   `<string>--timeout</string>` and, say, `<string>45m</string>` after
   `<string>run</string>`.
@@ -77,21 +77,22 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.you.grove-run.ledger
 
 ## Where to look
 
-- `/Users/you/grove-runs/ledger.log` gets one line per firing from Grove:
-  that the project is paused or a run is in progress, that there is
+- `/Users/you/grove-runs/ledger.log` gets one line per firing from Grove.
+  The line says the project is paused, a run is in progress, there is
   nothing to apply, or what went wrong. A firing that starts an attempt
-  adds the lines a terminal would show while the session runs, one per
-  message, tool call and result, then the attempt and how it ended.
+  adds the rows a terminal would show while the session runs (see
+  [Running unattended](../running.md), "An ordinary run"). Its last line
+  names the attempt and how it ended.
 - Each attempt's record and the session's output are in the checkout's
   `.git/grove/`, named by the attempt, as the log line says.
 - `launchctl print gui/$(id -u)/com.you.grove-run.ledger` shows whether
-  the job is running, how many times it has, and its last exit code: 0 for
-  a session that exited 0 or a firing that had nothing to do, 1 for a
-  refusal or an attempt that ended any other way.
+  the job is running, how many times it has run, and its last exit code.
+  The code is 0 for a session that exited 0, or a firing that had nothing
+  to do. It is 1 for a refusal, or an attempt that ended any other way.
 
-When the project is paused, deal with the attempt and run
-`grove run --retry` in the checkout yourself, or merge its pull request;
-the timer then picks up from there.
+When the project is paused, deal with the attempt. Then either run
+`grove run --retry` in the checkout yourself, or merge its pull request.
+The timer picks up from there.
 
 ## Stopping it
 
@@ -99,6 +100,6 @@ the timer then picks up from there.
 launchctl bootout gui/$(id -u)/com.you.grove-run.ledger
 ```
 
-If a session is running, launchd sends `grove run` `SIGTERM`; Grove stops
+If a session is running, launchd sends `grove run` `SIGTERM`. Grove stops
 the session's processes and records the attempt as cancelled. Its branch
 and files stay in the checkout for you.

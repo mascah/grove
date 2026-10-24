@@ -1,16 +1,20 @@
 # Running unattended
 
-`grove run` builds a cycle you name, or else one you have marked
-`unattended`, without anyone typing `/grove-implement <cycle-id>
---unattended`. In a checkout you set up for one project, it starts one
-Claude Code session that types it for that cycle, waits for it within a time limit, and then pauses the
-project until the cycle is merged or dropped. It builds nothing else: an
-approved change in no cycle is yours to build with `/grove-implement`,
-with `--unattended` or not. To send `grove run` one change, plan a cycle
-of one (see [Planning cycles](planning.md)). Grove does not
-schedule itself: run it by hand, or from a timer as in
-[Run on a timer](guides/run-on-a-timer.md). The [runs spec](https://github.com/mascah/grove/blob/main/grove/specs/runs/spec.md) has the
-exact rules.
+`grove run` builds a cycle without anyone typing `/grove-implement
+<cycle-id> --unattended`. It builds the cycle you name, or else one you
+have marked `unattended`. It runs in a checkout you set up for one
+project. There it starts one Claude Code session, which types that
+command for the cycle, and waits for it within a time limit. Then the
+project is paused until the cycle's changes are archived on the target,
+as finished or dropped.
+
+`grove run` builds nothing but cycles. An approved change in no cycle is
+yours to build with `/grove-implement`, with `--unattended` or not. To
+send `grove run` one change, plan a cycle of one (see
+[Planning cycles](planning.md)). Grove does not schedule itself: run it
+by hand, or from a timer as in [Run on a timer](guides/run-on-a-timer.md).
+The [runs spec](https://github.com/mascah/grove/blob/main/grove/specs/runs/spec.md)
+has the exact rules.
 
 ## Set up a checkout
 
@@ -28,11 +32,11 @@ What you prepare, since Grove does not:
   pushes nothing. A checkout with no `origin` works too: see
   "Without a remote".
 - **The harness.** `grove.yaml` on the target lists `claude` under
-  `agents`. `grove run` types the implement skill as that form has it,
-  `/grove-implement <cycle-id> --unattended` for skills or
+  `agents`. `grove run` types the implement skill the way that form
+  does: `/grove-implement <cycle-id> --unattended` for skills, or
   `/grove:implement <cycle-id> --unattended` for commands.
 - **Claude Code's permissions.** The session asks you nothing, so it can do
-  only what its settings allow, and Grove passes it no permission flags.
+  only what its settings allow. Grove passes it no permission flags.
   Put them in `.claude/settings.local.json` in the checkout, such as
 
   ```json
@@ -44,7 +48,7 @@ What you prepare, since Grove does not:
   }
   ```
 
-  with your project's test command in place of `python3`, and keep the file
+  with your project's test command in place of `python3`. Keep the file
   out of `git status`, since `grove run` refuses a checkout with anything
   uncommitted:
 
@@ -60,7 +64,7 @@ What you prepare, since Grove does not:
 ## Tell the agent to commit and open a pull request
 
 Grove's skills commit nothing unless a rule asks. For an unattended run,
-add these under `rules` in `grove.yaml` and merge them into the target:
+add these under `rules` in `grove.yaml`, and merge them into the target:
 
 ```yaml
 rules:
@@ -71,9 +75,9 @@ rules:
 ```
 
 `grove run` reads `grove.yaml` from the target it fetched, not from the
-checkout's branch, so the rules count once they are merged. Lines under
-`implement` are given with you in the session too; word them so they hold
-for both.
+checkout's branch. So the rules count once they are merged. Lines under
+`implement` are also given when you build with the agent yourself, so
+word them to hold for both.
 
 ## An ordinary run
 
@@ -87,34 +91,48 @@ it has uncommitted changes. Then it:
 1. Fetches the target from `origin`, if the checkout has one. If the
    local target branch has commits `origin`'s does not, it refuses and
    leaves them alone.
-2. Selects one cycle on the fetched target: the one with the earliest
-   `created` that is marked `unattended`, is not done, follows no cycle
-   that is not done (see [Planning cycles](planning.md), "Follow another
-   cycle"), has no change under
-   `needs_human`, has no change waiting on one neither in the cycle nor
-   archived as finished, and whose plan is not stale (see
-   [Planning cycles](planning.md), "Mark it unattended"). With none, it
-   says
+2. Selects one cycle on the fetched target: of the cycles that pass
+   every test below, the one with the earliest `created`. A cycle passes
+   when:
+   - it is marked `unattended`;
+   - it is not done;
+   - it follows no cycle that is not done (see
+     [Planning cycles](planning.md), "Follow another cycle");
+   - `needs_human` names none of its changes;
+   - none of its changes waits on a change that is neither in the cycle
+     nor archived as finished;
+   - its plan is not stale (see [Planning cycles](planning.md), "Mark it
+     unattended").
+
+   With none, it says
    > Nothing to apply on main at 243a63d.
 
    `grove check` says why a marked cycle is skipped.
-3. Creates the branch `grove/run-<attempt>` from the fetched target,
-   `<attempt>` being a new ID such as `261021-6jbj1`, fast-forwards the
-   local target branch to it, and starts
+3. Fast-forwards the local target branch to the fetched target. Creates
+   the branch `grove/run-<attempt>` from it, `<attempt>` being a new ID
+   such as `261021-6jbj1`. Then starts
    `claude -p "/grove-implement 261020-m4k8t --unattended" --output-format stream-json --verbose`
    on the new branch.
 
-The agent builds the cycle's changes in turn, as "Building a cycle unattended" in
-[Coordinating changes](coordinating.md) says, archives each one it finishes,
-commits, pushes and opens the pull request, as the rules say. While it
-works, Grove prints one row per event, with the time it read it and a mark
-for its kind: `▶` the session's start and its model, `•` the first line of
-each message the agent writes, `›` each tool it calls, with the first line
-of its input, such as a command or a file path, `✗` the first line of a
-tool's result when it is an error, `·` thinking and other notices, and `■`
-the session's result, with its turns and cost. A tool's result that is not
-an error gets no row. A row the same as the one before it is counted on
-that row instead of printed again:
+The agent builds the cycle's changes in turn, as "Building a cycle
+unattended" in [Coordinating changes](coordinating.md) says. It archives
+each one it finishes. As the rules say, it commits, pushes and opens the
+pull request.
+
+While it works, Grove prints one row per event: the time Grove read it,
+then a mark for its kind.
+
+- `▶` the session's start and its model.
+- `•` the first line of each message the agent writes.
+- `›` each tool it calls, with the first line of its input, such as a
+  command or a file path.
+- `✗` the first line of a tool's result, when it is an error. A result
+  that is not an error gets no row.
+- `·` thinking and other notices.
+- `■` the session's result, with its turns and cost.
+
+A row the same as the one before it is counted on that row, not printed
+again:
 
 ```text
 09:12:40 ▶ started: model claude-opus-5-5
@@ -128,23 +146,23 @@ that row instead of printed again:
 ```
 
 In a terminal, the rows are colored by kind and cut to its width, and a
-count goes up in place. Sent to a file or a pipe, as from a timer, they
-are plain text, never cut, and a counted row is printed once the next
-row differs. When the
-session ends, Grove says
+count goes up in place. Sent to a file or a pipe, as from a timer, the
+rows are plain text and never cut. A counted row is then printed once the
+next row differs. When the session ends, Grove says
 > Attempt 261021-6jbj1 ended: exit status 0; its output is /Users/you/grove-runs/ledger/.git/grove/261021-6jbj1.log.
 
 Exit status 0 means the session ended normally, not that every task is
 done; `implementation.md` and the pull request say that. Grove keeps two
-files per attempt in the checkout's `.git/grove/`, which `git status` does
-not show and nobody commits:
+files per attempt in the checkout's `.git/grove/`. `git status` does not
+show them, and nobody commits them:
 
 - `<attempt>.log`, every event the session emitted, one JSON object per
   line, as Claude Code's `stream-json` gives them, written as they come.
-- `<attempt>.json`, the record: when it started and `ended`, the `cycle`
-  it selected and its `changes` in build order, the target `commit`, the
-  `checkout`, the `branch`, the `output` file and the `outcome`, one of `exit status <n>`, `timed out`,
-  `cancelled` or `failed to start`.
+- `<attempt>.json`, the record. It holds when the attempt started and
+  `ended`, the `cycle` it selected and its `changes` in build order, the
+  target `commit`, the `checkout`, the `branch` and the `output` file. Its
+  `outcome` is one of `exit status <n>`, `timed out`, `cancelled` or
+  `failed to start`.
 
 ## Run a cycle you name
 
@@ -154,17 +172,24 @@ To build a planned cycle once, without marking it, name it:
 grove run 261020-m4k8t
 ```
 
-Grove builds that cycle whether or not it is marked `unattended`, as an
-ordinary run does in every other way: it refuses while the project is
-paused, unless you add `--retry`, records the attempt and pauses after it.
-A `grove run` given no cycle, such as a timer's, still builds only marked
-ones.
+Grove builds that cycle whether or not it is marked `unattended`. In
+every other way it is an ordinary run. It refuses while the project is
+paused, unless you add `--retry`. It records the attempt, and the project
+is paused after it. A `grove run` given no cycle, such as a timer's,
+still builds only marked ones.
 
-If the cycle cannot be built, Grove starts nothing, creates no branch and
-says why: there is no such cycle on the target, it is done, it follows a
-cycle that is not done, a change in it waits on one neither in the cycle
-nor archived as finished, its plan is stale, or a change in it needs a
-person:
+If the cycle cannot be built, Grove starts nothing and creates no
+branch. It says why, which is one of these:
+
+- there is no such cycle on the target;
+- it is done;
+- it follows a cycle that is not done;
+- a change in it waits on one that is neither in the cycle nor archived
+  as finished;
+- its plan is stale;
+- a change in it needs a person.
+
+Such as:
 
 > grove: 261019-p4x8d needs a person, as cycle 261020-m4k8t's needs_human says; build the cycle with /grove-implement 261020-m4k8t
 >
@@ -172,12 +197,12 @@ person:
 
 ## Without a remote
 
-In a checkout with no remote named `origin`, `grove run` fetches nothing:
-the local target branch is the fetched target. It selects a cycle there
-and creates the attempt's branch from it, and the record holds the local
-target's commit. Nobody opens a pull request, so in place of the push and
-`gh pr create` rule, have the agent commit what it leaves, such as the
-archive:
+In a checkout with no remote named `origin`, `grove run` fetches nothing.
+The local target branch stands in for the fetched target. Grove selects a
+cycle there and creates the attempt's branch from it, and the record
+holds the local target's commit. Nobody opens a pull request. So in place
+of the push and `gh pr create` rule, have the agent commit what it
+leaves, such as the archive:
 
 ```yaml
       - When you are done, commit everything left uncommitted.
@@ -195,43 +220,48 @@ request does with `origin`.
 
 ## The pause
 
-After an attempt, `grove run` starts nothing while a change of the cycle
-that attempt selected is not archived on the target, as finished or
-dropped:
+After an attempt, the project is paused. `grove run` starts nothing while
+any change of the attempt's cycle is not yet archived on the target, as
+finished or dropped:
 
 > grove: the project is paused after attempt 261021-6jbj1, whose output is /Users/you/grove-runs/ledger/.git/grove/261021-6jbj1.log; once you have dealt with it, run grove run --retry
 
-Merging the pull request archives the changes and ends the pause; the next
-`grove run` selects the next eligible cycle. Other merges, even of another
-marked cycle, do not end it. A change left blocked by a question stays
-open, so the project stays paused: answer the question with
-`/grove-propose <change-id>`, which re-plans the cycle on the same branch,
-merge that, then run `grove run --retry`; or drop the change with
-`/grove-archive <change-id>` and merge that. The revision and the re-plan
-must reach main as one commit, a squash or a merge commit: rebased or
-fast-forwarded as two, the revision makes the plan stale (see
-[Planning cycles](planning.md), "Re-plan a cycle").
+Merging the pull request archives the changes and ends the pause. The
+next `grove run` selects the next cycle it can build. Other merges, even
+of another marked cycle, do not end the pause.
+
+A change left blocked by a question stays open, so the project stays
+paused. There are two ways on:
+
+- Answer the question with `/grove-propose <change-id>`, which re-plans
+  the cycle on the same branch. Merge that, then run `grove run --retry`.
+  The revision and the re-plan must reach main as one commit, a squash or
+  a merge commit. Rebased or fast-forwarded as two commits, the revision
+  makes the plan stale (see [Planning cycles](planning.md), "Re-plan a
+  cycle").
+- Drop the change with `/grove-archive <change-id>`, and merge that.
 
 ## When a session is stopped
 
 A session has 2 hours unless you give another limit, such as
-`grove run --timeout 30m`. When the limit passes, or you press Ctrl-C, or
-`grove run` is sent `SIGTERM` (as launchd does to stop a job), Grove asks
-every process in the session's process group to stop, kills those still
-running 5 seconds later, and ends with
+`grove run --timeout 30m`. A session is stopped when the limit passes,
+when you press Ctrl-C, or when `grove run` is sent `SIGTERM`, as launchd
+does to stop a job. Grove then asks every process in the session's
+process group to stop, and kills those still running 5 seconds later. It
+ends with
 > grove: attempt 261021-6jbj1 ended: timed out; its output is /Users/you/grove-runs/ledger/.git/grove/261021-6jbj1.log
 
 or `cancelled`. The branch, its uncommitted files and the output stay as
 they were. A process that left the group, such as a server that started a
 session of its own, keeps running. If `grove run` itself is killed
-outright, it stops nothing: check with `ps` that no `claude -p` from it is
-still running before you start another.
+outright, it stops nothing. Before you start another, check with `ps`
+that no `claude -p` from it is still running.
 
 A stopped session's log holds each event up to the stop, so it shows what
 the session did, beside the branch and its files.
 
-Grove does not recover an attempt. Look at the branch and the output, then
-commit what is worth keeping and open its pull request yourself, or
+Grove does not recover an attempt. Look at the branch and the output.
+Then commit what is worth keeping and open its pull request yourself, or
 discard it:
 
 ```sh
@@ -248,13 +278,13 @@ Until the checkout is clean, `grove run` refuses:
 grove run --retry
 ```
 
-starts a new attempt as an unpaused `grove run` does, whatever the latest
-attempt selected. It starts from the fetched target, not from the last
-attempt's branch: to keep tasks that branch finished, merge its pull request
-first; otherwise the agent builds them again.
+starts a new attempt even while the project is paused, as an unpaused
+`grove run` would. It starts from the fetched target, not from the last
+attempt's branch. To keep the tasks that branch finished, merge its pull
+request first; otherwise the agent builds them again.
 
 If Claude Code cannot be started, such as when `claude` is not on `PATH`,
-the attempt ends `failed to start`, with the reason in its output, and the
-project is paused like after any attempt. Fix it and retry.
+the attempt ends `failed to start`, with the reason in its output. The
+project is paused, as after any attempt. Fix it and retry.
 
 Different projects, each in its own checkout, run independently.

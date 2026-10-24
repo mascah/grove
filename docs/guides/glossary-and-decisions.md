@@ -8,9 +8,10 @@ it is not part of what Grove does. Use it if it helps.
 Words drift as much as behavior does. One person's "old record" is
 another's "existing record", and an agent will happily invent a third name.
 This recipe keeps a glossary of your project's own terms, agreed the way
-specs are: a change carries the terms it adds or sharpens, your merge
-approves them, and archiving folds them into one glossary. It also keeps a
-short record of the few decisions a later reader would otherwise trip over.
+specs are. A change carries the terms it adds or sharpens. Your merge
+approves them, and archiving folds them into one glossary. The recipe also
+keeps a short record of the few decisions a later reader would otherwise
+trip over.
 
 It needs nothing beyond `rules` lines in `grove.yaml` (see
 [Reference](../reference.md), "grove.yaml").
@@ -54,6 +55,6 @@ Run `grove check` to see that `grove.yaml` still reads cleanly, and commit.
   glossary already defined.
 
 Grove itself knows nothing of these files. `grove check` does not read
-them, and `grove review` lists `grove/glossary.md` and `grove/decisions/` as
-`maintained spec`, its label for any file under the root outside `changes/`
-and `schemas/`.
+them. `grove review` lists `grove/glossary.md` and `grove/decisions/` as
+`maintained spec`: that is its label for any file under the root outside
+`changes/`, `schemas/` and `cycles/`.

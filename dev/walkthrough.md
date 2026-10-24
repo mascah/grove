@@ -3,8 +3,9 @@
 The working test script. It runs every step of
 [Getting started](../docs/getting-started.md) on the ledger fixture
 (`dev/fixture.md`), with what to type and what to expect, in Claude Code and
-again in Codex. The documentation is the specification (CONSTITUTION.md rule
-8); each step here names the page section it tests. Grove's output is quoted
+again in Codex. It runs the documentation's steps, as CONSTITUTION.md rule 8
+says; the maintained specs in `grove/specs/` are the specification. Each
+step here names the page section it tests. Grove's output is quoted
 only where it carries meaning.
 
 Setup: in the checkout or worktree under test, `eval "$(just dev-path)"`

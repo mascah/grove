@@ -21,14 +21,15 @@ grove init
 > Wrote grove.yaml and the Grove skills for claude and codex; nothing is committed.
 
 It chooses the agents from what your repository holds, such as `.claude/`
-or `AGENTS.md`, and Claude Code and Codex when it finds none. `agents` in
-`grove.yaml` lists them; change it and run `grove init` again to add an
-agent, or to have Claude Code's as commands, `/grove:explore`. The
+or `AGENTS.md`. When it finds none, it chooses Claude Code and Codex.
+`agents` in `grove.yaml` lists them. To add an agent, change it and run
+`grove init` again. The same way, you can have Claude Code's skills as
+commands, such as `/grove:explore`. The
 [init spec](https://github.com/mascah/grove/blob/main/grove/specs/init/spec.md) has the exact rules.
 
 Open `grove.yaml` and write, under `context`, what an agent working through
 Grove should always do, such as how to show a task is done. It is given to
-every skill, and to no other session; project facts every session needs
+every skill, and to no other session. Project facts every session needs
 stay in `CLAUDE.md` or `AGENTS.md` ([config spec](https://github.com/mascah/grove/blob/main/grove/specs/config/spec.md)). Keep it short:
 
 ```yaml
@@ -58,27 +59,28 @@ git switch -c rename-projects
 /grove-explore Users want to rename a project after creating it
 ```
 
-The agent reads the code and the project's specs and changes, then interviews
-you, one question at a time. It keeps apart what is agreed, what is approved
-and what the code merely does. Exploring writes nothing; when you want
-something kept, ask, or go on to propose.
+The agent reads the code and the project's specs and changes. Then it
+interviews you, one question at a time. It keeps apart what is agreed, what
+is approved and what the code merely does. Exploring writes nothing. When
+you want something kept, ask, or go on to propose.
 
 ### Try it first
 
-When a question's answer could change what you propose, such as how a new
-screen feels or whether a library can do what you need, the agent names the
-question and asks whether to prototype it. Say yes, or ask yourself:
+Some questions are best answered by trying something, such as how a new
+screen feels or whether a library can do what you need. When the answer
+could change what you propose, the agent names the question and asks
+whether to prototype it. Say yes, or ask yourself:
 
 ```text
 /grove-prototype Should renaming happen inline in the project list?
 ```
 
-The agent agrees the question and its limits with you, builds the simplest
-throwaway experiment on a branch such as `prototype/inline-rename`, runs
-it, and reports how to run it, what it observed, a verdict and what it
-cannot show. It writes no Grove document. When it asks, let it commit the
-experiment there, so the proposal can cite it. That branch is never merged;
-push it if you want to keep it.
+First the agent agrees the question and its limits with you. Then it
+builds the simplest throwaway experiment on a branch such as
+`prototype/inline-rename`, and runs it. It reports how to run it, what it
+observed, a verdict, and what it cannot show. It writes no Grove document.
+When it asks, let it commit the experiment there, so the proposal can cite
+it. That branch is never merged; push it if you want to keep it.
 
 When you go on to propose, the agent switches back to `rename-projects` and
 writes the findings into the proposal, citing the prototype's branch and
@@ -102,31 +104,43 @@ The agent writes a change folder, such as
 - `tasks.md`: the work, each task naming the files it touches and saying
   how to check it is done.
 
-Before writing, it lists every decision it would otherwise assume, each
-with a recommended answer, and waits for yours. The questions come in
-order of consequence: what changes behavior, scope or compatibility, or
-could lose data, first; then choices costly to reverse; and routine choices
-last, on one line of defaults that one "yes" accepts. If the idea is too
-big for one change, or has parts you could agree separately, it offers to
-write them as several changes on this branch, the later naming the earlier
-in `depends_on`. It may also recommend letting the implementer make some
-small choices alone, such as test layout or a new test file; if you agree,
-that task gets a `Delegated:` line naming them. It keeps anything you leave
-undecided as an open question, and says which task, if any, that question
-blocks. Before showing you the change, it checks that every requirement
-has an outcome you can observe and a task whose acceptance covers it, and
-that the scope, specs and tasks agree; it fixes what it can, tells you what
-it changed, and asks you about the rest. It runs
-`grove check` until the folder has no problems. You can
-also propose without exploring: `/grove-propose <description>`. To revise a
-drafted change later, run `/grove-propose <change-id>`.
+Before writing, the agent asks you one round of questions. It lists every
+decision it would otherwise assume, each with a recommended answer, and
+waits for yours. The questions come in order of consequence:
 
-When it is done, the agent offers two next steps and picks neither: merge
-the change now to approve it, as §4 does, or build it on this branch first,
-so one merge approves it with its code. For the second, stay on
-`rename-projects` and run `/grove-implement 261015-k3m9q` there, as §5
-describes; the agent treats the change as a draft and edits it only with
-your agreement. After the archive, `grove review` says
+- first, what changes behavior, scope or compatibility, or could lose data;
+- then, choices that are costly to reverse;
+- last, routine choices, on one line of defaults that one "yes" accepts.
+
+The idea may be too big for one change, or have parts you could agree
+separately. Then the agent offers to write several changes on this branch.
+Each later one names the earlier in `depends_on`.
+
+The agent may also recommend letting the implementer make some small
+choices alone, such as test layout or a new test file. If you agree, that
+task gets a `Delegated:` line naming them.
+
+Anything you leave undecided stays an open question. The agent says which
+task, if any, that question blocks.
+
+Before showing you the change, the agent checks it. Every requirement needs
+an outcome you can observe, and a task whose acceptance covers it. The
+scope, specs and tasks must agree. The agent fixes what it can, tells you
+what it changed, and asks you about the rest. It runs `grove check` until
+the folder has no problems.
+
+You can also propose without exploring: `/grove-propose <description>`. To
+revise a drafted change later, run `/grove-propose <change-id>`.
+
+When it is done, the agent offers two next steps and picks neither:
+
+- merge the change now to approve it, as §4 does;
+- or build it on this branch first, so one merge approves it with its code.
+
+For the second, stay on `rename-projects` and run
+`/grove-implement 261015-k3m9q` there, as §5 describes. The agent treats the
+change as a draft, and edits it only with your agreement. After the
+archive, `grove review` says
 
 > Merging rename-projects into main approves change 261015-k3m9q with its code.
 
@@ -164,23 +178,30 @@ The merge is the approval. Approved means agreed future work, not built.
 /grove-implement 261015-k3m9q
 ```
 
-The agent works through the tasks with tests, tells you how to try each one,
-and records each task's status and evidence in the change's
+The agent works through the tasks with tests, and tells you how to try each
+one. It records each task's status and evidence in the change's
 `implementation.md`. If an open question decides how a task is built, the
 agent does not guess: it asks you. If you say to leave it, it marks that
-task blocked, writes the question there, and builds the rest. Before it
-finishes, it runs the tests, rechecks each done task's evidence against the
-code as it now is, putting a task it no longer holds for back in progress,
-and lists each scenario of the change's specs under `## Scenarios` in
-`implementation.md` with the test that shows it, or `unverified` and why.
+task blocked, writes the question there, and builds the rest.
+
+Before it finishes, the agent checks its work:
+
+- It runs the tests.
+- It rechecks each done task's evidence against the code as it now is. A
+  task whose evidence no longer holds goes back to in progress.
+- It lists each scenario of the change's specs under `## Scenarios` in
+  `implementation.md`, with the test that shows it, or `unverified` and
+  why.
+
 Its report, and archiving, name each unverified scenario.
 
-The agent makes the choices and changes the paths a task's `Delegated:`
-line names without asking you; anything else beyond `Files:` it asks
-about. If it finds that the agreed approach is wrong, even where the task
-could still be built as written, it stops that task and tells you what it
-found and the revision the change needs. `/grove-implement --unattended`
-ignores `Delegated:` and keeps to `Files:`.
+A task's `Delegated:` line names choices and paths the agent may take
+without asking you. Anything else beyond the task's `Files:` it asks about.
+`/grove-implement --unattended` ignores `Delegated:` and keeps to `Files:`.
+
+The agent may find that the agreed approach is wrong. Then it stops that
+task, even if the task could still be built as written. It tells you what
+it found and the revision the change needs.
 
 When your answer or your feedback changes what the change says, the agent
 tells you which of its proposal, specs and tasks it would edit and how. Once
@@ -188,16 +209,16 @@ you agree, it edits them on this branch and builds to them. Merging the
 branch approves the revision with the code, and `grove review` shows it.
 
 `/grove-implement 261015-k3m9q --unattended` builds the change without
-you: it asks no one, marks a task an open question decides blocked, and
-never edits the change. Given a cycle's ID it builds each change of the
-cycle the same way (see [Planning cycles](planning.md)), and `grove run`
-uses it (see [Running unattended](running.md)).
+you. It asks no one. It marks blocked a task that an open question decides,
+and it never edits the change. Given a cycle's ID, it builds each change of
+the cycle the same way (see [Planning cycles](planning.md)). `grove run`
+uses it too (see [Running unattended](running.md)).
 
-When every task is done, the agent archives the change: it merges the
-change's specs into the maintained specs in `grove/specs/`, then runs
+When every task is done, the agent archives the change. It merges the
+change's specs into the maintained specs in `grove/specs/`. Then it runs
 `grove archive`, which moves the change to `grove/changes/archive/`.
-`/grove-archive 261015-k3m9q` does the same by hand, and is how a change
-you will not build is dropped. The exact rules are in the
+`/grove-archive 261015-k3m9q` does the same by hand. It is also how you
+drop a change you will not build. The exact rules are in the
 [implement spec](https://github.com/mascah/grove/blob/main/grove/specs/implement/spec.md) and, for archiving, the
 [requirements spec](https://github.com/mascah/grove/blob/main/grove/specs/requirements/spec.md).
 

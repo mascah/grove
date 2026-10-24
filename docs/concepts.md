@@ -43,8 +43,8 @@ that commit approves it.
 
 A small change can take one merge instead of two. Propose it on a branch,
 then build it there with `/grove-implement <change-id>`, with you in the
-session: merging that branch approves the change with its code, and lands
-the updated specs and the archived change too. Grove sets no size; you
+session. Merging that branch approves the change with its code. The same
+merge lands the updated specs and the archived change. Grove sets no size; you
 decide what is small. `--unattended` and `grove run` build only changes
 your main branch already holds.
 
@@ -71,27 +71,27 @@ flowchart LR
 
 1. **Explore.** A conversation with your agent about what you want and what
    is true today. It writes nothing unless you ask.
-2. **Prototype**, when it helps. When a question's answer could change
-   what you propose, such as how something feels or whether it is
-   feasible, the agent builds a throwaway experiment on a
-   `prototype/<slug>` branch that is never merged, and reports a verdict.
-   It writes no Grove document; its findings reach the main branch only in
-   a proposal, which cites the branch and commit.
+2. **Prototype**, when it helps. Some questions could change what you
+   propose, such as how something feels or whether it is feasible. For
+   those, the agent builds a throwaway experiment on a `prototype/<slug>`
+   branch and reports a verdict. That branch is never merged, and the
+   prototype writes no Grove document. Its findings reach the main branch
+   only in a proposal, which cites the branch and commit.
 3. **Propose.** The agent writes a change from the conversation or from a
-   description. First it asks you, in one numbered round with a
-   recommended answer to each, every decision it would otherwise assume;
-   what you leave open becomes an open question, never an assumption.
+   description. First it asks you every decision it would otherwise
+   assume, in one numbered round, with a recommended answer to each. What
+   you leave open becomes an open question, never an assumption.
 4. **Review and merge.** You read the change and merge it. Now it is
-   approved. Or, for a small change, skip this merge: implement it on the
-   same branch with you, and the one merge after step 6 approves it with
-   its code.
+   approved. A small change can skip this merge: implement it on the same
+   branch with you. Then the one merge after step 6 approves it with its
+   code.
 5. **Implement.** The agent builds the change on a branch with you and
-   records progress. It asks you what the change leaves open and, with
-   your agreement, revises the change on that branch; your merge then
-   approves the revision with the code. With `--unattended` it builds a
-   change, or a cycle of changes in order, without you: it asks no one,
-   marks a task an open question decides blocked, and never edits a
-   change. A cycle is approved changes planned together (see
+   records progress. It asks you what the change leaves open. With your
+   agreement, it revises the change on that branch, and your merge
+   approves the revision with the code. With `--unattended`, it builds a
+   change, or a cycle of changes in order, without you. Then it asks no
+   one: a task an open question decides is marked blocked, and the change
+   itself is never edited. A cycle is approved changes planned together (see
    [Planning cycles](planning.md)).
 6. **Archive.** When every task is done, the agent folds the change's specs
    into the maintained specs and moves the change to
@@ -103,14 +103,17 @@ it in `depends_on` (see [Coordinating changes](coordinating.md)).
 A change you decide not to build is archived too, without touching the
 specs; its `implementation.md` says `Status: dropped` and why.
 
-What Grove requires at each step is the same in every project: exploring
-writes nothing unless you ask, prototyping writes no Grove document and
-never merges its branch, only your merge approves a change,
-implementing builds the change as your main branch holds it,
-or as you agreed to revise it while implementing, and record each task's
-status in `implementation.md`, and archiving refuses a change that is
-neither finished nor dropped, or a finished one whose requirements the
-maintained specs do not hold word for word.
+What Grove requires at each step is the same in every project:
+
+- Exploring writes nothing unless you ask.
+- Prototyping writes no Grove document and never merges its branch.
+- Only your merge approves a change.
+- Implementing builds the change as your main branch holds it, or as you
+  agreed to revise it while implementing. It records each task's status
+  in `implementation.md`.
+- Archiving refuses a change that is neither finished nor dropped. It
+  also refuses a finished change whose requirements the maintained specs
+  do not hold word for word.
 
 ## Why archive folds a change into the specs
 
@@ -178,17 +181,57 @@ capability's ID is a short lowercase name, such as `projects`.
 
 ## Glossary
 
-- **Approved:** merged into the target branch.
+Each page uses these words in these meanings. A page may say again what a
+word means where you need it; where it says it differently, this list
+holds.
+
+- **Approved:** merged into the target branch. Approved means agreed, not
+  built.
 - **Archive:** fold a change's specs into the maintained specs and move it to
   `changes/archive/`.
+- **Archived as finished:** archived with every task done. A change that
+  waits on another can be built once that one is archived as finished.
+- **Attempt:** one session that `grove run` starts, with its own ID, branch
+  and record in `.git/grove/`.
+- **Base:** the commit of the target a change was proposed from, written in
+  its `.grove.yaml`.
+- **Blocked:** a task the agent could not build, because an open question
+  decides it or the change cannot be built as it says. Its
+  `implementation.md` says `Status: blocked` and why.
+- **Build order:** the order a cycle's changes are built in: each after the
+  changes it waits on, otherwise oldest first.
 - **Capability:** one area of behavior, with one maintained spec.
 - **Change:** a folder proposing future work.
 - **Change schema:** what a kind of change consists of and how each skill
   goes for it; Grove's are `default` and `bugfix`.
 - **Context:** instructions in `grove.yaml` given to every skill, so they
   reach agents working through Grove and no other session.
+- **Cycle:** approved changes planned to be built together, in a file under
+  `cycles/`. It is **done** when every change in it is archived, finished
+  or dropped.
+- **Draft:** a change, or any Grove document, that your working tree holds
+  and the target does not. It is not agreed until it is merged.
+- **Dropped:** archived without being built. Its `implementation.md` says
+  `Status: dropped` and why, and it never counts as finished.
 - **Harness:** the program you run your coding agent in. `grove init` writes
   skills for each harness `grove.yaml` lists.
 - **Maintained spec:** agreed behavior of one capability.
+- **Needs a person:** said of a change in a cycle whose `needs_human` names
+  it, because you said an unattended session cannot build it.
+- **Paused:** after an attempt, `grove run` starts nothing until the
+  attempt's cycle is archived on the target.
+- **Planned:** the commit of the target a cycle's plan read, written in its
+  file as `planned`.
 - **Skill:** a chat command Grove installs for your harness.
+- **Stale:** out of date with the target. A change is stale when a
+  requirement it modifies or removes was rewritten or removed since its
+  base. A change in no cycle that is not done is also stale when a file
+  one of its tasks names changed on the target since its base. A cycle is
+  stale when one of its changes, or a file their tasks name, changed on the
+  target since it was planned.
 - **Target:** the branch whose contents count as agreed, usually `main`.
+- **Unattended:** built with no one in the session, asking no one. A cycle
+  marked `unattended: true` is handed to a `grove run` given no cycle.
+- **Waits on:** a change waits on each change its `depends_on` names until
+  that one is archived as finished; a cycle waits on each cycle its
+  `depends_on` names until that one is done.

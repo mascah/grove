@@ -37,11 +37,13 @@ Skills run these; you do not need to:
 
 ## Harnesses
 
-`grove init` writes a file for each of Grove's six skills, explore,
-prototype, propose, plan, implement and archive, for each harness under `agents` in
-`grove.yaml`: as a skill, or as a command where the harness has commands,
-and removes the files of skills Grove no longer has, such as `grove-apply`.
-How you type implement, the others alike:
+Grove has six skills: explore, prototype, propose, plan, implement and
+archive. `grove init` writes a file for each of them, for each harness
+under `agents` in `grove.yaml`. It writes them as skills, or as commands
+where the harness has commands. It also removes the files of skills Grove
+no longer has, such as `grove-apply`.
+
+How you type implement, and the other skills alike:
 
 | Harness | `agents` key | As skills | As commands |
 | --- | --- | --- | --- |
@@ -71,19 +73,26 @@ Two harnesses read a project's files only once you trust it: in Hermes, run
 `hermes skills trust` in the repository; in Pi, trust the project when it
 asks, or with `/trust`.
 
-The first `grove init`, with no `grove.yaml`, chooses the harnesses from
-what the repository holds, each as skills: `.claude/` or `CLAUDE.md` gives
-`claude`, `.codex/` or `AGENTS.md` gives `codex`, `.cursor/` gives
-`cursor`, `.opencode/` or `opencode.json` gives `opencode`, `.pi/` gives
-`pi`, and `.hermes/` gives `hermes`. With none of these, it chooses `claude`
-and `codex`. It writes them under `agents`, and says which it chose.
+The first `grove init` runs where there is no `grove.yaml`. It chooses the
+harnesses from what the repository holds, each as skills:
 
-Later runs follow `agents` and nothing else. Each run writes every file the
-harnesses listed have, overwriting edits to them, and removes Grove's files
-that `agents` no longer gives: those of a harness taken out, of a form
-changed, or of a skill Grove no longer has. It looks only in the places in
-the table above, and removes only `grove-` folders and files, and files in
-`.claude/commands/grove/`. Its message names each one it removed. The
+- `.claude/` or `CLAUDE.md` gives `claude`.
+- `.codex/` or `AGENTS.md` gives `codex`.
+- `.cursor/` gives `cursor`.
+- `.opencode/` or `opencode.json` gives `opencode`.
+- `.pi/` gives `pi`.
+- `.hermes/` gives `hermes`.
+
+With none of these, it chooses `claude` and `codex`. It writes them under
+`agents`, and says which it chose.
+
+Later runs follow `agents` and nothing else. Each run writes every file of
+the harnesses listed, overwriting edits to them. It also removes Grove's
+files that `agents` no longer gives: those of a harness taken out, of a
+form changed, or of a skill Grove no longer has. It looks only in the
+places in the table above. There it removes only `grove-` folders and
+files, and files in `.claude/commands/grove/`. Its message names each one
+it removed. The
 [init spec](https://github.com/mascah/grove/blob/main/grove/specs/init/spec.md) has the exact rules.
 
 ## grove.yaml
@@ -117,12 +126,12 @@ rules:
 | `context` | empty | Instructions given to every skill, so they reach agents working through Grove and no other session; project facts every session needs stay in `CLAUDE.md` or `AGENTS.md`. |
 | `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `prototype`, `propose`, `plan`, `implement`, `archive`; lines under `implement` are given with the owner and with `--unattended`. |
 
-`grove check` reports a field or `rules` key that Grove does not know; other
-commands ignore it. A `rules.skills.apply` key, from before apply became
-`implement --unattended`, is reported as saying its lines go under
-`rules.skills.implement`. It also reports a harness under `agents` that Grove has
-no row for, or a form that harness does not have, and `init` stops at
-either.
+`grove check` reports a field or a `rules` key that Grove does not know.
+Other commands ignore it. A `rules.skills.apply` key is from before apply
+became `implement --unattended`; `grove check` says its lines go under
+`rules.skills.implement`. `grove check` also reports a harness under
+`agents` that Grove does not know, or a form that harness does not have.
+`init` stops at either.
 
 `context` and `rules` add to Grove's own instructions; they cannot remove
 or replace them. Short rules work better than long ones. The
@@ -133,9 +142,10 @@ asks, as `implement` does above.
 
 ## Change schemas
 
-A change schema says what a change consists of and how each skill goes: its
-kinds of document, each with a path, a template and a guide, and for each
-skill its guide and the kinds of document it writes. Grove has two built-in
+A change schema says what a change consists of and how each skill goes.
+It lists kinds of document, each with a path, a template and a guide. For
+each skill, it gives the skill's guide and the kinds of document it
+writes. Grove has two built-in
 schemas ([schemas spec](https://github.com/mascah/grove/blob/main/grove/specs/schemas/spec.md)): `bugfix`, for behavior that is wrong (see "Grove's bugfix"), and
 `default`, the software change [Concepts](concepts.md) describes:
 
@@ -151,18 +161,25 @@ A schema's folder holds `schema.yaml`, a folder for each kind of document,
 `documents/<kind>/` with its `template.md` and `guide.md`, and the guide for
 each skill, `skills/<skill>.md`.
 
-A schema cannot change Grove's skills or what Grove requires of each, which
-its instructions give first, such as propose asking one round of every
-decision it would otherwise assume before it writes; that a merge approves a change; a change's
-`.grove.yaml`; or how progress is recorded: each task is a `T-NN` heading in
-`tasks.md`, naming the files it touches on a `Files:` line and the
-interfaces it produces on an `Interfaces:` line, with an optional
-`Delegated:` line, which Grove does not read, naming choices and paths the
-implementer may take without asking the owner, and its status a `Status:`
-line in `implementation.md`, which `grove archive` reads. So every schema has `tasks` and `implementation` at
-those paths, keeps the `Status:` lines of Grove's implementation template,
-and has one kind with `metadata: changes/<change>/.grove.yaml`, the change's
-main document; no other kind has `metadata`. Its other kinds are in the change folder, except `spec`.
+Some things a schema cannot change:
+
+- Grove's skills, and what Grove requires of each. A skill's instructions
+  give those first, such as propose asking one round of every decision it
+  would otherwise assume before it writes.
+- That a merge approves a change.
+- A change's `.grove.yaml`.
+- How progress is recorded. Each task is a `T-NN` heading in `tasks.md`.
+  It names the files it touches on a `Files:` line, and the interfaces it
+  produces on an `Interfaces:` line. An optional `Delegated:` line names
+  choices and paths the implementer may take without asking the owner;
+  Grove does not read it. A task's status is a `Status:` line in
+  `implementation.md`, which `grove archive` reads.
+
+So every schema has `tasks` and `implementation` at those paths, and keeps
+the `Status:` lines of Grove's implementation template. Every schema has
+one kind with `metadata: changes/<change>/.grove.yaml`: the change's main
+document. No other kind has `metadata`. Every other kind is in the change
+folder, except `spec`.
 
 To add lines to Grove's instructions rather than replace a file, use `rules`
 in `grove.yaml`.
@@ -171,14 +188,20 @@ in `grove.yaml`.
 
 To change one of `default`'s files, put your own at the same path under
 `grove/schemas/default/`, such as `grove/schemas/default/documents/tasks/template.md`.
-It replaces Grove's file whole; every file you do not put there stays
+It replaces Grove's file whole. Every file you do not put there stays
 Grove's, including later improvements to it. A skill's instructions include
 the guides and templates it uses, so `grove instructions propose "x"` shows
-the proposal, change-spec and tasks templates to start from. Grove fills in
-a template's `{{change}}` (the change's ID), `{{title}}` (once the change
-has one), `{{created}}`, `{{schema}}`, `{{base}}` (the target's commit,
-shortened to seven characters) and `{{commit}}` (the target's full
-commit) before printing it; put them back where you copy one.
+the proposal, change-spec and tasks templates to start from.
+
+Before printing a template, Grove fills in these values. Put them back
+where you copy one.
+
+- `{{change}}`: the change's ID.
+- `{{title}}`: its title, once it has one.
+- `{{created}}`: when it was created.
+- `{{schema}}`: its schema.
+- `{{base}}`: the target's commit, shortened to seven characters.
+- `{{commit}}`: the target's full commit.
 
 ### A schema of your own
 
@@ -200,26 +223,36 @@ skills:
 | `skills` | For a skill, such as `propose`, its `guide` and the kinds it `writes`. A field or skill left out is `default`'s. |
 
 Each file the schema needs comes from `grove/schemas/<name>/`, else from
-`grove/schemas/default/`, else from Grove's `default`. A file of your own
-for `default` is so your other schemas' too, unless they have their own.
+`grove/schemas/default/`, else from Grove's `default`. So a file of your
+own for `default` is also your other schemas' file, unless they have
+their own.
 
-A change has a schema, which its `.grove.yaml` names as `schema`, and keeps
-it: revising, implementing and archiving the change use it. A change without
-one has `default`. A new change has `grove.yaml`'s `schema`, unless the owner
-says which kind of work it is while exploring or proposing: the
-instructions list the project's schemas, Grove's two first, the agent
-suggests `bugfix` when the owner describes behavior that is wrong, and once
-the owner confirms a schema it asks for `grove instructions propose
---schema <name>`. To change a change's schema, edit its `.grove.yaml`.
+A change has a schema, which its `.grove.yaml` names as `schema`. It keeps
+that schema: revising, implementing and archiving the change use it. A
+change without one has `default`. To change a change's schema, edit its
+`.grove.yaml`.
+
+A new change has `grove.yaml`'s `schema`, unless the owner says which kind
+of work it is while exploring or proposing. For that, the instructions
+list the project's schemas, Grove's two first. The agent suggests
+`bugfix` when the owner describes behavior that is wrong. Once the owner
+confirms a schema, the agent asks for `grove instructions propose
+--schema <name>`.
+
 Schemas are shared by copying their folder.
 
-`grove check` reports a mistake in a schema: an unknown field in its
-`schema.yaml`, a kind a skill writes that the schema does not list, a file
-it names that is in none of its places, a file in its folder that it
-does not use (often a misspelled path), `tasks` or `implementation` missing
-or moved, and a `schema` in `grove.yaml` or a change's `.grove.yaml` that
-names no schema. A skill's instructions are not built from a schema with
-any of these but the unknown field and the unused file.
+`grove check` reports these mistakes in a schema:
+
+- an unknown field in its `schema.yaml`;
+- a kind a skill writes that the schema does not list;
+- a file it names that is in none of its places;
+- a file in its folder that it does not use, often a misspelled path;
+- `tasks` or `implementation` missing or moved;
+- a `schema` in `grove.yaml` or a change's `.grove.yaml` that names no
+  schema.
+
+Grove builds no skill's instructions from a schema with one of these
+mistakes, except the unknown field and the unused file.
 
 ### Grove's bugfix
 
@@ -239,12 +272,17 @@ has its own description, propose guide, and proposal template and guide:
   fails before the fix.
 
 `grove instructions propose --schema bugfix "x"` shows its files as a
-session gets them. Each comes from `grove/schemas/bugfix/`, else from
-Grove's `bugfix`, else from `grove/schemas/default/`, else from Grove's
-`default`, and each field of its `schema.yaml` from the first of those that
-gives it. So to replace one of its files, put yours at the same path under
+session gets them. Each file comes from the first of these places that
+has it, and each field of its `schema.yaml` from the first that gives it:
+
+1. `grove/schemas/bugfix/`
+2. Grove's `bugfix`
+3. `grove/schemas/default/`
+4. Grove's `default`
+
+So to replace one of its files, put yours at the same path under
 `grove/schemas/bugfix/`, such as
-`grove/schemas/bugfix/documents/proposal/template.md`; the rest stay
+`grove/schemas/bugfix/documents/proposal/template.md`. The rest stay
 Grove's. A file of your own for `default`, such as a tasks template,
 reaches `bugfix` too, unless `grove/schemas/bugfix/` has its own.
 
@@ -270,27 +308,45 @@ grove/
 ```
 
 A folder under `specs/` is a maintained spec when it holds `spec.md`
-([maintained-specs spec](https://github.com/mascah/grove/blob/main/grove/specs/maintained-specs/spec.md)). Its
-title is the file's first `# ` heading, which `grove check` reports when
-there is none, and its description, in each skill's project index, is the
-first sentence of its `## Purpose`. A spec has no `.grove.yaml`; `grove
-check` reports one left in a spec folder as no longer read until it is
-deleted. A folder under `changes/` is a change when it holds a
-`.grove.yaml`; `grove check` reports one without its main document, the
-change's schema's, `proposal.md` in `default`. A change's `.grove.yaml`
-holds its `title`, when it was `created`, its `schema`, and `base`, the
-full commit of the target it was proposed from, which propose writes from
-Grove's template. It may add a one-line `description`, shown in lists, and
-`depends_on`, the list of change IDs it waits on (see
-[Coordinating changes](coordinating.md)). The folder name gives the ID: a spec's is the
-whole name, a change's the start of it. A change's main document starts
-with the title as its heading, and `grove check` reports one whose first
-heading is not `# ` and the title. A change's other files have no metadata: their
-folder names their change. A cycle file's name starts with its ID, and it
-holds its `title`, when it was `created`, an optional one-line `goal`, `changes`, the list of
-approved change IDs in it, an optional `depends_on`, the IDs of the cycles it
-follows, `planned`, the full commit of the target its
-plan read, an optional `needs_human`, each change the owner said needs a
-person with their reason, and an optional `unattended: true`, which hands
-it to `grove run` (see [Planning cycles](planning.md)). The change folder above is `default`'s;
-`schemas/` holds the project's own change schemas (see "Change schemas").
+([maintained-specs spec](https://github.com/mascah/grove/blob/main/grove/specs/maintained-specs/spec.md)).
+Its ID is the folder's name. Its title is the file's first `# ` heading;
+`grove check` reports a spec with none. Its description, in each skill's
+project index, is the first sentence of its `## Purpose`. A spec has no
+`.grove.yaml`. `grove check` reports one left in a spec folder as no
+longer read, until it is deleted.
+
+A folder under `changes/` is a change when it holds a `.grove.yaml`. Its
+ID is the start of the folder's name. `grove check` reports a change
+without its main document: its schema's, which is `proposal.md` in
+`default`. The main document starts with the change's title as its
+heading, and `grove check` reports one whose first heading is not `# `
+and the title. A change's other files have no metadata: their folder
+names their change.
+
+A change's `.grove.yaml` holds:
+
+- `title`;
+- `created`, when it was created;
+- `schema`;
+- `base`, the full commit of the target it was proposed from;
+- optionally `description`, one line shown in lists;
+- optionally `depends_on`, the IDs of the changes it waits on (see
+  [Coordinating changes](coordinating.md)).
+
+Propose writes it from Grove's template.
+
+A cycle file's name starts with its ID. It holds:
+
+- `title`;
+- `created`, when it was created;
+- optionally `goal`, one line;
+- `changes`, the IDs of the approved changes in it;
+- optionally `depends_on`, the IDs of the cycles it follows;
+- `planned`, the full commit of the target its plan read;
+- optionally `needs_human`, each change the owner said needs a person,
+  with their reason;
+- optionally `unattended: true`, which hands it to `grove run` (see
+  [Planning cycles](planning.md)).
+
+The change folder above is `default`'s. `schemas/` holds the project's own
+change schemas (see "Change schemas").
