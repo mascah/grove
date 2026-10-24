@@ -50,9 +50,13 @@ The five cases, on Grove as cycle B leaves it:
 | (d) A stale proposal after related code changes | Step 1; propose "Monthly budgets in report" and merge; then a commit on main making `format_report` in `ledger/report.py` list categories by amount, largest first. | On a branch, `/grove-implement <budgets-id>` | Names the commit to `ledger/report.py`, says what it means for the task, and asks before building; builds nothing on the old reading. |
 | (e) A fresh session picking up half-done work | Step 1; propose "Add ledger delete ID" with two tasks, the command with its test and the README and CHANGELOG, and merge; on a branch, `/grove-implement <id>`, stopped once `implementation.md` says T-01 is done, committing nothing. | A fresh session on that branch, `/grove-implement <id>` | Reads `implementation.md`, reruns the tests to recheck T-01 instead of rebuilding or asking what is done, builds T-02, and claims nothing it did not check. |
 
-The trials are run by hand in Claude Code and in Codex whenever a pull
+`just trials` runs them, in Claude Code and in Codex, whenever a pull
 request changes instruction text, and the counts go in that pull
-request's description. The first run, on Grove as cycle B leaves it, is
+request's description. A script under `dev/trials/` writes each case's
+setup on a fresh fixture itself, drives the agent headless, answers its
+questions from a fixed list for the case, counts the edits outside
+`Files:`/`Delegated:` and the words read, and has a model judge the other
+three counts from the transcript and the case's "a good run". The first run, on Grove as cycle B leaves it, is
 the baseline the cuts of change 261023-ejarr are measured against.
 
 ## Scope
@@ -61,6 +65,8 @@ the baseline the cuts of change 261023-ejarr are measured against.
 
 - `dev/trials.md`: the five cases and the five counts, with how each
   count is taken in Claude Code and in Codex.
+- `dev/trials/`: the script that runs the trials, each case's setup and
+  answers, and a `just trials` recipe.
 - The `CLAUDE.md` layout table listing `dev/trials.md`.
 - `CONTRIBUTING.md`, "Tests": run the trials when instruction text
   changes, results in the pull request's description.
@@ -69,8 +75,6 @@ the baseline the cuts of change 261023-ejarr are measured against.
 
 ### Out of scope
 
-- Automating the trials, or a harness to run them: rule 17 allows none
-  without a reproduced bug.
 - A pass mark: the counts are reported for the owner to read.
 - Any change to what Grove does, so no change spec and no `docs/` task
   (rule 8): `dev/` is not the specification.
@@ -91,10 +95,19 @@ every answer below in one round ("yes to C & D").
   `Files:`/`Delegated:`, done claims without evidence, and words the
   owner had to read. Reason: the Codex review; measuring skill behavior
   is a better simplicity budget than word count alone.
-- **Run by hand in Claude Code and Codex whenever skill text changes;
-  results go in that pull request's description.** No automation, no
-  harness (rule 17). A task records the first baseline run, its results
-  in the implementing pull request's description.
+- **Run in Claude Code and Codex whenever skill text changes; results go
+  in that pull request's description.** A task records the first
+  baseline run, its results in the implementing pull request's
+  description.
+- **A script runs the trials, not a person.** Revised while implementing,
+  on 2026-10-23: "These trials are too time consuming for me to sit here
+  and manually perform. I think we need to setup some sort of eval
+  harness to be able to more easily and repeatably perform these trials
+  when changes are made to re measure things." The owner chose to amend
+  rule 17 first (PR #72, merged), and in one round: scripted replies
+  answer the agent, so before and after runs compare; a model judges
+  unneeded questions, missed decisions and done claims without evidence;
+  the script writes each setup itself, with no agent sessions.
 - **First in cycle C,** so the cuts of change 261023-ejarr are measured
   against it. Its `depends_on` names cycle B's five changes, so the
   baseline runs on Grove as cycle B leaves it.
