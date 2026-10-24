@@ -1,9 +1,9 @@
 # Grove's built-in change schema, default (CONSTITUTION.md rule 10): a plain
 # list of document kinds and, for each skill, its guide and the kinds it
 # writes. A path is relative to the document root; <change> is the change's
-# folder name and <capability> a capability's ID. A kind with metadata is
-# written with that .grove.yaml beside it, from Grove's own template; the
-# change's is its main document. It holds no dependencies between steps and
+# folder name and <capability> a capability's ID. The kind with metadata,
+# the change's main document, is written with that .grove.yaml beside it,
+# from Grove's own template. It holds no dependencies between steps and
 # no status.
 description: "Software changes: a proposal, the change to each affected capability's requirements, and tasks."
 documents:
@@ -28,7 +28,6 @@ documents:
     path: specs/<capability>/spec.md
     template: documents/spec/template.md
     guide: documents/spec/guide.md
-    metadata: specs/<capability>/.grove.yaml
 skills:
   explore:
     guide: skills/explore.md

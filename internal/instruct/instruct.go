@@ -66,16 +66,9 @@ type Step struct {
 }
 
 // changeMetadata is where a change's metadata goes; the kind that names it
-// is the change's main document.
+// is the change's main document. Its template is Grove's own, not a
+// schema's, so no schema changes the fields Grove reads.
 const changeMetadata = "changes/<change>/.grove.yaml"
-
-// metadataTemplates are Grove's own templates for the .grove.yaml a kind's
-// metadata names. They are not a schema's, so no schema changes the fields
-// Grove reads.
-var metadataTemplates = map[string]string{
-	changeMetadata:                   "metadata/change.grove.yaml",
-	"specs/<capability>/.grove.yaml": "metadata/spec.grove.yaml",
-}
 
 func init() {
 	if err := yaml.Unmarshal([]byte(embedded("skills.yaml")), &skills); err != nil {
@@ -327,8 +320,8 @@ func (p Project) problems(s Schema) []string {
 	kinds, mains := map[string]Kind{}, 0
 	for _, k := range s.Documents {
 		kinds[k.Kind] = k
-		if _, ok := metadataTemplates[k.Metadata]; k.Metadata != "" && !ok {
-			report("%s: metadata must be %s or specs/<capability>/.grove.yaml", k.Kind, changeMetadata)
+		if k.Metadata != "" && k.Metadata != changeMetadata {
+			report("%s: metadata must be %s", k.Kind, changeMetadata)
 		}
 		if k.Metadata == changeMetadata {
 			mains++
@@ -418,7 +411,7 @@ func build(p Project, s, name, task string, fill *strings.Replacer, c *doc.Chang
 		d := Document{Kind: k.Kind, Path: p.Root + "/" + fill.Replace(k.Path),
 			Guide: file(k.Guide), Template: fill.Replace(file(k.Template)), Rules: p.Rules.Documents[k.Kind]}
 		if k.Metadata != "" {
-			d.Metadata, d.MetadataTemplate = p.Root+"/"+fill.Replace(k.Metadata), fill.Replace(embedded(metadataTemplates[k.Metadata]))
+			d.Metadata, d.MetadataTemplate = p.Root+"/"+fill.Replace(k.Metadata), fill.Replace(embedded("metadata/change.grove.yaml"))
 		}
 		in.Documents = append(in.Documents, d)
 	}
