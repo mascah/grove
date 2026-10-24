@@ -33,7 +33,9 @@ commit() { git add -A && git commit -qm "$1"; }
 spec() {
   put "grove/specs/$1/spec.md"
   printf 'title: %s\n' "$2" > "grove/specs/$1/.grove.yaml"
-  if grove check 2>/dev/null | grep -q "specs/$1/.grove.yaml: no longer read"; then rm "grove/specs/$1/.grove.yaml"; fi
+  local out
+  out=$(grove check 2> /dev/null || true)
+  if grep -q "specs/$1/.grove.yaml: no longer read" <<< "$out"; then rm "grove/specs/$1/.grove.yaml"; fi
 }
 # edit replaces old with new, both literal, once in file.
 edit() { python3 -c 'import sys; p,o,n=sys.argv[1:]; s=open(p).read(); assert o in s, (p,o); open(p,"w").write(s.replace(o,n,1))' "$@"; }
