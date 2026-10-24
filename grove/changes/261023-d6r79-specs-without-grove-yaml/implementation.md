@@ -62,7 +62,22 @@ Status: done
 
 ### T-04 — Document specs without .grove.yaml
 
-Status: not started
+Status: done
+
+- `docs/reference.md`, "Files": no `.grove.yaml` under
+  `specs/<capability>/`; a spec is a folder holding `spec.md`, titled by
+  its first `# ` heading and described in the project index by its
+  Purpose's first sentence; `grove check` reports a leftover `.grove.yaml`
+  until it is deleted. "Change schemas": no kind but the change's main
+  document has `metadata`.
+- `docs/concepts.md`, "Three things kept apart": a maintained spec's
+  title is its heading and its Purpose's first sentence describes it.
+- `dev/walkthrough.md`: main line step 5 writes the spec with no
+  `.grove.yaml`; new "A spec from before" under Other paths. Run on a
+  fresh fixture with this build: `grove check` printed the leftover line
+  and `1 problem found`, then, with it deleted, `No problems in grove/.`
+- No doc links a maintained spec yet; linking them is change
+  261023-338jz's.
 
 ## Scenarios
 
