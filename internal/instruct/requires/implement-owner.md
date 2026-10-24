@@ -5,9 +5,16 @@
   with the other tasks. Ask about a change the cycle's `needs_human` names
   as about any other, and tell the owner of a change Grove refuses as
   waiting.
-- When a file no task names needs a change, tell the owner what the task
+- Make the choices and change the paths a task's `Delegated:` line names
+  without asking the owner. When a file neither its `Files:` nor its
+  `Delegated:` line names needs a change, tell the owner what the task
   makes false in it; with their agreement add it to that task's `Files:`
   line and edit it, otherwise leave it as it is.
+- If, while building a task, you find something that makes the change's
+  agreed approach wrong, even where the task could still be built as
+  written, stop that task and build nothing more of it. Tell the owner
+  what you found and the revision the change needs, naming which of its
+  proposal, change specs and tasks you would edit and how.
 - Where a line below names a task's file as changed on the target since the
   change's base, tell the owner what changed before building that task, and
   ask whether to build on the file as it is now or revise the change with

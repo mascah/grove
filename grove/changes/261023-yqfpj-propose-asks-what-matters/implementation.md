@@ -34,3 +34,26 @@ Status: in progress
   `Files:` line, and `grove check` reports no problem on it, nor on
   `tests/test_records.py`, which only that line names, when main adds it
   after base.
+
+### T-02 — Implement honors delegation and stops on a discovery, and ignores delegation unattended
+
+Status: in progress
+
+- `internal/instruct/requires/implement-owner.md`: make the choices and
+  change the paths a task's `Delegated:` line names without asking; ask,
+  as before, about a file neither `Files:` nor `Delegated:` names; and, on
+  finding something that makes the agreed approach wrong, even where the
+  task could still be built as written, stop that task, build nothing more
+  of it, and tell the owner what was found and the revision the change
+  needs, naming which documents and how.
+- `internal/instruct/requires/implement-unattended.md`: a file no task's
+  `Files:` line names stays as it is even if a `Delegated:` line names it;
+  `Delegated:` lines are ignored, and a path the task would have changed is
+  named, with why, in its evidence. The shared `requires/implement.md` is
+  as change 261023-g0a3h left it.
+- `docs/getting-started.md` step 5: delegation honored with the owner, the
+  stop on a discovery, and `--unattended` ignoring `Delegated:`.
+- `internal/cli/walkthrough_test.go`: `TestImplementInstructions` checks
+  that `instructions implement` prints the delegation rule and the stop and
+  not the rule to ignore `Delegated:`, and that `--unattended` prints that
+  rule and neither of the other two.
