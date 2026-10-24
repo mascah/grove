@@ -1,8 +1,9 @@
-## T-01 — Move the docs' exact rules into the maintained specs
+## T-01 — Pages link the specs and agree with them
 
-Result: each exact rule `docs/` states is held by a maintained
-requirement, and the page that states it explains it in plain words and
-links the spec, as rule 8, amended in #78, says.
+Result: each page explains Grove in plain words, links the maintained
+spec that holds the exact rules where one exists, and says nothing about
+what Grove does that differs from a spec or the code, as rule 8, amended
+in #78, says.
 
 Files: `docs/index.md`, `docs/install.md`, `docs/getting-started.md`,
 `docs/concepts.md`, `docs/coordinating.md`, `docs/planning.md`,
@@ -11,40 +12,32 @@ Files: `docs/index.md`, `docs/install.md`, `docs/getting-started.md`,
 Interfaces: none; it is documentation and specs.
 
 Constraints:
-- Audit each page listed, as the dependencies left it. For each exact
-  rule, find the maintained requirement that holds it, or the
-  requirement this change ADDs for it.
-- A rule held nowhere gets a requirement in this change before it leaves
-  the page. The requirements in
-  [specs/propose/spec.md](specs/propose/spec.md),
-  [specs/changes/spec.md](specs/changes/spec.md) and
-  [specs/init/spec.md](specs/init/spec.md) are the ones found while
-  proposing. Any other goes in a revision of this change, written with
-  full EARS and scenarios and agreed with the owner while implementing.
-  Those not yet held at 0c6f419 include: `grove.yaml`'s fields other than
-  `context`, and `grove check`'s report of an unknown one (`config`); the
-  change schemas, a project's own files and schemas, and `grove check`'s
-  schema problems; the folder layout and main-document checks; `grove
-  review`'s labels; `grove specs`, `grove version`, the reader and IDs.
-- A page keeps its steps, examples and quoted messages; the walkthrough
-  runs them (rule 8). It keeps a restated rule only where a reader needs
-  it to act, such as the selection rule in `docs/running.md`, "An
-  ordinary run", step 2, which `grove/specs/runs/spec.md` holds;
-  otherwise it gives one plain sentence and the link. The implementer
-  proposes which restatements stay, and the owner agrees in the session.
+- Audit each page listed, as the dependencies left it, against the
+  maintained specs and the code.
+- A page teaches. It may explain a concept or an approach in its own way,
+  and need not follow the specs' form or map onto requirements. It keeps
+  its steps, examples and quoted messages; the walkthrough runs them
+  (rule 8).
+- A page shortens only where it copies a spec's detail without
+  explaining it, such as the long rows of the command tables in
+  `docs/reference.md`; it then gives a plain sentence and the link.
 - A page links a spec with a full GitHub link to the spec on `main`.
+- The requirements in [specs/propose/spec.md](specs/propose/spec.md),
+  [specs/changes/spec.md](specs/changes/spec.md) and
+  [specs/init/spec.md](specs/init/spec.md), found while proposing, are
+  the only ones this change adds.
 - The `config` spec's Boundaries stops sending the reader to
   `docs/reference.md` for the rest of `grove.yaml`.
 - This change edits no Go code. A scenario the code does not meet is
   raised with the owner before archiving.
 
 Acceptance:
-- For each page, a list in `implementation.md` names each rule the page
-  states, the requirement, by spec and name, that holds it, whether the
-  page kept, shortened or dropped it, and any difference fixed.
-- Each rule a page states is held by a maintained requirement, and the
-  page links it. Where the page and the spec differ, the page is fixed to
-  match the spec.
+- Pages explain in plain words and need not follow the specs' form.
+- A page links the relevant spec where one exists.
+- No page contradicts a spec or the code on what Grove does, and each
+  difference the audit found is fixed.
+- `implementation.md` lists, for each page, the links added, the
+  differences fixed and what was shortened.
 - On the ledger fixture, each scenario of the requirements this change
   ADDs holds as written.
 - `grove check` on Grove's own repository stays clean, and archiving
