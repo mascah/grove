@@ -118,17 +118,22 @@ No skill writes or removes the line, and re-planning keeps it.
 
 > grove/cycles/261020-m4k8t-0-4-release.yaml:8: unattended: 261019-r2w7k needs a person, as needs_human says, so grove run skips this cycle; remove unattended, or build the cycle with /grove-implement 261020-m4k8t
 
-And one whose plan is stale. A plan goes stale when a commit on your main
-branch, after `planned`, changes one of two things: the folder of a change
-in the cycle that is not archived, or a file one of its tasks names on its
-`Files:` line. A commit that also edits the cycle file does not count. Nor
-does one that archives a change of a cycle this one follows. Grove reads
-main's first-parent history, so a squash or a merge commit counts as one
-commit:
-
-> grove/cycles/261020-m4k8t-0-4-release.yaml: planned: 261019-p4x8d changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan 261020-m4k8t
+And one whose plan is stale (see "Re-plan a cycle").
 
 ## Re-plan a cycle
+
+A plan goes stale when a commit on your main branch, after `planned`,
+changes one of two things: the folder of a change in the cycle that is
+not archived, or a file one of its tasks names on its `Files:` line. A
+commit that also edits the cycle file does not count. Nor does one that
+archives a change of a cycle this one follows. Grove reads main's
+first-parent history, so a squash or a merge commit counts as one commit.
+`grove check` reports a stale cycle, marked or not:
+
+> grove/cycles/261020-m4k8t-0-4-release.yaml: planned: 261019-p4x8d changed on main since this plan; re-plan it with /grove-plan 261020-m4k8t
+
+For a marked cycle, the line says `since this plan, so grove run skips
+this cycle`.
 
 ```text
 /grove-plan 261020-m4k8t

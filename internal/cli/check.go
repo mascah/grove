@@ -137,13 +137,13 @@ func shapes(root fs.FS, c *doc.Collection) {
 	}
 }
 
-// stalePlans reports each member of a cycle in c, marked unattended and
-// not done, that changed on the target since the cycle's plan. Only then is
-// the target read, so a project with no such cycle checks without it.
+// stalePlans reports each member of a cycle in c, not done, that changed
+// on the target since the cycle's plan. Only then is the target read, so a
+// project with no such cycle checks without it.
 func stalePlans(p project, c *doc.Collection) error {
 	var target instruct.Project
 	for _, cy := range c.Cycles {
-		if !cy.Meta.Unattended || cy.Done || cy.Meta.Planned == "" {
+		if cy.Done || cy.Meta.Planned == "" {
 			continue
 		}
 		if target.Agreed == nil {
@@ -158,7 +158,7 @@ func stalePlans(p project, c *doc.Collection) error {
 		}
 		for _, id := range changed {
 			cy.Diagnostics = append(cy.Diagnostics, doc.Diagnostic{Path: cy.Path,
-				Message: fmt.Sprintf("planned: %s changed on %s since this plan, so grove run skips this cycle; re-plan it with /grove-plan %s", id, p.Target, cy.ID)})
+				Message: fmt.Sprintf("planned: %s changed on %s since this plan%s; re-plan it with /grove-plan %s", id, p.Target, map[bool]string{true: ", so grove run skips this cycle"}[cy.Meta.Unattended], cy.ID)})
 		}
 	}
 	return nil

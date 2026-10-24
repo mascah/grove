@@ -1380,12 +1380,20 @@ func TestMovedFiles(t *testing.T) {
 		}
 	}
 
-	// A member of a marked cycle: reported against the plan, not base.
+	// A member of a cycle: reported against the plan, not base, whether or
+	// not the cycle is marked.
 	k := "261023-k0000"
-	planCycle(t, dir, k, "2026-10-23T09:00:00Z", true, cid)
+	planCycle(t, dir, k, "2026-10-23T09:00:00Z", false, cid)
 	checks("No problems in grove/.\n")
 	edit("ledger/cli.py", "Yet another change")
-	checks("grove/cycles/" + k + "-cycle.yaml: planned: " + cid + " changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan " + k + "\n")
+	stale, cycle := "grove/cycles/"+k+"-cycle.yaml: planned: "+cid+" changed on main since this plan", filepath.Join(dir, "grove/cycles", k+"-cycle.yaml")
+	checks(stale + "; re-plan it with /grove-plan " + k + "\n")
+	planned := read(t, cycle)
+	os.WriteFile(cycle, []byte(regexp.MustCompile(`planned: \w+`).ReplaceAllString(planned, "planned: 0000000")), 0o644)
+	checks("grove/cycles/" + k + "-cycle.yaml: planned: 0000000 is not a commit in this repository\n")
+	os.WriteFile(cycle, []byte(planned+"unattended: true\n"), 0o644)
+	commitAll(t, dir, "Mark")
+	checks(stale + ", so grove run skips this cycle; re-plan it with /grove-plan " + k + "\n")
 	p, _ := openProject()
 	if ip, err := p.agreed(); err != nil || func() bool { cy, _ := eligible(p, ip); return cy != nil }() {
 		t.Errorf("grove run would build a cycle whose member's file moved: %v", err)
