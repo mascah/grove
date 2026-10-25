@@ -134,7 +134,10 @@ became `implement --unattended`; `grove check` says its lines go under
 `init` stops at either.
 
 `context` and `rules` add to Grove's own instructions; they cannot remove
-or replace them. Short rules work better than long ones. The
+or replace them. Short rules work better than long ones. When you correct
+`/grove-implement` in a way that would apply to future work, it may suggest
+one line for them when it finishes, and adds it only if you agree.
+`--unattended` only names a line in its report. The
 [config spec](https://github.com/mascah/grove/blob/main/grove/specs/config/spec.md) has the exact rules for `context`.
 
 Grove's skills commit nothing unless you ask in the conversation or a rule

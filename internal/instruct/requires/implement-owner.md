@@ -34,3 +34,9 @@
   rewritten or removed since its base, stop and tell the owner: the change
   must be revised with propose and merged again first. Merging this branch
   approves the revision with the code, and Grove's `review` shows it.
+- When you finish a change, if the owner corrected you in this session in a
+  way that would apply to future work, suggest one line to add to `context`,
+  or under a key of `rules`, in `grove.yaml`, from one correction, quoting
+  it: at most one per change, never several merged, and none for a
+  correction particular to this change. Add it on this branch only if the
+  owner agrees; it needs no task's `Files:` line.
