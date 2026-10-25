@@ -387,3 +387,14 @@ None recorded.
 ## Open questions
 
 None.
+
+## History
+
+- [261021-2aj5w](../../changes/archive/261021-2aj5w-run-one-bounded-apply-session/) Run one bounded apply session
+- [261022-1grb0](../../changes/archive/261022-1grb0-cycles-for-unattended-runs/) Cycles planned for unattended runs
+- [261023-rcxv2](../../changes/archive/261023-rcxv2-plan-verdict-no-remote-streamed-output/) Plan's verdict, runs without a remote, streamed output
+- [261023-3f9h6](../../changes/archive/261023-3f9h6-run-builds-a-given-cycle/) grove run builds a cycle it is given
+- [261023-yz5bk](../../changes/archive/261023-yz5bk-styled-run-output/) Styled grove run output
+- [261023-g0a3h](../../changes/archive/261023-g0a3h-implement-builds-unattended/) Implement builds unattended, and apply goes
+- [261023-bgtcb](../../changes/archive/261023-bgtcb-revising-a-change-re-plans-its-cycle/) Revising a change re-plans its cycle
+- [261023-2ej3w](../../changes/archive/261023-2ej3w-cycles-depend-on-cycles/) A cycle can depend on cycles

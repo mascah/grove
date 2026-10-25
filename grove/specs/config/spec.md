@@ -55,3 +55,8 @@ None recorded.
 ## Open questions
 
 None.
+
+## History
+
+- [261023-cnnhm](../../changes/archive/261023-cnnhm-restore-context/) Restore context in grove.yaml
+- [261023-g0a3h](../../changes/archive/261023-g0a3h-implement-builds-unattended/) Implement builds unattended, and apply goes

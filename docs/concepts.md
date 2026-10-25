@@ -122,7 +122,9 @@ That is the right shape for agreeing on work, and the wrong shape for
 reading what is agreed today, because you would have to replay every
 change in order. So when a change is built, archiving writes its
 requirements into the maintained specs, and the change itself moves to
-`grove/changes/archive/`, where it stays as the record of why.
+`grove/changes/archive/`, where it stays as the record of why. Each
+maintained spec ends with a History that links the archived changes that
+shaped it, where the reasons behind its rules are.
 
 Because the code, the updated spec and the archived change are merged
 together, a maintained spec changes in the same merge as the code it

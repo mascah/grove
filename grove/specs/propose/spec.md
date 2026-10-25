@@ -405,3 +405,16 @@ None recorded.
 ## Open questions
 
 None.
+
+## History
+
+- [261023-6j5bw](../../changes/archive/261023-6j5bw-tasks-name-their-files/) Tasks name their files
+- [261023-fca8x](../../changes/archive/261023-fca8x-propose-asks-a-round/) Propose asks a round
+- [261023-m2she](../../changes/archive/261023-m2she-verify-before-done/) Verify before done
+- [261023-g0a3h](../../changes/archive/261023-g0a3h-implement-builds-unattended/) Implement builds unattended, and apply goes
+- [261023-6yafg](../../changes/archive/261023-6yafg-one-merge-for-small-changes/) One merge for small changes
+- [261023-yqfpj](../../changes/archive/261023-yqfpj-propose-asks-what-matters/) Propose asks what matters
+- [261023-bgtcb](../../changes/archive/261023-bgtcb-revising-a-change-re-plans-its-cycle/) Revising a change re-plans its cycle
+- [261023-d6r79](../../changes/archive/261023-d6r79-specs-without-grove-yaml/) Specs without .grove.yaml, and no design.md
+- [261023-338jz](../../changes/archive/261023-338jz-plain-docs-exact-specs/) Plain docs, exact specs
+- [261023-psd1b](../../changes/archive/261023-psd1b-guide-to-specs-of-existing-code/) A guide to writing specs of existing code

@@ -519,3 +519,15 @@ task's evidence in `implementation.md`.
 ## Known discrepancies
 
 None recorded.
+
+## History
+
+- [261022-d1y6d](../../changes/archive/261022-d1y6d-implement-with-the-owner/) Implement a change with the owner
+- [261022-1grb0](../../changes/archive/261022-1grb0-cycles-for-unattended-runs/) Cycles planned for unattended runs
+- [261023-4044p](../../changes/archive/261023-4044p-apply-scenario-builds-a-cycle/) The apply scenario builds a cycle
+- [261023-6j5bw](../../changes/archive/261023-6j5bw-tasks-name-their-files/) Tasks name their files
+- [261023-m2she](../../changes/archive/261023-m2she-verify-before-done/) Verify before done
+- [261023-g0a3h](../../changes/archive/261023-g0a3h-implement-builds-unattended/) Implement builds unattended, and apply goes
+- [261023-6yafg](../../changes/archive/261023-6yafg-one-merge-for-small-changes/) One merge for small changes
+- [261023-yqfpj](../../changes/archive/261023-yqfpj-propose-asks-what-matters/) Propose asks what matters
+- [261024-8ykrz](../../changes/archive/261024-8ykrz-stale-cycle-reported-marked-or-not/) A stale cycle is reported whether or not it is marked

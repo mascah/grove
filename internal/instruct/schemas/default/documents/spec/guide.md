@@ -12,3 +12,5 @@ agreed only when the owner merges it into the target branch.
 - Each requirement is one EARS sentence about behavior a user or caller can
   observe, followed by at least one scenario at the boundary that matters.
 - Cover only the area at hand.
+- End with `## History`: one line per change folded in, in the order they
+  were archived, linking its archived folder, where its reasons are.

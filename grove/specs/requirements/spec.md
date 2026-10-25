@@ -154,6 +154,64 @@ again.
 - THEN the instructions say to copy requirements word for word and to run
   `grove archive` again after fixing what it reports
 
+### Requirement: Archive adds a History line
+
+When the agent runs `grove instructions archive <change-id>` for a
+finished change, the system shall print instructions to add one line at
+the end of the `## History` section of each maintained spec the change
+has a change spec for, adding the section at the end of the spec if it
+has none: `- [<change-id>](../../changes/archive/<folder>/) <title>`,
+where `<folder>` is the change's folder name and `<title>` its title.
+
+#### Scenario: The archive instructions
+
+- GIVEN finished change 261015-k3m9q, "Allow editing older records", with
+  a change spec for `record-editing`
+- WHEN the agent runs `grove instructions archive 261015-k3m9q`
+- THEN the instructions say to add a line to the History of
+  `grove/specs/record-editing/spec.md` linking
+  `../../changes/archive/261015-k3m9q-allow-editing-older-records/`
+
+#### Scenario: A new maintained spec
+
+- GIVEN no maintained spec for `record-editing`
+- WHEN the agent runs `grove instructions archive 261015-k3m9q`
+- THEN the maintained spec template it prints ends with `## History`
+
+#### Scenario: A second change
+
+- GIVEN `grove/specs/record-editing/spec.md` has a History line for
+  261015-k3m9q, and finished change C has a change spec for
+  `record-editing`
+- WHEN the agent archives C
+- THEN C's line follows 261015-k3m9q's
+
+#### Scenario: A dropped change
+
+- GIVEN change C's `implementation.md` says `Status: dropped`
+- WHEN the agent archives C
+- THEN no maintained spec gains a line
+
+### Requirement: Archive does not compare History
+
+When the owner runs `grove archive <change-id>` for a finished change,
+the system shall leave each maintained spec's `## History` section out of
+the fold it compares.
+
+#### Scenario: A line added
+
+- GIVEN finished change C's requirements are in the maintained spec word
+  for word, and its History has a line for C
+- WHEN the owner runs `grove archive C`
+- THEN C moves to `changes/archive/`
+
+#### Scenario: No line added
+
+- GIVEN finished change C's requirements are in the maintained spec word
+  for word, and its History has no line for C
+- WHEN the owner runs `grove archive C`
+- THEN C moves to `changes/archive/`
+
 ## Known discrepancies
 
 None recorded.
@@ -161,3 +219,8 @@ None recorded.
 ## Open questions
 
 None.
+
+## History
+
+- [261023-bfwp5](../../changes/archive/261023-bfwp5-check-requirements-and-the-fold/) Check requirements and the archive fold
+- [261023-xkehc](../../changes/archive/261023-xkehc-specs-list-the-changes-that-shaped-them/) Maintained specs list the changes that shaped them

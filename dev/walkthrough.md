@@ -98,7 +98,9 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    `python3 -m unittest` passes. With every task
    done, the same session runs `grove instructions archive 261015-k3m9q`,
    adds the requirement to a new `grove/specs/record-editing/spec.md`, with
-   no `.grove.yaml` beside it, runs `grove check`,
+   no `.grove.yaml` beside it, ending with a `## History` line
+   `- [261015-k3m9q](../../changes/archive/261015-k3m9q-allow-editing-older-records/) Allow editing older records`,
+   runs `grove check`,
    then `grove archive 261015-k3m9q`:
    > Archived 261015-k3m9q to grove/changes/archive/261015-k3m9q-allow-editing-older-records/; nothing is committed.
 
@@ -107,7 +109,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 
    The spec says "When a user edits an existing record and leaves its
    category unchanged, the system shall save the edit, even if that category
-   is no longer allowed for new records." `grove changes` lists nothing. `grove`
+   is no longer allowed for new records." Its History links 261015-k3m9q's
+   archived folder. `grove changes` lists nothing. `grove`
    opens the reader on the spec.
 
 7. **Next** (§Next). A fresh `/grove-explore Editing a missing record crashes`
@@ -585,7 +588,8 @@ Each step names the section of
   `schema: bugfix`. Commit; `grove check` is clean. Merge it, then on another branch
   `/grove-implement <change-id>` builds it (its instructions name schema
   `bugfix`) and `/grove-archive <change-id>` adds the requirement to
-  `grove/specs/record-editing/spec.md` and archives the change.
+  `grove/specs/record-editing/spec.md`, adds the change's History line
+  below 261015-k3m9q's, and archives the change.
 - **A mistake in a schema** (reference, "Change schemas", "Grove's
   bugfix"). After "A bug", write a `grove/schemas/bugfix/` of my own: a
   `schema.yaml` of `description: A fix.` and `instrution: x`, and a

@@ -485,19 +485,20 @@ func TestArchive(t *testing.T) {
 	// The session reconciles the change spec into a new maintained spec,
 	// from the template its instructions give, then archives the change.
 	out := grove(t, "instructions", "archive", cid)
-	for _, s := range []string{"Reconcile the specs", "word for word", "run `archive` again", "marks `unverified`; it does\n  not stop the archive", "Status: done", "### Requirement: Edit older records"} {
+	for _, s := range []string{"Reconcile the specs", "word for word", "run `archive` again", "marks `unverified`; it does\n  not stop the archive", "Status: done", "### Requirement: Edit older records", "`## History`", "`- [<change-id>](../../changes/archive/<folder>/) <title>`"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("archive instructions lack %q", s)
 		}
 	}
 	os.MkdirAll(filepath.Join(dir, "grove", "specs", "record-editing"), 0o755)
 	m := regexp.MustCompile(`(?s)<file path="grove/specs/<capability>/spec.md">\n(.*?)\n</file>`).FindStringSubmatch(out)
-	if m == nil || strings.Contains(out, "grove/specs/<capability>/.grove.yaml") {
-		t.Fatalf("no spec.md template, or a .grove.yaml one, in:\n%s", out)
+	if m == nil || strings.Contains(out, "grove/specs/<capability>/.grove.yaml") || !regexp.MustCompile(`(?s)\n## History\n\n<!--.*?-->$`).MatchString(m[1]) {
+		t.Fatalf("no spec.md template ending with History, or a .grove.yaml one, in:\n%s", out)
 	}
 	purpose := "Editing a record in `records.json` keeps its category.\nA record is one line of the ledger.\n"
 	filled := regexp.MustCompile(`(?s)### Requirement: \[.*?\n\n## Known`).ReplaceAllString(m[1], olderEdits+"\n## Known")
 	filled = regexp.MustCompile(`(?s)(## Purpose\n\n)<!--.*?-->\n`).ReplaceAllString(filled, "${1}"+purpose)
+	filled = regexp.MustCompile(`(?s)(## History\n\n)<!--.*?-->`).ReplaceAllString(filled, "${1}- ["+cid+"](../../changes/archive/"+cid+"-allow-editing-older-records/) Allow editing older records")
 	filled = strings.NewReplacer("<capability>", "record-editing", "<title>", "Record editing").Replace(filled)
 	os.WriteFile(filepath.Join(dir, "grove", "specs", "record-editing", "spec.md"), []byte(filled), 0o644)
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {

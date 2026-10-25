@@ -139,3 +139,7 @@ None recorded.
 ## Open questions
 
 None.
+
+## History
+
+- [261023-d6r79](../../changes/archive/261023-d6r79-specs-without-grove-yaml/) Specs without .grove.yaml, and no design.md

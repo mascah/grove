@@ -68,3 +68,11 @@ None recorded.
 can answer it. -->
 
 None.
+
+## History
+
+<!-- One line per change folded into this spec, in the order they were
+archived, linking its archived folder:
+
+    - [261015-k3m9q](../../changes/archive/261015-k3m9q-allow-editing-older-records/) Allow editing older records
+-->
