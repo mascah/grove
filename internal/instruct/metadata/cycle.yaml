@@ -1,4 +1,4 @@
-title: <title>
+title: "<title>"
 created: {{created}}
 # goal: <one line: what finishing the cycle achieves; optional>
 changes: [<the IDs of the approved changes in the cycle>]

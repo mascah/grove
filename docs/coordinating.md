@@ -17,7 +17,7 @@ the same capabilities. Each one you name goes in the change's `.grove.yaml`
 as `depends_on`:
 
 ```yaml
-title: Add ledger delete ID
+title: "Add ledger delete ID"
 created: 2026-10-19T14:02:11Z
 schema: default
 depends_on: [261019-p4x8d]

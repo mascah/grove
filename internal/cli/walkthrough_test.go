@@ -325,6 +325,20 @@ func TestPropose(t *testing.T) {
 		!strings.Contains(out, "For a change it lists as approved, the next\n  step is merging the revision") {
 		t.Errorf("propose's finish does not offer one merge or two:\n%.3000s", out)
 	}
+	// A title holding ": ", filled into the printed template, is valid YAML.
+	m := regexp.MustCompile("(?s)`grove/changes/([0-9]{6}-[0-9a-z]{5})-<slug>/proposal.md`.*/.grove.yaml\">\n(.*?)</file>").FindStringSubmatch(out)
+	if m == nil {
+		t.Fatalf("propose instructions print no .grove.yaml template:\n%.3000s", out)
+	}
+	colon := filepath.Join(dir, "grove/changes", m[1]+"-records-delete-by-id")
+	os.MkdirAll(colon, 0o755)
+	os.WriteFile(filepath.Join(colon, ".grove.yaml"), []byte(strings.Replace(m[2], "<title>", "Records: delete by ID", 1)), 0o644)
+	os.WriteFile(filepath.Join(colon, "proposal.md"), []byte("# Records: delete by ID\n"), 0o644)
+	os.WriteFile(filepath.Join(colon, "tasks.md"), []byte("## T-01 — Delete by ID\n"), 0o644)
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check of a title with a colon printed %q", got)
+	}
+	os.RemoveAll(colon)
 
 	os.MkdirAll(filepath.Join(dir, "grove/schemas/default/documents/tasks"), 0o755)
 	os.WriteFile(filepath.Join(dir, "grove/schemas/default/documents/tasks/template.md"), []byte("## T-01 — [title]\n\nRollback: [how to undo this task]\n"), 0o644)
@@ -652,7 +666,7 @@ func TestSchemas(t *testing.T) {
 	}
 	out = grove(t, "instructions", "propose", "--schema", "bugfix", "Editing a missing record crashes")
 	for _, s := range []string{", with change schema bugfix, from the owner's description", "## How to propose\n\n**Propose a bug fix.**", "/proposal.md\">\n# <title>\n\n## Observed\n",
-		"### change-spec: ", "### tasks: ", "/.grove.yaml\">\ntitle: <title>\ncreated: ", "schema: bugfix\n"} {
+		"### change-spec: ", "### tasks: ", "/.grove.yaml\">\ntitle: \"<title>\"\ncreated: ", "schema: bugfix\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("bugfix propose instructions lack %q", s)
 		}
@@ -938,7 +952,7 @@ func TestCycles(t *testing.T) {
 	out := grove(t, "instructions", "plan", "0.4 release")
 	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.yaml`").FindStringSubmatch(out)
 	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
-		"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n",
+		"\ntitle: \"<title>\"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n",
 		"\n# depends_on: [", "ask the owner\n  whether it follows any of them", "`grove run` builds\n    nothing of the cycle until it is"} {
 		if m == nil || !strings.Contains(out, s) {
 			t.Errorf("plan instructions lack %q:\n%s", s, out)
