@@ -35,6 +35,13 @@ Skills run these; you do not need to:
 | `grove instructions implement <cycle-id> --unattended` | Build each change of the cycle the same way without asking anyone, marked `unattended` or not (see [Coordinating changes](coordinating.md), "Building a cycle unattended"). |
 | `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs word for word, adding the change's line to each one's History, then run `grove archive`, fixing the specs and running it again if it refuses ([requirements spec](https://github.com/mascah/grove/blob/main/grove/specs/requirements/spec.md)). |
 
+The instructions of `implement`, `archive` and `propose <change-id>` name
+each of the change's documents by path, for the agent to read with its own
+file tool, and print none of their text, so they do not grow with the
+change. For an approved change, `implement` also names each document whose
+copy in the working tree differs from the target's, with the
+`git show <commit>:<path>` command that prints the approved text.
+
 ## Harnesses
 
 Grove has six skills: explore, prototype, propose, plan, implement and

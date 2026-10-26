@@ -542,7 +542,16 @@ Each step names the section of
   `grove instructions propose <change-id>` and adds T-02 with its
   `Files:` lines that way.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
-  is given that change's files in full and edits them.
+  is given the paths of that change's files, none of their text, reads
+  each one, and edits them.
+- **A large change** (reference, "Terminal commands"). `grove instructions
+  implement <change-id>`, `grove instructions archive <change-id>` and
+  `grove instructions propose <change-id>` list each of the change's
+  documents by path and print none of their text; adding a long paragraph
+  to its proposal leaves their length as it was. On a branch, edit its
+  `tasks.md`: `grove instructions implement <change-id>` names `tasks.md`
+  as differing from main, with `git show <commit>:<path>`; discard the
+  edit and it names none.
 - **A question that blocks a task** (§5). On a new branch,
   `/grove-propose Editing a missing record should print an error`; when
   asked whether it should exit 2 like other errors, defer it. The proposal

@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -62,7 +63,7 @@ func instructionsPropose(stdout io.Writer, schema, arg string) error {
 		return errors.New("a change keeps its schema; to change it, edit schema in the change's .grove.yaml")
 	}
 	fsys := os.DirFS(filepath.Join(p.Top, p.Root))
-	c, files, err := change(fsys, ip.Layout, arg)
+	c, _, err := change(fsys, ip.Layout, arg)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func instructionsPropose(stdout io.Writer, schema, arg string) error {
 			return err
 		}
 	}
-	return show(stdout)(instruct.Revise(ip, c, files, cy, string(content)))
+	return show(stdout)(instruct.Revise(ip, c, cy, string(content)))
 }
 
 // instructionsPlan prints the plan instructions: for a new cycle when arg
@@ -127,11 +128,11 @@ func instructionsArchive(stdout io.Writer, id string) error {
 	if err != nil {
 		return err
 	}
-	c, files, err := change(os.DirFS(filepath.Join(p.Top, p.Root)), ip.Layout, id)
+	c, _, err := change(os.DirFS(filepath.Join(p.Top, p.Root)), ip.Layout, id)
 	if err != nil {
 		return err
 	}
-	return show(stdout)(instruct.Archive(ip, c, files))
+	return show(stdout)(instruct.Archive(ip, c))
 }
 
 // target returns the project, the target's documents and this working
@@ -186,7 +187,8 @@ func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *
 		return fmt.Errorf("%s waits on %s, which this working tree has not archived as finished", id, strings.Join(waits, " and "))
 	}
 	var err error
-	if fsys == nil {
+	approved := fsys == nil
+	if approved {
 		if fsys, err = gitx.TreeFS(p.Top, ip.Commit, p.Root); err != nil {
 			return err
 		}
@@ -195,7 +197,11 @@ func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *
 	if err != nil {
 		return err
 	}
-	in, err := instruct.Implement(ip, c, files, unattended)
+	var differs []string
+	if approved {
+		differs = differing(p, files)
+	}
+	in, err := instruct.Implement(ip, c, differs, unattended)
 	var tasks []doc.Task
 	since := ""
 	if err == nil && cy == nil && !inOpenCycle(tree, id) && c.Meta.Base != "" {
@@ -298,4 +304,17 @@ func change(fsys fs.FS, layout doc.Layout, id string) (*doc.Change, map[string]s
 		files[name] = string(b)
 	}
 	return c, files, nil
+}
+
+// differing returns the names of files, the target's, whose working-tree
+// copy is missing or not the same, but implementation.md, which records
+// progress and is not approved (rule 3).
+func differing(p project, files map[string]string) []string {
+	var out []string
+	for name, agreed := range files {
+		if mine, err := os.ReadFile(filepath.Join(p.Top, p.Root, name)); path.Base(name) != "implementation.md" && (err != nil || string(mine) != agreed) {
+			out = append(out, name)
+		}
+	}
+	return out
 }

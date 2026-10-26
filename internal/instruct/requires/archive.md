@@ -16,5 +16,5 @@
   each requirement as `path:line: message`, when a maintained spec does not
   hold what this branch and the change give it; fix the spec as the
   messages say and run `archive` again.
-- Tell the owner what changed and where the change went. The owner merges
-  this branch, which lands the work and the archived change together.
+- Tell the owner what changed and where the change went. The owner's merge
+  of this branch lands the work and the archived change together.
