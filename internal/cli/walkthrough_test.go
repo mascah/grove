@@ -480,7 +480,7 @@ func TestImplementInstructions(t *testing.T) {
 
 	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. When every task is done", "Commit only when the owner or the project's\nrules ask.",
 		"The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n"}
-	owner := []string{"ask the owner and\n  wait", "with their agreement edit it and write\n  `` Also changed: `<path>` — <reason> `` under that task", "by running Grove's\n  `instructions propose <change-id>` and following it, never editing a\n  `Files:` line or `.grove.yaml` by hand", "tell the owner how to try it",
+	owner := []string{"ask the owner and\n  wait", "with their agreement edit it and write\n  `` Also changed: `<path>` — <reason> `` under that task", "by running Grove's\n  `instructions propose <change-id>` and following it, never editing a\n  `Files:` line or `.grove.yaml` by hand", "brought the file, recommend propose, which\n  re-bases the change", "tell the owner how to try it",
 		"Make the choices and change the paths a task's `Delegated:` line names\n  without asking the owner", "stop that task and build nothing more of it", "in `grove.yaml`, from one correction, quoting\n  it"}
 	alone := []string{"ask no one and wait for no one's answer", "A file no task's `Files:` line names stays as it is", "ignore\n  `Delegated:` lines", "mark that task `Status: blocked`, naming the file", "write no\n  `Also changed:` line", "whatever its\n  `needs_human` says", "Do not add it to `grove.yaml`."}
 	has := func(what, out string, want, not []string) {
@@ -1444,8 +1444,8 @@ func TestMovedFiles(t *testing.T) {
 	edit("tests/test_cli.py", "Another change")
 	edit("ledger/report.py", "A change under ledger/")
 	rel := "grove/changes/" + filepath.Base(folder) + "/tasks.md"
-	checks(rel + ": T-01's ledger/report.py changed on main since base " + base[:7] + "; revise the change with propose\n" +
-		rel + ": T-01's tests/test_cli.py changed on main since base " + base[:7] + "; revise the change with propose\n")
+	moved := "; revise the change with propose, which also re-bases it after a dependency lands\n"
+	checks(rel + ": T-01's ledger/report.py changed on main since base " + base[:7] + moved + rel + ": T-01's tests/test_cli.py changed on main since base " + base[:7] + moved)
 	for _, args := range [][]string{{cid}, {cid, "--unattended"}} {
 		if out := grove(t, append([]string{"instructions", "implement"}, args...)...); !strings.Contains(out, "\n- Changed on main since base "+base[:7]+": T-01's `ledger/report.py`, T-01's `tests/test_cli.py`.\n") {
 			t.Errorf("implement %v does not name the moved file:\n%.3000s", args, out)
@@ -1480,7 +1480,7 @@ func TestMovedFiles(t *testing.T) {
 	files := "Files:\n- `ledger/`\n- `tests/test_cli.py`"
 	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, files, "Files: `ledger/cli.py`,\n`tests/test_cli.py`", 1)), 0o644)
 	os.Remove(filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"))
-	since := " changed on main since base " + base[:7] + "; revise the change with propose\n"
+	since := " changed on main since base " + base[:7] + moved
 	checks(rel + ": T-01's ledger/cli.py" + since + rel + ": T-01's tests/test_cli.py" + since)
 	for _, bad := range []string{"Files: ledger/cli.py", "Files: `../ledger/cli.py`", "Files:\n- `ledger/cli.py`, `tests/test_cli.py`"} {
 		os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, files, bad, 1)), 0o644)

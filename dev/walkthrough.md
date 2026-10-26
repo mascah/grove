@@ -193,7 +193,7 @@ It starts where the main line's step 6 ends: one archived change and the
    T-01 names `ledger/report.py` on its `Files:` line. On a branch, add a
    comment to `ledger/report.py`: `grove check` there is clean, since only
    the branch changed it. Commit and merge; on main, `grove check` reports
-   > grove/changes/\<budgets>/tasks.md: T-01's ledger/report.py changed on main since base \<sha7>; revise the change with propose
+   > grove/changes/\<budgets>/tasks.md: T-01's ledger/report.py changed on main since base \<sha7>; revise the change with propose, which also re-bases it after a dependency lands
 
    `grove instructions implement <budgets-id>` names T-01 and
    `ledger/report.py` as changed since base, and a fresh session's
@@ -203,7 +203,9 @@ It starts where the main line's step 6 ends: one archived change and the
    `ledger/report.py` the same way. Write `Files: ledger/report.py`
    without backticks in a task: `grove check` reports the line, naming
    both forms and that a folder ends in `/`, and exits non-zero. Discard
-   those edits.
+   those edits. Then, on a branch, a fresh `/grove-propose <budgets-id>`:
+   the session brings T-01 up to date with `ledger/report.py` as main has
+   it and sets `base` to main's commit, and `grove check` is clean.
 
 6. **The project as data** ("The project as data"). `grove changes --json`
    shows the unknown-ID and recategorize changes as `archived` with `T-01` `done`, and the delete change with no

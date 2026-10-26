@@ -26,10 +26,11 @@
   the owner the revision and the re-plan must reach the target as one
   commit, a squash or a merge, or the plan is stale.
 - Revising a change that Grove's `check` reports as stale on a
-  requirement: bring that MODIFIED or REMOVED requirement up to date with
-  the target's maintained spec, keeping what this change alters, then set
-  `base` to the commit the `.grove.yaml` template below shows. Change `base`
-  only so; never clear the report by hand.
+  requirement, or for a named file changed since its base: bring that
+  MODIFIED or REMOVED requirement, or the tasks naming that file, up to
+  date with the target, keeping what this change alters, then set `base`
+  to the commit the `.grove.yaml` template below shows. Change `base` only
+  so; never clear the report by hand.
 - A new change: while confirming its scope, if the idea is too big for one
   change or has parts the owner could agree separately, say so and ask
   whether to split it. If the owner agrees, write each part as its own
