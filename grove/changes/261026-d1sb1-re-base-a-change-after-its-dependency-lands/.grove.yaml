@@ -1,0 +1,6 @@
+title: Re-base a change after its dependency lands
+created: 2026-10-26T20:33:25Z
+description: "The moved-file message, the implement instructions and the docs make propose's revise path, which re-bases the change, the normal step once a change it depends on lands."
+schema: default
+depends_on: [261026-804yw]
+base: ea7fbafc1d8082fd492167377b0e18c473d5705d

@@ -1,0 +1,6 @@
+title: "Instructions list the change's documents instead of embedding them"
+created: 2026-10-26T20:32:12Z
+description: "Implement, archive and propose's revise path name each change document by path, and implement drops propose's templates, so their size no longer grows with the change."
+schema: default
+depends_on: [261026-ar7ec]
+base: ea7fbafc1d8082fd492167377b0e18c473d5705d
