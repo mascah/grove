@@ -77,8 +77,44 @@ Evidence:
 
 ### T-04 — Trials read bullets and Also changed
 
-Status: not started
+Status: done
+
+Evidence:
+- `dev/trials/run.sh`: `allowed` adds the paths of every
+  `implementation.md`'s `Also changed:` lines to those of the `Files:` and
+  `Delegated:` lines (whose bullets the awk range already took in), and
+  `named` counts a path under an allowed folder ending in `/`.
+- `dev/trials.md` describes the count so.
+- Exercised `allowed` and `named`, taken from the script, on a scratch
+  folder whose `tasks.md` lists `ledger/records.py` and `tests/fixtures/`
+  as bullets and whose `implementation.md` has
+  `` Also changed: `README.md` ``: `ledger/records.py`,
+  `tests/fixtures/a.json` and `README.md` count as inside, `Cargo.lock`
+  and a path only an `Acceptance:` bullet names as outside. `bash -n`
+  passes. A full `just trials` run, which drives Claude Code and Codex, was
+  not run in this session.
 
 ## Scenarios
+
+- implement "Planned, agreed and named nowhere": `internal/cli/walkthrough_test.go` TestPlanned, passed
+- implement "After archiving": TestPlanned, passed
+- implement "No change on the branch": TestPlanned, passed
+- implement "Feedback changes a requirement mid-build": unverified; it needs an agent session with the owner (the instruction text is checked by TestImplementInstructions)
+- implement "The owner does not agree": unverified; it needs an agent session with the owner
+- implement "A revision that needs a new task": unverified; it needs an agent session with the owner (TestImplementInstructions checks the owner's instructions name the propose path and the frozen `Files:` line)
+- implement "A named file changed since base": TestMovedFiles, passed
+- implement "A file no task names needs a change": unverified; it needs an agent session with the owner (TestImplementInstructions checks the instructions name `Also changed:`)
+- implement "A member of a cycle": TestMovedFiles, passed
+- implement "A delegated path, unattended": unverified; it needs an unattended agent run (TestImplementInstructions checks the unattended instructions say to write no `Also changed:` line)
+- propose "A path outside the repository": TestMovedFiles (`../ledger/cli.py`), passed
+- propose "A folder": TestMovedFiles (`ledger/` checks clean) and TestPlanned (`tests/fixtures/`), passed
+- propose "A task that fixes a function": unverified; it is how a proposing agent writes a task
+- propose "A task that updates documentation": unverified; it is how a proposing agent writes a task
+- propose "One path per bullet": TestMovedFiles reads the bullet form clean and TestPropose checks the template teaches it, passed; that an agent writes it is unverified
+- propose "A comma line still reads": TestMovedFiles (a wrapped comma line reports both files), passed
+- propose "A file changed since base": TestMovedFiles, passed
+- propose "A file under a named folder": TestMovedFiles (`ledger/report.py` under `ledger/`), passed
+- propose "A member of a cycle": TestMovedFiles, passed
+- propose "A file this change's own branch touched": TestMovedFiles, passed
 
 ## Reconciliation

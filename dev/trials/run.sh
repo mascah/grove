@@ -108,10 +108,24 @@ $last" --model sonnet --setting-sources project,local --tools "" --output-format
   grep -qi '^yes' <<< "$verdict"
 }
 
-# allowed lists the paths the Files: and Delegated: lines of every tasks.md name.
+# allowed lists the paths the Files: and Delegated: lines of every tasks.md
+# name, as a comma line or bullets, and those the Also changed: lines of
+# every implementation.md name.
 allowed() {
-  find grove/changes -name tasks.md -exec awk '/^(Files|Delegated):/{on=1} /^$/{on=0} on' {} + |
-    grep -o '`[^`]*`' | tr -d '`' | sort -u
+  {
+    find grove/changes -name tasks.md -exec awk '/^(Files|Delegated):/{on=1} /^$/{on=0} on' {} + |
+      grep -o '`[^`]*`' | tr -d '`'
+    find grove/changes -name implementation.md -exec sed -n 's/^Also changed: `\([^`]*\)`.*/\1/p' {} +
+  } | sort -u
+}
+
+# named reports whether an allowed path is $1 or a folder, ending in /, above it.
+named() {
+  local a
+  while read -r a; do
+    [[ $1 == "$a" || ($a == */ && $1 == "$a"*) ]] && return 0
+  done < <(allowed)
+  return 1
 }
 
 # trial runs case c in harness h and writes its row of the table.
@@ -154,7 +168,7 @@ trial() {
     [[ $prompt == *--unattended* ]] || while [ $((k += 1)) -le "$turns" ] && waiting; do reply && turn "$answer"; done
     after=$(snapshot)
     while read -r p; do
-      [[ $p == grove/* ]] || grep -qxF "$p" <(allowed) || outside+=("$p")
+      [[ $p == grove/* ]] || named "$p" || outside+=("$p")
     done < <(diff <(echo "$before") <(echo "$after") | sed -n 's/^[<>] [0-9a-f]*  //p' | sort -u)
     new=$(comm -13 <(echo "$had") <(ls grove/changes 2> /dev/null) | grep -v '^archive$' | head -1 || true)
     [ -z "$new" ] || id=${new:0:12}

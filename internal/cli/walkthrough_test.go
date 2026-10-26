@@ -1424,12 +1424,14 @@ func TestMovedFiles(t *testing.T) {
 	checks("No problems in grove/.\n")
 	git(t, dir, "switch", "-q", "main")
 
-	// Changed on main since base.
+	// Changed on main since base, one file under the folder T-01 names.
 	edit("tests/test_cli.py", "Another change")
+	edit("ledger/report.py", "A change under ledger/")
 	rel := "grove/changes/" + filepath.Base(folder) + "/tasks.md"
-	checks(rel + ": T-01's tests/test_cli.py changed on main since base " + base[:7] + "; revise the change with propose\n")
+	checks(rel + ": T-01's ledger/report.py changed on main since base " + base[:7] + "; revise the change with propose\n" +
+		rel + ": T-01's tests/test_cli.py changed on main since base " + base[:7] + "; revise the change with propose\n")
 	for _, args := range [][]string{{cid}, {cid, "--unattended"}} {
-		if out := grove(t, append([]string{"instructions", "implement"}, args...)...); !strings.Contains(out, "\n- Changed on main since base "+base[:7]+": T-01's `tests/test_cli.py`.\n") {
+		if out := grove(t, append([]string{"instructions", "implement"}, args...)...); !strings.Contains(out, "\n- Changed on main since base "+base[:7]+": T-01's `ledger/report.py`, T-01's `tests/test_cli.py`.\n") {
 			t.Errorf("implement %v does not name the moved file:\n%.3000s", args, out)
 		}
 	}
