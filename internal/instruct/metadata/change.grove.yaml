@@ -1,4 +1,4 @@
-title: <title>
+title: "<title>"
 created: {{created}}
 # description: <one line, shown in lists; optional>
 schema: {{schema}}

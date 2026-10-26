@@ -30,7 +30,7 @@ finished. Then it writes one file, `grove/cycles/<cycle-id>-<slug>.yaml`.
 It edits no change:
 
 ```yaml
-title: 0.4 release
+title: "0.4 release"
 created: 2026-10-20T09:12:40Z
 goal: Delete and budgets in the README's planned list
 changes: [261019-p4x8d, 261019-r2w7k]
