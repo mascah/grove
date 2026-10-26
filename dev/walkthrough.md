@@ -512,8 +512,20 @@ Each step names the section of
   creates `tests/test_records.py` for `find`'s own tests without asking.
   On a fresh fixture with the same change in a cycle of one,
   `grove run <cycle-id>` leaves `tests/test_records.py` uncreated, puts
-  `find`'s tests in `tests/test_cli.py`, and T-01's evidence names
-  `tests/test_records.py` and why it was left.
+  `find`'s tests in `tests/test_cli.py`, T-01's evidence names
+  `tests/test_records.py` and why it was left, and `implementation.md`
+  has no `Also changed:` line.
+- **A file no task names, with me** (§5; coordinating, "Building a cycle
+  unattended"). Approve a change whose T-01 changes what `ledger delete`
+  prints and names only `ledger/cli.py` and `tests/test_cli.py`. On a
+  branch, a fresh `claude`, `/grove-implement <change-id>`: building T-01,
+  the session says the README's usage example is now false and asks. I
+  agree: it edits `README.md`, `implementation.md` has
+  `` Also changed: `README.md` — `` and the reason under T-01, and
+  `git diff main -- grove/changes/<change-id>-*/tasks.md` is empty. I ask
+  for a second task that exports records: the session runs
+  `grove instructions propose <change-id>` and adds T-02 with its
+  `Files:` lines that way.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
   is given that change's files in full and edits them.
 - **A question that blocks a task** (§5). On a new branch,

@@ -198,7 +198,10 @@ Its report, and archiving, name each unverified scenario.
 
 A task's `Delegated:` line names choices and paths the agent may take
 without asking you. Anything else beyond the task's `Files:` it asks about.
-`/grove-implement --unattended` ignores `Delegated:` and keeps to `Files:`.
+Once you agree, it edits the file and writes an `Also changed:` line under
+the task in `implementation.md`, naming the file and the reason;
+`tasks.md` stays as approved. `/grove-implement --unattended` ignores
+`Delegated:`, keeps to `Files:` and writes no `Also changed:` line.
 
 The agent may find that the agreed approach is wrong. Then it stops that
 task, even if the task could still be built as written. It tells you what
@@ -206,7 +209,9 @@ it found and the revision the change needs.
 
 When your answer or your feedback changes what the change says, the agent
 tells you which of its proposal, specs and tasks it would edit and how. Once
-you agree, it edits them on this branch and builds to them. Merging the
+you agree, it edits them on this branch and builds to them. It edits no
+`Files:` line itself: a revision that changes a task's files, or adds a
+task, goes through `grove instructions propose <change-id>`. Merging the
 branch approves the revision with the code, and `grove review` shows it.
 
 `/grove-implement 261015-k3m9q --unattended` builds the change without

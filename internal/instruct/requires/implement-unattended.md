@@ -9,7 +9,8 @@
 - A file no task's `Files:` line names stays as it is, even if it looks
   like it should change, and even if a `Delegated:` line names it: ignore
   `Delegated:` lines. When a task would have changed such a file, name it,
-  and why, in that task's evidence in `implementation.md`.
+  and why, in that task's evidence in `implementation.md`; write no
+  `Also changed:` line.
 - Where a line below names a task's file as changed on the target,
   mark that task `Status: blocked`, naming the file, and do not build on
   it: the change was not written against the file as it is.

@@ -29,7 +29,29 @@ Evidence:
 
 ### T-02 — Implement records agreed files on Also changed lines
 
-Status: not started
+Status: done
+
+Evidence:
+- `internal/instruct/requires/implement-owner.md`: an agreed file beyond
+  `Files:` and `Delegated:` is edited and recorded as
+  `` Also changed: `<path>` — <reason> `` under the task; a revision edits
+  no `Files:` line, and one that changes a task's files or adds a task
+  goes through `grove instructions propose <change-id>`.
+- `internal/instruct/requires/implement-unattended.md`: writes no
+  `Also changed:` line.
+- `internal/instruct/schemas/default/documents/implementation/guide.md`
+  describes the line, one per file.
+- `docs/getting-started.md`, `docs/coordinating.md` and
+  `dev/walkthrough.md` ("Delegated with me, ignored unattended" and a new
+  "A file no task names, with me") say the same.
+- `internal/cli/walkthrough_test.go` `TestImplementInstructions` checks
+  that the owner's instructions name `Also changed:`, the frozen `Files:`
+  line and the propose path, and that the unattended ones say to write no
+  `Also changed:` line (and the owner's do not).
+- The on-fixture acceptance (an agreed file ending as an `Also changed:`
+  line, a new task through propose) needs an agent session with the owner:
+  not run here, see Scenarios.
+- `just check` passed.
 
 ### T-03 — Review shows planned against actual
 
