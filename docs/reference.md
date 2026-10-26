@@ -172,7 +172,9 @@ Some things a schema cannot change:
 - That a merge approves a change.
 - A change's `.grove.yaml`.
 - How progress is recorded. Each task is a `T-NN` heading in `tasks.md`.
-  It names the files it touches on a `Files:` line, and the interfaces it
+  It names the files it touches under `Files:`, one backticked path per
+  bullet or, as before, separated by commas on one line; a path ending in
+  `/` names a folder and every file under it. It names the interfaces it
   produces on an `Interfaces:` line. An optional `Delegated:` line names
   choices and paths the implementer may take without asking the owner;
   Grove does not read it. A task's status is a `Status:` line in

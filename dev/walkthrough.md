@@ -64,8 +64,9 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    question open and blocking no task, since T-01 leaves the category
    unchanged),
    `specs/record-editing/spec.md` (an ADDED requirement as an EARS sentence
-   with scenarios), and `tasks.md` (T-01 with its acceptance, a `Files:`
-   line naming `ledger/cli.py`, the file under fix, and `tests/test_cli.py`,
+   with scenarios), and `tasks.md` (T-01 with its acceptance, `Files:`
+   with one bullet each for `ledger/cli.py`, the file under fix, and
+   `tests/test_cli.py`,
    which the session said in the conversation it would touch, and an
    `Interfaces:` line, with no code or steps). Before presenting it, the
    session checks that T-01's acceptance covers each scenario and says so,
@@ -191,9 +192,12 @@ It starts where the main line's step 6 ends: one archived change and the
    `grove instructions implement <budgets-id>` names T-01 and
    `ledger/report.py` as changed since base, and a fresh session's
    `/grove-implement <budgets-id>`, reaching T-01, tells me what changed
-   and asks before building; I stop it there. Write `Files: ledger/report.py`
-   without backticks in a task: `grove check` reports the line and exits
-   non-zero. Discard that edit.
+   and asks before building; I stop it there. Name the folder `ledger/`
+   in place of `ledger/report.py`: `grove check` reports T-01's
+   `ledger/report.py` the same way. Write `Files: ledger/report.py`
+   without backticks in a task: `grove check` reports the line, naming
+   both forms and that a folder ends in `/`, and exits non-zero. Discard
+   those edits.
 
 6. **The project as data** ("The project as data"). `grove changes --json`
    shows the unknown-ID and recategorize changes as `archived` with `T-01` `done`, and the delete change with no

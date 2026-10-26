@@ -3,11 +3,11 @@
 - A change that only records behavior the code already has has no tasks.
 - A task states the result wanted and the acceptance expectations someone else
   could check. It refers to requirements instead of repeating them.
-- A task names, on a `Files:` line after `Result:`, the repo-relative paths it
-  creates, modifies or tests, each in backticks, comma-separated; Grove reads
-  this line. On an `Interfaces:` line it names the functions, types or
-  commands it produces that other tasks or callers use. A task says what and
-  where, not how: no code, commands or steps.
+- A task names, under `Files:` after `Result:`, the repo-relative paths it
+  creates, modifies or tests, one backticked path per bullet, a folder
+  ending in `/`; Grove reads them. On an `Interfaces:` line it names the
+  functions, types or commands it produces that other tasks or callers use.
+  A task says what and where, not how: no code, commands or steps.
 - A task may have a `Delegated:` line, right after `Files:`, naming choices
   the implementer may make without asking and paths it may change beyond
   `Files:`, only where the owner agreed in the round. Implementing with the

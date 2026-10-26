@@ -208,13 +208,20 @@ func moved(p project, commit string, ch *doc.Change) ([]doc.Task, error) {
 	return naming(ch, strings.Split(diff, "\n")), nil
 }
 
-// naming returns ch's tasks that name a file in changed, each with only
-// those files.
+// naming returns ch's tasks that name a file in changed, or a folder above
+// one, each with only those files of changed.
 func naming(ch *doc.Change, changed []string) []doc.Task {
 	var out []doc.Task
 	for _, t := range ch.Tasks {
-		t.Files = slices.DeleteFunc(slices.Clone(t.Files), func(f string) bool { return !slices.Contains(changed, f) })
-		if len(t.Files) > 0 {
+		var files []string
+		for _, f := range t.Files {
+			for _, c := range changed {
+				if c != "" && doc.Names(f, c) && !slices.Contains(files, c) {
+					files = append(files, c)
+				}
+			}
+		}
+		if t.Files = files; len(files) > 0 {
 			out = append(out, t)
 		}
 	}
@@ -241,7 +248,7 @@ func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycl
 	var out []string
 	for _, id := range cy.Meta.Changes {
 		if ch := at.Change(id); ch != nil && slices.ContainsFunc(paths, func(f string) bool {
-			return strings.HasPrefix(f, p.Root+"/"+ch.Dir+"/") || slices.Contains(named(ch), f)
+			return strings.HasPrefix(f, p.Root+"/"+ch.Dir+"/") || slices.ContainsFunc(named(ch), func(n string) bool { return doc.Names(n, f) })
 		}) {
 			out = append(out, id)
 		}

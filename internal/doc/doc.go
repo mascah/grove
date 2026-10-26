@@ -81,7 +81,7 @@ type Task struct {
 	ID     string   `json:"id"`
 	Title  string   `json:"title"`
 	Status string   `json:"status,omitempty"`
-	Files  []string `json:"-"` // the repo-relative paths its Files: line names
+	Files  []string `json:"-"` // the repo-relative paths its Files: line names, a folder ending in /
 }
 
 // Cycle is one cycle file: approved changes the owner means to build
@@ -90,6 +90,12 @@ type Cycle struct {
 	Document
 	Done    bool     // every member is archived, finished or dropped
 	WaitsOn []string // what DependsOn names that is not a cycle done
+}
+
+// Names reports whether file, a path a Files: line names, is path or a
+// folder above it.
+func Names(file, path string) bool {
+	return file == path || strings.HasSuffix(file, "/") && strings.HasPrefix(path, file)
 }
 
 // Collection is everything under one document root.
@@ -351,6 +357,7 @@ func (ch *Change) Capabilities() []string {
 var (
 	taskHeading = regexp.MustCompile(`^#+ (T-\d+)\b[\s—–:-]*(.*)$`)
 	filesLine   = regexp.MustCompile("^`[^`]+`(\\s*,\\s*`[^`]+`)*$")
+	fileBullet  = regexp.MustCompile("^\\s*[-*] `[^`]+`\\s*$")
 	quoted      = regexp.MustCompile("`([^`]+)`")
 	field       = regexp.MustCompile(`^[A-Z]\w*:`)
 )
@@ -380,16 +387,21 @@ func (ch *Change) tasks(fsys fs.FS) {
 		if !ok || len(ch.Tasks) == 0 {
 			continue
 		}
+		bullets := strings.TrimSpace(files) == ""
 		for j := i + 1; j < len(lines) && strings.TrimSpace(lines[j]) != "" && !field.MatchString(lines[j]); j++ { // it wraps until a blank line or the next field
 			files += " " + lines[j]
+			bullets = bullets && fileBullet.MatchString(lines[j])
 		}
 		t := &ch.Tasks[len(ch.Tasks)-1]
 		files = strings.TrimSpace(files)
 		for _, m := range quoted.FindAllStringSubmatch(files, -1) {
 			t.Files = append(t.Files, m[1])
 		}
-		if !filesLine.MatchString(files) || slices.ContainsFunc(t.Files, func(f string) bool { return !fs.ValidPath(f) || f == "." }) {
-			ch.report(ch.Dir+"/tasks.md", i+1, t.ID+"'s Files: line should list repo-relative paths in backticks, separated by commas")
+		if !(bullets && len(t.Files) > 0 || filesLine.MatchString(files)) || slices.ContainsFunc(t.Files, func(f string) bool {
+			f = strings.TrimSuffix(f, "/")
+			return !fs.ValidPath(f) || f == "."
+		}) {
+			ch.report(ch.Dir+"/tasks.md", i+1, t.ID+"'s Files: line should list repo-relative paths in backticks, one per bullet or separated by commas, and a folder ends in /")
 			t.Files = nil
 		}
 	}
