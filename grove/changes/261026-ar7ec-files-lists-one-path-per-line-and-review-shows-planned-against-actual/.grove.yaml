@@ -1,0 +1,5 @@
+title: Files lists one path per line, and review shows planned against actual
+created: 2026-10-26T20:29:53Z
+description: "A Files: entry per bullet, folders ending in /, Also changed lines for agreed extra files, and grove review comparing the branch's files with both."
+schema: default
+base: ea7fbafc1d8082fd492167377b0e18c473d5705d

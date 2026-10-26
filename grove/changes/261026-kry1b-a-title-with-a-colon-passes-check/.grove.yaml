@@ -1,0 +1,5 @@
+title: A title with a colon passes check
+created: 2026-10-26T20:13:34Z
+description: The change and cycle templates quote the title, so a colon in it is valid YAML.
+schema: bugfix
+base: ea7fbafc1d8082fd492167377b0e18c473d5705d
