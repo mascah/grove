@@ -78,8 +78,10 @@ marking the task blocked.
 When the owner's answer or feedback changes what the change says, the
 implement instructions shall have the agent say which of the change's
 proposal, change specs and tasks it would edit and how, and, only once the
-owner agrees, edit them on the implementation branch, run `grove check`
-clean, and then build to the revised change.
+owner agrees, edit them on the implementation branch, leaving every
+`Files:` line as it is, revising a task's files only through
+`grove instructions propose <change-id>`, run `grove check` clean, and
+then build to the revised change.
 
 #### Scenario: Feedback changes a requirement mid-build
 
@@ -94,6 +96,14 @@ clean, and then build to the revised change.
 - GIVEN the agent proposed an edit to C's change spec
 - WHEN the owner declines it
 - THEN C's files are unchanged and the agent builds what C says
+
+#### Scenario: A revision that needs a new task
+
+- GIVEN the owner agrees that change C needs a new task touching
+  `ledger/export.py`
+- WHEN the agent revises C
+- THEN it runs `grove instructions propose C` and follows it to add the
+  task with its `Files:` line, instead of writing the line itself
 
 ### Requirement: Implement a cycle
 
@@ -113,10 +123,11 @@ each as `/grove-implement <change-id>` builds it, in the owner's session.
 ### Requirement: Tell the owner of a moved file
 
 When the owner runs `/grove-implement <change-id>` for a change in no
-cycle that is not done, and a task names a file that differs on the target
-from the same file at the change's `base`, the system shall say which task
-and file, and the implement instructions shall have the agent ask the owner
-before building that task, instead of building on the file as it was.
+cycle that is not done, and a task names a file, or a folder holding a
+file, that differs on the target from the same file at the change's
+`base`, the system shall say which task and file, and the implement
+instructions shall have the agent ask the owner before building that
+task, instead of building on the file as it was.
 
 #### Scenario: A named file changed since base
 
@@ -132,9 +143,10 @@ before building that task, instead of building on the file as it was.
 - GIVEN the agent, building T-01, finds `docs/concepts.md`, which no task
   names, states what T-01 makes false
 - WHEN it tells the owner and they agree
-- THEN T-01's `Files:` line on the branch names `docs/concepts.md`, and the
-  agent edits the page; had the owner declined, the page would be left as
-  it is
+- THEN `implementation.md` has `` Also changed: `docs/concepts.md` `` under
+  T-01 with the reason, `tasks.md` is unchanged, and the agent edits the
+  page; had the owner declined, the page would be left as it is and no
+  line written
 
 #### Scenario: A member of a cycle
 
@@ -501,10 +513,10 @@ tasks it would edit and how.
 
 When a task built with `/grove-implement <id> --unattended` has a
 `Delegated:` line, the implement instructions shall have the agent ignore
-it: change only the files the tasks' `Files:` lines name, and leave a path
-only a `Delegated:` line names as it is, as it does any file no task
-names: when the task would have changed it, naming it, and why, in that
-task's evidence in `implementation.md`.
+it: change only the files the tasks' `Files:` lines name, write no
+`Also changed:` line, and leave a path only a `Delegated:` line names as it
+is, as it does any file no task names: when the task would have changed
+it, naming it, and why, in that task's evidence in `implementation.md`.
 
 #### Scenario: A delegated path, unattended
 
@@ -513,8 +525,8 @@ task's evidence in `implementation.md`.
   its `Delegated:` line
 - WHEN `/grove-implement K --unattended` builds T-01
 - THEN `tests/test_records.py` is not created, `find`'s tests go in
-  `tests/test_cli.py`, and T-01's evidence names `tests/test_records.py`
-  and why it was left
+  `tests/test_cli.py`, T-01's evidence names `tests/test_records.py`
+  and why it was left, and `implementation.md` has no `Also changed:` line
 
 ### Requirement: Suggest a rules line
 
@@ -572,6 +584,41 @@ line per change for `context`, or for a key under `rules`, in
 - THEN its report names a `context` line giving that command, nobody is
   asked, and `grove.yaml` on the branch is unchanged
 
+### Requirement: Review shows planned against actual
+
+When the current branch holds a change open, or holds it archived where
+the target does not hold it archived, `grove review` shall list each file
+outside the document root that the branch changes against the target,
+each as planned, naming the change's task whose `Files:` line names it or
+a folder above it, as agreed, naming the task and the reason its
+`Also changed:` line in `implementation.md` gives, or as named nowhere.
+
+#### Scenario: Planned, agreed and named nowhere
+
+- GIVEN branch `c-impl` holds change C, whose T-01 names
+  `ledger/records.py` and `tests/fixtures/` on its `Files:` line, whose
+  `implementation.md` has `` Also changed: `README.md` — T-01 makes its
+  usage example false `` under T-01, and the branch changes
+  `ledger/records.py`, `tests/fixtures/records.json`, `README.md` and
+  `Cargo.lock`
+- WHEN the owner runs `grove review` on `c-impl`
+- THEN it lists `ledger/records.py` and `tests/fixtures/records.json` as
+  planned by C:T-01, `README.md` as agreed by C:T-01 with that reason, and
+  `Cargo.lock` as named nowhere, and exits 0
+
+#### Scenario: After archiving
+
+- GIVEN the same branch after `grove archive C`, the target holding C open
+- WHEN the owner runs `grove review`
+- THEN it lists the same files the same way
+
+#### Scenario: No change on the branch
+
+- GIVEN a branch that holds no change open, and none archived that the
+  target does not hold archived
+- WHEN the owner runs `grove review`
+- THEN it lists no files against a plan
+
 ## Known discrepancies
 
 None recorded.
@@ -588,3 +635,4 @@ None recorded.
 - [261023-yqfpj](../../changes/archive/261023-yqfpj-propose-asks-what-matters/) Propose asks what matters
 - [261024-8ykrz](../../changes/archive/261024-8ykrz-stale-cycle-reported-marked-or-not/) A stale cycle is reported whether or not it is marked
 - [261023-mfgew](../../changes/archive/261023-mfgew-implement-suggests-a-rules-line/) Implement suggests a rules line
+- [261026-ar7ec](../../changes/archive/261026-ar7ec-files-lists-one-path-per-line-and-review-shows-planned-against-actual/) Files lists one path per line, and review shows planned against actual

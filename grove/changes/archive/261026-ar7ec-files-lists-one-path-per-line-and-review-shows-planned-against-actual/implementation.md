@@ -118,3 +118,5 @@ Evidence:
 - propose "A file this change's own branch touched": TestMovedFiles, passed
 
 ## Reconciliation
+- implement: applied to grove/specs/implement/spec.md
+- propose: applied to grove/specs/propose/spec.md
