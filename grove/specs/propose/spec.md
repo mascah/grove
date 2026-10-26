@@ -463,6 +463,38 @@ none of their text.
   their text, and still prints the templates of the documents propose
   writes
 
+### Requirement: Say that revising re-bases
+
+When `grove check` reports a task's named file as changed on the target
+since the change's `base`, the system shall say, in the same sentence,
+that revising the change with propose also re-bases it after a dependency
+lands.
+
+#### Scenario: The message
+
+- GIVEN change C, in no cycle, proposed at `base` b143991, whose T-01
+  names `ledger/cli.py`, which the target has since changed
+- WHEN the owner runs `grove check`
+- THEN it reports "T-01's ledger/cli.py changed on main since base
+  b143991; revise the change with propose, which also re-bases it after a
+  dependency lands"
+
+### Requirement: Re-base a change whose named file moved
+
+When the owner revises, with `/grove-propose <change-id>`, a change that
+`grove check` reports for a named file changed since its `base`, the
+propose instructions shall have the agent bring the change up to date with
+the file as the target holds it and set `base` to the target's commit.
+
+#### Scenario: A dependency landed
+
+- GIVEN change B depends on change A, and the merge that archived A
+  created `ledger/export.py`, which B's T-01 names
+- WHEN the owner runs `/grove-propose B`
+- THEN B's `base` is the target's commit, B's tasks hold for
+  `ledger/export.py` as the target has it, and `grove check` reports
+  nothing for B
+
 ## Known discrepancies
 
 None recorded.
@@ -485,3 +517,4 @@ None.
 - [261023-psd1b](../../changes/archive/261023-psd1b-guide-to-specs-of-existing-code/) A guide to writing specs of existing code
 - [261026-ar7ec](../../changes/archive/261026-ar7ec-files-lists-one-path-per-line-and-review-shows-planned-against-actual/) Files lists one path per line, and review shows planned against actual
 - [261026-804yw](../../changes/archive/261026-804yw-instructions-list-the-change-s-documents-instead-of-embedding-them/) Instructions list the change's documents instead of embedding them
+- [261026-d1sb1](../../changes/archive/261026-d1sb1-re-base-a-change-after-its-dependency-lands/) Re-base a change after its dependency lands
