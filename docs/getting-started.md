@@ -209,9 +209,10 @@ it found and the revision the change needs.
 
 When your answer or your feedback changes what the change says, the agent
 tells you which of its proposal, specs and tasks it would edit and how. Once
-you agree, it edits them on this branch and builds to them. It edits no
-`Files:` line itself: a revision that changes a task's files, or adds a
-task, goes through `grove instructions propose <change-id>`. Merging the
+you agree, it edits them on this branch, through
+`grove instructions propose <change-id>`, and builds to them; it never edits
+a `Files:` line by hand. The implement instructions give only the template
+of `implementation.md`, and leave the others to propose. Merging the
 branch approves the revision with the code, and `grove review` shows it.
 
 `/grove-implement 261015-k3m9q --unattended` builds the change without

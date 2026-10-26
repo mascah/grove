@@ -24,13 +24,11 @@
   before the next.
 - When the owner's answer or feedback changes what the change says, tell
   them which of its proposal, change specs and tasks you would edit, and
-  how, and build nothing that depends on the edit yet. Edit them only once
-  the owner agrees, and only as agreed; if they do not, build what the
-  change says. Edit no other file of the change than these and
-  `implementation.md`, never its `.grove.yaml` or a `Files:` line, and
-  never renumber or reuse a task ID; a revision that changes a task's
-  files or adds a task goes through Grove's `instructions propose
-  <change-id>`. A done task whose result the revision changes is in
+  how, and build nothing that depends on the edit yet. Only once the owner
+  agrees, make the edit as agreed by running Grove's
+  `instructions propose <change-id>` and following it, never editing a
+  `Files:` line or `.grove.yaml` by hand; if they do not agree, build what
+  the change says. A done task whose result the revision changes is in
   progress again until rebuilt and its evidence updated.
   Then run Grove's `check`, fix what it reports in the change, and build to
   the revised change. If `check` reports a requirement of the change as

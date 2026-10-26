@@ -225,7 +225,7 @@ type Instructions struct {
 	Guide       string     // how the skill goes, from the change schema
 	Description string     // the owner's description, when given
 	Documents   []Document // the kinds of document the skill writes
-	Change      []File     // the change being worked on, in full
+	Change      []Listed   // the documents of the change being worked on, by path
 	Cycle       []File     // the cycle being revised or built, in full
 	Plan        string     // the cycle's members in build order, for one of them
 }
@@ -240,6 +240,14 @@ type Document struct {
 
 // File is one document included in full; Path is from the repository root.
 type File struct{ Path, Content string }
+
+// Listed is one document named by its path from the repository root, for
+// the agent to read. Differs is set for a document of an approved change
+// whose working-tree copy is not the target's.
+type Listed struct {
+	Path    string
+	Differs bool
+}
 
 // Check returns each problem in the project's change schemas: the
 // structure every schema keeps, the files each names, and, which other
@@ -390,8 +398,8 @@ func (p Project) file(s, name string) (string, error) {
 
 // build returns skill name's instructions in change schema s, with its guide
 // and documents, fill's values put into their paths and templates, and
-// change c's files when c is not nil.
-func build(p Project, s, name, task string, fill *strings.Replacer, c *doc.Change, files map[string]string) (Instructions, error) {
+// the paths of change c's files when c is not nil.
+func build(p Project, s, name, task string, fill *strings.Replacer, c *doc.Change) (Instructions, error) {
 	schema, err := p.load(s)
 	if err != nil {
 		return Instructions{}, err
@@ -417,7 +425,7 @@ func build(p Project, s, name, task string, fill *strings.Replacer, c *doc.Chang
 	}
 	if c != nil {
 		for _, name := range c.Files {
-			in.Change = append(in.Change, File{in.Root + "/" + name, files[name]})
+			in.Change = append(in.Change, Listed{Path: in.Root + "/" + name})
 		}
 	}
 	return in, err
@@ -448,7 +456,7 @@ func with(s string) string {
 
 // Explore returns the instructions for interviewing the owner about an idea.
 func Explore(p Project) (Instructions, error) {
-	in, err := build(p, p.Schema, "explore", "You are exploring an idea with the owner, in their own working tree.", strings.NewReplacer(), nil, nil)
+	in, err := build(p, p.Schema, "explore", "You are exploring an idea with the owner, in their own working tree.", strings.NewReplacer(), nil)
 	in.Schemas = p.choices()
 	return in, err
 }
@@ -460,7 +468,7 @@ func Prototype(p Project, question string) (Instructions, error) {
 	if question != "" {
 		from = "the owner's question below"
 	}
-	in, err := build(p, p.Schema, "prototype", "You are prototyping "+from+" with the owner, in their own working tree.", strings.NewReplacer(), nil, nil)
+	in, err := build(p, p.Schema, "prototype", "You are prototyping "+from+" with the owner, in their own working tree.", strings.NewReplacer(), nil)
 	in.Description = question
 	return in, err
 }
@@ -474,7 +482,7 @@ func Propose(p Project, s, id, created, description string) (Instructions, error
 		from = "the owner's description below"
 	}
 	in, err := build(p, s, "propose", fmt.Sprintf("You are proposing new change %s%s, from %s, in the owner's own working tree.", id, with(s), from),
-		strings.NewReplacer("<change>", id+"-<slug>", "{{change}}", id, "{{created}}", created, "{{schema}}", s, "{{base}}", short(p.Commit), "{{commit}}", p.Commit), nil, nil)
+		strings.NewReplacer("<change>", id+"-<slug>", "{{change}}", id, "{{created}}", created, "{{schema}}", s, "{{base}}", short(p.Commit), "{{commit}}", p.Commit), nil)
 	in.Description, in.Schemas = description, p.choices()
 	return in, err
 }
@@ -507,19 +515,19 @@ func Replan(p Project, cy *doc.Cycle, content string) (Instructions, error) {
 // created at created, from Grove's own template: a cycle is no change, so
 // no schema has it.
 func plan(p Project, task, path, created string) (Instructions, error) {
-	in, err := build(p, p.Schema, "plan", task, strings.NewReplacer(), nil, nil)
+	in, err := build(p, p.Schema, "plan", task, strings.NewReplacer(), nil)
 	fill := strings.NewReplacer("{{commit}}", p.Commit, "{{created}}", created)
 	in.Documents = append(in.Documents, Document{Kind: "cycle", Path: path, Template: fill.Replace(embedded("metadata/cycle.yaml"))})
 	return in, err
 }
 
 // Revise returns the instructions for revising drafted change c, read from
-// the working tree; files are c.Files as read from there. With cy, the
+// the working tree. With cy, the
 // cycle not done that lists c, whose file holds content, they re-plan it
 // too, so one merge brings both.
-func Revise(p Project, c *doc.Change, files map[string]string, cy *doc.Cycle, content string) (Instructions, error) {
+func Revise(p Project, c *doc.Change, cy *doc.Cycle, content string) (Instructions, error) {
 	task := fmt.Sprintf("You are revising drafted change %s, %q%s, in the owner's own working tree.", c.ID, c.Meta.Title, with(c.Meta.Schema))
-	in, err := build(p, c.Meta.Schema, "propose", task, fill(p, c), c, files)
+	in, err := build(p, c.Meta.Schema, "propose", task, fill(p, c), c)
 	if cy != nil {
 		in.Task = strings.TrimSuffix(in.Task, ".") + fmt.Sprintf(", and re-planning cycle %s, %q, which lists it.", cy.ID, cy.Meta.Title)
 		fill := strings.NewReplacer("{{commit}}", p.Commit, "{{created}}", cy.Meta.Created)
@@ -530,16 +538,20 @@ func Revise(p Project, c *doc.Change, files map[string]string, cy *doc.Cycle, co
 }
 
 // Implement returns the instructions for implementing change c, which the
-// target holds, with the owner or, unattended, asking no one; files are
-// c.Files as read from there. A change the target does not hold is a draft,
-// read from the working tree, which only the owner builds (rule 4).
-func Implement(p Project, c *doc.Change, files map[string]string, unattended bool) (Instructions, error) {
+// target holds, with the owner or, unattended, asking no one; differs are
+// the files of c whose working-tree copy is not the target's. A change the
+// target does not hold is a draft, read from the working tree, which only
+// the owner builds (rule 4).
+func Implement(p Project, c *doc.Change, differs []string, unattended bool) (Instructions, error) {
 	task := fmt.Sprintf("You are implementing approved change %s, %q%s, as %s@%s holds it, %s.",
 		c.ID, c.Meta.Title, with(c.Meta.Schema), p.Target, short(p.Commit), who(unattended))
 	if p.Agreed.Change(c.ID) == nil {
 		task = fmt.Sprintf("You are implementing drafted change %s, %q%s, as this working tree holds it, %s.", c.ID, c.Meta.Title, with(c.Meta.Schema), who(false))
 	}
-	in, err := build(p, c.Meta.Schema, "implement", task, fill(p, c), c, files)
+	in, err := build(p, c.Meta.Schema, "implement", task, fill(p, c), c)
+	for i, name := range c.Files {
+		in.Change[i].Differs = slices.Contains(differs, name)
+	}
 	in.Requires += mode(unattended)
 	return in, err
 }
@@ -606,10 +618,10 @@ func (in *Instructions) InCycle(cy *doc.Cycle, content string, ordered []*doc.Ch
 }
 
 // Archive returns the instructions for archiving change c, read from the
-// working tree; files are c.Files as read from there.
-func Archive(p Project, c *doc.Change, files map[string]string) (Instructions, error) {
+// working tree.
+func Archive(p Project, c *doc.Change) (Instructions, error) {
 	task := fmt.Sprintf("You are archiving change %s, %q%s, in the owner's own working tree.", c.ID, c.Meta.Title, with(c.Meta.Schema))
-	return build(p, c.Meta.Schema, "archive", task, fill(p, c), c, files)
+	return build(p, c.Meta.Schema, "archive", task, fill(p, c), c)
 }
 
 // fill puts change c's values into paths and templates. {{commit}} is the
@@ -652,10 +664,17 @@ func (in Instructions) Markdown() string {
 	}
 	in.index(&b)
 	if len(in.Change) > 0 {
-		b.WriteString("## The change\n\n")
+		b.WriteString("## The change\n\nRead every document of the change with your own file tool before you act; Grove prints none of them.\n\n")
 	}
 	for _, f := range in.Change {
-		include(&b, f.Path, f.Content)
+		fmt.Fprintf(&b, "- `%s`", f.Path)
+		if f.Differs {
+			fmt.Fprintf(&b, ": differs from %s; `git show %s:%s` prints the approved text", in.Target, in.Commit, f.Path)
+		}
+		b.WriteString("\n")
+	}
+	if len(in.Change) > 0 {
+		b.WriteString("\n")
 	}
 	if len(in.Cycle) > 0 {
 		b.WriteString("## The cycle\n\n" + in.Plan)

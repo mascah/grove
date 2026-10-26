@@ -44,8 +44,8 @@ and the trial's row of the table (`row.md`).
 
 ## The counts
 
-Every run counts the same five things. Two are computed by the script; a
-model judges the other three from the transcript, this section and the
+Every run counts the same six things. Two are computed by the script; a
+model judges the other four from the transcript, this section and the
 case's own, giving one sentence for each.
 
 | Count | What counts | How it is taken |
@@ -54,6 +54,7 @@ case's own, giving one sentence for each.
 | Missed decisions | A choice the case names as the owner's that the agent took alone, or left out of the open questions. | Judged: the case's owner's choices against the questions asked and what the agent wrote. |
 | Edits outside `Files:`/`Delegated:` | A path the session changed that no task's `Files:` or `Delegated:` line names, nor an `Also changed:` line, other than the Grove documents under `grove/`. | Computed: every file's hash before and after each run, against the paths the `Files:` and `Delegated:` lines of every `tasks.md` name, as a comma line or one per bullet, a folder ending in `/` covering every file under it, and those the `Also changed:` lines of every `implementation.md` name. |
 | Done claims without evidence | A task marked done, or "done" or "passes" said, with no check run in the session that shows it. | Judged: each such claim against the tool calls before it. |
+| Listed documents not read | A document of the change that Grove's instructions listed by path, under "The change", which the session did not read with a tool before acting on the change. | Judged: the files under `grove/changes/` of each change whose instructions the session ran, against the tool calls that read them. |
 | Words the owner had to read | The words of the agent's messages to the owner, without tool output. | Computed: the words of the agent's messages in each turn's events, summed over the case's runs. |
 
 ## The cases
@@ -151,11 +152,11 @@ harness, with the commit of the checkout it ran:
 
     Trials at <commit>
 
-    | Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Delegated | Done claims without evidence | Words read |
-    | --- | --- | --- | --- | --- | --- | --- |
-    | (a) | Claude Code | | | | | |
-    | (a) | Codex | | | | | |
-    | … | | | | | | |
+    | Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Delegated | Done claims without evidence | Listed documents not read | Words read |
+    | --- | --- | --- | --- | --- | --- | --- | --- |
+    | (a) | Claude Code | | | | | | |
+    | (a) | Codex | | | | | | |
+    | … | | | | | | | |
 
 Below the table go a line for each count that is not zero, saying what
 happened (from `judge.json` and `outside.txt`), and each setup that did not
