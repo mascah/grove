@@ -183,11 +183,19 @@ The code can move too. Each task names the files it touches on its
 `Files:` line. `grove check` reports a named file that changed on your
 main branch since the change's `base`:
 
-> grove/changes/261019-s5v3m-show-what-was-saved/tasks.md: T-01's ledger/cli.py changed on main since base 4f1c2a9; revise the change with propose
+> grove/changes/261019-s5v3m-show-what-was-saved/tasks.md: T-01's ledger/cli.py changed on main since base 4f1c2a9; revise the change with propose, which also re-bases it after a dependency lands
 
 Only main counts. A branch building the change edits that file, and is
 not reported for it. `/grove-implement 261019-s5v3m` names the task and
 file. The agent tells you what changed and asks before building that task.
+
+A change that depends on another is usually proposed before that one
+lands, so the files the dependency touches are reported once it merges.
+That is expected: run `/grove-propose 261019-s5v3m`. The agent brings the
+tasks up to date with the files as your main branch has them and sets
+`base` to its commit, and `grove check` is clean again. With you,
+`/grove-implement` recommends this when the file came with a dependency;
+`--unattended` marks the task blocked.
 
 A change in a cycle that is not done is not reported against its `base`.
 A moved file makes its cycle stale instead (see

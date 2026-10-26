@@ -682,6 +682,23 @@ change's proposal, change specs or tasks.
 - THEN it has first run `grove instructions propose C` and follows what it
   prints
 
+### Requirement: Recommend re-basing after a dependency lands
+
+When `/grove-implement <change-id>`, with the owner, names a task's file
+as changed since the change's `base`, and a change in its `depends_on` is
+archived on the target, the implement instructions shall have the agent
+recommend revising the change with propose, which re-bases it, as the
+normal step, beside building on the file as it is now.
+
+#### Scenario: Built after its dependency
+
+- GIVEN change B depends on A, A is archived on the target, and the merge
+  that archived A changed `ledger/export.py`, which B's T-01 names
+- WHEN the owner runs `/grove-implement B` and the agent reaches T-01
+- THEN it tells the owner what changed and recommends revising B with
+  `/grove-propose B` to re-base it, or else building on the file as it is
+  now, and waits for the answer
+
 ## Known discrepancies
 
 None recorded.
@@ -700,3 +717,4 @@ None recorded.
 - [261023-mfgew](../../changes/archive/261023-mfgew-implement-suggests-a-rules-line/) Implement suggests a rules line
 - [261026-ar7ec](../../changes/archive/261026-ar7ec-files-lists-one-path-per-line-and-review-shows-planned-against-actual/) Files lists one path per line, and review shows planned against actual
 - [261026-804yw](../../changes/archive/261026-804yw-instructions-list-the-change-s-documents-instead-of-embedding-them/) Instructions list the change's documents instead of embedding them
+- [261026-d1sb1](../../changes/archive/261026-d1sb1-re-base-a-change-after-its-dependency-lands/) Re-base a change after its dependency lands

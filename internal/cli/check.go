@@ -186,7 +186,7 @@ func movedSinceBase(p project, c *doc.Collection) error {
 		for _, t := range tasks {
 			for _, f := range t.Files {
 				ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: ch.Dir + "/tasks.md",
-					Message: fmt.Sprintf("%s's %s changed on %s since base %s; revise the change with propose", t.ID, f, p.Target, ch.Meta.Base[:min(7, len(ch.Meta.Base))])})
+					Message: fmt.Sprintf("%s's %s changed on %s since base %s; revise the change with propose, which also re-bases it after a dependency lands", t.ID, f, p.Target, ch.Meta.Base[:min(7, len(ch.Meta.Base))])})
 			}
 		}
 	}

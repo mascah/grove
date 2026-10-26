@@ -18,8 +18,9 @@
   proposal, change specs and tasks you would edit and how.
 - Where a line below names a task's file as changed on the target, tell
   the owner what changed before building that task, and ask whether to
-  build on the file as it is now or revise the change with propose; do not
-  build on the file as it was.
+  build on the file as it is now or revise the change with propose; when a
+  change in its `depends_on` brought the file, recommend propose, which
+  re-bases the change. Never build on the file as it was.
 - When a task is built, tell the owner how to try it and take their feedback
   before the next.
 - When the owner's answer or feedback changes what the change says, tell
