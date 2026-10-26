@@ -78,10 +78,11 @@ type Change struct {
 // Task is one T-NN heading of a change's tasks.md, with the status
 // implementation.md gives it, if any (rule 3).
 type Task struct {
-	ID     string   `json:"id"`
-	Title  string   `json:"title"`
-	Status string   `json:"status,omitempty"`
-	Files  []string `json:"-"` // the repo-relative paths its Files: line names, a folder ending in /
+	ID     string            `json:"id"`
+	Title  string            `json:"title"`
+	Status string            `json:"status,omitempty"`
+	Files  []string          `json:"-"` // the repo-relative paths its Files: line names, a folder ending in /
+	Also   map[string]string `json:"-"` // path → reason, from its Also changed: lines in implementation.md
 }
 
 // Cycle is one cycle file: approved changes the owner means to build
@@ -358,6 +359,7 @@ var (
 	taskHeading = regexp.MustCompile(`^#+ (T-\d+)\b[\s—–:-]*(.*)$`)
 	filesLine   = regexp.MustCompile("^`[^`]+`(\\s*,\\s*`[^`]+`)*$")
 	fileBullet  = regexp.MustCompile("^\\s*[-*] `[^`]+`\\s*$")
+	alsoLine    = regexp.MustCompile("^Also changed: `([^`]+)`[\\s—–:-]*(.*)$")
 	quoted      = regexp.MustCompile("`([^`]+)`")
 	field       = regexp.MustCompile(`^[A-Z]\w*:`)
 )
@@ -368,7 +370,7 @@ var (
 func (ch *Change) tasks(fsys fs.FS) {
 	tasks, _ := fs.ReadFile(fsys, ch.Dir+"/tasks.md")
 	impl, _ := fs.ReadFile(fsys, ch.Dir+"/implementation.md")
-	status, task := map[string]string{}, ""
+	status, also, task := map[string]string{}, map[string]map[string]string{}, ""
 	for _, l := range strings.Split(string(impl), "\n") {
 		if m := taskHeading.FindStringSubmatch(l); m != nil {
 			task = m[1]
@@ -377,11 +379,17 @@ func (ch *Change) tasks(fsys fs.FS) {
 			status[task] = strings.TrimSpace(s)
 			ch.Dropped = ch.Dropped || status[task] == "dropped"
 		}
+		if m := alsoLine.FindStringSubmatch(l); m != nil && task != "" {
+			if also[task] == nil {
+				also[task] = map[string]string{}
+			}
+			also[task][m[1]] = strings.TrimSpace(m[2])
+		}
 	}
 	lines := strings.Split(string(tasks), "\n")
 	for i, l := range lines {
 		if m := taskHeading.FindStringSubmatch(l); m != nil {
-			ch.Tasks = append(ch.Tasks, Task{ID: m[1], Title: m[2], Status: status[m[1]]})
+			ch.Tasks = append(ch.Tasks, Task{ID: m[1], Title: m[2], Status: status[m[1]], Also: also[m[1]]})
 		}
 		files, ok := strings.CutPrefix(l, "Files:")
 		if !ok || len(ch.Tasks) == 0 {

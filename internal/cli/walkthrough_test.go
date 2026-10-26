@@ -372,6 +372,43 @@ func TestApprove(t *testing.T) {
 	}
 }
 
+// TestPlanned follows the walkthrough's "Planned against actual": review
+// marks each file a branch changes outside grove/ against the change's
+// tasks, before and after archiving.
+func TestPlanned(t *testing.T) {
+	dir := setUp(t)
+	cid, folder := propose(t, dir, "c", "Allow editing older records", "")
+	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte("## T-01 — Allow editing older records\n\nFiles:\n- `ledger/records.py`\n- `tests/fixtures/`\n"), 0o644)
+	commitAll(t, dir, "Propose")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "c")
+	git(t, dir, "switch", "-q", "-c", "c-impl")
+	os.WriteFile(filepath.Join(folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n\nAlso changed: `README.md` — T-01 makes its usage example false\n"), 0o644)
+	os.MkdirAll(filepath.Join(dir, "tests/fixtures"), 0o755)
+	for _, f := range []string{"ledger/records.py", "tests/fixtures/records.json", "README.md", "Cargo.lock"} {
+		os.WriteFile(filepath.Join(dir, f), []byte("changed\n"), 0o644)
+	}
+	commitAll(t, dir, "Build")
+	want := "\n  named nowhere  Cargo.lock\n  agreed " + cid + ":T-01: T-01 makes its usage example false  README.md\n  planned " + cid + ":T-01  ledger/records.py\n  planned " + cid + ":T-01  tests/fixtures/records.json\n\n"
+	if out := grove(t, "review"); !strings.Contains(out, want) {
+		t.Errorf("review does not mark the files against the plan:\n%.2000s", out)
+	}
+	maintain(t, dir, olderEdits)
+	grove(t, "archive", cid)
+	commitAll(t, dir, "Archive")
+	if out := grove(t, "review"); !strings.Contains(out, want) {
+		t.Errorf("review after archiving does not mark the files:\n%.2000s", out)
+	}
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Implement", "c-impl")
+	git(t, dir, "switch", "-q", "-c", "other")
+	os.WriteFile(filepath.Join(dir, "Cargo.lock"), []byte("again\n"), 0o644)
+	commitAll(t, dir, "Other")
+	if out := grove(t, "review"); strings.Contains(out, "named nowhere") {
+		t.Errorf("review of a branch with no change marks files:\n%.2000s", out)
+	}
+}
+
 // TestOneMerge follows the walkthrough's "One merge for a small change": a
 // change drafted, built and archived on one branch, approved by one merge.
 func TestOneMerge(t *testing.T) {

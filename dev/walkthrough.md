@@ -106,7 +106,12 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    then `grove archive 261015-k3m9q`:
    > Archived 261015-k3m9q to grove/changes/archive/261015-k3m9q-allow-editing-older-records/; nothing is committed.
 
-6. **Merge** (§6). Commit, `git switch main && git merge --no-ff older-edits-impl`. `grove specs`:
+6. **Merge** (§6). Commit, then `grove review` lists, before the
+   documents, each file the branch changes outside `grove/`:
+   > planned 261015-k3m9q:T-01  ledger/cli.py
+   > planned 261015-k3m9q:T-01  tests/test_cli.py
+
+   `git switch main && git merge --no-ff older-edits-impl`. `grove specs`:
    > record-editing  Record editing  grove/specs/record-editing/spec.md
 
    The spec says "When a user edits an existing record and leaves its
@@ -515,6 +520,16 @@ Each step names the section of
   `find`'s tests in `tests/test_cli.py`, T-01's evidence names
   `tests/test_records.py` and why it was left, and `implementation.md`
   has no `Also changed:` line.
+- **Planned against actual** (§6; reference, "Terminal commands"). Approve
+  a change whose T-01 names `ledger/records.py` and `tests/fixtures/` as
+  bullets. On a branch, write `implementation.md` with T-01 done and
+  `` Also changed: `README.md` — T-01 makes its usage example false ``
+  under it, change `ledger/records.py`, `tests/fixtures/records.json`,
+  `README.md` and `Cargo.lock`, and commit. `grove review` lists
+  `Cargo.lock` as `named nowhere`, `README.md` as `agreed <change-id>:T-01`
+  with the reason, and the other two as `planned <change-id>:T-01`, and
+  exits 0; after `grove archive <change-id>` and a commit, the same. On a
+  branch from main holding no change, it lists no files against a plan.
 - **A file no task names, with me** (§5; coordinating, "Building a cycle
   unattended"). Approve a change whose T-01 changes what `ledger delete`
   prints and names only `ledger/cli.py` and `tests/test_cli.py`. On a

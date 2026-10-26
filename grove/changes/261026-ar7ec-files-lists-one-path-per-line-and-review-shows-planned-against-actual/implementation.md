@@ -55,7 +55,25 @@ Evidence:
 
 ### T-03 — Review shows planned against actual
 
-Status: not started
+Status: done
+
+Evidence:
+- Rule 3 names `Also changed:` among what Grove reads in `review`
+  (`CONSTITUTION.md` at 2c6de73), so the constraint holds.
+- `internal/doc/doc.go`: `Task.Also` holds the path and reason of each
+  `Also changed:` line under the task's heading in `implementation.md`,
+  not in the project data.
+- `internal/cli/review.go`: while the branch holds a change open, or
+  archived where the target does not, `grove review` lists before the
+  documents each file `<target>...HEAD` changes outside the root, as
+  `planned <id>:T-NN`, `agreed <id>:T-NN: <reason>` or `named nowhere`,
+  then the path.
+- `docs/reference.md` and `dev/walkthrough.md` (step 6 of the main line
+  and "Planned against actual") show the list.
+- `internal/cli/walkthrough_test.go` `TestPlanned` covers the three marks
+  and a folder entry, before and after archiving, and a branch holding no
+  change.
+- `just check` passed: 3982 Go lines, 1663 test lines.
 
 ### T-04 — Trials read bullets and Also changed
 
