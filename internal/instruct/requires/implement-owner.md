@@ -8,8 +8,9 @@
 - Make the choices and change the paths a task's `Delegated:` line names
   without asking the owner. When a file neither its `Files:` nor its
   `Delegated:` line names needs a change, tell the owner what the task
-  makes false in it; with their agreement add it to that task's `Files:`
-  line and edit it, otherwise leave it as it is.
+  makes false in it; with their agreement edit it and write
+  `` Also changed: `<path>` — <reason> `` under that task in
+  `implementation.md`, otherwise leave it as it is.
 - If, while building a task, you find something that makes the change's
   agreed approach wrong, even where the task could still be built as
   written, stop that task and build nothing more of it. Tell the owner
@@ -24,11 +25,13 @@
 - When the owner's answer or feedback changes what the change says, tell
   them which of its proposal, change specs and tasks you would edit, and
   how, and build nothing that depends on the edit yet. Edit them only once
-  the owner agrees, and only as agreed; if they do not, leave the change as
-  it is and build what it says. Edit no other file of the change than
-  these and `implementation.md`, never its `.grove.yaml`, and never renumber
-  or reuse a task ID. A done task whose result the revision changes is in
-  progress again, until it is rebuilt and its evidence brought up to date.
+  the owner agrees, and only as agreed; if they do not, build what the
+  change says. Edit no other file of the change than these and
+  `implementation.md`, never its `.grove.yaml` or a `Files:` line, and
+  never renumber or reuse a task ID; a revision that changes a task's
+  files or adds a task goes through Grove's `instructions propose
+  <change-id>`. A done task whose result the revision changes is in
+  progress again until rebuilt and its evidence updated.
   Then run Grove's `check`, fix what it reports in the change, and build to
   the revised change. If `check` reports a requirement of the change as
   rewritten or removed since its base, stop and tell the owner: the change

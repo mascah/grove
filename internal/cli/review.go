@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"github.com/mascah/grove/internal/doc"
@@ -56,6 +57,9 @@ func review(stdout io.Writer) error {
 		return err
 	}
 	fmt.Fprintln(stdout)
+	if err := planned(stdout, p, ip.Agreed, head, span); err != nil {
+		return err
+	}
 	for line := range strings.Lines(names) {
 		status, path, _ := strings.Cut(strings.TrimSpace(line), "\t")
 		fmt.Fprintf(stdout, "  %-8s %-16s %s\n", map[string]string{"A": "adds", "M": "changes", "D": "removes"}[status], meaning(p.Root, path), path)
@@ -78,4 +82,53 @@ func meaning(root, path string) string {
 		return "cycle"
 	}
 	return "maintained spec"
+}
+
+// planned lists each file the branch changes outside the root against the
+// plan of the changes it holds open, or archived where agreed does not.
+func planned(stdout io.Writer, p project, agreed, head *doc.Collection, span string) error {
+	changes := slices.Clone(head.Changes)
+	for _, c := range head.Archived {
+		if !agreed.InArchive(c.ID) {
+			changes = append(changes, c)
+		}
+	}
+	if len(changes) == 0 {
+		return nil
+	}
+	names, err := gitx.Run(p.Top, "diff", "--name-only", "--no-renames", span)
+	if err != nil {
+		return err
+	}
+	listed := false
+	for path := range strings.Lines(names) {
+		if path = strings.TrimSpace(path); path != "" && !strings.HasPrefix(path, p.Root+"/") {
+			fmt.Fprintf(stdout, "  %s  %s\n", mark(changes, path), path)
+			listed = true
+		}
+	}
+	if listed {
+		fmt.Fprintln(stdout)
+	}
+	return nil
+}
+
+// mark says whether a task of changes plans path on its Files: line, or
+// failing that agrees to it on an Also changed: line, or none names it.
+func mark(changes []*doc.Change, path string) string {
+	for _, c := range changes {
+		for _, t := range c.Tasks {
+			if slices.ContainsFunc(t.Files, func(f string) bool { return doc.Names(f, path) }) {
+				return "planned " + c.ID + ":" + t.ID
+			}
+		}
+	}
+	for _, c := range changes {
+		for _, t := range c.Tasks {
+			if reason, ok := t.Also[path]; ok {
+				return "agreed " + c.ID + ":" + t.ID + ": " + reason
+			}
+		}
+	}
+	return "named nowhere"
 }

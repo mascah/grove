@@ -311,7 +311,7 @@ func TestPropose(t *testing.T) {
 	out := grove(t, "instructions", "propose", "Editing a missing record should print an error")
 	req, how := strings.Index(out, "## What Grove requires of propose\n\n- Write the documents below"), strings.Index(out, "## How to propose\n\n**Propose says")
 	if !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") || req < 0 || how < req ||
-		!strings.Contains(out, "on a `Files:` line after `Result:`") || !strings.Contains(out, "\nFiles: [`path/to/file`") || strings.Contains(out, "file-by-file") ||
+		!strings.Contains(out, "under `Files:` after `Result:`") || !strings.Contains(out, "\nFiles:\n- [`path/to/file`]\n") || strings.Contains(out, "file-by-file") ||
 		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 5. Check the change") || strings.Contains(out, "Assumptions to confirm") {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
@@ -369,6 +369,43 @@ func TestApprove(t *testing.T) {
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "older-edits")
 	if got := grove(t, "changes"); !strings.HasSuffix(got, "  Allow editing older records  approved\n") {
 		t.Errorf("changes printed %q", got)
+	}
+}
+
+// TestPlanned follows the walkthrough's "Planned against actual": review
+// marks each file a branch changes outside grove/ against the change's
+// tasks, before and after archiving.
+func TestPlanned(t *testing.T) {
+	dir := setUp(t)
+	cid, folder := propose(t, dir, "c", "Allow editing older records", "")
+	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte("## T-01 — Allow editing older records\n\nFiles:\n- `ledger/records.py`\n- `tests/fixtures/`\n"), 0o644)
+	commitAll(t, dir, "Propose")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", "c")
+	git(t, dir, "switch", "-q", "-c", "c-impl")
+	os.WriteFile(filepath.Join(folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n\nAlso changed: `README.md` — T-01 makes its usage example false\n"), 0o644)
+	os.MkdirAll(filepath.Join(dir, "tests/fixtures"), 0o755)
+	for _, f := range []string{"ledger/records.py", "tests/fixtures/records.json", "README.md", "Cargo.lock"} {
+		os.WriteFile(filepath.Join(dir, f), []byte("changed\n"), 0o644)
+	}
+	commitAll(t, dir, "Build")
+	want := "\n  named nowhere  Cargo.lock\n  agreed " + cid + ":T-01: T-01 makes its usage example false  README.md\n  planned " + cid + ":T-01  ledger/records.py\n  planned " + cid + ":T-01  tests/fixtures/records.json\n\n"
+	if out := grove(t, "review"); !strings.Contains(out, want) {
+		t.Errorf("review does not mark the files against the plan:\n%.2000s", out)
+	}
+	maintain(t, dir, olderEdits)
+	grove(t, "archive", cid)
+	commitAll(t, dir, "Archive")
+	if out := grove(t, "review"); !strings.Contains(out, want) {
+		t.Errorf("review after archiving does not mark the files:\n%.2000s", out)
+	}
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Implement", "c-impl")
+	git(t, dir, "switch", "-q", "-c", "other")
+	os.WriteFile(filepath.Join(dir, "Cargo.lock"), []byte("again\n"), 0o644)
+	commitAll(t, dir, "Other")
+	if out := grove(t, "review"); strings.Contains(out, "named nowhere") {
+		t.Errorf("review of a branch with no change marks files:\n%.2000s", out)
 	}
 }
 
@@ -440,9 +477,10 @@ func TestImplementInstructions(t *testing.T) {
 
 	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. When every task is done", "Commit only when the owner or the project's\nrules ask.",
 		"The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n"}
-	owner := []string{"ask the owner and\n  wait", "with their agreement add it to that task's `Files:`", "tell the owner how to try it",
+	owner := []string{"ask the owner and\n  wait", "with their agreement edit it and write\n  `` Also changed: `<path>` — <reason> `` under that task", "never its `.grove.yaml` or a `Files:` line",
+		"a revision that changes a task's\n  files or adds a task goes through Grove's `instructions propose\n  <change-id>`", "tell the owner how to try it",
 		"Make the choices and change the paths a task's `Delegated:` line names\n  without asking the owner", "stop that task and build nothing more of it", "in `grove.yaml`, from one correction, quoting\n  it"}
-	alone := []string{"ask no one and wait for no one's answer", "A file no task's `Files:` line names stays as it is", "ignore\n  `Delegated:` lines", "mark that task `Status: blocked`, naming the file", "whatever its\n  `needs_human` says", "Do not add it to `grove.yaml`."}
+	alone := []string{"ask no one and wait for no one's answer", "A file no task's `Files:` line names stays as it is", "ignore\n  `Delegated:` lines", "mark that task `Status: blocked`, naming the file", "write no\n  `Also changed:` line", "whatever its\n  `needs_human` says", "Do not add it to `grove.yaml`."}
 	has := func(what, out string, want, not []string) {
 		t.Helper()
 		for _, s := range want {
@@ -1356,7 +1394,8 @@ func TestMovedFiles(t *testing.T) {
 	dir := setUp(t)
 	base := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	cid, folder := propose(t, dir, "older-edits", "Allow editing older records", "base: "+base+"\n")
-	tasks := "## T-01 — Allow editing older records\n\nResult: older records can be edited.\n\nFiles: `ledger/cli.py`,\n`tests/test_cli.py`\nDelegated: test layout; `tests/test_records.py`\n\nAcceptance:\n- An older record saves.\n"
+	// One path per bullet, ledger/ naming every file under it.
+	tasks := "## T-01 — Allow editing older records\n\nResult: older records can be edited.\n\nFiles:\n- `ledger/`\n- `tests/test_cli.py`\nDelegated: test layout; `tests/test_records.py`\n\nAcceptance:\n- An older record saves.\n"
 	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(tasks), 0o644)
 	commitAll(t, dir, "Propose")
 	git(t, dir, "switch", "-q", "main")
@@ -1385,12 +1424,14 @@ func TestMovedFiles(t *testing.T) {
 	checks("No problems in grove/.\n")
 	git(t, dir, "switch", "-q", "main")
 
-	// Changed on main since base.
+	// Changed on main since base, one file under the folder T-01 names.
 	edit("tests/test_cli.py", "Another change")
+	edit("ledger/report.py", "A change under ledger/")
 	rel := "grove/changes/" + filepath.Base(folder) + "/tasks.md"
-	checks(rel + ": T-01's tests/test_cli.py changed on main since base " + base[:7] + "; revise the change with propose\n")
+	checks(rel + ": T-01's ledger/report.py changed on main since base " + base[:7] + "; revise the change with propose\n" +
+		rel + ": T-01's tests/test_cli.py changed on main since base " + base[:7] + "; revise the change with propose\n")
 	for _, args := range [][]string{{cid}, {cid, "--unattended"}} {
-		if out := grove(t, append([]string{"instructions", "implement"}, args...)...); !strings.Contains(out, "\n- Changed on main since base "+base[:7]+": T-01's `tests/test_cli.py`.\n") {
+		if out := grove(t, append([]string{"instructions", "implement"}, args...)...); !strings.Contains(out, "\n- Changed on main since base "+base[:7]+": T-01's `ledger/report.py`, T-01's `tests/test_cli.py`.\n") {
 			t.Errorf("implement %v does not name the moved file:\n%.3000s", args, out)
 		}
 	}
@@ -1419,10 +1460,16 @@ func TestMovedFiles(t *testing.T) {
 		t.Errorf("grove run would build a cycle whose member's file moved: %v", err)
 	}
 
-	// A Files: line Grove cannot read.
-	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, "`ledger/cli.py`,\n`tests/test_cli.py`", "ledger/cli.py", 1)), 0o644)
+	// A comma line, wrapped, still reads; a Files: line Grove cannot read.
+	files := "Files:\n- `ledger/`\n- `tests/test_cli.py`"
+	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, files, "Files: `ledger/cli.py`,\n`tests/test_cli.py`", 1)), 0o644)
 	os.Remove(filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"))
-	checks(rel + ":5: T-01's Files: line should list repo-relative paths in backticks, separated by commas\n")
+	since := " changed on main since base " + base[:7] + "; revise the change with propose\n"
+	checks(rel + ": T-01's ledger/cli.py" + since + rel + ": T-01's tests/test_cli.py" + since)
+	for _, bad := range []string{"Files: ledger/cli.py", "Files: `../ledger/cli.py`", "Files:\n- `ledger/cli.py`, `tests/test_cli.py`"} {
+		os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, files, bad, 1)), 0o644)
+		checks(rel + ":5: T-01's Files: line should list repo-relative paths in backticks, one per bullet or separated by commas, and a folder ends in /\n")
+	}
 }
 
 // TestFollows follows the walkthrough's steps on a cycle that follows

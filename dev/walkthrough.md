@@ -64,8 +64,9 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    question open and blocking no task, since T-01 leaves the category
    unchanged),
    `specs/record-editing/spec.md` (an ADDED requirement as an EARS sentence
-   with scenarios), and `tasks.md` (T-01 with its acceptance, a `Files:`
-   line naming `ledger/cli.py`, the file under fix, and `tests/test_cli.py`,
+   with scenarios), and `tasks.md` (T-01 with its acceptance, `Files:`
+   with one bullet each for `ledger/cli.py`, the file under fix, and
+   `tests/test_cli.py`,
    which the session said in the conversation it would touch, and an
    `Interfaces:` line, with no code or steps). Before presenting it, the
    session checks that T-01's acceptance covers each scenario and says so,
@@ -105,7 +106,12 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    then `grove archive 261015-k3m9q`:
    > Archived 261015-k3m9q to grove/changes/archive/261015-k3m9q-allow-editing-older-records/; nothing is committed.
 
-6. **Merge** (§6). Commit, `git switch main && git merge --no-ff older-edits-impl`. `grove specs`:
+6. **Merge** (§6). Commit, then `grove review` lists, before the
+   documents, each file the branch changes outside `grove/`:
+   > planned 261015-k3m9q:T-01  ledger/cli.py
+   > planned 261015-k3m9q:T-01  tests/test_cli.py
+
+   `git switch main && git merge --no-ff older-edits-impl`. `grove specs`:
    > record-editing  Record editing  grove/specs/record-editing/spec.md
 
    The spec says "When a user edits an existing record and leaves its
@@ -191,9 +197,12 @@ It starts where the main line's step 6 ends: one archived change and the
    `grove instructions implement <budgets-id>` names T-01 and
    `ledger/report.py` as changed since base, and a fresh session's
    `/grove-implement <budgets-id>`, reaching T-01, tells me what changed
-   and asks before building; I stop it there. Write `Files: ledger/report.py`
-   without backticks in a task: `grove check` reports the line and exits
-   non-zero. Discard that edit.
+   and asks before building; I stop it there. Name the folder `ledger/`
+   in place of `ledger/report.py`: `grove check` reports T-01's
+   `ledger/report.py` the same way. Write `Files: ledger/report.py`
+   without backticks in a task: `grove check` reports the line, naming
+   both forms and that a folder ends in `/`, and exits non-zero. Discard
+   those edits.
 
 6. **The project as data** ("The project as data"). `grove changes --json`
    shows the unknown-ID and recategorize changes as `archived` with `T-01` `done`, and the delete change with no
@@ -508,8 +517,30 @@ Each step names the section of
   creates `tests/test_records.py` for `find`'s own tests without asking.
   On a fresh fixture with the same change in a cycle of one,
   `grove run <cycle-id>` leaves `tests/test_records.py` uncreated, puts
-  `find`'s tests in `tests/test_cli.py`, and T-01's evidence names
-  `tests/test_records.py` and why it was left.
+  `find`'s tests in `tests/test_cli.py`, T-01's evidence names
+  `tests/test_records.py` and why it was left, and `implementation.md`
+  has no `Also changed:` line.
+- **Planned against actual** (§6; reference, "Terminal commands"). Approve
+  a change whose T-01 names `ledger/records.py` and `tests/fixtures/` as
+  bullets. On a branch, write `implementation.md` with T-01 done and
+  `` Also changed: `README.md` — T-01 makes its usage example false ``
+  under it, change `ledger/records.py`, `tests/fixtures/records.json`,
+  `README.md` and `Cargo.lock`, and commit. `grove review` lists
+  `Cargo.lock` as `named nowhere`, `README.md` as `agreed <change-id>:T-01`
+  with the reason, and the other two as `planned <change-id>:T-01`, and
+  exits 0; after `grove archive <change-id>` and a commit, the same. On a
+  branch from main holding no change, it lists no files against a plan.
+- **A file no task names, with me** (§5; coordinating, "Building a cycle
+  unattended"). Approve a change whose T-01 changes what `ledger delete`
+  prints and names only `ledger/cli.py` and `tests/test_cli.py`. On a
+  branch, a fresh `claude`, `/grove-implement <change-id>`: building T-01,
+  the session says the README's usage example is now false and asks. I
+  agree: it edits `README.md`, `implementation.md` has
+  `` Also changed: `README.md` — `` and the reason under T-01, and
+  `git diff main -- grove/changes/<change-id>-*/tasks.md` is empty. I ask
+  for a second task that exports records: the session runs
+  `grove instructions propose <change-id>` and adds T-02 with its
+  `Files:` lines that way.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
   is given that change's files in full and edits them.
 - **A question that blocks a task** (§5). On a new branch,

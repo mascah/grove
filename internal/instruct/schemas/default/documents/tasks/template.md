@@ -10,7 +10,9 @@ task is selected as {{change}}:T-01. Example:
 
     Result: existing records can be edited without forcing the new-record rule.
 
-    Files: `src/records/rules.py`, `tests/test_rules.py`
+    Files:
+    - `src/records/rules.py`
+    - `tests/test_rules.py`
 
     Delegated: test layout and private helpers; `tests/test_records.py`
 
@@ -32,7 +34,9 @@ status here. -->
 
 Result: [what is true once this task is done, in one sentence]
 
-Files: [`path/to/file`, `path/to/its_test`]
+Files:
+- [`path/to/file`]
+- [`path/to/its_test`]
 
 Interfaces: [the functions, types or commands it produces that others use]
 

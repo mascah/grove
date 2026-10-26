@@ -106,9 +106,16 @@ change the same way, with no cycle to plan first.
 Unattended, the agent changes only the files a change's tasks name on
 their `Files:` lines. It may find another file that should change too.
 It leaves that file as it is and names it in the task's evidence in
-`implementation.md`. With you, the agent asks to add it to the task
-instead. A task may name a file that changed on your main branch since
-the change's `base`, or, for a change in a cycle, since the cycle's plan.
+`implementation.md`. With you, the agent asks instead. Once you agree, it
+edits the file and writes an `Also changed:` line under the task in
+`implementation.md`, with the reason:
+
+```markdown
+Also changed: `README.md` — T-01 makes its usage example false
+```
+
+A task may name a file that changed on your main branch since the
+change's `base`, or, for a change in a cycle, since the cycle's plan.
 Unattended, that task is marked blocked, naming the file, and is not
 built. With you, the agent asks what to do.
 
