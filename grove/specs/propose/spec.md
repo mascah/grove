@@ -448,6 +448,21 @@ line.
 - WHEN the owner runs `grove check`
 - THEN it reports nothing for the line
 
+### Requirement: List a revised change's documents
+
+When `grove instructions propose <change-id>` is run for a change the
+working tree holds, the system shall name each of the change's documents
+by path, with the instruction to read every one before editing, and print
+none of their text.
+
+#### Scenario: Revising a large change
+
+- GIVEN drafted change D whose documents hold 31 KB of text
+- WHEN `grove instructions propose D` is run
+- THEN the output names each of D's documents by path and holds none of
+  their text, and still prints the templates of the documents propose
+  writes
+
 ## Known discrepancies
 
 None recorded.
@@ -469,3 +484,4 @@ None.
 - [261023-338jz](../../changes/archive/261023-338jz-plain-docs-exact-specs/) Plain docs, exact specs
 - [261023-psd1b](../../changes/archive/261023-psd1b-guide-to-specs-of-existing-code/) A guide to writing specs of existing code
 - [261026-ar7ec](../../changes/archive/261026-ar7ec-files-lists-one-path-per-line-and-review-shows-planned-against-actual/) Files lists one path per line, and review shows planned against actual
+- [261026-804yw](../../changes/archive/261026-804yw-instructions-list-the-change-s-documents-instead-of-embedding-them/) Instructions list the change's documents instead of embedding them

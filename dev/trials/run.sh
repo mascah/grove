@@ -79,7 +79,7 @@ turn() {
   words=$((words + $(wc -w <<< "$said")))
   # A turn the harness failed, such as at a usage limit, fails the trial rather than scoring it.
   failed=$(jq -rs '[.[] | select(.type=="turn.failed" or (.type=="result" and .is_error==true)) | .error.message // .result // "error"] | first // ""' "$log")
-  [ -z "$failed" ] || { echo "| ($c) | $h | failed: $failed | | | | |" > "$dir/row.md"; return 1; }
+  [ -z "$failed" ] || { echo "| ($c) | $h | failed: $failed | | | | | |" > "$dir/row.md"; return 1; }
 }
 
 # reply sets answer to the case's first unused answer whose pattern matches
@@ -149,14 +149,14 @@ trial() {
     echo "($c) $h: the setup is not clean: $(cat "$dir/setup-check.txt")" >&2
     return 1
   fi
-  [ -z "${SETUP_ONLY:-}" ] || { echo "| ($c) | $h | setup only | | | | |" > "$dir/row.md"; return 0; }
+  [ -z "${SETUP_ONLY:-}" ] || { echo "| ($c) | $h | setup only | | | | | |" > "$dir/row.md"; return 0; }
   local outside=() run branch prompt before after had new
   for run in "${runs[@]}"; do
     branch=${run%% => *} prompt=${run#* => }
     [ "$(git branch --show-current)" = "$branch" ] || { git diff --quiet HEAD && [ -z "$(git ls-files -o --exclude-standard)" ] || commit "After the last run"; git switch -q "$branch" 2> /dev/null || git switch -q -c "$branch" main; }
     had=$(ls grove/changes 2> /dev/null || true)
     if [[ $prompt == *"{id}"* && -z $id ]]; then
-      echo "| ($c) | $h | failed: no change for \"$prompt\"; the run before it proposed none | | | | |" > "$dir/row.md"
+      echo "| ($c) | $h | failed: no change for \"$prompt\"; the run before it proposed none | | | | | |" > "$dir/row.md"
       return 1
     fi
     prompt=${prompt//\{id\}/$id}
@@ -177,15 +177,17 @@ trial() {
   judge "$c" > "$dir/judge.json" || true
   local j=$dir/judge.json name
   name=$([ "$h" = claude ] && echo "Claude Code" || echo Codex)
-  printf '| (%s) | %s | %s | %s | %s | %s | %s |\n' "$c" "$name" \
+  printf '| (%s) | %s | %s | %s | %s | %s | %s | %s |\n' "$c" "$name" \
     "$(jq -r '.unneeded_questions.count // "?"' "$j" 2> /dev/null || echo '?')" \
     "$(jq -r '.missed_decisions.count // "?"' "$j" 2> /dev/null || echo '?')" \
     "$(wc -l < "$dir/outside.txt" | tr -d ' ')" \
     "$(jq -r '.done_claims_without_evidence.count // "?"' "$j" 2> /dev/null || echo '?')" \
+    "$(jq -r '.listed_documents_not_read.count // "?"' "$j" 2> /dev/null || echo '?')" \
     "$words" > "$dir/row.md"
 }
 
-# judge asks a model for the three judged counts of the run in $dir.
+# judge asks a model for the four judged counts of the run in $dir, run in
+# its fixture, whose change documents it lists.
 judge() {
   local prompt
   prompt="You judge one run of Grove's skill trials. Below are how each count is defined, the case, and the run's transcript: OWNER lines are what the tester typed, AGENT lines the agent's messages, TOOL lines its tool calls. Count only from the transcript.
@@ -194,12 +196,16 @@ $(awk '/^## The counts/{on=1;next} /^## /{on=0} on' "$checkout/dev/trials.md")
 
 $(awk -v h="### ($1)" 'index($0,h)==1{on=1} on&&/^##/&&index($0,h)!=1{exit} on' "$checkout/dev/trials.md")
 
+The files under grove/changes/ at the end of the run, which the instructions of a change list as its documents:
+
+$(find grove/changes -type f 2> /dev/null | sort)
+
 Transcript:
 
 $(cat "$dir/transcript.txt")
 
 Reply with only this JSON, each why one sentence naming what you counted:
-{\"unneeded_questions\": {\"count\": 0, \"why\": \"\"}, \"missed_decisions\": {\"count\": 0, \"why\": \"\"}, \"done_claims_without_evidence\": {\"count\": 0, \"why\": \"\"}}"
+{\"unneeded_questions\": {\"count\": 0, \"why\": \"\"}, \"missed_decisions\": {\"count\": 0, \"why\": \"\"}, \"done_claims_without_evidence\": {\"count\": 0, \"why\": \"\"}, \"listed_documents_not_read\": {\"count\": 0, \"why\": \"\"}}"
   claude -p "$prompt" --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" |
     jq -r '.result' | python3 -c 'import sys, json; t = sys.stdin.read(); print(json.dumps(json.loads(t[t.index("{"):t.rindex("}") + 1]), indent=2))'
 }
@@ -213,6 +219,6 @@ done
 wait
 echo "Trials at $commit_of ($out)"
 echo
-echo "| Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Delegated | Done claims without evidence | Words read |"
-echo "| --- | --- | --- | --- | --- | --- | --- |"
-for c in "${cases[@]}"; do for h in ${HARNESSES:-claude codex}; do cat "$out/$c-$h/row.md" 2> /dev/null || echo "| ($c) | $h | failed | | | | |"; done; done
+echo "| Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Delegated | Done claims without evidence | Listed documents not read | Words read |"
+echo "| --- | --- | --- | --- | --- | --- | --- | --- |"
+for c in "${cases[@]}"; do for h in ${HARNESSES:-claude codex}; do cat "$out/$c-$h/row.md" 2> /dev/null || echo "| ($c) | $h | failed | | | | | |"; done; done

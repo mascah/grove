@@ -63,8 +63,33 @@ Evidence:
 
 ### T-03 — Trials count listed documents not read
 
-Status: not started
+Status: done
+
+Evidence:
+- `dev/trials.md` defines "Listed documents not read" as a judged count
+  (six counts, four judged) and the results table has its column.
+- `dev/trials/run.sh`: the judge prompt lists the files under
+  `grove/changes/` at the end of the run and asks for
+  `listed_documents_not_read`; each row prints it; every row width has the
+  extra column.
+- `HARNESSES=claude dev/trials/run.sh c` at e1be131 (plus these edits):
+  `| (c) | Claude Code | 0 | 0 | 0 | 0 | 0 | 913 |`; the judge: "Both runs
+  read `.grove.yaml`, `proposal.md`, `specs/record-editing/spec.md` and
+  `tasks.md` before acting". The same run's owner session wrote
+  `` Also changed: `ledger/records.py` — … the owner agreed `` under T-01,
+  as 261026-ar7ec intends. Codex was not run.
 
 ## Scenarios
 
+- implement "A large change": `internal/cli/walkthrough_test.go` TestImplementInstructions (paths listed, no requirement text), passed; that the agent reads every one is unverified here, and is what the trials' "Listed documents not read" counts
+- implement "A document revised on the branch": TestImplementInstructions names an edited `tasks.md` as differing with `git show <main>:<path>`, passed; that the agent builds the owner's agreed revision needs an agent session with the owner, unverified
+- implement "A document that differs, unattended": TestImplementInstructions (`--unattended`), passed for the naming; that the agent builds what `git show` prints needs an agent run, unverified
+- implement "Archiving": TestArchive (lists `implementation.md` and the change spec, no requirement text), passed
+- implement "Templates": TestImplementInstructions and TestSchemas (bugfix), passed
+- implement "An agreed revision": unverified; it needs an agent session with the owner (TestImplementInstructions checks the owner's instructions say to run `grove instructions propose <change-id>`)
+- propose "Revising a large change": TestPropose (paths listed, no requirement text, the templates still printed), passed
+
 ## Reconciliation
+
+- implement: applied to grove/specs/implement/spec.md
+- propose: applied to grove/specs/propose/spec.md
