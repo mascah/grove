@@ -88,7 +88,8 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 5. **Implement** (§5). `git switch -c older-edits-impl`, a fresh `claude`,
    `/grove-implement 261015-k3m9q`. Its instructions,
    `grove instructions implement 261015-k3m9q`, give
-   `## What Grove requires of implement` before `## How to implement`. The
+   `## What Grove requires of implement` before `## How to implement`, and
+   the template of `implementation.md` but of no other document. The
    open question blocks no task, so the session asks nothing, works T-01
    with a test, editing no file but the two T-01 names without asking me,
    tells me how to try it, and writes `implementation.md` with
@@ -566,7 +567,8 @@ Each step names the section of
   building T-01 the session asks whether a missing record should exit 2. I
   answer yes; it says it would edit the change spec's requirement and its
   scenario, and the open question in the proposal, to say exit 2, and
-  waits. I agree: it edits them, runs `grove check` until
+  waits. I agree: it runs `grove instructions propose <change-id>`,
+  edits them as that says, runs `grove check` until
   > No problems in grove/.
 
   builds T-01 to exit 2 with a test, and archives the change. Commit, then

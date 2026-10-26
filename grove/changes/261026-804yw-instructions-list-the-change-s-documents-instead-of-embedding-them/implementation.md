@@ -42,7 +42,24 @@ Evidence:
 
 ### T-02 — Implement prints only the implementation template
 
-Status: not started
+Status: done
+
+Evidence:
+- `internal/instruct/schemas/default/schema.yaml`: implement `writes` is
+  `[implementation]`; `bugfix` takes default's skills, so the same.
+- `internal/instruct/requires/implement-owner.md`: an agreed edit is made
+  by running `grove instructions propose <change-id>` and following it,
+  never editing a `Files:` line or `.grove.yaml` by hand (this also covers
+  261026-ar7ec's "Revise the change on its branch", in fewer words).
+- `docs/getting-started.md` and `dev/walkthrough.md` (main line step 5,
+  "Implement asks, and revises with the owner") say so.
+- `internal/cli/walkthrough_test.go`: `TestImplementInstructions` expects
+  the implementation template and no proposal, change spec, tasks or
+  `.grove.yaml` template, and the propose path; `TestSchemas` checks
+  bugfix's implement instructions likewise.
+- The on-fixture acceptance with the owner (an agreed revision made after
+  running propose) needs an agent session: not run here, see Scenarios.
+- `just check` passed: 7970 instruction words.
 
 ### T-03 — Trials count listed documents not read
 

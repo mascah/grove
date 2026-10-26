@@ -40,7 +40,7 @@ skills:
     guide: skills/plan.md
   implement:
     guide: skills/implement.md
-    writes: [proposal, change-spec, tasks, implementation]
+    writes: [implementation]
   archive:
     guide: skills/archive.md
     writes: [spec, implementation]

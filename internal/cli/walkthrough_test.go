@@ -480,8 +480,7 @@ func TestImplementInstructions(t *testing.T) {
 
 	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. When every task is done", "Commit only when the owner or the project's\nrules ask.",
 		"The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n"}
-	owner := []string{"ask the owner and\n  wait", "with their agreement edit it and write\n  `` Also changed: `<path>` — <reason> `` under that task", "never its `.grove.yaml` or a `Files:` line",
-		"a revision that changes a task's\n  files or adds a task goes through Grove's `instructions propose\n  <change-id>`", "tell the owner how to try it",
+	owner := []string{"ask the owner and\n  wait", "with their agreement edit it and write\n  `` Also changed: `<path>` — <reason> `` under that task", "by running Grove's\n  `instructions propose <change-id>` and following it, never editing a\n  `Files:` line or `.grove.yaml` by hand", "tell the owner how to try it",
 		"Make the choices and change the paths a task's `Delegated:` line names\n  without asking the owner", "stop that task and build nothing more of it", "in `grove.yaml`, from one correction, quoting\n  it"}
 	alone := []string{"ask no one and wait for no one's answer", "A file no task's `Files:` line names stays as it is", "ignore\n  `Delegated:` lines", "mark that task `Status: blocked`, naming the file", "write no\n  `Also changed:` line", "whatever its\n  `needs_human` says", "Do not add it to `grove.yaml`."}
 	has := func(what, out string, want, not []string) {
@@ -499,7 +498,8 @@ func TestImplementInstructions(t *testing.T) {
 	}
 	out := grove(t, "instructions", "implement", cid)
 	listed := "\n- `grove/changes/" + cid + "-allow-editing-older-records/specs/record-editing/spec.md`\n"
-	has("implement instructions", out, append(append([]string{"You are implementing approved change " + cid + ", \"Allow editing older records\", as main@", "with the owner, in their own working tree.", "### change-spec: ", listed}, shared...), owner...), append(alone, "### Requirement: Edit older records", ": differs from main"))
+	has("implement instructions", out, append(append([]string{"You are implementing approved change " + cid + ", \"Allow editing older records\", as main@", "with the owner, in their own working tree.", "### implementation: ", listed}, shared...), owner...),
+		append(alone, "### Requirement: Edit older records", ": differs from main", "### proposal: ", "### change-spec: ", "### tasks: ", "/.grove.yaml\">"))
 	// A document edited on the branch is named, with the approved text.
 	tasks := filepath.Join(dir, "grove/changes", cid+"-allow-editing-older-records/tasks.md")
 	os.WriteFile(tasks, []byte(read(t, tasks)+"\nResult: edited.\n"), 0o644)
@@ -749,6 +749,9 @@ func TestSchemas(t *testing.T) {
 		if out := grove(t, append(append([]string{"instructions"}, strings.Fields(skill)...), cid)...); !strings.Contains(out, ", with change schema bugfix, ") || !strings.Contains(out, s) {
 			t.Errorf("bugfix %s instructions:\n%.2000s", skill, out)
 		}
+	}
+	if out := grove(t, "instructions", "implement", cid); strings.Contains(out, "### proposal: ") || !strings.Contains(out, "### implementation: ") {
+		t.Errorf("bugfix implement instructions print templates other than implementation's:\n%.3000s", out)
 	}
 
 	// The walkthrough's "A mistake in a schema", a change naming no schema,
