@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0](https://github.com/mascah/grove/compare/v0.5.0...v0.6.0) (2026-10-27)
+
+
+### Features
+
+* **cli:** re-base a change after its dependency lands ([#95](https://github.com/mascah/grove/issues/95)) ([b34274f](https://github.com/mascah/grove/commit/b34274ff96b7ea73570832b8771a2fc9c4a225ae))
+* Files lists one path per line, and review shows planned against actual ([#93](https://github.com/mascah/grove/issues/93)) ([671f7c7](https://github.com/mascah/grove/commit/671f7c7159e1c9d13a0169f4fd2a1e5d77411cbe))
+* **instruct:** instructions list the change's documents instead of embedding them ([#94](https://github.com/mascah/grove/issues/94)) ([f7d3c5a](https://github.com/mascah/grove/commit/f7d3c5a83d39d3061d42a61b45aa50968f931600))
+
+
+### Bug Fixes
+
+* **instruct:** a title with a colon passes check ([#92](https://github.com/mascah/grove/issues/92)) ([e0be394](https://github.com/mascah/grove/commit/e0be394c1d1da67c7e898b8bb429bbe739cfebe9))
+
 ## [0.5.0](https://github.com/mascah/grove/compare/v0.4.0...v0.5.0) (2026-10-25)
 
 
