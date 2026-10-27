@@ -25,8 +25,11 @@ schema: default
 # Skills: explore, prototype, propose, plan, implement, archive.
 rules:
   skills:
+    propose:
+      - Keep instruction text well under the 8,000-word budget. If a change is difficult to fit within this budget, consider splitting into multiple changes.
     implement:
       - Make changes in a git worktree to avoid conflicting with other work
+      - When working in a git worktree, run grove from the worktree's own build (bin/grove) to check behavior the branch changes.
       - Commit after each task, naming its task ID.
       - When you are done, push the branch to origin and open a pull request with gh pr create, listing the changes archived and each blocked task with its question.
       - When working on a cycle with multiple changes, create a branch and pull request for each individual change using branch chaining
