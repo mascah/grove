@@ -697,6 +697,10 @@ const meanings = `Grove keeps three meanings apart; keep them apart when you spe
 A Grove document in the working tree that the target does not hold as it is,
 is a draft: not agreed until it is merged.
 
+Write Grove documents for whoever reads this project: cite only what they can
+open, and quote or summarise what only this machine holds, such as an unpushed
+branch, a file outside the checkout or a private project.
+
 Grove itself commits nothing. Commit only when the owner or the project's
 rules ask.
 `
