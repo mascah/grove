@@ -26,7 +26,7 @@ schema: default
 rules:
   skills:
     propose:
-      - Keep instruction text well under the 8,000-word budget. If a change is difficult to fit within this budget, consider splitting into multiple changes.
+      - Keep instruction text well under the 9,000-word budget. If a change is difficult to fit within this budget, consider splitting into multiple changes.
     implement:
       - Make changes in a git worktree to avoid conflicting with other work
       - When working in a git worktree, run grove from the worktree's own build (bin/grove) to check behavior the branch changes.
