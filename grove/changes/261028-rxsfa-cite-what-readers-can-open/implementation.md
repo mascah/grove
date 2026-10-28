@@ -42,11 +42,21 @@ Status: done
 
 ## Scenarios
 
-<!-- Before finishing, one line per scenario of the change specs: the check
-that shows it and its result, or `unverified` and why:
-
-    - record-editing "Update the note on a legacy record": tests/test_cli.py test_edit_legacy, passed
--->
+- instructions "Every skill is told": `bin/grove instructions explore`,
+  `propose` and `implement 261028-rxsfa` each print the sentence at line 17,
+  before the skill's own instructions at line 24, passed. No test pins the
+  sentence, as the proposal decided.
+- instructions "A note in a private project": unverified; it is how an agent
+  writes a proposal, judged by a person reading it or by a skill trial.
+- instructions "A source the readers share": unverified; as above, an
+  agent's choice judged by a person.
+- prototype "Proposing after a prototype": unverified; the propose
+  instructions say it (`internal/cli/walkthrough_test.go` `TestPrototype`
+  checks their citing phrase, passed), but what the proposal states is
+  judged by a person running the walkthrough's "Prototype before proposing".
+- prototype "An experiment not committed": unverified; the propose
+  instructions say to say the experiment was not committed, but the
+  proposal is judged by a person.
 
 ## Reconciliation
 
