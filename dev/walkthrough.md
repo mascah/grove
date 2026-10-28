@@ -488,9 +488,9 @@ Each step names the section of
   reports the command, what it showed, a verdict and its limits. It asks
   whether to commit; I say yes, and it commits on `prototype/<slug>` only.
   Asked to propose, it switches back to `budgets` and the proposal states
-  the finding and cites `prototype/<slug>` at that commit, linking no
-  prototype file. `git diff main prototype/<slug> -- grove` is empty, and
-  main is unchanged.
+  what was tried, the finding and the verdict, and names `prototype/<slug>`
+  at that commit as their source, linking no prototype file.
+  `git diff main prototype/<slug> -- grove` is empty, and main is unchanged.
 - **Propose checks the change** (§3). On a new branch, `/grove-propose Add
   ledger delete ID, and print the deleted record`, answering "yes" to the
   round. Before presenting the change, the session checks that a task's

@@ -20,6 +20,26 @@ Status: done
   before `## What Grove requires of <skill>` at line 24.
 - `just check` passed: 4024 Go lines, 1681 test lines, 7997 instruction words.
 
+### T-02 — A proposal carries a prototype's findings
+
+Status: done
+
+- `internal/instruct/requires/propose.md`: the prototype line now has the
+  agent write the findings into the proposal so it stands without the
+  prototype branch (what was tried, what was observed and the verdict),
+  citing the branch and commit only as where they came from, or saying the
+  experiment was not committed. `bin/grove instructions propose` prints it.
+- `docs/concepts.md`, `docs/getting-started.md`, `dev/walkthrough.md`: the
+  prototype steps say the proposal states the findings and names the branch
+  and commit as their source.
+- `internal/cli/walkthrough_test.go` `TestPrototype` checks the propose
+  instructions for the phrase "citing the prototype branch and the commit".
+  That file is on no task's `Files:` line, so it stays as it is; the
+  propose line keeps that phrase, on one line, which the requirement's
+  "naming the branch and its commit only as where they came from" allows.
+  The test would otherwise have needed its phrase updated.
+- `just check` passed: 4024 Go lines, 1681 test lines, 8023 instruction words.
+
 ## Scenarios
 
 <!-- Before finishing, one line per scenario of the change specs: the check
