@@ -60,7 +60,5 @@ Status: done
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- instructions: applied to specs/instructions/spec.md, a new maintained spec
+- prototype: applied to specs/prototype/spec.md
