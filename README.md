@@ -1,3 +1,8 @@
+> This is a playground for combining concepts from the following projects, with an emphasis on trying to combine the best of them but keeping it simple as can be. Still an early work in progress. 
+> * [aws/aidlc](https://github.com/awslabs/aidlc-workflows/tree/main)
+> * [github/spec-kit](https://github.com/github/spec-kit)
+> * [ission-ai/OpenSpec](https://github.com/Fission-AI/OpenSpec)
+
 # Grove
 
 Grove keeps a written record of what your software should do. It helps you
