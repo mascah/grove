@@ -76,7 +76,8 @@ flowchart LR
    those, the agent builds a throwaway experiment on a `prototype/<slug>`
    branch and reports a verdict. That branch is never merged, and the
    prototype writes no Grove document. Its findings reach the main branch
-   only in a proposal, which cites the branch and commit.
+   only in a proposal, which states them and names the branch and commit
+   as their source.
 3. **Propose.** The agent writes a change from the conversation or from a
    description. First it asks you every decision it would otherwise
    assume, in one numbered round, with a recommended answer to each. What

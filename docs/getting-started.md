@@ -80,12 +80,15 @@ First the agent agrees the question and its limits with you. Then it
 builds the simplest throwaway experiment on a branch such as
 `prototype/inline-rename`, and runs it. It reports how to run it, what it
 observed, a verdict, and what it cannot show. It writes no Grove document.
-When it asks, let it commit the experiment there, so the proposal can cite
-it. That branch is never merged; push it if you want to keep it.
+When it asks, let it commit the experiment there, so the proposal can name
+where its findings came from. That branch is never merged; push it if you
+want to keep it.
 
 When you go on to propose, the agent switches back to `rename-projects` and
-writes the findings into the proposal, citing the prototype's branch and
-commit. A prototype that kills the idea leaves only its branch. The
+writes the findings into the proposal: what was tried, what was observed and
+the verdict, so the proposal stands without the branch. It names the
+prototype's branch and commit as their source. A prototype that kills the
+idea leaves only its branch. The
 [prototype spec](https://github.com/mascah/grove/blob/main/grove/specs/prototype/spec.md) has the exact rules.
 
 ## 3. Propose

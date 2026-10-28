@@ -53,9 +53,11 @@
   change's open questions, naming the task it blocks when it decides how
   that task is built. Write nothing you inferred as an assumption.
 - When this conversation holds a prototype's findings, write them into the
-  proposal, citing the prototype branch and the commit that holds the
-  experiment. Link no file outside the change and the target branch: the
-  prototype branch is never merged.
+  proposal so that it stands without the prototype branch: what was tried,
+  what was observed and the verdict,
+  citing the prototype branch and the commit only as where they came from,
+  or saying the experiment was not committed. Link no file outside the
+  change and the target branch: the prototype branch is never merged.
 - Change no code.
 - Before you tell the owner the change is written, check that each
   requirement has an outcome a user or caller can observe, each ADDED or
