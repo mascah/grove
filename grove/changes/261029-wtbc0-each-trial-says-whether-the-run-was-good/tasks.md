@@ -17,10 +17,10 @@ Constraints: rule 17; no Go, so rule 12's budget is unchanged. No model
 call decides the column.
 
 Acceptance:
-- A case whose `good` prints nothing shows `pass`; one whose `good` prints
-  two lines shows `fail`, and both lines are listed below the table under
-  its case, harness and run.
-- `just trials` exits 0 when a row shows `fail`.
+- With `RUNS=3`, a case whose `good` prints nothing in every run shows
+  `3/3`; one whose `good` prints two lines in one run shows `2/3`, and both
+  lines are listed below the table under its case, harness and run.
+- `just trials` exits 0 when a row shows fewer passes than runs.
 - `dev/trials.md`'s counts table has a "Good run" row saying how it is
   taken, and "Results" shows the column.
 
@@ -45,5 +45,6 @@ Acceptance:
   with a line naming it.
 - In case (c), a records.py edit in the turn before the scripted answer
   fails the run with the owner; in case (d), a `ledger/report.py` edit in
-  the first turn fails it.
+  any turn before the scripted answer about it was given fails it, the
+  first turn or a later one.
 - Each case of `dev/trials.md` lists its checks under its "A good run".

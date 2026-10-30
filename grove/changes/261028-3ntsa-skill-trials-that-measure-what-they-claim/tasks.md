@@ -65,25 +65,37 @@ Acceptance:
 - In both harnesses, `transcript.txt` has a result line after each tool
   line: an error mark when the tool failed, and its first 20 lines, or
   every line for a `grove` command.
-- The judge runs with only Read, Grep and Glob, in the fixture, and its
-  prompt no longer says to count only from the transcript.
+- The judge runs with only Read, Grep and Glob, in a copy of the fixture
+  at the commit the case's setup left, and its prompt says which state it
+  reads and no longer says to count only from the transcript.
+- In case (b), the judge's copy holds no change the run proposed.
 - `dev/trials.md`'s "How it is taken" says what the judge reads.
 
-## T-04 — Repeated runs
+## T-04 — Repeated runs and judgings
 
-Result: `RUNS=k` runs each case and harness k times and prints a row for
-each run, as the proposal's decisions say.
+Result: `RUNS=k` runs each case and harness k times, `JUDGINGS=j` judges
+each run j times, and the table prints one row per case and harness, as
+the proposal's decisions say.
 
 Files:
 - `dev/trials/run.sh`
 - `dev/trials.md`
 
-Interfaces: the `RUNS` setting of `just trials`.
+Interfaces: the `RUNS` and `JUDGINGS` settings of `just trials`.
 
 Acceptance:
 - `RUNS=2 HARNESSES=claude just trials c` leaves `c-claude-1` and
-  `c-claude-2`, the second started after the first ended, and prints two
-  rows, Run 1 and Run 2.
-- Without `RUNS`, the table has one row per case and harness, Run 1.
-- `dev/trials.md`'s "Running" and "Results" show the setting and the Run
-  column.
+  `c-claude-2`, the second started after the first ended, and prints one
+  row for (c) and Claude Code, each count its median and min–max over the
+  two runs.
+- Without `RUNS` or `JUDGINGS`, each case and harness runs 3 times and
+  each run is judged 3 times.
+- `RUNS=1 JUDGINGS=1` prints each count as one number, as at a5b5674.
+- Each run's folder holds `judge-1.json` to `judge-<j>.json`, judged from
+  its saved `transcript.txt` with no agent session started after its last
+  turn; a run's judged count is their median.
+- A run whose judgings give a count different values has a line below the
+  table naming its case, harness, run, count and each value; with judgings
+  that agree there is none.
+- `dev/trials.md`'s "Running" and "Results" show both settings, the
+  summary row and the judgings' lines.

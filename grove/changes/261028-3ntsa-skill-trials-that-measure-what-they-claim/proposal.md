@@ -40,7 +40,10 @@ them on 2026-10-28, at a5b5674, found:
   counted the same question differently between runs" and, over three
   runs, unneeded questions of 34 before and 34 after; the owner then
   called the trials "a record here, not a gate". The script has no way to
-  repeat a run other than running it again by hand.
+  repeat a run other than running it again by hand, nor to judge one saved
+  transcript twice, so a count that moves cannot be put down to the agent
+  or to the judge. `CONTRIBUTING.md` asks for the table in every pull
+  request that changes instruction text, and that table is one run.
 
 ## Intended outcome
 
@@ -56,8 +59,13 @@ them on 2026-10-28, at a5b5674, found:
 - Each Codex trial runs with its own `CODEX_HOME` and `HOME`, so none of
   the user's Codex config, plugins, hooks, memories or user skills load.
 - The transcript the judge reads shows each tool's result in both
-  harnesses, and the judge can read the fixture.
-- `RUNS=k` runs each case and harness k times and prints one row per run.
+  harnesses, and the judge can read the fixture as the case's setup left
+  it.
+- `RUNS=k` (default 3) runs each case and harness k times, and
+  `JUDGINGS=j` (default 3) judges each run j times from its saved
+  transcript, starting no agent session. The table keeps one row per case
+  and harness, each count its median and min–max over the runs when k > 1.
+  Below it, each run whose judgings disagree on a count gets a line.
 
 ## Scope
 
@@ -80,7 +88,9 @@ them on 2026-10-28, at a5b5674, found:
 
 The owner accepted the scope, its split into two changes and no
 `depends_on` for this one ("yes", 2026-10-28), then every item of the round
-and its defaults ("yes", 2026-10-28):
+and its defaults ("yes", 2026-10-28). After a review comment on PR #106,
+the owner chose three runs by default ("yes default to 3", 2026-10-30) and
+accepted judgings, the summary row and the judge reading the setup's state:
 
 - **Outside edits are counted by `grove review`.** After a case's last run
   the script commits what it left and counts the `named nowhere` lines of
@@ -101,15 +111,28 @@ and its defaults ("yes", 2026-10-28):
 - **The judge sees what it judges:** both transcripts show each tool's
   result after its call, an error mark and its first 20 lines, and a
   `grove` command's output in full; the judge gets Read, Grep and Glob on
-  the fixture, and its prompt lets it check what the repository already
-  answers.
-- **`RUNS=k`** (default 1) runs each case and harness k times, one after
-  another, with cases and harnesses in parallel as now; the table has a
-  Run column, one row per run.
-- **`CONTRIBUTING.md` stays as it is.** Change 261029-wtbc0 can revisit it
-  once a pass or fail per run shows its worth.
-- Defaults: trial folders are `<case>-<harness>-<run>`; no task has a
-  `Delegated:` line.
+  a copy of the fixture at the commit the case's setup left, and its prompt
+  says so and lets it check what the repository already answers. Reason:
+  in the end state, a document the agent wrote from the owner's answer
+  makes the question that got it look unneeded.
+- **`RUNS=k`** (default 3) runs each case and harness k times, one after
+  another, with cases and harnesses in parallel as now. Reason: at one run
+  a count that moves by 1 cannot be told from noise, and PR #73's 34 and
+  34 over three runs said nothing either way. It triples the time and cost
+  of `just trials`.
+- **`JUDGINGS=j`** judges each run j times from its saved `transcript.txt`,
+  with no new agent session; a run's judged count is the median of its
+  judgings. Below the table, each run whose judgings give a count different
+  values gets a line naming its case, harness, run, count and each value.
+  Reason: pinning the judge's model does not make it repeat itself, and
+  reruns alone mix its noise with the agent's.
+- **One row per case and harness.** At k = 1 each count is as now; at
+  k > 1 each is its median and min–max over the runs, such as `2 (1–4)`.
+  Each run's detail stays in its trial folder.
+- **`CONTRIBUTING.md` stays as it is.** With `RUNS` at 3, the table it
+  asks for is already three runs. Still a record, not a gate.
+- Defaults: trial folders are `<case>-<harness>-<run>`; `JUDGINGS` is 3;
+  judgings are saved as `judge-<n>.json`; no task has a `Delegated:` line.
 
 ## Open questions
 

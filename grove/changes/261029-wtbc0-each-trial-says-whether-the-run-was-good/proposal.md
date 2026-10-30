@@ -19,8 +19,9 @@ answer it gave in which turn, and what each turn changed.
 
 ## Intended outcome
 
-`just trials` prints a "Good run" column: `pass`, or `fail` with each
-failed check listed below the table. The checks are each case's "a good
+`just trials` prints a "Good run" column: how many of a case and
+harness's runs passed, as `passed/k`, such as `2/3`, with each failed check
+listed below the table under its case, harness and run. The checks are each case's "a good
 run", made concrete, and come only from the repository and the script's
 own state, never from a model. `just trials` exits 0 whatever the column
 shows.
@@ -37,9 +38,9 @@ The checks:
   and `python3 -m unittest` passes.
 - **(c), unattended** `ledger/records.py` is unchanged, and T-01 in
   `implementation.md` has `Status: blocked` and names `ledger/records.py`.
-- **(d)** `ledger/report.py` is unchanged after the first turn, the
-  scripted answer about `ledger/report.py` was given, and `python3 -m
-  unittest` passes.
+- **(d)** The scripted answer about `ledger/report.py` was given,
+  `ledger/report.py` is unchanged after every turn before the turn it was
+  given, and `python3 -m unittest` passes.
 - **(e)** `python3 -m unittest` was run in the session, `test_delete_record`
   in `tests/test_cli.py` is as the setup wrote it, T-02 in
   `implementation.md` has `Status: done`, `README.md` shows `ledger
@@ -55,7 +56,7 @@ The checks:
 ### Out of scope
 
 - What change 261028-3ntsa does: outside edits from `grove review`, pinned
-  models, an isolated Codex, the judge's view, and `RUNS`.
+  models, an isolated Codex, the judge's view, `RUNS` and `JUDGINGS`.
 - A gate: `just trials` exits 0 whatever it prints, and `CONTRIBUTING.md`
   is unchanged.
 - Any change to what Grove does, so no change spec and no `docs/` task
@@ -68,8 +69,10 @@ The owner accepted the split into two changes, this one depending on
 defaults ("yes", 2026-10-28):
 
 - **A "Good run" column, computed only from the repository and the
-  script's own state, never by a model**, showing `pass` or `fail`, each
-  failed check listed below the table. `just trials` exits 0 whatever it
+  script's own state, never by a model**, showing `passed/k` for a case
+  and harness's k runs (changed from `pass` or `fail` per run after the
+  review of PR #106, as 261028-3ntsa now prints one row per case and
+  harness), each failed check listed below the table under its run. `just trials` exits 0 whatever it
   shows: a record, not a gate. This reverses "A pass mark" being out of
   scope in change 261023-kh3gg's proposal. Reason: every count today is a
   cost, so a run that does nothing scores best.
