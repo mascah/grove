@@ -51,6 +51,15 @@ edit() { python3 -c 'import sys; p,o,n=sys.argv[1:]; s=open(p).read(); assert o 
 # save commits what the last run left, if anything.
 save() { git diff --quiet HEAD && [ -z "$(git ls-files -o --exclude-standard)" ] || commit "After the last run"; }
 
+# result, a jq function, prints a tool's result for the transcript: an error
+# mark, then its first 20 lines, or all of a grove command's, since the judge
+# checks what Grove's instructions listed.
+result='def result($out; $err; $cmd):
+  ($out | rtrimstr("\n") | split("\n")) as $l
+  | (if $cmd | test("(^|[^A-Za-z0-9_/.-])grove( |$)") then $l else $l[:20] end) as $s
+  | "RESULT" + (if $err then " (error)" else "" end) + ":", ($s[] | "  " + .),
+    (if ($l | length) > ($s | length) then "  … \(($l | length) - ($s | length)) more lines" else empty end);'
+
 # turn sends msg to the agent, resuming session sid when set, and sets sid,
 # last (the agent's last message), said (all its messages this turn) and
 # words (the words of its messages).
@@ -62,10 +71,16 @@ turn() {
       --allowedTools "$claude_tools" --output-format stream-json --verbose < /dev/null > "$log" 2>> "$dir/stderr.txt" || true
     sid=$(jq -r 'select(.type=="result") | .session_id' "$log" | tail -1)
     last=$(jq -rs '[.[] | select(.type=="result") | .result] | last // ""' "$log")
-    jq -r 'select(.type=="assistant" and .parent_tool_use_id==null) | .message.content[]? |
-      if .type=="text" then "AGENT: " + .text
-      elif .type=="tool_use" then "TOOL: " + .name + " " + ((.input.command // .input.file_path // .input.skill // .input.pattern // "") | tostring)
-      else empty end' "$log" >> "$dir/transcript.txt"
+    jq -rs "$result"'
+      (map(.message.content?[]? | objects | select(.type=="tool_use") | {key: .id, value: (.input.command // "" | tostring)}) | from_entries) as $cmd
+      | .[] | select(.parent_tool_use_id==null)
+      | if .type=="assistant" then .message.content[]? |
+          if .type=="text" then "AGENT: " + .text
+          elif .type=="tool_use" then "TOOL: " + .name + " " + ((.input.command // .input.file_path // .input.skill // .input.pattern // "") | tostring)
+          else empty end
+        elif .type=="user" then .message.content[]? | objects | select(.type=="tool_result")
+          | result(if (.content | type)=="string" then .content else [.content[]? | .text? // empty] | join("\n") end; .is_error==true; $cmd[.tool_use_id] // "")
+        else empty end' "$log" >> "$dir/transcript.txt"
     said=$(jq -r 'select(.type=="assistant" and .parent_tool_use_id==null) | .message.content[]? | select(.type=="text") | .text' "$log")
   else
     # HOME and CODEX_HOME are the trial's, so none of the user's Codex config,
@@ -78,10 +93,10 @@ turn() {
       HOME=$dir CODEX_HOME=$dir/codex codex exec resume "${cfg[@]}" -c sandbox_mode='"workspace-write"' "$sid" "$msg" < /dev/null > "$log" 2>> "$dir/stderr.txt" || true
     fi
     last=$(jq -rs '[.[] | select(.type=="item.completed" and .item.type=="agent_message") | .item.text] | last // ""' "$log")
-    jq -r 'select(.type=="item.completed") | .item |
+    jq -r "$result"'select(.type=="item.completed") | .item |
       if .type=="agent_message" then "AGENT: " + .text
-      elif .type=="command_execution" then "TOOL: " + .command + " (exit \(.exit_code))"
-      elif .type=="file_change" then "TOOL: edit " + ([.changes[]?.path] | join(", "))
+      elif .type=="command_execution" then "TOOL: " + .command, result(.aggregated_output // ""; .exit_code != 0; .command)
+      elif .type=="file_change" then "TOOL: edit " + ([.changes[]?.path] | join(", ")), result(.status // ""; .status=="failed"; "")
       else empty end' "$log" >> "$dir/transcript.txt"
     said=$(jq -r 'select(.type=="item.completed" and .item.type=="agent_message") | .item.text' "$log")
   fi
@@ -141,10 +156,11 @@ trial() {
   grove init > /dev/null
   edit grove.yaml 'context: ""' 'context: "Run python3 -m unittest before saying a task is done."'
   commit "Set up Grove"
-  local id="" check_ok="" runs=() answers=() used=()
+  local id="" check_ok="" runs=() answers=() used=() setup_rev
   # shellcheck source=/dev/null
   source "$here/$c.sh"
   setup
+  setup_rev=$(git rev-parse HEAD)
   # A case sets check_ok to the problems its setup means grove check to report.
   if ! grove check > "$dir/setup-check.txt" 2> /dev/null && grep -vqE "${check_ok:-^$}" "$dir/setup-check.txt"; then
     echo "($c) $h: the setup is not clean: $(cat "$dir/setup-check.txt")" >&2
@@ -172,7 +188,11 @@ trial() {
     [ -z "$new" ] || id=${new:0:12}
   done
   save
-  judge "$c" > "$dir/judge.json" || true
+  local changes
+  changes=$(find grove/changes -type f 2> /dev/null | sort)
+  # The judge reads the fixture as the setup left it, before any run wrote to it.
+  mkdir "$dir/setup" && git archive "$setup_rev" | tar -x -C "$dir/setup"
+  (cd "$dir/setup" && judge "$c" "$changes") > "$dir/judge.json" || true
   for branch in "${branches[@]}"; do git switch -q "$branch" && outside; done > "$dir/outside.txt"
   local j=$dir/judge.json name
   name=$([ "$h" = claude ] && echo "Claude Code" || echo Codex)
@@ -185,11 +205,11 @@ trial() {
     "$words" > "$dir/row.md"
 }
 
-# judge asks a model for the four judged counts of the run in $dir, run in
-# its fixture, whose change documents it lists.
+# judge asks a model for the four judged counts of the run in $dir, of case
+# $1, whose change documents at the run's end are $2.
 judge() {
   local prompt
-  prompt="You judge one run of Grove's skill trials. Below are how each count is defined, the case, and the run's transcript: OWNER lines are what the tester typed, AGENT lines the agent's messages, TOOL lines its tool calls. Count only from the transcript.
+  prompt="You judge one run of Grove's skill trials. Below are how each count is defined, the case, and the run's transcript: OWNER lines are what the tester typed, AGENT lines the agent's messages, TOOL lines its tool calls, and RESULT lines what each returned, its first 20 lines, or all of a grove command's. Your working folder holds the case's fixture as its setup left it, before the run: none of what the run wrote is there. Read it with Read, Grep and Glob to check what the repository already answered when the agent asked.
 
 $(awk '/^## The counts/{on=1;next} /^## /{on=0} on' "$checkout/dev/trials.md")
 
@@ -197,7 +217,7 @@ $(awk -v h="### ($1)" 'index($0,h)==1{on=1} on&&/^##/&&index($0,h)!=1{exit} on' 
 
 The files under grove/changes/ at the end of the run, which the instructions of a change list as its documents:
 
-$(find grove/changes -type f 2> /dev/null | sort)
+$2
 
 Transcript:
 
@@ -205,7 +225,8 @@ $(cat "$dir/transcript.txt")
 
 Reply with only this JSON, each why one sentence naming what you counted:
 {\"unneeded_questions\": {\"count\": 0, \"why\": \"\"}, \"missed_decisions\": {\"count\": 0, \"why\": \"\"}, \"done_claims_without_evidence\": {\"count\": 0, \"why\": \"\"}, \"listed_documents_not_read\": {\"count\": 0, \"why\": \"\"}}"
-  claude -p "$prompt" --model "$judge_model" --effort medium --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" |
+  claude -p "$prompt" --model "$judge_model" --effort medium --setting-sources project,local \
+    --tools Read,Grep,Glob --allowedTools "Read Grep Glob" --output-format json < /dev/null 2>> "$dir/stderr.txt" |
     jq -r '.result' | python3 -c 'import sys, json; t = sys.stdin.read(); print(json.dumps(json.loads(t[t.index("{"):t.rindex("}") + 1]), indent=2))'
 }
 
