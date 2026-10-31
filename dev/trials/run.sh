@@ -40,9 +40,8 @@ spec() {
 # edit replaces old with new, both literal, once in file.
 edit() { python3 -c 'import sys; p,o,n=sys.argv[1:]; s=open(p).read(); assert o in s, (p,o); open(p,"w").write(s.replace(o,n,1))' "$@"; }
 
-# snapshot lists every file of the fixture with its hash, to tell what a run changed.
-# A file the run moved or deleted is left out, so it shows as changed.
-snapshot() { git ls-files -co --exclude-standard -z | xargs -0 shasum 2> /dev/null | sort -k2 || true; }
+# save commits what the last run left, if anything.
+save() { git diff --quiet HEAD && [ -z "$(git ls-files -o --exclude-standard)" ] || commit "After the last run"; }
 
 # turn sends msg to the agent, resuming session sid when set, and sets sid,
 # last (the agent's last message), said (all its messages this turn) and
@@ -108,24 +107,15 @@ $last" --model sonnet --setting-sources project,local --tools "" --output-format
   grep -qi '^yes' <<< "$verdict"
 }
 
-# allowed lists the paths the Files: and Delegated: lines of every tasks.md
-# name, as a comma line or bullets, and those the Also changed: lines of
-# every implementation.md name.
-allowed() {
-  {
-    find grove/changes -name tasks.md -exec awk '/^(Files|Delegated):/{on=1} /^$/{on=0} on' {} + |
-      grep -o '`[^`]*`' | tr -d '`'
-    find grove/changes -name implementation.md -exec sed -n 's/^Also changed: `\([^`]*\)`.*/\1/p' {} +
-  } | sort -u
-}
-
-# named reports whether an allowed path is $1 or a folder, ending in /, above it.
-named() {
-  local a
-  while read -r a; do
-    [[ $1 == "$a" || ($a == */ && $1 == "$a"*) ]] && return 0
-  done < <(allowed)
-  return 1
+# outside lists, as "branch: path", each file outside grove/ that the current
+# branch changes against main and that grove review marks neither planned nor
+# agreed: named nowhere, or not listed, as on a branch holding no change.
+outside() {
+  local b marked
+  b=$(git branch --show-current)
+  marked=$(grove review | sed -nE '/^diff --git/q; s/^  (planned|agreed) .*  ([^ ]+)$/\2/p' | sort -u)
+  git diff --name-only --no-renames main...HEAD | { grep -v '^grove/' || true; } | sort -u |
+    comm -23 - <(echo "$marked") | sed "s|^|$b: |"
 }
 
 # trial runs case c in harness h and writes its row of the table.
@@ -150,10 +140,11 @@ trial() {
     return 1
   fi
   [ -z "${SETUP_ONLY:-}" ] || { echo "| ($c) | $h | setup only | | | | | |" > "$dir/row.md"; return 0; }
-  local outside=() run branch prompt before after had new
+  local run branch prompt had new branches=()
   for run in "${runs[@]}"; do
     branch=${run%% => *} prompt=${run#* => }
-    [ "$(git branch --show-current)" = "$branch" ] || { git diff --quiet HEAD && [ -z "$(git ls-files -o --exclude-standard)" ] || commit "After the last run"; git switch -q "$branch" 2> /dev/null || git switch -q -c "$branch" main; }
+    [ "$(git branch --show-current)" = "$branch" ] || { save; git switch -q "$branch" 2> /dev/null || git switch -q -c "$branch" main; }
+    [[ " ${branches[*]} " == *" $branch "* ]] || branches+=("$branch")
     had=$(ls grove/changes 2> /dev/null || true)
     if [[ $prompt == *"{id}"* && -z $id ]]; then
       echo "| ($c) | $h | failed: no change for \"$prompt\"; the run before it proposed none | | | | | |" > "$dir/row.md"
@@ -161,20 +152,17 @@ trial() {
     fi
     prompt=${prompt//\{id\}/$id}
     [ "$h" = codex ] && prompt=${prompt/\/grove-/\$grove-}
-    before=$(snapshot) sid="" last=""
+    sid="" last=""
     turn "$prompt"
     local k=0
     # An unattended run has no owner to answer it.
     [[ $prompt == *--unattended* ]] || while [ $((k += 1)) -le "$turns" ] && waiting; do reply && turn "$answer"; done
-    after=$(snapshot)
-    while read -r p; do
-      [[ $p == grove/* ]] || named "$p" || outside+=("$p")
-    done < <(diff <(echo "$before") <(echo "$after") | sed -n 's/^[<>] [0-9a-f]*  //p' | sort -u)
     new=$(comm -13 <(echo "$had") <(ls grove/changes 2> /dev/null) | grep -v '^archive$' | head -1 || true)
     [ -z "$new" ] || id=${new:0:12}
   done
-  printf '%s\n' "${outside[@]:-}" | sed '/^$/d' | sort -u > "$dir/outside.txt"
+  save
   judge "$c" > "$dir/judge.json" || true
+  for branch in "${branches[@]}"; do git switch -q "$branch" && outside; done > "$dir/outside.txt"
   local j=$dir/judge.json name
   name=$([ "$h" = claude ] && echo "Claude Code" || echo Codex)
   printf '| (%s) | %s | %s | %s | %s | %s | %s | %s |\n' "$c" "$name" \
@@ -219,6 +207,6 @@ done
 wait
 echo "Trials at $commit_of ($out)"
 echo
-echo "| Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Delegated | Done claims without evidence | Listed documents not read | Words read |"
+echo "| Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Also changed | Done claims without evidence | Listed documents not read | Words read |"
 echo "| --- | --- | --- | --- | --- | --- | --- | --- |"
 for c in "${cases[@]}"; do for h in ${HARNESSES:-claude codex}; do cat "$out/$c-$h/row.md" 2> /dev/null || echo "| ($c) | $h | failed | | | | | |"; done; done

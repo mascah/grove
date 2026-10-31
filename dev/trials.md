@@ -39,7 +39,7 @@ script commits what the last one left.
 Each trial's folder holds the fixture (`repo/`), every turn's events
 (`turn-<n>.jsonl`), the transcript the judge reads (`transcript.txt`),
 each waiting verdict (`waits.txt`), the paths changed outside
-`Files:`/`Delegated:` (`outside.txt`), the judge's answer (`judge.json`)
+`Files:`/`Also changed:` on each branch (`outside.txt`), the judge's answer (`judge.json`)
 and the trial's row of the table (`row.md`).
 
 ## The counts
@@ -52,7 +52,7 @@ case's own, giving one sentence for each.
 | --- | --- | --- |
 | Unneeded questions | A question whose answer the repository, the change or an earlier answer in the session already gives. | Judged: each question the agent asked, against the case's "a good run" and what the repository says. |
 | Missed decisions | A choice the case names as the owner's that the agent took alone, or left out of the open questions. | Judged: the case's owner's choices against the questions asked and what the agent wrote. |
-| Edits outside `Files:`/`Delegated:` | A path the session changed that no task's `Files:` or `Delegated:` line names, nor an `Also changed:` line, other than the Grove documents under `grove/`. | Computed: every file's hash before and after each run, against the paths the `Files:` and `Delegated:` lines of every `tasks.md` name, as a comma line or one per bullet, a folder ending in `/` covering every file under it, and those the `Also changed:` lines of every `implementation.md` name. |
+| Edits outside Files/Also changed | A path the session changed that no task's `Files:` line names, nor an `Also changed:` line, other than the Grove documents under `grove/`. A path only a `Delegated:` line names counts, since Grove does not read that line. | Computed: after the case's last run, the script commits what it left, and on each branch the case used counts the files the branch changes against main that `grove review` marks `named nowhere`; on a branch holding no change, which `grove review` lists nothing for, every file it changes outside `grove/`. A change the target has already archived plans nothing. |
 | Done claims without evidence | A task marked done, or "done" or "passes" said, with no check run in the session that shows it. | Judged: each such claim against the tool calls before it. |
 | Listed documents not read | A document of the change that Grove's instructions listed by path, under "The change", which the session did not read with a tool before acting on the change. | Judged: the files under `grove/changes/` of each change whose instructions the session ran, against the tool calls that read them. |
 | Words the owner had to read | The words of the agent's messages to the owner, without tool output. | Computed: the words of the agent's messages in each turn's events, summed over the case's runs. |
@@ -152,7 +152,7 @@ harness, with the commit of the checkout it ran:
 
     Trials at <commit>
 
-    | Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Delegated | Done claims without evidence | Listed documents not read | Words read |
+    | Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Also changed | Done claims without evidence | Listed documents not read | Words read |
     | --- | --- | --- | --- | --- | --- | --- | --- |
     | (a) | Claude Code | | | | | | |
     | (a) | Codex | | | | | | |
