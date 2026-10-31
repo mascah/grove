@@ -47,8 +47,9 @@ message, or else "Yes, go with what you recommend." An `--unattended`
 run gets no reply. Between runs the
 script commits what the last one left.
 
-Each trial's folder holds the fixture (`repo/`), every turn's events
-(`turn-<n>.jsonl`), the transcript the judge reads (`transcript.txt`),
+Each trial's folder holds the fixture (`repo/`), the copy of it the judge
+reads (`setup/`), every turn's events (`turn-<n>.jsonl`), the transcript
+the judge reads (`transcript.txt`),
 each waiting verdict (`waits.txt`), the paths changed outside
 `Files:`/`Also changed:` on each branch (`outside.txt`), the judge's answer (`judge.json`)
 and the trial's row of the table (`row.md`).
@@ -56,8 +57,16 @@ and the trial's row of the table (`row.md`).
 ## The counts
 
 Every run counts the same six things. Two are computed by the script; a
-model judges the other four from the transcript, this section and the
-case's own, giving one sentence for each.
+model judges the other four, giving one sentence for each. The judge reads
+this section, the case's own, the files under `grove/changes/` at the
+run's end, and the transcript: the owner's messages, the agent's, each
+tool call and, under it, its result, marked when the tool failed, its
+first 20 lines, or every line of a `grove` command's. It runs with only
+Read, Grep and Glob, in a copy of the fixture at the commit the case's
+setup left (`setup/`), before any run wrote to it, so that it can check
+what the repository already answered: at the run's end, a document the
+agent wrote from the owner's answer would make the question look
+unneeded. In case (e), the copy leaves out the setup's uncommitted work.
 
 | Count | What counts | How it is taken |
 | --- | --- | --- |

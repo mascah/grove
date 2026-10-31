@@ -58,3 +58,37 @@ Checks so far, on this machine (2026-10-31):
   the script sets them, it lists only Codex's bundled `imagegen`,
   `openai-docs`, `skill-creator`, `skill-installer`, signed in, and
   `journal.jsonl`'s size and mtime are unchanged.
+
+### T-03 — A judge that sees results and the repository
+
+Status: in progress
+
+`dev/trials/run.sh`: the jq function `result` writes, after each tool
+line, `RESULT:` or `RESULT (error):` and the result's first 20 lines,
+indented, with `… N more lines` when cut, or every line when the command
+runs `grove`. Claude Code's results come from the `user` events'
+`tool_result` blocks, matched to their call by `tool_use_id`; Codex's from
+`aggregated_output` and `exit_code`, and a `file_change`'s `status`. After
+setup the script keeps `setup_rev`; before judging it extracts that commit
+with `git archive` into `<trial>/setup/` and runs the judge there with
+`--tools Read,Grep,Glob`. Its prompt names the RESULT lines, says the
+folder holds the fixture as the setup left it, before the run, and lets it
+check what the repository already answered; "Count only from the
+transcript" is gone. The files under `grove/changes/` at the run's end are
+listed from the run's fixture before judging. `dev/trials.md`'s "The
+counts" says what the judge reads.
+
+Not in the judge's copy: case (e)'s setup leaves T-01's work and
+`implementation.md` uncommitted, so its copy, at the setup's commit, does
+not hold them; `dev/trials.md` says so.
+
+Checks so far:
+- The Claude Code program on a `claude -p` session running a blocked `ls`
+  and `echo hi`: `RESULT (error):` with the block message, then `RESULT:`
+  `hi`. The Codex program on a `codex exec` session running `ls
+  /nonexistent` (exit 1) and `echo hi`: the same. On 25-line outputs:
+  `seq 25` shows lines 1 to 20 and `… 5 more lines`; `grove instructions
+  x` all 25.
+- (b)'s setup commit (`SETUP_ONLY=1`), the judge's copy: `git archive
+  HEAD` lists no file under `grove/changes/`; the run's change is
+  committed later, on `delete`.
