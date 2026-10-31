@@ -29,3 +29,32 @@ end state written by hand and `outside` run in each fixture:
   changed: `unknown-id-impl: ledger/records.py`, 1. With `Also changed:
   \`ledger/records.py\`` under T-01 in `implementation.md`: none, 0
   (`grove review` marks it `agreed 261015-c0000:T-01`).
+
+### T-02 — Pinned models and an isolated Codex
+
+Status: in progress
+
+`dev/trials/run.sh`: `CLAUDE_MODEL` (default `claude-opus-5-5`) and
+`CODEX_MODEL` (default `gpt-6.1-sol`) set the agents under test, both run
+with medium effort (`--effort medium`, `-c model_reasoning_effort="medium"`);
+the judge is fixed at `claude-opus-5-5` with `--effort medium` and the
+waiting check at `claude-sonnet-5-5`. The waiting check gets no effort
+setting, since the proposal fixes effort only for the agents and the judge,
+and the first line says "at its default effort". Each Codex trial runs with
+`HOME=<trial folder>` and `CODEX_HOME=<trial folder>/codex`, holding only a
+symlink to the user's `auth.json` (`${CODEX_HOME:-$HOME/.codex}`). The
+first line of the table names the Grove commit, every model with its
+effort, and `claude --version` and `codex --version`. `dev/trials.md`'s
+"Running" says so.
+
+Checks so far, on this machine (2026-10-31):
+- The user's `~/.codex/config.toml` enables hooks (`[features] hooks =
+  true`) and trusts those of `~/.codex/hooks.json`, whose SessionStart
+  hook appends to Crew's `journal.jsonl`; `~/.agents/skills` holds
+  `hindsight-coding-agent`.
+- With `CODEX_HOME` a folder holding only the `auth.json` link and the real
+  `HOME`, `codex exec -m gpt-6.1-sol` asked to list its skills lists
+  `hindsight-coding-agent` among them. With `HOME` and `CODEX_HOME` set as
+  the script sets them, it lists only Codex's bundled `imagegen`,
+  `openai-docs`, `skill-creator`, `skill-installer`, signed in, and
+  `journal.jsonl`'s size and mtime are unchanged.
