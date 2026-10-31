@@ -1,0 +1,5 @@
+title: "Reconcile the implement spec with current behavior"
+created: 2026-10-31T15:37:19Z
+description: The implement spec says what implement does today in 8 requirements instead of 24, with nothing agreed lost and no behavior changed.
+schema: default
+base: a5b5674382f588cf5e716ffce01abedf92374835
