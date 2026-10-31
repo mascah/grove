@@ -52,10 +52,10 @@ them on 2026-10-28, at a5b5674, found:
 - Edits outside are counted from `grove review`'s `named nowhere` lines on
   each branch a case used, so case (a) counts an edit its new change does
   not name. The column is "Edits outside Files/Also changed".
-- The agent's model in each harness is pinned, overridable by
-  `CLAUDE_MODEL` and `CODEX_MODEL`; the judge and the waiting check are
-  pinned in the script. The table's first line names every model and the
-  `claude` and `codex` versions.
+- The agent's model in each harness is pinned at medium effort,
+  overridable by `CLAUDE_MODEL` and `CODEX_MODEL`; the judge and the
+  waiting check are pinned in the script. The table's first line names
+  every model with its effort and the `claude` and `codex` versions.
 - Each Codex trial runs with its own `CODEX_HOME` and `HOME`, so none of
   the user's Codex config, plugins, hooks, memories or user skills load.
 - The transcript the judge reads shows each tool's result in both
@@ -90,7 +90,11 @@ The owner accepted the scope, its split into two changes and no
 `depends_on` for this one ("yes", 2026-10-28), then every item of the round
 and its defaults ("yes", 2026-10-28). After a review comment on PR #106,
 the owner chose three runs by default ("yes default to 3", 2026-10-30) and
-accepted judgings, the summary row and the judge reading the setup's state:
+accepted judgings, the summary row and the judge reading the setup's state.
+On 2026-10-31 the owner said "we absolutely cannot use gpt 6 astra at high
+effort for the trials", having asked for "gpt 6.1 sol medium or opus 5.5
+medium for the trials to converse tokens", and accepted the revised models
+and efforts below ("yes", 2026-10-31):
 
 - **Outside edits are counted by `grove review`.** After a case's last run
   the script commits what it left and counts the `named nowhere` lines of
@@ -104,10 +108,19 @@ accepted judgings, the summary row and the judge reading the setup's state:
   the review found, `hooks.json` or user skills.
 - **Pinned models, printed with the table:** the agent under test uses
   `CLAUDE_MODEL` (default `claude-opus-5-5`) and `CODEX_MODEL` (default
-  `gpt-6-astra` at high effort); the judge is fixed at `claude-opus-5-5`
-  and the waiting check at `claude-sonnet-5-5`. Reason: changing the agent
-  never changes the grader. The table's first line names the models and
+  `gpt-6.1-sol`); the judge is fixed at `claude-opus-5-5` and the waiting
+  check at `claude-sonnet-5-5`. Reason: changing the agent never changes
+  the grader. The table's first line names each model with its effort and
   the `claude` and `codex` versions.
+- **Medium effort, always:** both agents under test and the judge run at
+  medium effort, fixed in the script with no setting to change it, on
+  every run rather than only once trials take longer than 30 minutes.
+  Reason: the owner's token budget, and a switch by run time would make
+  two runs of one case incomparable. The judge runs j times per run, so it
+  is most of the cost.
+- **`gpt-6-astra` is not used for the trials:** `dev/trials.md` says so,
+  and the script does not refuse it as a `CODEX_MODEL`. Reason: a guard
+  would be code for a choice only the owner makes (rule 13).
 - **The judge sees what it judges:** both transcripts show each tool's
   result after its call, an error mark and its first 20 lines, and a
   `grove` command's output in full; the judge gets Read, Grep and Glob on
