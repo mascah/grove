@@ -2,702 +2,335 @@
 
 ## Purpose
 
-`/grove-implement` builds an approved change, or each change of a cycle,
-in the owner's session, asking the owner instead of blocking and revising
-the change on its branch with their agreement; with `--unattended` it asks
-no one. `/grove-implement <change-id>` also builds a draft on the branch
-that proposed it, which one merge then approves with its code, and
-`/grove-implement <cycle-id>` builds each change of a cycle in turn. Where
-the change does not settle how a task is built, it asks the owner instead
-of blocking, and with their agreement revises the change on its
-implementation branch, so the merge approves the revision with the code.
-With `--unattended` it builds a change or a cycle the same way but asks no
-one: what it cannot settle is marked blocked, and the change stays as
-approved. "The owner" is the person in whose session the skill runs.
+`/grove-implement` builds an approved change, a draft, or each change of a
+cycle on a branch, asking the owner where the change does not settle a
+task; with `--unattended` it asks no one and marks the task blocked
+instead. "The owner" is the person in whose session the skill runs.
 
 ## Boundaries
 
-This covers the implement instructions, with the owner and with
-`--unattended`, how `grove review` names a draft built on its branch,
-`grove.yaml`'s rules for implement, and the removal of the
-apply skill that `--unattended` replaced. Starting a session with no one
-watching, and what it refuses, belong to `grove run`
-(`grove/specs/runs/spec.md`). Revising a change outside its implementation
-branch belongs to `/grove-propose`. What makes a revision approved is the
+This covers the implement instructions in both modes, `grove.yaml`'s
+rules for implement, and how `grove review` names what an implementation
+branch approves and builds. Starting a session with no one watching
+belongs to `grove run` ([runs](../runs/spec.md)); when a cycle member
+counts as changed since its plan, to [cycles](../cycles/spec.md);
+revising a change off its implementation branch, to
+[propose](../propose/spec.md). What makes a revision approved is the
 merge into the target (`CONSTITUTION.md` rule 4).
 
 ## Requirements
 
-### Requirement: Implement an approved change
+### Requirement: Build a change, a draft or a cycle
 
-When the owner runs `/grove-implement <change-id>`, without
-`--unattended`, for a change the target approves and that waits on
-nothing the working tree has not archived as finished, the system shall
-print instructions for building its tasks in the owner's session, on a
-branch other than the target, recording each task's status in
-`implementation.md` and archiving the change when every task is done.
+When `/grove-implement <id>` is run, the system shall print instructions
+for building, on a branch other than the target, the approved change
+`<id>`, or each member of cycle `<id>` not yet archived in build order,
+each member's instructions naming its place in the cycle's plan; or, with
+the owner, a change only the working tree holds, as a draft that merging
+the branch approves with its code. The agent records each task's status
+in `implementation.md`, builds no task already done again unless the
+check before finishing finds its evidence no longer holds, and archives
+the change when every task is done. The system shall print no
+instructions, and say why, for a change that waits on one the working
+tree has not archived as finished, or for a draft given `--unattended`;
+and a cycle's instructions shall leave out, saying why, a member that
+waits on a change neither being built nor archived as finished.
 
-#### Scenario: A change with two tasks
+#### Scenario: An approved change
 
-- GIVEN the target approves change C with tasks T-01 and T-02, neither
-  started
-- WHEN the owner runs `/grove-implement C` on the target branch
+- GIVEN the target approves change C with tasks T-01 and T-02
+- WHEN `/grove-implement C` is run on the target branch, with or without
+  `--unattended`
 - THEN the agent creates a branch, builds T-01 and T-02, records both as
   done in `implementation.md`, and archives C on that branch
 
+#### Scenario: A draft
+
+- GIVEN the owner proposed change D on branch `rename` and committed it,
+  and the target does not hold D
+- WHEN the owner runs `/grove-implement D` on `rename`
+- THEN the instructions say D is a draft that merging `rename` approves
+  with its code, and the agent builds and archives D on `rename`; with
+  `--unattended`, Grove says the target holds no approved change D
+
 #### Scenario: A change that waits
 
-- GIVEN the target approves change B with `depends_on: [A]`, and the
+- GIVEN change B, approved or a draft, with `depends_on: [A]`, and the
   working tree does not hold A archived as finished
-- WHEN the owner runs `/grove-implement B`
+- WHEN `/grove-implement B` is run, with or without `--unattended`
 - THEN nothing is built, and Grove says B waits on A
 
-### Requirement: Ask the owner instead of blocking
+#### Scenario: A cycle
 
-When, without `--unattended`, a task is decided by an open question in the
-change, or cannot be built as the change says, the implement instructions
-shall have the agent ask the owner and wait for the answer, instead of
-marking the task blocked.
+- GIVEN cycle K lists A and B, B depending on A, K not marked
+  `unattended` and its `needs_human` naming B
+- WHEN `/grove-implement K` is run, with or without `--unattended`
+- THEN A and then B are built on one branch, each by
+  `grove instructions implement <change-id>` with the same mode, B's
+  instructions naming it the second of two in K's plan; only `grove run`
+  reads `unattended` and `needs_human`
 
-#### Scenario: An open question decides a task
+#### Scenario: A member left out
 
-- GIVEN change C's proposal has an open question that decides how T-02 is
-  built
+- GIVEN cycle K lists A and C, and C depends on Z, which K does not list
+  and the target has not archived as finished
+- WHEN `/grove-implement K` is run
+- THEN the instructions leave C out, saying it waits on Z, and A is built
+
+### Requirement: Name the change's documents
+
+When `grove instructions implement <change-id>` or `grove instructions
+archive <change-id>` is run, the system shall name each document of the
+change by its path, with the instruction to read every one first, print
+none of their text and no template but `implementation.md`'s, and, for an
+approved change, name each document whose working-tree copy differs from
+the target's with the `git show` command that prints the approved text,
+which the agent builds unless the owner agreed to the revision on this
+branch.
+
+#### Scenario: A large change
+
+- GIVEN approved change C whose documents hold 45 KB of text
+- WHEN `grove instructions implement C` is run
+- THEN the output names each of C's documents by path, holds none of
+  their text, and prints the implementation template and no other
+
+#### Scenario: A document that differs
+
+- GIVEN approved change C, whose `tasks.md` in the working tree differs
+  from the target's
+- WHEN `grove instructions implement C` is run
+- THEN it names `tasks.md` as differing, with `git show <commit>:<path>`;
+  the agent builds the revision if the owner agreed to it on this branch,
+  and otherwise, as always with `--unattended`, what `git show` prints
+
+### Requirement: Settle what the change does not
+
+When a task is decided by an open question in the change, cannot be built
+as the change says, or shows the change's approach is wrong, the implement
+instructions shall have the agent, with the owner, stop that task and ask,
+naming which of the proposal, change specs and tasks it would edit and
+how, and edit them on the branch only once the owner agrees, by following
+`grove instructions propose <change-id>` and then running `grove check`,
+marking the task `Status: blocked` with the question if the owner leaves
+it open; and, with `--unattended`, mark the task `Status: blocked` with
+the question or reason, ask no one, and edit none of the change's files
+but `implementation.md`. With the owner, they shall also have it tell the
+owner how to try each task it builds and take their feedback before the
+next, set a done task whose result an agreed edit changes back to in
+progress until it is rebuilt, and stop when `grove check` reports a
+requirement of the change as rewritten or removed since its base,
+telling the owner the change must be revised with propose and merged
+again first.
+
+#### Scenario: An open question, with the owner
+
+- GIVEN change C's open question decides how T-02 is built
 - WHEN the agent reaches T-02
-- THEN it asks the owner the question before building T-02
+- THEN it asks the owner before building T-02; if the owner leaves it,
+  T-02 is `Status: blocked` with the question and the agent goes on
 
-#### Scenario: The owner leaves it open
+#### Scenario: Feedback changes the change
 
-- GIVEN the agent asked the owner a question deciding T-02
-- WHEN the owner says to leave it
-- THEN T-02 is marked `Status: blocked` with the question under it, and the
-  agent goes on with the other tasks
-
-### Requirement: Revise the change on its branch
-
-When the owner's answer or feedback changes what the change says, the
-implement instructions shall have the agent say which of the change's
-proposal, change specs and tasks it would edit and how, and, only once the
-owner agrees, edit them on the implementation branch, leaving every
-`Files:` line as it is, revising a task's files only through
-`grove instructions propose <change-id>`, run `grove check` clean, and
-then build to the revised change.
-
-#### Scenario: Feedback changes a requirement mid-build
-
-- GIVEN the agent built T-01 of change C, and the owner, trying it, asks for
-  different behavior than C's change spec states
+- GIVEN the agent built T-01 of change C and told the owner how to try
+  it, and the owner, trying it, asks for behavior C's change spec does
+  not state
 - WHEN the owner agrees to the edit the agent describes
-- THEN C's change spec on the branch states the new behavior, the code
-  follows it, and `grove review` on the branch shows the edited change spec
+- THEN the agent edits C's change spec on the branch by following
+  `grove instructions propose C`, T-01 is in progress until rebuilt, and
+  the agent builds to the edit; had the owner declined, C would be
+  unchanged and built as it says
 
-#### Scenario: The owner does not agree
+#### Scenario: The approach rests on something false
 
-- GIVEN the agent proposed an edit to C's change spec
-- WHEN the owner declines it
-- THEN C's files are unchanged and the agent builds what C says
-
-#### Scenario: A revision that needs a new task
-
-- GIVEN the owner agrees that change C needs a new task touching
-  `ledger/export.py`
-- WHEN the agent revises C
-- THEN it runs `grove instructions propose C` and follows it to add the
-  task with its `Files:` line, instead of writing the line itself
-
-### Requirement: Implement a cycle
-
-When the owner runs `/grove-implement <cycle-id>`, without
-`--unattended`, for a cycle the target holds, the system shall print
-instructions for building each member not yet archived, in build order,
-each as `/grove-implement <change-id>` builds it, in the owner's session.
-
-#### Scenario: A cycle the owner builds
-
-- GIVEN cycle K lists A and B, is not marked `unattended`, and
-  `needs_human` names B
-- WHEN the owner runs `/grove-implement K`
-- THEN A and then B are built in the owner's session, the agent asking the
-  owner where `/grove-implement` would
-
-### Requirement: Tell the owner of a moved file
-
-When the owner runs `/grove-implement <change-id>` for a change in no
-cycle that is not done, and a task names a file, or a folder holding a
-file, that differs on the target from the same file at the change's
-`base`, the system shall say which task and file, and the implement
-instructions shall have the agent ask the owner before building that
-task, instead of building on the file as it was.
-
-#### Scenario: A named file changed since base
-
-- GIVEN the target approves change C, in no cycle, whose T-02 names
-  `internal/cli/run.go`, which the target changed after C's `base`
-- WHEN the owner runs `/grove-implement C`
-- THEN Grove's instructions name T-02 and `internal/cli/run.go` as changed
-  since base, and the agent, on reaching T-02, tells the owner what changed
-  and asks before building
-
-#### Scenario: A file no task names needs a change
-
-- GIVEN the agent, building T-01, finds `docs/concepts.md`, which no task
-  names, states what T-01 makes false
-- WHEN it tells the owner and they agree
-- THEN `implementation.md` has `` Also changed: `docs/concepts.md` `` under
-  T-01 with the reason, `tasks.md` is unchanged, and the agent edits the
-  page; had the owner declined, the page would be left as it is and no
-  line written
-
-#### Scenario: A member of a cycle
-
-- GIVEN change C is a member of cycle K, and a file C's T-01 names changed
-  on the target after K's `planned` commit
-- WHEN the owner runs `/grove-implement K`
-- THEN C is not reported against its `base`; `grove check` reports K as
-  stale, and the owner re-plans K or builds on
-
-### Requirement: Tell the owner of a file moved since the plan
-
-When `grove instructions implement <change-id>` is run, with the owner or
-with `--unattended`, for a member of a cycle that the target holds and
-that is not done, and a task names a file that a commit counted by "Count
-a member changed with its plan" changed after the cycle's `planned`
-commit, the system shall name that task and file as changed since the
-cycle's plan.
-
-#### Scenario: With the owner
-
-- GIVEN change C is a member of cycle K, not marked `unattended` and not
-  done, C's T-01 names `ledger/records.py`, and the target merged a commit
-  touching that file after K's `planned` commit
-- WHEN the owner runs `/grove-implement C`
-- THEN Grove's instructions name T-01 and `ledger/records.py` as changed
-  on the target since K's plan, and the agent, on reaching T-01, tells the
-  owner what changed and asks before building it
+- GIVEN C's T-01 says `find` raises `ValueError` for an unknown ID, and
+  the agent finds `report` relies on `find` returning nothing
+- WHEN it makes the finding while building T-01
+- THEN it stops T-01 and tells the owner what it found and which of C's
+  documents it would edit and how
 
 #### Scenario: Unattended
 
-- GIVEN the same C and K
-- WHEN `/grove-implement K --unattended` is run and reaches C
-- THEN Grove's instructions for C name T-01 and `ledger/records.py` as
-  changed since K's plan, and T-01 is marked `Status: blocked` naming that
-  file, unbuilt, with nobody asked
+- GIVEN cycle K lists change C, whose open question decides T-02
+- WHEN `/grove-implement K --unattended` reaches T-02
+- THEN T-02 is `Status: blocked` with the question, nobody is asked, and
+  C's proposal, change specs and tasks are unchanged
 
-#### Scenario: The cycle it depends on lands
+### Requirement: Change only the files the tasks name
 
-- GIVEN cycle K depends on cycle L, K's member C has T-01 naming
-  `ledger/records.py`, and the merge into the target that archives L's
-  change also edits that file
-- WHEN `grove instructions implement C` is run
-- THEN it names no file as changed since K's plan
+The implement instructions shall have the agent change only the files the
+tasks' `Files:` lines name and, with the owner, also make the choices and
+change the paths a task's `Delegated:` line names without asking; for any
+other file a task makes false, they shall have it tell the owner and,
+only with their agreement, edit it and write `` Also changed: `<path>` —
+<reason> `` under that task in `implementation.md`; with `--unattended`,
+ignore `Delegated:` lines, write no `Also changed:` line, and name such a
+file, and why, in the task's evidence.
 
-#### Scenario: Re-planned
+#### Scenario: A delegated path
 
-- GIVEN C's T-01 names `ledger/records.py`, the target changed that file
-  after K's `planned` commit, and K was then re-planned, setting `planned`
-  to the target's commit
-- WHEN `grove instructions implement C` is run
-- THEN it names no file as changed since K's plan
+- GIVEN T-01's `Files:` line names `tests/test_cli.py` and its
+  `Delegated:` line names `tests/test_records.py`
+- WHEN the agent puts `find`'s tests in a new `tests/test_records.py`
+- THEN it creates the file without asking the owner
+
+#### Scenario: A file nothing names
+
+- GIVEN the agent, building T-01, finds `README.md`, which no line of T-01
+  names, states what T-01 makes false
+- WHEN it tells the owner and they agree
+- THEN it edits `README.md` and writes `` Also changed: `README.md` ``
+  under T-01 with the reason; had they declined, nothing is written
+
+#### Scenario: Unattended
+
+- GIVEN the same T-01, built by `/grove-implement K --unattended`
+- WHEN the agent builds it
+- THEN neither `tests/test_records.py` nor `README.md` is touched, T-01's
+  evidence names both and why, and there is no `Also changed:` line
+
+### Requirement: A task's file changed on the target
+
+When a task names a file, or a folder holding one, that the target changed
+since the change's `base`, or, for a member of a cycle not done, since
+the cycle's `planned` commit as the cycles spec's "Count a member changed
+with its plan" counts it, the system shall name
+that task and file in the implement instructions, and they shall have the
+agent, with the owner, tell them what changed before building the task
+and ask whether to build on the file as it is now or revise the change
+with propose, recommending propose, which re-bases the change, when a
+change in its `depends_on` brought the file; and, with `--unattended`,
+mark the task `Status: blocked` naming the file and not build it.
+
+#### Scenario: Changed since base
+
+- GIVEN approved change C, in no cycle, whose T-02 names
+  `internal/cli/run.go`, which the target changed after C's `base`
+- WHEN `/grove-implement C` is run
+- THEN the instructions name T-02 and `internal/cli/run.go` as changed
+  since base; with the owner, the agent asks before building T-02; with
+  `--unattended`, T-01 is built and T-02 is `Status: blocked` naming the
+  file
+
+#### Scenario: Its dependency landed
+
+- GIVEN change B depends on A, and the merge that archived A on the
+  target changed `ledger/export.py`, which B's T-01 names
+- WHEN the owner runs `/grove-implement B` and the agent reaches T-01
+- THEN it tells the owner what changed and recommends revising B with
+  `/grove-propose B`, or else building on the file as it is now
+
+#### Scenario: A member of a cycle
+
+- GIVEN change C is a member of cycle K, and the target changed a file
+  C's T-01 names after K's `planned` commit
+- WHEN `/grove-implement C` is run
+- THEN the instructions name T-01 and the file as changed since K's plan,
+  not since C's `base`; once K is re-planned, or when the change came by
+  the merge that archived a cycle K depends on, they name nothing
 
 ### Requirement: Verify before finishing
 
-When the agent has built every task it can of a change, with the owner or
-with `--unattended`, the implement instructions shall have it, before it
-finishes, run the project's tests, re-read each done task's evidence
-against the code as it now is and set a task whose evidence no longer
-holds back to `Status: in progress`, and write a `## Scenarios` section in
-`implementation.md` with one line per scenario of the change specs naming
-the check that shows it and its result, or `unverified` and why; its
-finishing report names each unverified scenario, and with `--unattended`
-it asks no one.
+When the agent has built every task it can of a change, the implement
+instructions shall have it run the project's tests, re-read each done
+task's evidence against the code as it now is and set a task whose
+evidence no longer holds back to `Status: in progress`, and write a
+`## Scenarios` section in `implementation.md` with one line per scenario
+of the change specs naming the check that shows it and its result, or
+`unverified` and why; its report, and the archive instructions before the
+fold, shall name each unverified scenario, refusing nothing and, with
+`--unattended`, asking no one.
 
 #### Scenario: Every scenario has a test
 
-- GIVEN a change whose change spec has two scenarios, both shown by tests
-  that pass
-- WHEN the agent finishes implementing it
-- THEN `implementation.md`'s `## Scenarios` names each scenario with its
-  test and "passed"
+- GIVEN a change whose two scenarios are shown by passing tests
+- WHEN the agent finishes it
+- THEN `## Scenarios` names each with its test and "passed"
 
 #### Scenario: A done task later broken
 
-- GIVEN T-01 was marked done, and building T-02 changed the code T-01's
-  evidence relies on so its test fails
+- GIVEN T-01 was done, and building T-02 broke the test T-01's evidence
+  relies on
 - WHEN the agent rechecks before finishing
 - THEN T-01 is `Status: in progress` again until it is rebuilt
 
 #### Scenario: A scenario only a person can judge
 
 - GIVEN a scenario says a list "reads clearly"
-- WHEN the agent writes the scenario list
-- THEN that line says `unverified` and why, and the finishing report
-  names it
+- WHEN the agent finishes, and later archives, the change
+- THEN that line says `unverified` and why, the report names it, and
+  archive names it to the owner before folding
 
-#### Scenario: A scenario no test shows, unattended
-
-- GIVEN a member, built with `--unattended`, whose change spec has a
-  scenario no test checks
-- WHEN the agent finishes the member
-- THEN that line says `unverified` and why, the report names it, and the
-  agent goes on without asking
-
-### Requirement: Archive names unverified scenarios
-
-When the agent runs the archive instructions for a finished change, they
-shall have it tell the owner each scenario `implementation.md` marks
-`unverified`, before the fold, without refusing to archive.
-
-#### Scenario: One scenario unverified
-
-- GIVEN a finished change whose scenario list marks one scenario
-  `unverified`
-- WHEN the agent archives it
-- THEN it names that scenario to the owner, then folds and archives
-
-### Requirement: Build unattended
-
-When `/grove-implement <id> --unattended` is run for a change the target
-approves or a cycle the target holds, the system shall print instructions
-that have the agent build it as `/grove-implement <id>` would but ask no
-one: a task an open question decides, or that cannot be built as the
-change says, is marked `Status: blocked` with the question or the reason;
-in a change in no cycle that is not done, a task naming a file the target
-changed since the change's `base` is marked `Status: blocked` with the
-file and is not built on it;
-a file no task names is left as it is and named in that task's evidence;
-the change's files other than `implementation.md` are not edited; and a
-cycle is built whether or not it is marked `unattended` and whatever its
-`needs_human` says.
-
-#### Scenario: One change, by hand
-
-- GIVEN the target approves change C, in no cycle, with tasks T-01 and
-  T-02 that no open question decides
-- WHEN `/grove-implement C --unattended` is run on the target branch
-- THEN the agent creates a branch, builds T-01 and T-02 without asking
-  anyone, records both as done in `implementation.md`, and archives C on
-  that branch
-
-#### Scenario: An open question decides a task
-
-- GIVEN cycle K lists change C, whose open question decides T-02
-- WHEN `/grove-implement K --unattended` is run and the agent reaches C's
-  T-02
-- THEN T-02 is marked `Status: blocked` with the question, nobody is
-  asked, and C's proposal, change specs and tasks are unchanged
-
-#### Scenario: A named file moved since base
-
-- GIVEN the target approves change C, in no cycle, whose T-02 names
-  `internal/cli/run.go`, which the target changed after C's `base`
-- WHEN `/grove-implement C --unattended` is run
-- THEN Grove's instructions name T-02 and `internal/cli/run.go` as changed
-  since base, T-01 is built, and T-02 is marked `Status: blocked` naming
-  that file, unbuilt, with nobody asked
-
-#### Scenario: Two members, one waiting on the other
-
-- GIVEN cycle K lists A and B, B depending on A, neither archived
-- WHEN `/grove-implement K --unattended` is run
-- THEN A is built and archived, then B, on one branch, each by
-  `grove instructions implement <change-id> --unattended`
-
-#### Scenario: A cycle that needs a person, by hand
-
-- GIVEN cycle K lists A and B, is not marked `unattended`, and
-  `needs_human` names B
-- WHEN `/grove-implement K --unattended` is run by hand
-- THEN A and B are built asking no one; only `grove run` refuses K
-
-#### Scenario: A change that waits
-
-- GIVEN the target approves change B with `depends_on: [A]`, and the
-  working tree does not hold A archived as finished
-- WHEN `/grove-implement B --unattended` is run
-- THEN nothing is built, and Grove says B waits on A
-
-### Requirement: A member gets its cycle's plan
-
-When `/grove-implement <change-id>` is run, with or without
-`--unattended`, for a member of a cycle the target holds that is not
-done, the system shall print that change's instructions with the cycle's
-plan, naming the member's place in build order.
-
-#### Scenario: The second member, unattended
-
-- GIVEN cycle K lists A and B, B depending on A, and A is archived as
-  finished on this branch
-- WHEN `grove instructions implement B --unattended` is run
-- THEN B's instructions are printed with K's plan, naming B as the second
-  of two
-
-#### Scenario: A member built with the owner
-
-- GIVEN cycle K lists A and B, neither archived
-- WHEN the owner runs `/grove-implement A`
-- THEN A's instructions are printed with K's plan, naming A as the first
-  of two
-
-### Requirement: Implement's rules in both modes
+### Requirement: Rules for implement
 
 Where `grove.yaml` holds lines under `rules.skills.implement`, the system
-shall print them with the implement instructions, for a change and for a
-cycle, with and without `--unattended`.
+shall print them with the implement instructions in both modes; when the
+agent finishes a change with the owner, who corrected it in a way that
+would apply to future work, the instructions shall have it suggest at most
+one line for `context` or a key under `rules`, quoting the correction, and
+add it on the branch only if the owner agrees, naming it in no task's
+`Files:` line; and, with `--unattended`, let its report name at most one
+such line and add none.
 
 #### Scenario: A rule for both modes
 
 - GIVEN `rules.skills.implement` holds "Commit after each task, naming its
   task ID."
-- WHEN `grove instructions implement C` runs, and then
-  `grove instructions implement C --unattended`
-- THEN both print that line with the implement instructions
-
-### Requirement: Report rules for apply
-
-When the owner runs `grove check` and `grove.yaml` holds a
-`rules.skills.apply` key, the system shall report that line, saying its
-lines go under `rules.skills.implement`.
-
-#### Scenario: A project that kept its apply rules
-
-- GIVEN `grove.yaml` holds two lines under `rules.skills.apply`
-- WHEN the owner runs `grove check`
-- THEN it reports the `apply` line, pointing to `implement`
-
-### Requirement: No apply skill
-
-The system shall write no apply skill or command for any harness, `grove
-init` shall remove the apply skill and command files an earlier Grove
-wrote, and `grove instructions apply` shall print the usage and exit with
-status 2.
-
-#### Scenario: Init after upgrading
-
-- GIVEN a project whose `.claude/skills/grove-apply/SKILL.md` an earlier
-  Grove wrote
-- WHEN the owner runs `grove init`
-- THEN that folder is removed, and init names `grove-apply` among what it
-  removed
-
-#### Scenario: The old command
-
-- GIVEN cycle K on the target
-- WHEN `grove instructions apply K` is run
-- THEN no instructions are printed, and Grove prints the usage
-
-### Requirement: Implement a draft with the owner
-
-When the owner runs `/grove-implement <change-id>`, without
-`--unattended`, for a change this working tree holds and the target does
-not, and that waits on nothing the working tree has not archived as
-finished, the system shall print instructions for building it as the
-working tree holds it, in the owner's session, that say the change is a
-draft, that merging the branch into the target approves it with its
-code, and that its proposal, change specs and tasks are edited only with
-the owner's agreement, as when revising a change on its branch.
-
-#### Scenario: Drafted and built on one branch
-
-- GIVEN the owner proposed change D on branch `rename` and committed it,
-  and the target does not hold D
-- WHEN the owner runs `/grove-implement D` on `rename`
-- THEN Grove's instructions say D is a draft that merging `rename`
-  approves with its code, and the agent builds D's tasks, records them as
-  done in `implementation.md`, and archives D on `rename`
-
-#### Scenario: Unattended refuses a draft
-
-- GIVEN change D exists in the working tree but not in the target
-- WHEN `/grove-implement D --unattended` is run
-- THEN nothing is built, and Grove says the target holds no approved
-  change D
-
-#### Scenario: Building shows the draft is wrong
-
-- GIVEN the agent, building draft D's T-01, finds that D's change spec
-  states behavior the owner, trying it, does not want
-- WHEN the agent says which of D's files it would edit and how
-- THEN it edits them only once the owner agrees, runs `grove check`
-  clean, and builds to the edited change; had the owner declined, D's
-  files would be unchanged
-
-#### Scenario: A large draft
-
-- GIVEN draft D has eight tasks across four capabilities
-- WHEN the owner runs `/grove-implement D`
-- THEN Grove prints the instructions for D as for a draft of one task,
-  with nothing about its size
-
-#### Scenario: A draft that waits
-
-- GIVEN draft D has `depends_on: [A]`, and the working tree does not
-  hold A archived as finished
-- WHEN the owner runs `/grove-implement D`
-- THEN nothing is built, and Grove says D waits on A
-
-### Requirement: Review names a change approved with its code
-
-When the current branch holds a change archived as finished that the
-target holds neither open nor archived, `grove review` shall say that
-merging the branch into the target approves that change with its code,
-instead of as future work.
-
-#### Scenario: Drafted, built and archived on one branch
-
-- GIVEN branch `rename` holds change D archived as finished, and the
-  target does not hold D
-- WHEN the owner runs `grove review` on `rename`
-- THEN its first line is "Merging rename into main approves change D
-  with its code."
-
-#### Scenario: A draft not yet built
-
-- GIVEN branch `rename` holds change D open, and the target does not hold
-  D
-- WHEN the owner runs `grove review`
-- THEN it says merging `rename` approves change D as future work and does
-  not implement it
-
-#### Scenario: An approved change archived on its branch
-
-- GIVEN the target holds change C open, and branch `c-impl` holds C
-  archived as finished
-- WHEN the owner runs `grove review` on `c-impl`
-- THEN it names no change approved by the merge, and lists C's archived
-  folder and the maintained specs it changes
-
-### Requirement: Honor a task's delegation
-
-When a task the owner is building with `/grove-implement` has a
-`Delegated:` line, the implement instructions shall have the agent make the choices it names and change the
-paths it names without asking the owner, and ask, as for any other, about
-a choice or a file neither the task's `Files:` line nor its `Delegated:`
-line names.
-
-#### Scenario: A delegated path
-
-- GIVEN T-01 names `ledger/records.py` and `tests/test_cli.py` on its
-  `Files:` line, and its `Delegated:` line names test layout and
-  `tests/test_records.py`
-- WHEN the agent, building T-01, puts `find`'s own tests in a new
-  `tests/test_records.py`
-- THEN it creates the file without asking the owner
-
-#### Scenario: A path nothing names
-
-- GIVEN the same T-01, and the agent finds `README.md` states what T-01
-  makes false
-- WHEN it would edit `README.md`
-- THEN it tells the owner and asks first, as for any file no task names
-
-### Requirement: Stop on a discovery that breaks the approach
-
-If, while building a task, the agent finds something that makes the
-change's agreed approach wrong, even where the task could still be built
-as written, then the implement instructions shall have it stop that task,
-build nothing more of it, and tell the owner what it found and the
-revision the change needs, naming which of its proposal, change specs and
-tasks it would edit and how.
-
-#### Scenario: The approach rests on something false
-
-- GIVEN change C's T-01 says `find` in `ledger/records.py` raises
-  `ValueError` for an unknown ID, and the agent finds `report` relies on
-  `find` returning nothing for a missing ID
-- WHEN it makes the finding while building T-01
-- THEN it stops T-01, tells the owner what it found and which of C's
-  documents it would edit and how, and builds nothing more of T-01 until
-  the owner answers
-
-### Requirement: Ignore a task's delegation unattended
-
-When a task built with `/grove-implement <id> --unattended` has a
-`Delegated:` line, the implement instructions shall have the agent ignore
-it: change only the files the tasks' `Files:` lines name, write no
-`Also changed:` line, and leave a path only a `Delegated:` line names as it
-is, as it does any file no task names: when the task would have changed
-it, naming it, and why, in that task's evidence in `implementation.md`.
-
-#### Scenario: A delegated path, unattended
-
-- GIVEN cycle K lists change C, whose T-01 names `ledger/records.py` and
-  `tests/test_cli.py` on its `Files:` line and `tests/test_records.py` on
-  its `Delegated:` line
-- WHEN `/grove-implement K --unattended` builds T-01
-- THEN `tests/test_records.py` is not created, `find`'s tests go in
-  `tests/test_cli.py`, T-01's evidence names `tests/test_records.py`
-  and why it was left, and `implementation.md` has no `Also changed:` line
-
-### Requirement: Suggest a rules line
-
-When the agent finishes implementing a change with the owner, and the
-owner corrected it in that session in a way that would apply to future
-work, the implement instructions shall have it suggest one line for
-`context`, or for a key under `rules`, in `grove.yaml`, quoting the
-correction, and add the line to `grove.yaml` on the implementation branch
-only if the owner agrees, without adding `grove.yaml` to any task's
-`Files:` line; it suggests at most one line per change.
+- WHEN `grove instructions implement C` is run, with or without
+  `--unattended`
+- THEN the instructions print that line
 
 #### Scenario: The owner agrees
 
-- GIVEN, while the agent built change C, the owner said "Name each test
-  after the requirement it checks"
+- GIVEN the owner said "Name each test after the requirement it checks"
+  while C was built, and made one other correction that would apply to
+  future work
 - WHEN the agent finishes C and the owner agrees to the line it suggests
-  under `rules: skills: implement:`, quoting that correction
-- THEN `grove.yaml` on the branch holds that line, no task's `Files:`
-  line names `grove.yaml`, and Grove's `check` reports no problem in it
+- THEN `grove.yaml` on the branch holds that one line, and no task's
+  `Files:` line names `grove.yaml`; had the owner declined, or corrected
+  only something particular to C, `grove.yaml` is unchanged
 
-#### Scenario: The owner declines
+#### Scenario: Unattended
 
-- GIVEN the agent suggested a line from the owner's correction
-- WHEN the owner declines it
-- THEN `grove.yaml` is unchanged
-
-#### Scenario: Nothing for next time
-
-- GIVEN the owner corrected nothing while the agent built C, or only
-  something particular to C
-- WHEN the agent finishes C
-- THEN it suggests no line, and `grove.yaml` is unchanged
-
-#### Scenario: Two corrections
-
-- GIVEN the owner made two corrections while the agent built C, each of
-  which would apply to future work
-- WHEN the agent finishes C
-- THEN it suggests one line, not two
-
-### Requirement: Name a rules line unattended
-
-When the agent, building a change with `/grove-implement <id>
---unattended`, found something that would apply to future work, the
-unattended instructions shall let its report name at most one suggested
-line per change for `context`, or for a key under `rules`, in
-`grove.yaml`, with what it found, and shall have it add no such line to
-`grove.yaml`.
-
-#### Scenario: A test command nobody wrote down
-
-- GIVEN cycle K lists change A, and A's tests run only with a command
-  that `context` in `grove.yaml` does not name
+- GIVEN A's tests run only with a command `context` does not name
 - WHEN `/grove-implement K --unattended` builds A and finishes
-- THEN its report names a `context` line giving that command, nobody is
-  asked, and `grove.yaml` on the branch is unchanged
+- THEN its report names a `context` line giving that command, and
+  `grove.yaml` is unchanged
 
-### Requirement: Review shows planned against actual
+### Requirement: Review names what the branch approves and builds
 
-When the current branch holds a change open, or holds it archived where
-the target does not hold it archived, `grove review` shall list each file
-outside the document root that the branch changes against the target,
-each as planned, naming the change's task whose `Files:` line names it or
-a folder above it, as agreed, naming the task and the reason its
-`Also changed:` line in `implementation.md` gives, or as named nowhere.
+When the current branch holds a change the target does not hold, `grove
+review` shall say whether merging the branch approves it as future work
+or, once it is archived as finished on the branch, with its code; and when
+the branch holds a change open, or archived where the target does not
+hold it archived, `grove review` shall list each file outside the
+document root that the branch changes against the target, as planned,
+naming the task whose `Files:` line names it or a folder above it, as
+agreed, naming the task and the reason its `Also changed:` line in
+`implementation.md` gives, or as named nowhere.
+
+#### Scenario: A draft, before and after building
+
+- GIVEN branch `rename` holds change D, which the target does not hold
+- WHEN the owner runs `grove review` on `rename` with D open, and again
+  once D is archived as finished there
+- THEN, with D open, it says merging `rename` approves change D as future
+  work and does not implement it; with D archived, its first line is
+  "Merging rename into main approves change D with its code."
 
 #### Scenario: Planned, agreed and named nowhere
 
-- GIVEN branch `c-impl` holds change C, whose T-01 names
-  `ledger/records.py` and `tests/fixtures/` on its `Files:` line, whose
-  `implementation.md` has `` Also changed: `README.md` — T-01 makes its
-  usage example false `` under T-01, and the branch changes
+- GIVEN branch `c-impl` holds approved change C, open or archived, whose
+  T-01 names `ledger/records.py` and `tests/fixtures/` on its `Files:`
+  line, whose `implementation.md` has `` Also changed: `README.md` — T-01
+  makes its usage example false `` under T-01, and the branch changes
   `ledger/records.py`, `tests/fixtures/records.json`, `README.md` and
   `Cargo.lock`
 - WHEN the owner runs `grove review` on `c-impl`
-- THEN it lists `ledger/records.py` and `tests/fixtures/records.json` as
-  planned by C:T-01, `README.md` as agreed by C:T-01 with that reason, and
-  `Cargo.lock` as named nowhere, and exits 0
-
-#### Scenario: After archiving
-
-- GIVEN the same branch after `grove archive C`, the target holding C open
-- WHEN the owner runs `grove review`
-- THEN it lists the same files the same way
-
-#### Scenario: No change on the branch
-
-- GIVEN a branch that holds no change open, and none archived that the
-  target does not hold archived
-- WHEN the owner runs `grove review`
-- THEN it lists no files against a plan
-
-### Requirement: List the change's documents
-
-When `grove instructions implement <change-id>` or `grove instructions
-archive <change-id>` is run, the system shall name each document of the
-change by its path in the working tree, with the instruction to read every
-one before acting, and print none of their text, and, for an approved
-change that implement builds, name each document whose working-tree copy
-differs from the target's, with the `git show` command that prints the
-target's.
-
-#### Scenario: A large change
-
-- GIVEN approved change C whose proposal, change specs and tasks hold
-  45 KB of text
-- WHEN `grove instructions implement C` is run
-- THEN the output names each of C's documents by path and holds none of
-  their text, and the agent reads every one before building
-
-#### Scenario: A document revised on the branch
-
-- GIVEN approved change C, and the owner agreed, on this branch, to an edit
-  of C's `tasks.md`
-- WHEN `grove instructions implement C` is run with the owner
-- THEN it names `tasks.md` as differing from the target, with
-  `git show <commit>:<path>` for the approved text, and the agent builds
-  the revision the owner agreed
-
-#### Scenario: A document that differs, unattended
-
-- GIVEN approved change C, and the working tree's copy of C's change spec
-  differs from the target's
-- WHEN `grove instructions implement C --unattended` is run
-- THEN it names that change spec as differing, and the agent builds what
-  `git show` prints for it
-
-#### Scenario: Archiving
-
-- GIVEN change C with every task done
-- WHEN `grove instructions archive C` is run
-- THEN it names each of C's documents, `implementation.md` included, by
-  path, and holds none of their text
-
-### Requirement: Implement leaves revising to propose
-
-When `grove instructions implement <change-id>` is run, the system shall
-print the template of `implementation.md` and of no other kind of
-document, and the implement instructions shall have the agent run
-`grove instructions propose <change-id>` and follow it before editing the
-change's proposal, change specs or tasks.
-
-#### Scenario: Templates
-
-- WHEN `grove instructions implement C` is run
-- THEN it prints the implementation template, and no proposal, change
-  spec, tasks or `.grove.yaml` template
-
-#### Scenario: An agreed revision
-
-- GIVEN the owner agreed, while C is built, to an edit of its change spec
-- WHEN the agent makes the edit
-- THEN it has first run `grove instructions propose C` and follows what it
-  prints
-
-### Requirement: Recommend re-basing after a dependency lands
-
-When `/grove-implement <change-id>`, with the owner, names a task's file
-as changed since the change's `base`, and a change in its `depends_on` is
-archived on the target, the implement instructions shall have the agent
-recommend revising the change with propose, which re-bases it, as the
-normal step, beside building on the file as it is now.
-
-#### Scenario: Built after its dependency
-
-- GIVEN change B depends on A, A is archived on the target, and the merge
-  that archived A changed `ledger/export.py`, which B's T-01 names
-- WHEN the owner runs `/grove-implement B` and the agent reaches T-01
-- THEN it tells the owner what changed and recommends revising B with
-  `/grove-propose B` to re-base it, or else building on the file as it is
-  now, and waits for the answer
+- THEN it names no change approved by the merge, and lists
+  `ledger/records.py` and `tests/fixtures/records.json` as planned by
+  C:T-01, `README.md` as agreed by C:T-01 with that reason, and
+  `Cargo.lock` as named nowhere
 
 ## Known discrepancies
 
@@ -718,3 +351,4 @@ None recorded.
 - [261026-ar7ec](../../changes/archive/261026-ar7ec-files-lists-one-path-per-line-and-review-shows-planned-against-actual/) Files lists one path per line, and review shows planned against actual
 - [261026-804yw](../../changes/archive/261026-804yw-instructions-list-the-change-s-documents-instead-of-embedding-them/) Instructions list the change's documents instead of embedding them
 - [261026-d1sb1](../../changes/archive/261026-d1sb1-re-base-a-change-after-its-dependency-lands/) Re-base a change after its dependency lands
+- [261031-kkzva](../../changes/archive/261031-kkzva-reconcile-the-implement-spec-with-current-behavior/) Reconcile the implement spec with current behavior

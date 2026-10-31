@@ -10,8 +10,7 @@ project, or adding or changing a harness, rely on it.
 
 This covers which harnesses the first `grove init` chooses, where each
 harness's skill files go, and which files it removes. What `grove init`
-writes for `context` belongs to [config](../config/spec.md); removing the
-apply skill to [implement](../implement/spec.md), "No apply skill".
+writes for `context` belongs to [config](../config/spec.md).
 
 ## Requirements
 
