@@ -97,3 +97,13 @@ runs=(
 answers=(
   "report\.py|changed|since base|stale|order => Build on the file as it is now, listing by amount."
 )
+
+# good checks that the agent asked about the change to ledger/report.py, so
+# got its scripted answer, edited the file only after it, and the tests pass.
+good() {
+  local t
+  t=$(answered "Build on the file as it is now")
+  [ -n "$t" ] || echo "the agent did not ask about the change to ledger/report.py"
+  kept ledger/report.py budgets-impl "$t" || echo "ledger/report.py changed before the owner's answer about it"
+  python3 -m unittest -q 2> /dev/null || echo "python3 -m unittest fails"
+}

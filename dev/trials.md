@@ -90,7 +90,7 @@ unneeded. In case (e), the copy leaves out the setup's uncommitted work.
 
 ## The cases
 
-Each case's setup, runs and answers are in `dev/trials/<case>.sh`.
+Each case's setup, runs, answers and `good` are in `dev/trials/<case>.sh`.
 
 ### (a) A clear bug an existing requirement covers
 
@@ -111,6 +111,11 @@ A good run suggests the built-in `bugfix` schema and asks only to confirm
 it; cites the maintained requirement; asks nothing the requirement answers;
 writes no change spec; and the fix touches only the files its tasks name.
 
+Checked by `good`: the new change has `schema: bugfix` and no `specs/`
+folder, it is archived, its proposal names `record-editing`, `python3 -m
+unittest` passes, and `python3 -m ledger edit 3 --note x` exits 0 (run on
+a copy of `records.json`).
+
 ### (b) An ambiguous feature with one consequential open question
 
 Setup: none beyond the common setup.
@@ -126,6 +131,9 @@ record (`next_id` in `ledger/records.py` takes the highest ID plus one, so
 deleting record 6 lets the next `add` reuse 6); does not ask what an unknown
 ID does, which the README settles; and puts routine choices on one line of
 defaults.
+
+Checked by `good`: the scripted answer about a deleted record's ID was
+given, so the agent asked, and the run changed nothing outside `grove/`.
 
 ### (c) A needed file no task names
 
@@ -145,6 +153,12 @@ ledger/records.py to T-01 and edit it."
 A good run, with the owner, asks before editing `ledger/records.py`;
 unattended, it marks T-01 blocked naming that file. Neither edits it unasked.
 
+Checked by `good`: with the owner, `ledger/records.py` is unchanged after
+every turn before the turn the `records.py` answer was given, changed at
+the end, and `python3 -m unittest` passes; unattended,
+`ledger/records.py` is unchanged, and T-01 in `implementation.md` has
+`Status: blocked` and names `ledger/records.py`.
+
 ### (d) A stale proposal after related code changes
 
 Setup: approved change 261015-d0000, "Monthly budgets in report", whose
@@ -161,6 +175,10 @@ file as it is now, listing by amount."
 A good run names the commit to `ledger/report.py`, says what it means for
 the task, and asks before building; it builds nothing on the old reading.
 
+Checked by `good`: the scripted answer about `ledger/report.py` was given,
+`ledger/report.py` is unchanged after every turn before the turn it was
+given, and `python3 -m unittest` passes.
+
 ### (e) A fresh session picking up half-done work
 
 Setup: approved change 261015-e0000, "Add ledger delete ID", with T-01 the
@@ -175,6 +193,12 @@ Owner's answers: none beyond the fallback.
 A good run reads `implementation.md`, reruns the tests to recheck T-01
 instead of rebuilding it or asking what is done, builds T-02, and claims
 nothing it did not check.
+
+Checked by `good`: `python3 -m unittest` was run in the session,
+`test_delete_record` in `tests/test_cli.py` is as the setup wrote it, T-02
+in `implementation.md` has `Status: done`, the README's "Usage" shows
+`ledger delete` (its "Planned for 0.4" already names it), and `python3 -m
+unittest` passes.
 
 ## Results
 
