@@ -50,7 +50,4 @@ agent session, as the skill trials in `dev/trials.md` run. Tests are in
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- implement: applied to specs/implement/spec.md
