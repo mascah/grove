@@ -18,6 +18,7 @@ nav:
       - A glossary and decision records: guides/glossary-and-decisions.md
       - Specs of the code you already have: guides/spec-existing-code.md
       - Split a maintained spec: guides/split-a-maintained-spec.md
+      - Reconcile a maintained spec: guides/reconcile-a-maintained-spec.md
   - Reference: reference.md
 
 theme:
