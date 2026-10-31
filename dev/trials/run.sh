@@ -5,8 +5,9 @@
 #
 #   dev/trials/run.sh [a b c d e]
 #
-# HARNESSES (default "claude codex") picks the harnesses, CLAUDE_MODEL and
-# CODEX_MODEL the models under test, TRIALS_OUT the
+# HARNESSES (default "claude codex") picks the harnesses, RUNS (default 3)
+# the runs of each case and harness, JUDGINGS (default 3) the judgings of
+# each run, CLAUDE_MODEL and CODEX_MODEL the models under test, TRIALS_OUT the
 # output folder, TURNS (default 8) the owner replies a run may get, and
 # SETUP_ONLY=1 stops each trial once its fixture is set up.
 set -euo pipefail
@@ -15,6 +16,9 @@ here=$(cd "$(dirname "$0")" && pwd)
 checkout=$(cd "$here/../.." && pwd)
 out=${TRIALS_OUT:-${TMPDIR:-/tmp}/grove-trials/$(date +%Y%m%d-%H%M%S)}
 turns=${TURNS:-8}
+runs_each=${RUNS:-3}
+judgings=${JUDGINGS:-3}
+harnesses=${HARNESSES:-claude codex}
 cases=("$@")
 [ ${#cases[@]} -gt 0 ] || cases=(a b c d e)
 fallback="Yes, go with what you recommend."
@@ -103,7 +107,7 @@ turn() {
   words=$((words + $(wc -w <<< "$said")))
   # A turn the harness failed, such as at a usage limit, fails the trial rather than scoring it.
   failed=$(jq -rs '[.[] | select(.type=="turn.failed" or (.type=="result" and .is_error==true)) | .error.message // .result // "error"] | first // ""' "$log")
-  [ -z "$failed" ] || { echo "| ($c) | $h | failed: $failed | | | | | |" > "$dir/row.md"; return 1; }
+  [ -z "$failed" ] || { echo "$failed" > "$dir/failed.txt"; return 1; }
 }
 
 # reply sets answer to the case's first unused answer whose pattern matches
@@ -143,10 +147,11 @@ outside() {
     comm -23 - <(echo "$marked") | sed "s|^|$b: |"
 }
 
-# trial runs case c in harness h and writes its row of the table.
+# trial runs case c in harness h, as run r of the k, and leaves its counts
+# in its folder.
 trial() {
-  local c=$1 h=$2
-  dir=$out/$c-$h harness=$h n=0 words=0
+  local c=$1 h=$2 r=$3
+  dir=$out/$c-$h-$r harness=$h n=0 words=0
   local repo=$dir/repo
   mkdir -p "$dir"
   [ "$h" = claude ] || { mkdir -p "$dir/codex" && ln -s "$codex_auth" "$dir/codex/auth.json"; }
@@ -163,10 +168,10 @@ trial() {
   setup_rev=$(git rev-parse HEAD)
   # A case sets check_ok to the problems its setup means grove check to report.
   if ! grove check > "$dir/setup-check.txt" 2> /dev/null && grep -vqE "${check_ok:-^$}" "$dir/setup-check.txt"; then
-    echo "($c) $h: the setup is not clean: $(cat "$dir/setup-check.txt")" >&2
+    echo "the setup is not clean: $(cat "$dir/setup-check.txt")" > "$dir/failed.txt"
     return 1
   fi
-  [ -z "${SETUP_ONLY:-}" ] || { echo "| ($c) | $h | setup only | | | | | |" > "$dir/row.md"; return 0; }
+  [ -z "${SETUP_ONLY:-}" ] || { touch "$dir/setup-only"; return 0; }
   local run branch prompt had new branches=()
   for run in "${runs[@]}"; do
     branch=${run%% => *} prompt=${run#* => }
@@ -174,7 +179,7 @@ trial() {
     [[ " ${branches[*]} " == *" $branch "* ]] || branches+=("$branch")
     had=$(ls grove/changes 2> /dev/null || true)
     if [[ $prompt == *"{id}"* && -z $id ]]; then
-      echo "| ($c) | $h | failed: no change for \"$prompt\"; the run before it proposed none | | | | | |" > "$dir/row.md"
+      echo "no change for \"$prompt\"; the run before it proposed none" > "$dir/failed.txt"
       return 1
     fi
     prompt=${prompt//\{id\}/$id}
@@ -192,17 +197,11 @@ trial() {
   changes=$(find grove/changes -type f 2> /dev/null | sort)
   # The judge reads the fixture as the setup left it, before any run wrote to it.
   mkdir "$dir/setup" && git archive "$setup_rev" | tar -x -C "$dir/setup"
-  (cd "$dir/setup" && judge "$c" "$changes") > "$dir/judge.json" || true
+  # Each judging reads the saved transcript; no agent session starts after the last turn.
+  local i
+  for ((i = 1; i <= judgings; i++)); do (cd "$dir/setup" && judge "$c" "$changes") > "$dir/judge-$i.json" || true; done
   for branch in "${branches[@]}"; do git switch -q "$branch" && outside; done > "$dir/outside.txt"
-  local j=$dir/judge.json name
-  name=$([ "$h" = claude ] && echo "Claude Code" || echo Codex)
-  printf '| (%s) | %s | %s | %s | %s | %s | %s | %s |\n' "$c" "$name" \
-    "$(jq -r '.unneeded_questions.count // "?"' "$j" 2> /dev/null || echo '?')" \
-    "$(jq -r '.missed_decisions.count // "?"' "$j" 2> /dev/null || echo '?')" \
-    "$(wc -l < "$dir/outside.txt" | tr -d ' ')" \
-    "$(jq -r '.done_claims_without_evidence.count // "?"' "$j" 2> /dev/null || echo '?')" \
-    "$(jq -r '.listed_documents_not_read.count // "?"' "$j" 2> /dev/null || echo '?')" \
-    "$words" > "$dir/row.md"
+  echo "$words" > "$dir/words.txt"
 }
 
 # judge asks a model for the four judged counts of the run in $dir, of case
@@ -232,14 +231,76 @@ Reply with only this JSON, each why one sentence naming what you counted:
 
 mkdir -p "$out"
 for c in "${cases[@]}"; do
-  for h in ${HARNESSES:-claude codex}; do
-    (trial "$c" "$h") &
+  for h in $harnesses; do
+    # A case and harness's runs go one after another. Each runs in the
+    # background and is waited for, not run under ||, so set -e holds in it.
+    (for ((r = 1; r <= runs_each; r++)); do (trial "$c" "$h" "$r") & wait $! || true; done) &
   done
 done
 wait
 version() { "$1" --version 2> /dev/null | head -1 || echo "no $1"; }
 echo "Trials at $commit_of ($out): Claude Code $claude_model and Codex $codex_model at medium effort, judge $judge_model at medium effort, waiting check $waiting_model at its default effort; $(version claude), $(version codex)"
 echo
-echo "| Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Also changed | Done claims without evidence | Listed documents not read | Words read |"
-echo "| --- | --- | --- | --- | --- | --- | --- | --- |"
-for c in "${cases[@]}"; do for h in ${HARNESSES:-claude codex}; do cat "$out/$c-$h/row.md" 2> /dev/null || echo "| ($c) | $h | failed | | | | | |"; done; done
+# One row per case and harness: each count the median of its runs, and at
+# more than one run their min–max; a run's judged count is the median of its
+# judgings. Below the table, each failed run and each count its judgings
+# disagree on.
+python3 - "$out" "$runs_each" "$judgings" "$harnesses" "${cases[@]}" << 'EOF'
+import json, os, statistics, sys
+
+out, k, j, harnesses, cases = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), sys.argv[4].split(), sys.argv[5:]
+judged = {"unneeded_questions": "Unneeded questions", "missed_decisions": "Missed decisions",
+          "done_claims_without_evidence": "Done claims without evidence", "listed_documents_not_read": "Listed documents not read"}
+columns = ["unneeded_questions", "missed_decisions", "outside", "done_claims_without_evidence", "listed_documents_not_read", "words"]
+
+
+def judging(path, key):
+    try:
+        return int(json.load(open(path))[key]["count"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def spread(values):
+    if not values:
+        return "?"
+    m = f"{statistics.median(values):g}"
+    return m if k == 1 else f"{m} ({min(values):g}–{max(values):g})"
+
+
+print("| Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Also changed | Done claims without evidence | Listed documents not read | Words read |")
+print("| --- | --- | --- | --- | --- | --- | --- | --- |")
+notes = []
+for c in cases:
+    for h in harnesses:
+        name = {"claude": "Claude Code", "codex": "Codex"}.get(h, h)
+        counts = {col: [] for col in columns}
+        setup_only = False
+        for r in range(1, k + 1):
+            d, where = f"{out}/{c}-{h}-{r}", f"({c}) {name} run {r}"
+            if os.path.exists(f"{d}/setup-only"):
+                setup_only = True
+                continue
+            if not os.path.exists(f"{d}/words.txt"):
+                failed = open(f"{d}/failed.txt").read().strip() if os.path.exists(f"{d}/failed.txt") else "it did not finish"
+                notes.append(f"{where} failed: {failed}")
+                continue
+            for key, label in judged.items():
+                values = [v for v in (judging(f"{d}/judge-{i}.json", key) for i in range(1, j + 1)) if v is not None]
+                if values:
+                    counts[key].append(statistics.median(values))
+                if len(set(values)) > 1:
+                    notes.append(f"{where}: {label} judged {', '.join(map(str, values))}")
+            counts["outside"].append(sum(1 for line in open(f"{d}/outside.txt") if line.strip()))
+            counts["words"].append(int(open(f"{d}/words.txt").read()))
+        if setup_only:
+            cells = ["setup only"] + [""] * 5
+        elif not counts["words"]:
+            cells = ["failed"] + [""] * 5
+        else:
+            cells = [spread(counts[col]) for col in columns]
+        print(f"| ({c}) | {name} | " + " | ".join(cells) + " |")
+if notes:
+    print()
+    print("\n".join(notes))
+EOF
