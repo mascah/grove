@@ -63,6 +63,7 @@ session. `grove run` is the only command that starts an agent.
   [running Grove in CI](guides/run-grove-in-ci.md),
   [running on a timer](guides/run-on-a-timer.md),
   [keeping a glossary and decision records](guides/glossary-and-decisions.md),
-  [writing specs of the code you already have](guides/spec-existing-code.md) and
-  [splitting a maintained spec](guides/split-a-maintained-spec.md).
+  [writing specs of the code you already have](guides/spec-existing-code.md),
+  [splitting a maintained spec](guides/split-a-maintained-spec.md) and
+  [reconciling one with current behavior](guides/reconcile-a-maintained-spec.md).
 - [Reference](reference.md): every command, skill and setting.
