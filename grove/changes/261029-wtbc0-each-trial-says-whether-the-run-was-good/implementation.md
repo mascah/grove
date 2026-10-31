@@ -8,7 +8,7 @@ write "Status: dropped" here with their reason. -->
 
 ### T-01 — The Good run column
 
-Status: in progress
+Status: done
 
 `dev/trials/run.sh`: after each turn the script appends `<turn>\t<branch>\t<owner's
 message>` to `turns.txt` and writes `snapshot-<turn>.txt` (every file of
@@ -31,10 +31,20 @@ Checks so far:
 - The summary on hand-written folders, `RUNS=3`: (c) Claude Code, every
   `good.txt` empty, `3/3`; (c) Codex, run 2's `good.txt` with two lines,
   `2/3`, and both lines below the table as `(c) Codex run 2: …`; exit 0.
+- End to end at 588134c, `RUNS=1 JUDGINGS=1 HARNESSES=claude just trials c`:
+  `turns.txt` has turns 1 to 3 on `unknown-id-impl` (turn 2 the
+  `records.py` answer) and 4 on `unknown-id-unattended`, four
+  `snapshot-<n>.txt`, `start-1.txt` and `start-4.txt`; `good.txt` is
+  empty and the row shows `| (c) | Claude Code | 1/1 | 1 | 0 | 0 | 0 | 0 |
+  907 |`; exit 0.
+- `RUNS=1 JUDGINGS=1 HARNESSES=claude TURNS=0 just trials d`, so no
+  scripted answer is given: the row shows `0/1`, below the table `(d)
+  Claude Code run 1: the agent did not ask about the change to
+  ledger/report.py`, and `just trials` exits 0.
 
 ### T-02 — Each case's checks
 
-Status: in progress
+Status: done
 
 Each case file has a `good` beside `setup`, checking what the proposal's
 "Intended outcome" lists for it, and `dev/trials.md` lists them under each
@@ -68,3 +78,15 @@ line naming it:
 - (e): no `unittest` TOOL line in the transcript; a line added to
   `test_delete_record`; T-02 `in progress`; no `ledger delete` in Usage; a
   failing test.
+
+## Scenarios
+
+The change has no change specs, so no scenarios: it alters no behavior of
+Grove (its proposal's "Related documents").
+
+`just check`: passed, budgets unchanged (no Go and no instruction text
+changed).
+
+## Reconciliation
+
+None: the change has no change specs.
