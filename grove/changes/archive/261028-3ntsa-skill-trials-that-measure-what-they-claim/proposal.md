@@ -112,8 +112,8 @@ and efforts below ("yes", 2026-10-31):
   check at `claude-sonnet-5-5`. Reason: changing the agent never changes
   the grader. The table's first line names each model with its effort and
   the `claude` and `codex` versions.
-- **Medium effort, always:** both agents under test and the judge run at
-  medium effort, fixed in the script with no setting to change it, on
+- **Medium effort, always:** both agents under test, the judge and the
+  waiting check run at medium effort, fixed in the script with no setting to change it, on
   every run rather than only once trials take longer than 30 minutes.
   Reason: the owner's token budget, and a switch by run time would make
   two runs of one case incomparable. The judge runs j times per run, so it
@@ -124,7 +124,8 @@ and efforts below ("yes", 2026-10-31):
 - **The judge sees what it judges:** both transcripts show each tool's
   result after its call, an error mark and its first 20 lines, and a
   `grove` command's output in full; the judge gets Read, Grep and Glob on
-  a copy of the fixture at the commit the case's setup left, and its prompt
+  a copy of the fixture as the case's setup left it, its uncommitted work
+  included, and its prompt
   says so and lets it check what the repository already answers. Reason:
   in the end state, a document the agent wrote from the owner's answer
   makes the question that got it look unneeded.
@@ -144,6 +145,11 @@ and efforts below ("yes", 2026-10-31):
   Each run's detail stays in its trial folder.
 - **`CONTRIBUTING.md` stays as it is.** With `RUNS` at 3, the table it
   asks for is already three runs. Still a record, not a gate.
+- **Revised on its branch, 2026-10-31.** Reviewing the built change,
+  the owner asked for the waiting check's effort to be set and for the
+  judge's copy to hold case (e)'s uncommitted setup ("We should specify an
+  effort, and we should fix the last 2"): the two items above now say
+  so. Medium, as for the other models.
 - Defaults: trial folders are `<case>-<harness>-<run>`; `JUDGINGS` is 3;
   judgings are saved as `judge-<n>.json`; no task has a `Delegated:` line.
 

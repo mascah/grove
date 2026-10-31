@@ -23,7 +23,7 @@ cases=("$@")
 [ ${#cases[@]} -gt 0 ] || cases=(a b c d e)
 fallback="Yes, go with what you recommend."
 # Changing the agent under test never changes the grader: the judge and the
-# waiting check are fixed here.
+# waiting check are fixed here. Every model runs at medium effort.
 claude_model=${CLAUDE_MODEL:-claude-opus-5-5}
 codex_model=${CODEX_MODEL:-gpt-6.1-sol}
 judge_model=claude-opus-5-5
@@ -131,7 +131,7 @@ waiting() {
   local verdict
   verdict=$(claude -p "Here is the last message an AI coding agent sent the person it works for. Does it stop to wait for that person to answer or decide something before it can go on with the task it was given? A step the agent says it will take itself once the person answers or gives feedback counts. Next steps it leaves for the person to take, such as committing, merging, reviewing or running another command or skill, do not count, and neither do offers of optional further work, such as a commit. Reply with only yes or no.
 
-$last" --model "$waiting_model" --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" | jq -r '.result')
+$last" --model "$waiting_model" --effort medium --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" | jq -r '.result')
   echo "turn $n: waiting: $verdict" >> "$dir/waits.txt"
   grep -qi '^yes' <<< "$verdict"
 }
@@ -161,11 +161,13 @@ trial() {
   grove init > /dev/null
   edit grove.yaml 'context: ""' 'context: "Run python3 -m unittest before saying a task is done."'
   commit "Set up Grove"
-  local id="" check_ok="" runs=() answers=() used=() setup_rev
+  local id="" check_ok="" runs=() answers=() used=()
   # shellcheck source=/dev/null
   source "$here/$c.sh"
   setup
-  setup_rev=$(git rev-parse HEAD)
+  # The judge reads the fixture as the setup left it, uncommitted work
+  # included, before any run wrote to it.
+  mkdir "$dir/setup" && git ls-files -co --exclude-standard -z | tar -c --null -T - -f - | tar -x -C "$dir/setup"
   # A case sets check_ok to the problems its setup means grove check to report.
   if ! grove check > "$dir/setup-check.txt" 2> /dev/null && grep -vqE "${check_ok:-^$}" "$dir/setup-check.txt"; then
     echo "the setup is not clean: $(cat "$dir/setup-check.txt")" > "$dir/failed.txt"
@@ -195,8 +197,6 @@ trial() {
   save
   local changes
   changes=$(find grove/changes -type f 2> /dev/null | sort)
-  # The judge reads the fixture as the setup left it, before any run wrote to it.
-  mkdir "$dir/setup" && git archive "$setup_rev" | tar -x -C "$dir/setup"
   # Each judging reads the saved transcript; no agent session starts after the last turn.
   local i
   for ((i = 1; i <= judgings; i++)); do (cd "$dir/setup" && judge "$c" "$changes") > "$dir/judge-$i.json" || true; done
@@ -239,7 +239,7 @@ for c in "${cases[@]}"; do
 done
 wait
 version() { "$1" --version 2> /dev/null | head -1 || echo "no $1"; }
-echo "Trials at $commit_of ($out): Claude Code $claude_model and Codex $codex_model at medium effort, judge $judge_model at medium effort, waiting check $waiting_model at its default effort; $(version claude), $(version codex)"
+echo "Trials at $commit_of ($out): Claude Code $claude_model and Codex $codex_model at medium effort, judge $judge_model at medium effort, waiting check $waiting_model at medium effort; $(version claude), $(version codex)"
 echo
 # One row per case and harness: each count the median of its runs, and at
 # more than one run their min–max; a run's judged count is the median of its
