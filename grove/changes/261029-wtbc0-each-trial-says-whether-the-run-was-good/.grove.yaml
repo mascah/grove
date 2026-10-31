@@ -1,0 +1,6 @@
+title: "Each trial says whether the run was good"
+created: 2026-10-29T01:59:01Z
+description: A Good run column, from checks of each case's "a good run" on the repository and the script's own state.
+schema: default
+depends_on: [261028-3ntsa]
+base: a5b5674382f588cf5e716ffce01abedf92374835
