@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/mascah/grove/compare/v0.6.0...v0.7.0) (2026-10-31)
+
+
+### Features
+
+* **instruct:** cite only what the project's readers can open ([#104](https://github.com/mascah/grove/issues/104)) ([a5b5674](https://github.com/mascah/grove/commit/a5b5674382f588cf5e716ffce01abedf92374835))
+
 ## [0.6.0](https://github.com/mascah/grove/compare/v0.5.0...v0.6.0) (2026-10-27)
 
 
