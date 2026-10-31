@@ -1,0 +1,5 @@
+title: "A cycle's own member merges keep its plan fresh"
+created: 2026-10-30T21:35:26Z
+description: A commit that archives a member of the cycle itself no longer makes its plan stale, so a cycle can reach the target one pull request per member.
+schema: default
+base: a5b5674382f588cf5e716ffce01abedf92374835
