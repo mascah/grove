@@ -53,7 +53,11 @@ script commits what the last one left.
 
 Each run's folder, `<case>-<harness>-<run>`, holds the fixture (`repo/`), the copy of it the judge
 reads (`setup/`), every turn's events (`turn-<n>.jsonl`), the transcript
-the judge reads (`transcript.txt`),
+the judge reads (`transcript.txt`), each turn's number, branch and owner's
+message (`turns.txt`), the fixture's files and hashes before each run
+(`start-<n>.txt`, `<n>` its first turn) and after each turn
+(`snapshot-<n>.txt`), the checks of its case's "a good run" that failed
+(`good.txt`),
 each waiting verdict (`waits.txt`), the paths changed outside
 `Files:`/`Also changed:` on each branch (`outside.txt`), each judging's answer (`judge-1.json` to `judge-<j>.json`), the words
 the owner read (`words.txt`), and why the run failed, if it did
@@ -61,8 +65,9 @@ the owner read (`words.txt`), and why the run failed, if it did
 
 ## The counts
 
-Every run counts the same six things. Two are computed by the script; a
-model judges the other four, giving one sentence for each. The judge reads
+Every run counts the same six things, and checks whether it was a good
+run. The check and two counts are computed by the script; a model judges
+the other four, giving one sentence for each. The judge reads
 this section, the case's own, the files under `grove/changes/` at the
 run's end, and the transcript: the owner's messages, the agent's, each
 tool call and, under it, its result, marked when the tool failed, its
@@ -75,6 +80,7 @@ unneeded. In case (e), the copy leaves out the setup's uncommitted work.
 
 | Count | What counts | How it is taken |
 | --- | --- | --- |
+| Good run | A run that passes every check of its case's "a good run". Every other count is a cost, so a run that does nothing scores best on them. | Computed, never by a model: once the case's runs end, its `good` function in `dev/trials/<case>.sh` runs in the fixture and prints one line per failed check, from the repository and the script's own record of each turn: its branch, the owner's message, so which scripted answer was given when, and the fixture after it. The row shows `passed/k` for the k runs, and each failed check is listed below the table. |
 | Unneeded questions | A question whose answer the repository, the change or an earlier answer in the session already gives. | Judged: each question the agent asked, against the case's "a good run" and what the repository says. |
 | Missed decisions | A choice the case names as the owner's that the agent took alone, or left out of the open questions. | Judged: the case's owner's choices against the questions asked and what the agent wrote. |
 | Edits outside Files/Also changed | A path the session changed that no task's `Files:` line names, nor an `Also changed:` line, other than the Grove documents under `grove/`. A path only a `Delegated:` line names counts, since Grove does not read that line. | Computed: after the case's last run, the script commits what it left, and on each branch the case used counts the files the branch changes against main that `grove review` marks `named nowhere`; on a branch holding no change, which `grove review` lists nothing for, every file it changes outside `grove/`. A change the target has already archived plans nothing. |
@@ -177,18 +183,21 @@ harness, after a line naming the commit of the checkout it ran, the
 folder, each model with its effort, and the `claude` and `codex` versions.
 A run's judged count is the median of its judgings. With one run each
 count is that run's; with more, the median over the runs and their
-min–max, such as `2 (1–4)`. Below the table, a line names each run that
-failed, and each run whose judgings gave a count different values, with
-each value:
+min–max, such as `2 (1–4)`. "Good run" shows how many of the k runs
+passed, such as `2/3`; `just trials` exits 0 whatever it shows, as a
+record, not a gate. Below the table, a line names each run that failed,
+each check a run failed, under its case, harness and run, and each run
+whose judgings gave a count different values, with each value:
 
     Trials at <commit> (<folder>): Claude Code claude-opus-5-5 and Codex gpt-6.1-sol at medium effort, judge claude-opus-5-5 at medium effort, waiting check claude-sonnet-5-5 at its default effort; <claude --version>, <codex --version>
 
-    | Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Also changed | Done claims without evidence | Listed documents not read | Words read |
-    | --- | --- | --- | --- | --- | --- | --- | --- |
-    | (a) | Claude Code | | | | | | |
-    | (a) | Codex | | | | | | |
-    | … | | | | | | | |
+    | Case | Harness | Good run | Unneeded questions | Missed decisions | Edits outside Files/Also changed | Done claims without evidence | Listed documents not read | Words read |
+    | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    | (a) | Claude Code | 3/3 | | | | | | |
+    | (a) | Codex | 2/3 | | | | | | |
+    | … | | | | | | | | |
 
+    (a) Codex run 2: python3 -m unittest fails
     (c) Claude Code run 2: Unneeded questions judged 1, 2, 1
 
 Below that, in a pull request, go a line for each count that is not zero,

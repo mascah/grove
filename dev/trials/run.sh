@@ -52,6 +52,29 @@ spec() {
 # edit replaces old with new, both literal, once in file.
 edit() { python3 -c 'import sys; p,o,n=sys.argv[1:]; s=open(p).read(); assert o in s, (p,o); open(p,"w").write(s.replace(o,n,1))' "$@"; }
 
+# snapshot lists every file of the fixture with its hash. A file moved or
+# deleted is left out, so it shows as changed.
+snapshot() { git ls-files -co --exclude-standard -z | xargs -0 shasum 2> /dev/null | sort -k2 || true; }
+
+# Helpers for a case's good, which reads what each turn did: turns.txt has a
+# line "<turn>\t<branch>\t<owner's message>" per turn, snapshot-<turn>.txt
+# the fixture after it, and start-<turn>.txt the fixture before a run's first.
+
+# answered prints the turn whose owner's message holds $1, such as a scripted answer.
+answered() { awk -F'\t' -v a="$1" 'index($3, a) {print $1; exit}' "$dir/turns.txt"; }
+# kept reports whether path $1 stayed as it was at the start of branch $2's
+# run after each of its turns before turn $3, or after all of them.
+kept() {
+  local t first="" h
+  for t in $(awk -F'\t' -v b="$2" '$2 == b {print $1}' "$dir/turns.txt"); do
+    [ -n "$first" ] || { first=$t h=$(awk -v p="$1" '$2 == p {print $1}' "$dir/start-$t.txt"); }
+    [ -z "${3:-}" ] || [ "$t" -lt "$3" ] || break
+    [ "$(awk -v p="$1" '$2 == p {print $1}' "$dir/snapshot-$t.txt")" = "$h" ] || return 1
+  done
+}
+# task prints task $1's section of the implementation.md on stdin.
+task() { awk -v t="### $1 " 'index($0, t) == 1 {on = 1; next} on && /^##/ {exit} on'; }
+
 # save commits what the last run left, if anything.
 save() { git diff --quiet HEAD && [ -z "$(git ls-files -o --exclude-standard)" ] || commit "After the last run"; }
 
@@ -105,6 +128,8 @@ turn() {
     said=$(jq -r 'select(.type=="item.completed" and .item.type=="agent_message") | .item.text' "$log")
   fi
   words=$((words + $(wc -w <<< "$said")))
+  printf '%s\t%s\t%s\n' "$n" "$(git branch --show-current)" "$msg" >> "$dir/turns.txt"
+  snapshot > "$dir/snapshot-$n.txt"
   # A turn the harness failed, such as at a usage limit, fails the trial rather than scoring it.
   failed=$(jq -rs '[.[] | select(.type=="turn.failed" or (.type=="result" and .is_error==true)) | .error.message // .result // "error"] | first // ""' "$log")
   [ -z "$failed" ] || { echo "$failed" > "$dir/failed.txt"; return 1; }
@@ -185,6 +210,7 @@ trial() {
     prompt=${prompt//\{id\}/$id}
     [ "$h" = codex ] && prompt=${prompt/\/grove-/\$grove-}
     sid="" last=""
+    snapshot > "$dir/start-$((n + 1)).txt"
     turn "$prompt"
     local k=0
     # An unattended run has no owner to answer it.
@@ -195,6 +221,8 @@ trial() {
   save
   local changes
   changes=$(find grove/changes -type f 2> /dev/null | sort)
+  # A case's good prints one line per check of its "a good run" that failed.
+  good > "$dir/good.txt" 2>&1 || true
   # The judge reads the fixture as the setup left it, before any run wrote to it.
   mkdir "$dir/setup" && git archive "$setup_rev" | tar -x -C "$dir/setup"
   # Each judging reads the saved transcript; no agent session starts after the last turn.
@@ -241,10 +269,11 @@ wait
 version() { "$1" --version 2> /dev/null | head -1 || echo "no $1"; }
 echo "Trials at $commit_of ($out): Claude Code $claude_model and Codex $codex_model at medium effort, judge $judge_model at medium effort, waiting check $waiting_model at its default effort; $(version claude), $(version codex)"
 echo
-# One row per case and harness: each count the median of its runs, and at
-# more than one run their min–max; a run's judged count is the median of its
-# judgings. Below the table, each failed run and each count its judgings
-# disagree on.
+# One row per case and harness: how many runs passed their case's good, and
+# each count the median of its runs, and at more than one run their min–max;
+# a run's judged count is the median of its judgings. Below the table, each
+# failed run, each check a run failed, and each count its judgings disagree
+# on. It exits 0 whatever it shows: a record, not a gate.
 python3 - "$out" "$runs_each" "$judgings" "$harnesses" "${cases[@]}" << 'EOF'
 import json, os, statistics, sys
 
@@ -268,14 +297,14 @@ def spread(values):
     return m if k == 1 else f"{m} ({min(values):g}–{max(values):g})"
 
 
-print("| Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Also changed | Done claims without evidence | Listed documents not read | Words read |")
-print("| --- | --- | --- | --- | --- | --- | --- | --- |")
+print("| Case | Harness | Good run | Unneeded questions | Missed decisions | Edits outside Files/Also changed | Done claims without evidence | Listed documents not read | Words read |")
+print("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
 notes = []
 for c in cases:
     for h in harnesses:
         name = {"claude": "Claude Code", "codex": "Codex"}.get(h, h)
         counts = {col: [] for col in columns}
-        setup_only = False
+        setup_only, passed = False, 0
         for r in range(1, k + 1):
             d, where = f"{out}/{c}-{h}-{r}", f"({c}) {name} run {r}"
             if os.path.exists(f"{d}/setup-only"):
@@ -291,14 +320,17 @@ for c in cases:
                     counts[key].append(statistics.median(values))
                 if len(set(values)) > 1:
                     notes.append(f"{where}: {label} judged {', '.join(map(str, values))}")
+            failed_checks = [line.strip() for line in open(f"{d}/good.txt") if line.strip()]
+            passed += not failed_checks
+            notes += [f"{where}: {line}" for line in failed_checks]
             counts["outside"].append(sum(1 for line in open(f"{d}/outside.txt") if line.strip()))
             counts["words"].append(int(open(f"{d}/words.txt").read()))
         if setup_only:
-            cells = ["setup only"] + [""] * 5
+            cells = ["setup only"] + [""] * 6
         elif not counts["words"]:
-            cells = ["failed"] + [""] * 5
+            cells = ["failed"] + [""] * 6
         else:
-            cells = [spread(counts[col]) for col in columns]
+            cells = [f"{passed}/{k}"] + [spread(counts[col]) for col in columns]
         print(f"| ({c}) | {name} | " + " | ".join(cells) + " |")
 if notes:
     print()
