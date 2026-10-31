@@ -5,7 +5,8 @@
 #
 #   dev/trials/run.sh [a b c d e]
 #
-# HARNESSES (default "claude codex") picks the harnesses, TRIALS_OUT the
+# HARNESSES (default "claude codex") picks the harnesses, CLAUDE_MODEL and
+# CODEX_MODEL the models under test, TRIALS_OUT the
 # output folder, TURNS (default 8) the owner replies a run may get, and
 # SETUP_ONLY=1 stops each trial once its fixture is set up.
 set -euo pipefail
@@ -17,6 +18,13 @@ turns=${TURNS:-8}
 cases=("$@")
 [ ${#cases[@]} -gt 0 ] || cases=(a b c d e)
 fallback="Yes, go with what you recommend."
+# Changing the agent under test never changes the grader: the judge and the
+# waiting check are fixed here.
+claude_model=${CLAUDE_MODEL:-claude-opus-5-5}
+codex_model=${CODEX_MODEL:-gpt-6.1-sol}
+judge_model=claude-opus-5-5
+waiting_model=claude-sonnet-5-5
+codex_auth=${CODEX_HOME:-$HOME/.codex}/auth.json
 claude_tools="Read Glob Grep Edit Write Skill TodoWrite Bash(grove:*) Bash(git:*) Bash(python3:*) Bash(ls:*) Bash(cat:*) Bash(grep:*) Bash(rg:*) Bash(head:*) Bash(tail:*) Bash(sed:*) Bash(find:*) Bash(wc:*) Bash(diff:*) Bash(mkdir:*) Bash(mv:*)"
 
 (cd "$checkout" && go build -o bin/grove ./cmd/grove)
@@ -50,7 +58,7 @@ turn() {
   local msg=$1 log=$dir/turn-$((n += 1)).jsonl
   echo "OWNER: $msg" >> "$dir/transcript.txt"
   if [ "$harness" = claude ]; then
-    claude -p "$msg" ${sid:+--resume "$sid"} --setting-sources project,local --permission-mode acceptEdits \
+    claude -p "$msg" ${sid:+--resume "$sid"} --model "$claude_model" --effort medium --setting-sources project,local --permission-mode acceptEdits \
       --allowedTools "$claude_tools" --output-format stream-json --verbose < /dev/null > "$log" 2>> "$dir/stderr.txt" || true
     sid=$(jq -r 'select(.type=="result") | .session_id' "$log" | tail -1)
     last=$(jq -rs '[.[] | select(.type=="result") | .result] | last // ""' "$log")
@@ -60,12 +68,14 @@ turn() {
       else empty end' "$log" >> "$dir/transcript.txt"
     said=$(jq -r 'select(.type=="assistant" and .parent_tool_use_id==null) | .message.content[]? | select(.type=="text") | .text' "$log")
   else
-    local cfg=(--json -c allow_login_shell=false)
+    # HOME and CODEX_HOME are the trial's, so none of the user's Codex config,
+    # plugins, hooks, memories or skills load.
+    local cfg=(--json -m "$codex_model" -c model_reasoning_effort='"medium"' -c allow_login_shell=false)
     if [ -z "$sid" ]; then
-      codex exec "${cfg[@]}" --sandbox workspace-write "$msg" < /dev/null > "$log" 2>> "$dir/stderr.txt" || true
+      HOME=$dir CODEX_HOME=$dir/codex codex exec "${cfg[@]}" --sandbox workspace-write "$msg" < /dev/null > "$log" 2>> "$dir/stderr.txt" || true
       sid=$(jq -r 'select(.type=="thread.started") | .thread_id' "$log")
     else
-      codex exec resume "${cfg[@]}" -c sandbox_mode='"workspace-write"' "$sid" "$msg" < /dev/null > "$log" 2>> "$dir/stderr.txt" || true
+      HOME=$dir CODEX_HOME=$dir/codex codex exec resume "${cfg[@]}" -c sandbox_mode='"workspace-write"' "$sid" "$msg" < /dev/null > "$log" 2>> "$dir/stderr.txt" || true
     fi
     last=$(jq -rs '[.[] | select(.type=="item.completed" and .item.type=="agent_message") | .item.text] | last // ""' "$log")
     jq -r 'select(.type=="item.completed") | .item |
@@ -102,7 +112,7 @@ waiting() {
   local verdict
   verdict=$(claude -p "Here is the last message an AI coding agent sent the person it works for. Does it stop to wait for that person to answer or decide something before it can go on with the task it was given? A step the agent says it will take itself once the person answers or gives feedback counts. Next steps it leaves for the person to take, such as committing, merging, reviewing or running another command or skill, do not count, and neither do offers of optional further work, such as a commit. Reply with only yes or no.
 
-$last" --model sonnet --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" | jq -r '.result')
+$last" --model "$waiting_model" --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" | jq -r '.result')
   echo "turn $n: waiting: $verdict" >> "$dir/waits.txt"
   grep -qi '^yes' <<< "$verdict"
 }
@@ -124,6 +134,7 @@ trial() {
   dir=$out/$c-$h harness=$h n=0 words=0
   local repo=$dir/repo
   mkdir -p "$dir"
+  [ "$h" = claude ] || { mkdir -p "$dir/codex" && ln -s "$codex_auth" "$dir/codex/auth.json"; }
   (cd "$checkout" && just fixture "$repo" > /dev/null)
   cd "$repo"
   git config user.name "Fixture Owner" && git config user.email fixture@example.com
@@ -194,7 +205,7 @@ $(cat "$dir/transcript.txt")
 
 Reply with only this JSON, each why one sentence naming what you counted:
 {\"unneeded_questions\": {\"count\": 0, \"why\": \"\"}, \"missed_decisions\": {\"count\": 0, \"why\": \"\"}, \"done_claims_without_evidence\": {\"count\": 0, \"why\": \"\"}, \"listed_documents_not_read\": {\"count\": 0, \"why\": \"\"}}"
-  claude -p "$prompt" --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" |
+  claude -p "$prompt" --model "$judge_model" --effort medium --setting-sources project,local --tools "" --output-format json < /dev/null 2>> "$dir/stderr.txt" |
     jq -r '.result' | python3 -c 'import sys, json; t = sys.stdin.read(); print(json.dumps(json.loads(t[t.index("{"):t.rindex("}") + 1]), indent=2))'
 }
 
@@ -205,7 +216,8 @@ for c in "${cases[@]}"; do
   done
 done
 wait
-echo "Trials at $commit_of ($out)"
+version() { "$1" --version 2> /dev/null | head -1 || echo "no $1"; }
+echo "Trials at $commit_of ($out): Claude Code $claude_model and Codex $codex_model at medium effort, judge $judge_model at medium effort, waiting check $waiting_model at its default effort; $(version claude), $(version codex)"
 echo
 echo "| Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Also changed | Done claims without evidence | Listed documents not read | Words read |"
 echo "| --- | --- | --- | --- | --- | --- | --- | --- |"

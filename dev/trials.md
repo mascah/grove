@@ -15,6 +15,14 @@ holding each trial. `HARNESSES=claude` runs one harness, `TRIALS_OUT` sets
 the folder, `TURNS` (default 8) caps the owner's replies in a run, and
 `SETUP_ONLY=1` stops once each fixture is set up.
 
+The agent under test runs `claude-opus-5-5` in Claude Code and
+`gpt-6.1-sol` in Codex, or the model `CLAUDE_MODEL` or `CODEX_MODEL`
+names, always at medium effort. The judge is fixed at `claude-opus-5-5`,
+at medium effort, and the waiting check at `claude-sonnet-5-5`, so
+changing the agent never changes the grader. `gpt-6-astra` is not used
+for the trials: it costs too many tokens. The table's first line names
+each model with its effort, and the `claude` and `codex` versions.
+
 `dev/trials/run.sh` builds this checkout's `grove` and puts it first on
 PATH. For each case and harness it makes a fresh fixture with `just
 fixture`, does the walkthrough's main line step 1 (`grove init`, the
@@ -27,8 +35,11 @@ Then each of the case's runs, on its branch, in a fresh headless session:
 `claude -p` with only project settings and a fixed list of tools, or
 `codex exec` in its workspace-write sandbox, without a login shell so that
 PATH keeps this build first, typing `$grove-…` where Claude Code types
-`/grove-…`. Codex's sandbox cannot write `.git`, so the script makes the
-branches. When the agent's turn ends, a model (Sonnet) says whether it
+`/grove-…`. Codex runs with `HOME` set to the trial's folder and its own
+`CODEX_HOME` there, holding only a link to the user's `auth.json`, so none
+of the user's Codex config, plugins, hooks, memories or skills under
+`~/.agents/skills` load. Codex's sandbox cannot write `.git`, so the script makes the
+branches. When the agent's turn ends, the waiting check's model says whether it
 waits for the owner's answer; next steps it leaves to the owner, such as
 committing or running another skill, get no reply. While it waits, up to `TURNS` times, the script replies with
 the case's first unused answer whose pattern matches the agent's last
