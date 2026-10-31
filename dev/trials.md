@@ -11,7 +11,11 @@ owner would (CONSTITUTION.md rule 17).
 `just trials` runs every case in both harnesses at once; `just trials b d`
 runs those named. It needs `claude`, `codex`, `jq` and `python3` on PATH,
 each harness signed in, and prints the results table and the folder
-holding each trial. `HARNESSES=claude` runs one harness, `TRIALS_OUT` sets
+holding each trial. `RUNS` (default 3) runs each case and harness that many
+times, one run after another, the cases and harnesses at once, and
+`JUDGINGS` (default 3) judges each run that many times from its saved
+transcript, starting no agent session: three runs triple the time and cost
+of one. `HARNESSES=claude` runs one harness, `TRIALS_OUT` sets
 the folder, `TURNS` (default 8) caps the owner's replies in a run, and
 `SETUP_ONLY=1` stops once each fixture is set up.
 
@@ -47,12 +51,13 @@ message, or else "Yes, go with what you recommend." An `--unattended`
 run gets no reply. Between runs the
 script commits what the last one left.
 
-Each trial's folder holds the fixture (`repo/`), the copy of it the judge
+Each run's folder, `<case>-<harness>-<run>`, holds the fixture (`repo/`), the copy of it the judge
 reads (`setup/`), every turn's events (`turn-<n>.jsonl`), the transcript
 the judge reads (`transcript.txt`),
 each waiting verdict (`waits.txt`), the paths changed outside
-`Files:`/`Also changed:` on each branch (`outside.txt`), the judge's answer (`judge.json`)
-and the trial's row of the table (`row.md`).
+`Files:`/`Also changed:` on each branch (`outside.txt`), each judging's answer (`judge-1.json` to `judge-<j>.json`), the words
+the owner read (`words.txt`), and why the run failed, if it did
+(`failed.txt`).
 
 ## The counts
 
@@ -168,9 +173,15 @@ nothing it did not check.
 ## Results
 
 `just trials` prints the counts as this table, one row per case and
-harness, with the commit of the checkout it ran:
+harness, after a line naming the commit of the checkout it ran, the
+folder, each model with its effort, and the `claude` and `codex` versions.
+A run's judged count is the median of its judgings. With one run each
+count is that run's; with more, the median over the runs and their
+min–max, such as `2 (1–4)`. Below the table, a line names each run that
+failed, and each run whose judgings gave a count different values, with
+each value:
 
-    Trials at <commit>
+    Trials at <commit> (<folder>): Claude Code claude-opus-5-5 and Codex gpt-6.1-sol at medium effort, judge claude-opus-5-5 at medium effort, waiting check claude-sonnet-5-5 at its default effort; <claude --version>, <codex --version>
 
     | Case | Harness | Unneeded questions | Missed decisions | Edits outside Files/Also changed | Done claims without evidence | Listed documents not read | Words read |
     | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -178,6 +189,8 @@ harness, with the commit of the checkout it ran:
     | (a) | Codex | | | | | | |
     | … | | | | | | | |
 
-Below the table go a line for each count that is not zero, saying what
-happened (from `judge.json` and `outside.txt`), and each setup that did not
+    (c) Claude Code run 2: Unneeded questions judged 1, 2, 1
+
+Below that, in a pull request, go a line for each count that is not zero,
+saying what happened (from the `judge-<n>.json` files and `outside.txt`), and each setup that did not
 work as written and why.
