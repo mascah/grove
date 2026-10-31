@@ -53,9 +53,12 @@ setup writes and its `good` looks for unchanged. How two checks were made
 concrete:
 - (a) runs `python3 -m ledger edit 3 --note x` with `--file` on a copy of
   `records.json`, so the check does not change the fixture it reads.
-- (e)'s "`README.md` shows `ledger delete`" looks in the README's
-  "Usage" only: its "Planned for 0.4" already says `ledger delete ID`, so
-  a check of the whole file could not fail.
+- (e)'s README check: built first as "Usage shows `ledger delete`", since
+  the fixture's "Planned for 0.4" already says `ledger delete ID` and
+  "`README.md` shows `ledger delete`" could not fail; revised with the
+  owner on 2026-10-31 (see the proposal's decisions) to "Usage" showing
+  `ledger delete` and "Planned for 0.4" no longer listing it, read with a
+  `section` helper in `e.sh`.
 
 Checks: a scratch script (not in the repository) copies each case's
 `SETUP_ONLY=1` fixture, writes a run's end state, `turns.txt` and the
@@ -76,8 +79,10 @@ line naming it:
   edited in turn 2, with the answer in turn 3; no answer given; a failing
   test.
 - (e): no `unittest` TOOL line in the transcript; a line added to
-  `test_delete_record`; T-02 `in progress`; no `ledger delete` in Usage; a
-  failing test.
+  `test_delete_record`; T-02 `in progress`; no `ledger delete` in Usage;
+  `ledger delete` still under "Planned for 0.4"; a failing test. Rerun
+  after the revision, on fresh setups with the revised script: all as
+  above.
 
 ## Scenarios
 

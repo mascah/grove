@@ -43,8 +43,9 @@ The checks:
   given, and `python3 -m unittest` passes.
 - **(e)** `python3 -m unittest` was run in the session, `test_delete_record`
   in `tests/test_cli.py` is as the setup wrote it, T-02 in
-  `implementation.md` has `Status: done`, `README.md` shows `ledger
-  delete`, and `python3 -m unittest` passes.
+  `implementation.md` has `Status: done`, the README's "Usage" shows
+  `ledger delete` and its "Planned for 0.4" no longer does, and `python3
+  -m unittest` passes.
 
 ## Scope
 
@@ -80,6 +81,12 @@ defaults ("yes", 2026-10-28):
   file.** Reason: each is that case's "a good run", made checkable.
 - **A snapshot after every turn, not only every run,** so the checks of
   (c) and (d) can see order: asking before editing.
+- **Revised on its branch, 2026-10-31.** The fixture's README already
+  plans `ledger delete ID` under "Planned for 0.4", so "`README.md`
+  shows `ledger delete`" held before any run. Reviewing the built change,
+  the owner asked for it to be fixed ("we should fix the last 2"): (e)
+  now checks the README as case (e)'s T-02 Result says, `delete` in
+  "Usage" and no longer planned.
 - Defaults: the checks are a `good` function in each case file, beside
   `setup`; `dev/trials.md`'s counts table gains a "Good run" row; no task
   has a `Delegated:` line.

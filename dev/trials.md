@@ -22,7 +22,7 @@ the folder, `TURNS` (default 8) caps the owner's replies in a run, and
 The agent under test runs `claude-opus-5-5` in Claude Code and
 `gpt-6.1-sol` in Codex, or the model `CLAUDE_MODEL` or `CODEX_MODEL`
 names, always at medium effort. The judge is fixed at `claude-opus-5-5`,
-at medium effort, and the waiting check at `claude-sonnet-5-5`, so
+and the waiting check at `claude-sonnet-5-5`, both at medium effort, so
 changing the agent never changes the grader. `gpt-6-astra` is not used
 for the trials: it costs too many tokens. The table's first line names
 each model with its effort, and the `claude` and `codex` versions.
@@ -72,11 +72,11 @@ this section, the case's own, the files under `grove/changes/` at the
 run's end, and the transcript: the owner's messages, the agent's, each
 tool call and, under it, its result, marked when the tool failed, its
 first 20 lines, or every line of a `grove` command's. It runs with only
-Read, Grep and Glob, in a copy of the fixture at the commit the case's
-setup left (`setup/`), before any run wrote to it, so that it can check
-what the repository already answered: at the run's end, a document the
-agent wrote from the owner's answer would make the question look
-unneeded. In case (e), the copy leaves out the setup's uncommitted work.
+Read, Grep and Glob, in a copy of the fixture as the case's setup left
+it, uncommitted work included (`setup/`), before any run wrote to it, so
+that it can check what the repository already answered: at the run's end,
+a document the agent wrote from the owner's answer would make the question
+look unneeded.
 
 | Count | What counts | How it is taken |
 | --- | --- | --- |
@@ -197,7 +197,7 @@ nothing it did not check.
 Checked by `good`: `python3 -m unittest` was run in the session,
 `test_delete_record` in `tests/test_cli.py` is as the setup wrote it, T-02
 in `implementation.md` has `Status: done`, the README's "Usage" shows
-`ledger delete` (its "Planned for 0.4" already names it), and `python3 -m
+`ledger delete` and its "Planned for 0.4" no longer does, and `python3 -m
 unittest` passes.
 
 ## Results
@@ -213,7 +213,7 @@ record, not a gate. Below the table, a line names each run that failed,
 each check a run failed, under its case, harness and run, and each run
 whose judgings gave a count different values, with each value:
 
-    Trials at <commit> (<folder>): Claude Code claude-opus-5-5 and Codex gpt-6.1-sol at medium effort, judge claude-opus-5-5 at medium effort, waiting check claude-sonnet-5-5 at its default effort; <claude --version>, <codex --version>
+    Trials at <commit> (<folder>): Claude Code claude-opus-5-5 and Codex gpt-6.1-sol at medium effort, judge claude-opus-5-5 at medium effort, waiting check claude-sonnet-5-5 at medium effort; <claude --version>, <codex --version>
 
     | Case | Harness | Good run | Unneeded questions | Missed decisions | Edits outside Files/Also changed | Done claims without evidence | Listed documents not read | Words read |
     | --- | --- | --- | --- | --- | --- | --- | --- | --- |

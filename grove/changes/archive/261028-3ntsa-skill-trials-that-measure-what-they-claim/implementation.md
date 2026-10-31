@@ -37,10 +37,10 @@ Status: done
 `dev/trials/run.sh`: `CLAUDE_MODEL` (default `claude-opus-5-5`) and
 `CODEX_MODEL` (default `gpt-6.1-sol`) set the agents under test, both run
 with medium effort (`--effort medium`, `-c model_reasoning_effort="medium"`);
-the judge is fixed at `claude-opus-5-5` with `--effort medium` and the
-waiting check at `claude-sonnet-5-5`. The waiting check gets no effort
-setting, since the proposal fixes effort only for the agents and the judge,
-and the first line says "at its default effort". Each Codex trial runs with
+the judge is fixed at `claude-opus-5-5` and the waiting check at
+`claude-sonnet-5-5`, both with `--effort medium`. (Built first with no
+effort for the waiting check, which the proposal then left out; revised
+with the owner on 2026-10-31, see the proposal's decisions.) Each Codex trial runs with
 `HOME=<trial folder>` and `CODEX_HOME=<trial folder>/codex`, holding only a
 symlink to the user's `auth.json` (`${CODEX_HOME:-$HOME/.codex}`). The
 first line of the table names the Grove commit, every model with its
@@ -90,9 +90,11 @@ line, `RESULT:` or `RESULT (error):` and the result's first 20 lines,
 indented, with `… N more lines` when cut, or every line when the command
 runs `grove`. Claude Code's results come from the `user` events'
 `tool_result` blocks, matched to their call by `tool_use_id`; Codex's from
-`aggregated_output` and `exit_code`, and a `file_change`'s `status`. After
-setup the script keeps `setup_rev`; before judging it extracts that commit
-with `git archive` into `<trial>/setup/` and runs the judge there with
+`aggregated_output` and `exit_code`, and a `file_change`'s `status`. Right
+after setup the script copies the fixture's files, tracked and untracked
+but not ignored (`git ls-files -co --exclude-standard`), uncommitted work
+included,
+into `<trial>/setup/` and runs the judge there with
 `--tools Read,Grep,Glob`. Its prompt names the RESULT lines, says the
 folder holds the fixture as the setup left it, before the run, and lets it
 check what the repository already answered; "Count only from the
@@ -100,9 +102,10 @@ transcript" is gone. The files under `grove/changes/` at the run's end are
 listed from the run's fixture before judging. `dev/trials.md`'s "The
 counts" says what the judge reads.
 
-Not in the judge's copy: case (e)'s setup leaves T-01's work and
-`implementation.md` uncommitted, so its copy, at the setup's commit, does
-not hold them; `dev/trials.md` says so.
+First built from the setup's commit with `git archive`, which left out
+case (e)'s uncommitted T-01 work and `implementation.md`; revised with the
+owner on 2026-10-31 to copy the working tree, see the proposal's
+decisions.
 
 Checks so far:
 - The Claude Code program on a `claude -p` session running a blocked `ls`
@@ -111,13 +114,19 @@ Checks so far:
   /nonexistent` (exit 1) and `echo hi`: the same. On 25-line outputs:
   `seq 25` shows lines 1 to 20 and `… 5 more lines`; `grove instructions
   x` all 25.
+- After the revision, `SETUP_ONLY=1 RUNS=1 HARNESSES=claude
+  dev/trials/run.sh b e`: the first line ends "waiting check
+  claude-sonnet-5-5 at medium effort", and `claude -p … --model
+  claude-sonnet-5-5 --effort medium` answers.
 - End to end (T-02's runs): (c) run 1's transcript has 29 TOOL lines and
   29 RESULT lines, (e)'s Codex transcript 12 and 12. Each run's `setup/`
   holds 261015-c0000's or 261015-e0000's `.grove.yaml`, `proposal.md`,
   `specs/`, `tasks.md`, and no `implementation.md` the run wrote.
-- (b)'s setup commit (`SETUP_ONLY=1`), the judge's copy: `git archive
-  HEAD` lists no file under `grove/changes/`; the run's change is
-  committed later, on `delete`.
+- After the revision, `SETUP_ONLY=1 RUNS=1 HARNESSES=claude
+  dev/trials/run.sh b e`: (e)'s `setup/` holds 261015-e0000's
+  `implementation.md` and the uncommitted `ledger/cli.py` with `delete`,
+  the same as the fixture's, and no `.git`; (b)'s `setup/` holds no
+  `grove/` folder, so no change.
 
 ### T-04 — Repeated runs and judgings
 
