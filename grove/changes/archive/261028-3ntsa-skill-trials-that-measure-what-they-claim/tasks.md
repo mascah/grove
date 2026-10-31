@@ -25,8 +25,7 @@ Acceptance:
 
 ## T-02 — Pinned models and an isolated Codex
 
-Result: every model the trials use is pinned, the agents under test and
-the judge at medium effort, and printed with the table, and Codex runs
+Result: every model the trials use is pinned, at medium effort, and printed with the table, and Codex runs
 without the user's Codex setup, as the proposal's decisions say.
 
 Files:
@@ -44,8 +43,9 @@ Acceptance:
   its effort, and the `claude --version` and `codex --version` output.
 - Without `CLAUDE_MODEL` or `CODEX_MODEL`, the Claude Code sessions under
   test run `claude-opus-5-5` at medium effort, the Codex sessions
-  `gpt-6.1-sol` at medium effort, and the judge `claude-opus-5-5` at
-  medium effort.
+  `gpt-6.1-sol` at medium effort, the judge `claude-opus-5-5` at
+  medium effort, and the waiting check `claude-sonnet-5-5` at medium
+  effort.
 - `CLAUDE_MODEL` changes the model of the Claude Code sessions under test
   and not the judge's or the waiting check's.
 - With a hook in the user's `~/.codex/hooks.json` that writes a file, and
@@ -71,9 +71,10 @@ Acceptance:
   line: an error mark when the tool failed, and its first 20 lines, or
   every line for a `grove` command.
 - The judge runs with only Read, Grep and Glob, in a copy of the fixture
-  at the commit the case's setup left, and its prompt says which state it
+  as the case's setup left it, its uncommitted work included, and its prompt says which state it
   reads and no longer says to count only from the transcript.
-- In case (b), the judge's copy holds no change the run proposed.
+- In case (b), the judge's copy holds no change the run proposed; in case
+  (e), it holds T-01's uncommitted work and `implementation.md`.
 - `dev/trials.md`'s "How it is taken" says what the judge reads.
 
 ## T-04 — Repeated runs and judgings
