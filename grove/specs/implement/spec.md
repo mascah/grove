@@ -2,28 +2,20 @@
 
 ## Purpose
 
-`/grove-implement` builds an approved change, or each change of a cycle,
-in the owner's session, asking the owner instead of blocking and revising
-the change on its branch with their agreement; with `--unattended` it asks
-no one. `/grove-implement <change-id>` also builds a draft on the branch
-that proposed it, which one merge then approves with its code, and
-`/grove-implement <cycle-id>` builds each change of a cycle in turn. Where
-the change does not settle how a task is built, it asks the owner instead
-of blocking, and with their agreement revises the change on its
-implementation branch, so the merge approves the revision with the code.
-With `--unattended` it builds a change or a cycle the same way but asks no
-one: what it cannot settle is marked blocked, and the change stays as
-approved. "The owner" is the person in whose session the skill runs.
+`/grove-implement` builds an approved change, a draft, or each change of a
+cycle on a branch, asking the owner where the change does not settle a
+task; with `--unattended` it asks no one and marks the task blocked
+instead. "The owner" is the person in whose session the skill runs.
 
 ## Boundaries
 
-This covers the implement instructions, with the owner and with
-`--unattended`, how `grove review` names a draft built on its branch,
-`grove.yaml`'s rules for implement, and the removal of the
-apply skill that `--unattended` replaced. Starting a session with no one
-watching, and what it refuses, belong to `grove run`
-(`grove/specs/runs/spec.md`). Revising a change outside its implementation
-branch belongs to `/grove-propose`. What makes a revision approved is the
+This covers the implement instructions in both modes, `grove.yaml`'s
+rules for implement, and how `grove review` names what an implementation
+branch approves and builds. Starting a session with no one watching
+belongs to `grove run` ([runs](../runs/spec.md)); when a cycle member
+counts as changed since its plan, to [cycles](../cycles/spec.md);
+revising a change off its implementation branch, to
+[propose](../propose/spec.md). What makes a revision approved is the
 merge into the target (`CONSTITUTION.md` rule 4).
 
 ## Requirements
