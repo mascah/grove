@@ -25,9 +25,9 @@ Acceptance:
 
 ## T-02 — Pinned models and an isolated Codex
 
-Result: every model the trials use is pinned and printed with the table,
-and Codex runs without the user's Codex setup, as the proposal's decisions
-say.
+Result: every model the trials use is pinned, the agents under test and
+the judge at medium effort, and printed with the table, and Codex runs
+without the user's Codex setup, as the proposal's decisions say.
 
 Files:
 - `dev/trials/run.sh`
@@ -40,14 +40,19 @@ Constraints: the user's `auth.json` is linked, never copied.
 
 Acceptance:
 - The table's first line names the Grove commit, the Claude Code and Codex
-  models under test, the judge's and the waiting check's models, and the
-  `claude --version` and `codex --version` output.
+  models under test, the judge's and the waiting check's models, each with
+  its effort, and the `claude --version` and `codex --version` output.
+- Without `CLAUDE_MODEL` or `CODEX_MODEL`, the Claude Code sessions under
+  test run `claude-opus-5-5` at medium effort, the Codex sessions
+  `gpt-6.1-sol` at medium effort, and the judge `claude-opus-5-5` at
+  medium effort.
 - `CLAUDE_MODEL` changes the model of the Claude Code sessions under test
   and not the judge's or the waiting check's.
 - With a hook in the user's `~/.codex/hooks.json` that writes a file, and
   a skill in `~/.agents/skills`, a Codex trial runs to its end signed in,
   the hook writes nothing and the skill is not offered.
-- `dev/trials.md`'s "Running" names both settings and says how Codex is
+- `dev/trials.md`'s "Running" names both settings, the medium effort,
+  that `gpt-6-astra` is not used for the trials, and how Codex is
   isolated.
 
 ## T-03 — A judge that sees results and the repository
