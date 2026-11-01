@@ -1,6 +1,11 @@
 # (e) A fresh session picking up half-done work: T-01 built and recorded
 # done in implementation.md, uncommitted, on delete-impl; T-02 not started.
 
+# delete_test is T-01's test as the setup writes it, for good to find unchanged.
+delete_test='    def test_delete_record(self):
+        self.assertEqual(self.run_cli("delete", "6"), (0, "deleted 6\n"))
+        self.assertEqual([r.id for r in store.load(self.file)], [1, 2, 3, 4, 5])'
+
 setup() {
   local c=grove/changes/261015-e0000-add-ledger-delete-id
   id=261015-e0000
@@ -95,11 +100,9 @@ EOF
             store.save(args.file, [r for r in records if r is not record])
             print(f"deleted {record.id}")
         elif args.command == "report":'
-  edit tests/test_cli.py '    def test_edit_current_record_note(self):' '    def test_delete_record(self):
-        self.assertEqual(self.run_cli("delete", "6"), (0, "deleted 6\n"))
-        self.assertEqual([r.id for r in store.load(self.file)], [1, 2, 3, 4, 5])
+  edit tests/test_cli.py '    def test_edit_current_record_note(self):' "$delete_test
 
-    def test_edit_current_record_note(self):'
+    def test_edit_current_record_note(self):"
   put $c/implementation.md << 'EOF'
 # Implementation: Add ledger delete ID
 
@@ -126,3 +129,21 @@ runs=(
   "delete-impl => /grove-implement {id}"
 )
 answers=()
+
+# section prints the section of README.md headed "## $1".
+section() { awk -v h="## $1" '$0 == h {on = 1; next} /^## / {on = 0} on' README.md; }
+
+# good checks that the session reran the tests, left T-01's test as it was,
+# and built T-02: done in implementation.md, and in the README's Usage, no
+# longer planned.
+good() {
+  local c=grove/changes/261015-e0000-add-ledger-delete-id
+  grep -q '^TOOL: .*unittest' "$dir/transcript.txt" || echo "python3 -m unittest was not run in the session"
+  python3 -c 'import sys; sys.exit(sys.argv[1] + "\n\n" not in open("tests/test_cli.py").read())' "$delete_test" ||
+    echo "test_delete_record in tests/test_cli.py is not as the setup wrote it"
+  grep -qx 'Status: done' <<< "$(task T-02 < "$c/implementation.md")" || echo "T-02 is not Status: done in implementation.md"
+  # The README plans ledger delete before the run, so the check is where it is.
+  grep -q 'ledger delete' <<< "$(section Usage)" || echo "README.md's Usage does not show ledger delete"
+  ! grep -q 'ledger delete' <<< "$(section 'Planned for 0.4')" || echo "README.md's Planned for 0.4 still lists ledger delete"
+  python3 -m unittest -q 2> /dev/null || echo "python3 -m unittest fails"
+}

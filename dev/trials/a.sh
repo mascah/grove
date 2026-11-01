@@ -148,3 +148,23 @@ runs=(
 answers=(
   "bugfix => Yes, use bugfix."
 )
+
+# good checks the end of a run: the new change on fix is a bugfix, archived,
+# with no change spec, citing record-editing, and the fix works.
+good() {
+  git switch -q fix
+  local d
+  d=$(ls -d grove/changes/archive/"$id"-* grove/changes/"$id"-* 2> /dev/null | head -1)
+  if [ -z "$id" ] || [ -z "$d" ]; then
+    echo "the run proposed no change"
+  else
+    [[ $d == grove/changes/archive/* ]] || echo "the new change is not archived"
+    grep -qx 'schema: bugfix' "$d/.grove.yaml" || echo "the new change does not have schema: bugfix"
+    [ ! -e "$d/specs" ] || echo "the new change has a specs/ folder"
+    grep -q record-editing "$d/proposal.md" || echo "the new change's proposal does not name record-editing"
+  fi
+  python3 -m unittest -q 2> /dev/null || echo "python3 -m unittest fails"
+  # On a copy, so the check leaves records.json as the run did.
+  cp records.json "$dir/records.json"
+  python3 -m ledger --file "$dir/records.json" edit 3 --note x > /dev/null 2>&1 || echo "python3 -m ledger edit 3 --note x fails"
+}
