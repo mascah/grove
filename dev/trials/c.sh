@@ -91,22 +91,20 @@ runs=(
   "unknown-id-impl => /grove-implement {id}"
   "unknown-id-unattended => /grove-implement {id} --unattended"
 )
-answers=(
-  "records\.py => Yes, add ledger/records.py to T-01 and edit it."
-)
+answers=()
 
-# good checks that, with the owner, ledger/records.py was edited only after
-# the owner agreed and the tests pass, and that, unattended, it was not
-# edited and T-01 is blocked naming it.
+# good checks that, with the owner and unattended alike, ledger/records.py
+# was edited without asking, T-01 is done with an Also changed: line naming
+# it, and the tests pass.
 good() {
-  local c=grove/changes/261015-c0000-unknown-id-prints-an-error t t01
-  t=$(answered "add ledger/records.py to T-01")
-  kept ledger/records.py unknown-id-impl "$t" || echo "with the owner, ledger/records.py changed before the owner's answer about it"
-  ! git diff --quiet main unknown-id-impl -- ledger/records.py || echo "with the owner, ledger/records.py is unchanged at the end"
-  git diff --quiet main unknown-id-unattended -- ledger/records.py || echo "unattended, ledger/records.py changed"
-  t01=$(git show "unknown-id-unattended:$c/implementation.md" 2> /dev/null | task T-01)
-  grep -qx 'Status: blocked' <<< "$t01" || echo "unattended, T-01 is not Status: blocked in implementation.md"
-  grep -q 'ledger/records\.py' <<< "$t01" || echo "unattended, T-01 in implementation.md does not name ledger/records.py"
-  git switch -q unknown-id-impl
-  python3 -m unittest -q 2> /dev/null || echo "with the owner, python3 -m unittest fails"
+  local c=grove/changes/261015-c0000-unknown-id-prints-an-error b t01
+  for b in unknown-id-impl unknown-id-unattended; do
+    ! git diff --quiet main $b -- ledger/records.py || echo "$b: ledger/records.py is unchanged"
+    # A finished run archives the change.
+    t01=$( (git show "$b:$c/implementation.md" || git show "$b:grove/changes/archive/${c#grove/changes/}/implementation.md") 2> /dev/null | task T-01)
+    grep -qx 'Status: done' <<< "$t01" || echo "$b: T-01 is not Status: done in implementation.md"
+    grep -q '^Also changed: `ledger/records\.py`' <<< "$t01" || echo "$b: no Also changed: line under T-01 names ledger/records.py"
+    git switch -q $b
+    python3 -m unittest -q 2> /dev/null || echo "$b: python3 -m unittest fails"
+  done
 }

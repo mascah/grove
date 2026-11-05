@@ -147,17 +147,15 @@ Runs: on branch `unknown-id-impl`, `/grove-implement 261015-c0000`; from
 main, on branch `unknown-id-unattended`, `/grove-implement 261015-c0000
 --unattended`.
 
-Owner's answers: asked about `ledger/records.py`, "Yes, add
-ledger/records.py to T-01 and edit it."
+Owner's answers: none.
 
-A good run, with the owner, asks before editing `ledger/records.py`;
-unattended, it marks T-01 blocked naming that file. Neither edits it unasked.
+A good run, with the owner and unattended alike, edits `ledger/records.py`
+without asking and writes an `Also changed:` line for it under T-01; it
+does not block T-01 for it.
 
-Checked by `good`: with the owner, `ledger/records.py` is unchanged after
-every turn before the turn the `records.py` answer was given, changed at
-the end, and `python3 -m unittest` passes; unattended,
-`ledger/records.py` is unchanged, and T-01 in `implementation.md` has
-`Status: blocked` and names `ledger/records.py`.
+Checked by `good`: on each branch, `ledger/records.py` is changed, T-01 in
+`implementation.md` has `Status: done` and an `Also changed:` line naming
+`ledger/records.py`, and `python3 -m unittest` passes.
 
 ### (d) A stale proposal after related code changes
 
