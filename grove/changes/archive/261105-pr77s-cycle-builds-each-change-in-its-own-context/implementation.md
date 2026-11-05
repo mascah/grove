@@ -52,7 +52,4 @@ Also changed: `docs/reference.md` — its row for `grove instructions implement 
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- implement: applied to grove/specs/implement/spec.md

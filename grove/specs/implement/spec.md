@@ -25,7 +25,8 @@ merge into the target (`CONSTITUTION.md` rule 4).
 When `/grove-implement <id>` is run, the system shall print instructions
 for building, on a branch other than the target, the approved change
 `<id>`, or each member of cycle `<id>` not yet archived in build order,
-each member's instructions naming its place in the cycle's plan; or, with
+each listed with the members of the cycle it depends on and each member's
+instructions naming its place in the cycle's plan; or, with
 the owner, a change only the working tree holds, as a draft that merging
 the branch approves with its code. The agent records each task's status
 in `implementation.md`, builds no task already done again unless the
@@ -65,8 +66,8 @@ waits on a change neither being built nor archived as finished.
 - GIVEN cycle K lists A and B, B depending on A, K not marked
   `unattended` and its `needs_human` naming B
 - WHEN `/grove-implement K` is run, with or without `--unattended`
-- THEN A and then B are built on one branch, each by
-  `grove instructions implement <change-id>` with the same mode, B's
+- THEN K's instructions list B `after A`, and A and then B are built on
+  one branch, each by `grove instructions implement <change-id>`, B's
   instructions naming it the second of two in K's plan; only `grove run`
   reads `unattended` and `needs_human`
 
@@ -76,6 +77,67 @@ waits on a change neither being built nor archived as finished.
   and the target has not archived as finished
 - WHEN `/grove-implement K` is run
 - THEN the instructions leave C out, saying it waits on Z, and A is built
+
+### Requirement: Build a cycle's changes in their own contexts
+
+Where the agent's harness lets it start its own subagents, the cycle's
+implement instructions shall have the session building a cycle, with the
+owner or with `--unattended`, build each member in a fresh context of its
+own by `grove instructions implement <change-id> --unattended`, which
+neither archives nor commits; start at once every member whose
+dependencies are archived and whose tasks' `Files:` name no file a member
+being built names; itself archive and commit each returned member whose
+tasks are all done, one at a time; where two members built together
+changed the same file, run the project's tests once both returned and,
+if they fail, rebuild the later-started member on its own before
+archiving it; and, with the owner, put the checkpoints each returned
+member holds to the owner at once and rerun that member with their words,
+or, with `--unattended`, list every checkpoint first in its report; and,
+where the harness has none, the session shall build each member itself,
+one after another, in its own mode.
+
+#### Scenario: Two members that share nothing
+
+- GIVEN cycle K lists A, B and C, C depending on A and B, and no file in
+  A's tasks' `Files:` is in B's
+- WHEN `/grove-implement K` is run in a harness with subagents
+- THEN A and B are built at the same time, each in its own subagent by
+  `grove instructions implement <change-id> --unattended`; the session
+  archives and commits each as it returns, one at a time; and C is
+  started once both are archived
+
+#### Scenario: Members that share a file
+
+- GIVEN cycle K lists A and B, which depend on nothing, and both name
+  `dev/walkthrough.md` in their tasks' `Files:`
+- WHEN `/grove-implement K` is run in a harness with subagents
+- THEN B's subagent is started only once A is archived
+
+#### Scenario: A checkpoint, with the owner
+
+- GIVEN A and B of cycle K are built at the same time, and A's subagent
+  returns T-01 as `Status: to check` with a `Check:` line
+- WHEN both have returned
+- THEN the session archives B, puts A's T-01 to the owner, and reruns
+  A's subagent with the owner's words, which it writes under T-01 as
+  `Answer:`
+
+#### Scenario: Two members changed the same file
+
+- GIVEN A and B of cycle K are built at the same time, A's subagent
+  changes `internal/cli/check.go` with an `Also changed:` line, B's tasks
+  name that file, and the project's tests fail once both have returned
+- WHEN the session checks them before archiving
+- THEN B is built again on its own, after A is archived, and is archived
+  only once its evidence holds
+
+#### Scenario: A harness with no subagents
+
+- GIVEN cycle K lists A and B, which share nothing
+- WHEN `/grove-implement K` is run in a harness that cannot start
+  subagents
+- THEN the session builds A and then B itself, each by
+  `grove instructions implement <change-id>` in the session's own mode
 
 ### Requirement: Name the change's documents
 
@@ -450,3 +512,4 @@ None recorded.
 - [261031-kkzva](../../changes/archive/261031-kkzva-reconcile-the-implement-spec-with-current-behavior/) Reconcile the implement spec with current behavior
 - [261101-mg8hd](../../changes/archive/261101-mg8hd-unattended-edits-a-file-a-task-needs/) Implement edits a file a task needs and says why
 - [261105-va9qn](../../changes/archive/261105-va9qn-implement-stops-at-checkpoints/) Implement stops at checkpoints and hands off in the branch
+- [261105-pr77s](../../changes/archive/261105-pr77s-cycle-builds-each-change-in-its-own-context/) A cycle builds each change in its own context
