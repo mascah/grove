@@ -1,9 +1,11 @@
 - No one is in this session: ask no one and wait for no one's answer. Where
-  an open question in the change decides a task, or a task cannot be built
-  as the change says, do not build it and do not settle it yourself, even if
-  you could ask: mark it `Status: blocked` in `implementation.md`, write the
-  question or the reason under it, and go on with the other tasks. It is
-  settled by revising the change, not here.
+  a task cannot be built as the change says, do not build it and do not
+  settle it yourself, even if you could ask: mark it `Status: blocked` in
+  `implementation.md`, write the reason under it, and go on with the other
+  tasks. It is settled by revising the change, not here. Leave a
+  checkpoint for a later session and finish.
+- Where a checkpoint's answer changes what the change says, leave the task
+  `Status: blocked`, naming the revision the change needs.
 - Do not edit the change's files other than `implementation.md`: they are
   what was approved.
 - Make the choices and change the paths a task's `Delegated:` line names.

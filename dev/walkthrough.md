@@ -92,7 +92,7 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    the template of `implementation.md` but of no other document. The
    open question blocks no task, so the session asks nothing, works T-01
    with a test, editing no file but the two T-01 names without asking me,
-   tells me how to try it, and writes `implementation.md` with
+   stops nowhere, there being no checkpoint, and writes `implementation.md` with
    T-01's status and evidence. Before finishing it runs the tests, rechecks
    T-01's evidence, and writes `## Scenarios` there, naming each scenario's
    test and "passed", or `unverified` and why; its report names each
@@ -563,6 +563,18 @@ Each step names the section of
   for a second task that exports records: the session runs
   `grove instructions propose <change-id>` and adds T-02 with its
   `Files:` lines that way.
+- **A checkpoint, then its answer** (§5; coordinating, "Building a cycle
+  unattended"). Approve a change whose T-01 adds budgets to `report` and
+  asks that an overspent line "reads clearly", and whose T-02 adds
+  `ledger list --json`, each with a test. On a branch, a fresh `claude`,
+  `/grove-implement <change-id> --unattended`: T-02 is `Status: done`,
+  T-01 is built and `Status: to check` with a `Check:` line saying what
+  to read and why, the change is not archived, and the report lists T-01's
+  checkpoint first. Commit. A fresh `claude` on the same branch,
+  `/grove-implement <change-id>`: the session puts T-01's checkpoint to
+  me before building anything; on "reads fine" it writes
+  `Answer: "reads fine"` under T-01, marks it `Status: done` and archives
+  the change.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
   is given the paths of that change's files, none of their text, reads
   each one, and edits them.

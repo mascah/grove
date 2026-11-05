@@ -482,10 +482,12 @@ func TestImplementInstructions(t *testing.T) {
 		"The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n"}
 	// Both modes edit a file a task needs or makes false, and say why.
 	shared = append(shared, "changed to be built as the change says, or makes", "`` Also changed: `<path>` — <why> `` under that task")
-	gone := []string{"with their agreement edit it", "stays as it is", "ignore\n  `Delegated:` lines", "write no\n  `Also changed:` line"}
-	owner := []string{"ask the owner and\n  wait", "without asking and without blocking the task", "by running Grove's\n  `instructions propose <change-id>` and following it, never editing a\n  `Files:` line or `.grove.yaml` by hand", "brought the file, recommend propose, which\n  re-bases the change", "tell the owner how to try it",
+	// Both modes build every task but a checkpoint's dependents, and take answers.
+	shared = append(shared, "A checkpoint is a task whose acceptance no check you can run shows", "and mark it `Status: to check`", "build nothing of it and mark it `Status: blocked`", "on a checkpoint unbuilt, naming the checkpoint under it", "`Answer: \"<their words>\"`", "Finish: report the checkpoints first")
+	gone := []string{"with their agreement edit it", "stays as it is", "ignore\n  `Delegated:` lines", "write no\n  `Also changed:` line", "tell the owner how to try it", "an open question in the change decides"}
+	owner := []string{"stop it at once, ask the owner and wait", "without asking and without blocking the task", "by running Grove's\n  `instructions propose <change-id>` and following it, never editing a\n  `Files:` line or `.grove.yaml` by hand", "brought the file, recommend propose, which\n  re-bases the change", "Do not stop between tasks.", "stop once: put each checkpoint to the owner",
 		"Make the choices and change the paths a task's `Delegated:` line names\n  without asking the owner", "stop that task and build nothing more of it", "in `grove.yaml`, from one correction, quoting\n  it"}
-	alone := []string{"ask no one and wait for no one's answer", "Make the choices and change the paths a task's `Delegated:` line names.\n", "mark that task `Status: blocked`, naming the file", "whatever its\n  `needs_human` says", "Do not add it to `grove.yaml`."}
+	alone := []string{"ask no one and wait for no one's answer", "checkpoint for a later session and finish", "naming the revision the change needs", "Make the choices and change the paths a task's `Delegated:` line names.\n", "mark that task `Status: blocked`, naming the file", "whatever its\n  `needs_human` says", "Do not add it to `grove.yaml`."}
 	has := func(what, out string, want, not []string) {
 		t.Helper()
 		for _, s := range want {
@@ -522,9 +524,9 @@ func TestImplementInstructions(t *testing.T) {
 		has(strings.Join(args, " "), out, []string{", change 1 of 1 in cycle " + k + ".", "## The cycle\n\nCycle " + k + ", \"Cycle " + k + "\", in build order:\n\n1. " + cid + " \"Allow editing older records\" — this change\n", "<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n" + cycle}, nil)
 	}
 	out = grove(t, "instructions", "implement", k)
-	has("cycle instructions", out, []string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "with the owner", "run Grove's `instructions implement <change-id>` and", "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n", shared[3]}, alone)
+	has("cycle instructions", out, []string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "with the owner", "run Grove's `instructions implement <change-id>` and", "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n", shared[3], "Finish: report the checkpoints of every change first"}, alone)
 	out = grove(t, "instructions", "implement", k, "--unattended")
-	has("unattended cycle instructions", out, append([]string{"asking no one", "run Grove's `instructions implement <change-id> --unattended` and", "\n1. " + cid + " \"Allow editing older records\"\n", shared[3]}, alone...), owner)
+	has("unattended cycle instructions", out, append([]string{"asking no one", "run Grove's `instructions implement <change-id> --unattended` and", "\n1. " + cid + " \"Allow editing older records\"\n", shared[3], "Finish: report the checkpoints of every change first"}, alone...), owner)
 }
 
 func TestDropChange(t *testing.T) {
@@ -540,10 +542,14 @@ func TestArchive(t *testing.T) {
 	cid, _ := approve(t, dir, "older-edits", "Allow editing older records", "")
 	git(t, dir, "switch", "-q", "-c", "older-edits-impl")
 	folder := "grove/changes/" + cid + "-allow-editing-older-records"
-	os.WriteFile(filepath.Join(dir, folder, "implementation.md"), []byte("## T-01\n\nStatus: in progress\n"), 0o644)
 	var stdout, stderr strings.Builder
-	if code := run([]string{"archive", cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove: T-01 is not done in implementation.md; archive a change when every task is done or the file says Status: dropped\n" {
-		t.Errorf("archiving an unfinished change: status %d, %q", code, stderr.String())
+	// A checkpoint's guess is not done until the owner answers it.
+	for _, status := range []string{"in progress", "to check"} {
+		os.WriteFile(filepath.Join(dir, folder, "implementation.md"), []byte("## T-01\n\nStatus: "+status+"\n"), 0o644)
+		stderr.Reset()
+		if code := run([]string{"archive", cid}, &stdout, &stderr); code != 1 || stderr.String() != "grove: T-01 is not done in implementation.md; archive a change when every task is done or the file says Status: dropped\n" {
+			t.Errorf("archiving a change whose T-01 is %s: status %d, %q", status, code, stderr.String())
+		}
 	}
 	os.WriteFile(filepath.Join(dir, folder, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
 

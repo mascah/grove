@@ -182,11 +182,26 @@ The merge is the approval. Approved means agreed future work, not built.
 /grove-implement 261015-k3m9q
 ```
 
-The agent works through the tasks with tests, and tells you how to try each
-one. It records each task's status and evidence in the change's
-`implementation.md`. If an open question decides how a task is built, the
-agent does not guess: it asks you. If you say to leave it, it marks that
-task blocked, writes the question there, and builds the rest.
+The agent works through the tasks with tests, without stopping between
+them. It records each task's status and evidence in the change's
+`implementation.md`. A task only you can judge, such as how a screen
+looks, or one an open question decides, is a checkpoint. The agent builds
+its guess and marks it `Status: to check`. Where a wrong guess would be
+costly, to data or to an interface other tasks build on, it builds nothing
+and marks it `Status: blocked`. Either way it writes a `Check:` line
+saying what to try or decide, and why, and leaves unbuilt a task that
+builds on it. Once the rest is built, it stops once and puts the
+checkpoints to you:
+
+```markdown
+Status: to check
+
+Check: try `ledger report` with a budget; the change does not say how an overspent line reads
+```
+
+It writes your answer under the task, `Answer: "red is fine"`, and builds
+on it. A task `to check` is not done, so the change is archived only once
+you answer.
 
 Before it finishes, the agent checks its work:
 
