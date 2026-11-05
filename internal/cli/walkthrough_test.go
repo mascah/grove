@@ -1617,3 +1617,22 @@ func TestFollows(t *testing.T) {
 	state(clean, k, "re-planned")
 	names(false, "re-planned")
 }
+
+// TestMisnamedCycle follows the walkthrough's planning step 6, a cycle
+// file named without an ID: check reports it, and changes names no cycle
+// for its member, while a cycle named well is shown as before.
+func TestMisnamedCycle(t *testing.T) {
+	dir := setUp(t)
+	a, _ := approve(t, dir, "a", "Editing an unknown ID prints an error", "")
+	b, _ := approve(t, dir, "b", "Add ledger delete ID", "")
+	planCycle(t, dir, "261105-proto-unknown-id", "2026-11-05T09:00:00Z", false, a) // IDs leave out o
+	planCycle(t, dir, "261105-pr0t0", "2026-11-05T10:00:00Z", false, b)
+	var stdout, stderr strings.Builder
+	if code := run([]string{"check"}, &stdout, &stderr); code == 0 || !strings.Contains(stdout.String(), "grove/cycles/261105-proto-unknown-id-cycle.yaml: the file name must start with a cycle ID, such as 261015-k3m9q\n") {
+		t.Errorf("check of a misnamed cycle: status %d, %q", code, stdout.String())
+	}
+	out := grove(t, "changes")
+	if !strings.Contains(out, a+"  Editing an unknown ID prints an error  approved\n") || !strings.Contains(out, b+"  Add ledger delete ID  approved  in cycle 261105-pr0t0\n") {
+		t.Errorf("changes with a misnamed cycle:\n%s", out)
+	}
+}
