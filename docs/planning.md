@@ -126,7 +126,9 @@ A plan goes stale when a commit on your main branch, after `planned`,
 changes one of two things: the folder of a change in the cycle that is
 not archived, or a file one of its tasks names on its `Files:` line. A
 commit that also edits the cycle file does not count. Nor does one that
-archives a change of a cycle this one follows. Grove reads main's
+archives a change of this cycle, or of a cycle this one follows. So the
+cycle's changes can reach main one pull request at a time, each archiving
+its own change, and the plan stays fresh. Grove reads main's
 first-parent history, so a squash or a merge commit counts as one commit.
 `grove check` reports a stale cycle, marked or not:
 

@@ -14,8 +14,8 @@ done. A cycle is stale when the folder of a member not yet archived, or a
 file one of its tasks names, differs on the target from the same path at
 the cycle's `planned` commit, unless every commit on the target's
 first-parent history since then that changed it also edited the cycle
-file, or archived a change that a cycle this one depends on, directly or
-through other cycles, lists.
+file, archived a change the cycle itself lists, or archived a change that
+a cycle this one depends on, directly or through other cycles, lists.
 
 ## Boundaries
 
@@ -319,8 +319,8 @@ When a commit on the target's first-parent history after a cycle's
 `planned` commit changes the folder of a member not yet archived, or a
 file one of its tasks names, the system shall treat the cycle as stale, in
 `grove check` and in `grove run`, unless that commit also edits the cycle
-file, or archives a change that a cycle this one depends on, directly or
-through other cycles, lists.
+file, archives a change the cycle itself lists, or archives a change that
+a cycle this one depends on, directly or through other cycles, lists.
 
 #### Scenario: Revised and re-planned in one squash merge
 
@@ -351,6 +351,23 @@ through other cycles, lists.
   the target as two commits, by rebase or fast-forward
 - WHEN the operator runs `grove run K`
 - THEN no session is launched, and Grove says K's plan is stale
+
+#### Scenario: A member lands in its own squash merge
+
+- GIVEN cycle K, marked `unattended`, lists A and B, each with a task
+  naming `ledger/cli.py`, and a squash merge into the target archives A,
+  edits `ledger/cli.py` and leaves K's file as it is
+- WHEN the owner runs `grove check`
+- THEN it reports nothing for K, `grove run` builds K, and
+  `grove instructions implement B` names no file changed since K's plan
+
+#### Scenario: Then a commit archiving nothing
+
+- GIVEN that squash merge, and a later commit on the target that archives
+  no change and edits `ledger/cli.py`
+- WHEN the owner runs `grove check`
+- THEN it reports K, saying B changed since the plan and to re-plan K with
+  `/grove-plan K`
 
 #### Scenario: The cycle it follows lands in a squash merge
 
@@ -402,3 +419,4 @@ None.
 - [261023-3f9h6](../../changes/archive/261023-3f9h6-run-builds-a-given-cycle/) grove run builds a cycle it is given
 - [261023-bgtcb](../../changes/archive/261023-bgtcb-revising-a-change-re-plans-its-cycle/) Revising a change re-plans its cycle
 - [261023-2ej3w](../../changes/archive/261023-2ej3w-cycles-depend-on-cycles/) A cycle can depend on cycles
+- [261030-t2pt7](../../changes/archive/261030-t2pt7-own-member-merges-keep-a-cycle-fresh/) A cycle's own member merges keep its plan fresh
