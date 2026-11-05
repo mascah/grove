@@ -10,8 +10,14 @@ write "Status: dropped" here with their reason. -->
 
 Status: not started
 
-<!-- Evidence: what changed, the checks run and their result. One section per
-task in tasks.md, with the same ID. -->
+<!-- Status: not started, in progress, done, to check or blocked. Evidence:
+what changed, the checks run and their result. One section per task in
+tasks.md, with the same ID. A checkpoint adds a line saying what to try or
+decide and why, and, once answered, the owner's words:
+
+    Check: try the settings screen with a bad path; the change does not say how errors show
+    Answer: "the inline error is fine"
+-->
 
 ## Scenarios
 

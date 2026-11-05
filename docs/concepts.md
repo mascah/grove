@@ -87,12 +87,16 @@ flowchart LR
    branch with you. Then the one merge after step 6 approves it with its
    code.
 5. **Implement.** The agent builds the change on a branch with you and
-   records progress. It asks you what the change leaves open. With your
-   agreement, it revises the change on that branch, and your merge
-   approves the revision with the code. With `--unattended`, it builds a
-   change, or a cycle of changes in order, without you. Then it asks no
-   one: a task an open question decides is marked blocked, and the change
-   itself is never edited. A cycle is approved changes planned together (see
+   records progress. A task only you can judge, or one resting on
+   something the change leaves open, is a checkpoint: the agent builds
+   its guess, or nothing where a wrong guess is costly, and says what to
+   try and why. It builds the rest, then stops once with the checkpoints.
+   With your agreement, it revises the change on that branch, and your
+   merge approves the revision with the code. With `--unattended`, it
+   builds a change, or a cycle of changes in order, without you. Then it
+   asks no one: it leaves the checkpoints in `implementation.md` and
+   finishes, and the change itself is never edited. A later session on
+   the branch, with you or unattended, takes your answers. A cycle is approved changes planned together (see
    [Planning cycles](planning.md)).
 6. **Archive.** When every task is done, the agent folds the change's specs
    into the maintained specs and moves the change to
@@ -198,15 +202,20 @@ holds.
   and record in `.git/grove/`.
 - **Base:** the commit of the target a change was proposed from, written in
   its `.grove.yaml`.
-- **Blocked:** a task the agent could not build, because an open question
-  decides it or the change cannot be built as it says. Its
-  `implementation.md` says `Status: blocked` and why.
+- **Blocked:** a task the agent did not build: a checkpoint where a wrong
+  guess would be costly, or a task the change cannot be built as it says.
+  Its `implementation.md` says `Status: blocked` and why.
 - **Build order:** the order a cycle's changes are built in: each after the
   changes it waits on, otherwise oldest first.
 - **Capability:** one area of behavior, with one maintained spec.
 - **Change:** a folder proposing future work.
 - **Change schema:** what a kind of change consists of and how each skill
   goes for it; Grove's are `default` and `bugfix`.
+- **Checkpoint:** a task whose acceptance only a person can judge, or that
+  rests on a choice the change leaves open. Its `implementation.md` says
+  `Status: to check` for a guess built, or `Status: blocked`, with a
+  `Check:` line saying what to try or decide and why, and, once answered,
+  an `Answer:` line quoting you. `to check` is not done.
 - **Context:** instructions in `grove.yaml` given to every skill, so they
   reach agents working through Grove and no other session.
 - **Cycle:** approved changes planned to be built together, in a file under

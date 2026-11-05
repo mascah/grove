@@ -128,16 +128,26 @@ cycle with you, each change as `/grove-implement <change-id>` does.
 Some changes cannot be built in the session. A change may wait on one
 that is neither in the cycle nor archived as finished, because it was
 dropped or does not exist. That change is left out and named, and
-`grove check` says why. A change whose task is blocked by an open question
-stays open, with the question in its `implementation.md`. A change that
-waits on it is refused and stays as it is. The agent's report says which
-changes were archived, which are blocked and on what, and which were left
-out. The [implement spec](https://github.com/mascah/grove/blob/main/grove/specs/implement/spec.md) has the exact rules for building a cycle.
+`grove check` says why. A change with a checkpoint (see
+[Getting started](getting-started.md)) stays open, with its `Check:` line
+in `implementation.md`. A change that waits on it is refused and stays as
+it is. The agent's report lists the checkpoints first, then which changes
+were archived, which are blocked and on what, and which were left out. The [implement spec](https://github.com/mascah/grove/blob/main/grove/specs/implement/spec.md) has the exact rules for building a cycle.
 
 The branch holds the code, the updated specs and each archived change.
-Review the pull request and merge once. To finish a blocked change, revise
-it with `/grove-propose <change-id>`, merge, and build again. A task its
-`implementation.md` already marks done is not built twice.
+Review the pull request and merge once. A task its `implementation.md`
+already marks done is not built twice.
+
+A later session on the same branch picks up the checkpoints. Run
+`/grove-implement 261019-p4x8d` there: the agent puts each `Check:` line
+to you, writes your answer under its task as an `Answer:` line, builds on
+it and archives the change once every task is done. Or start an
+unattended session with your answer beside the command, as a workflow
+could pass on a pull request comment: `/grove-implement 261019-p4x8d
+--unattended` with "use six-digit IDs". An answer that changes what the
+change says still needs `/grove-propose <change-id>`: unattended, the task
+stays blocked, naming the revision. Revise the change, merge, and build
+again.
 
 Nothing in the session needs you. It creates a branch if it is on your
 main branch. It settles no question itself. It commits only when a rule in

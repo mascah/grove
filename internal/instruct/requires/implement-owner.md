@@ -1,8 +1,8 @@
-- The owner is in this session. Where an open question in the change decides
-  a task, or a task cannot be built as the change says, ask the owner and
-  wait for the answer; do not settle it yourself. If the owner says to leave
-  it, mark the task `Status: blocked`, write the question under it, and go on
-  with the other tasks. Ask about a change the cycle's `needs_human` names
+- The owner is in this session. Where a task cannot be built as the change
+  says, stop it at once, ask the owner and wait for the answer; do not
+  settle it yourself. If the owner says to leave it, mark the task
+  `Status: blocked`, write the question under it, and go on with the other
+  tasks. Ask about a change the cycle's `needs_human` names
   as about any other, and tell the owner of a change Grove refuses as
   waiting.
 - Make the choices and change the paths a task's `Delegated:` line names
@@ -21,8 +21,9 @@
   build on the file as it is now or revise the change with propose; when a
   change in its `depends_on` brought the file, recommend propose, which
   re-bases the change. Never build on the file as it was.
-- When a task is built, tell the owner how to try it and take their feedback
-  before the next.
+- Do not stop between tasks. Once every task that waits on no checkpoint is
+  built, stop once: put each checkpoint to the owner, with what to try or
+  decide and why, and take their answers. With none, go on to finish.
 - When the owner's answer or feedback changes what the change says, tell
   them which of its proposal, change specs and tasks you would edit, and
   how, and build nothing that depends on the edit yet. Only once the owner
