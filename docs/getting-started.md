@@ -200,11 +200,11 @@ Before it finishes, the agent checks its work:
 Its report, and archiving, name each unverified scenario.
 
 A task's `Delegated:` line names choices and paths the agent may take
-without asking you. Anything else beyond the task's `Files:` it asks about.
-Once you agree, it edits the file and writes an `Also changed:` line under
-the task in `implementation.md`, naming the file and the reason;
-`tasks.md` stays as approved. `/grove-implement --unattended` ignores
-`Delegated:`, keeps to `Files:` and writes no `Also changed:` line.
+without asking you. Another file the task needs changed, or makes false,
+it edits without asking too, and writes an `Also changed:` line under the
+task in `implementation.md`, naming the file and why; `tasks.md` stays as
+approved. `/grove-implement --unattended` does the same. You judge the
+edit in review.
 
 The agent may find that the agreed approach is wrong. Then it stops that
 task, even if the task could still be built as written. It tells you what

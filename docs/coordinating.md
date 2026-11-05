@@ -103,16 +103,19 @@ and whatever its `needs_human` says. Only `grove run` reads those. Given a
 change's ID, `/grove-implement 261019-p4x8d --unattended` builds that one
 change the same way, with no cycle to plan first.
 
-Unattended, the agent changes only the files a change's tasks name on
-their `Files:` lines. It may find another file that should change too.
-It leaves that file as it is and names it in the task's evidence in
-`implementation.md`. With you, the agent asks instead. Once you agree, it
-edits the file and writes an `Also changed:` line under the task in
-`implementation.md`, with the reason:
+With you or unattended, the agent changes the files a change's tasks
+name on their `Files:` lines and the paths their `Delegated:` lines name.
+It may find another file the task needs changed, or makes false. It edits
+that file without asking and writes an `Also changed:` line under the task
+in `implementation.md`, with why:
 
 ```markdown
 Also changed: `README.md` — T-01 makes its usage example false
 ```
+
+`grove review` then shows that file as
+`also changed <change-id>:T-01: T-01 makes its usage example false`, so
+you read the reason beside it.
 
 A task may name a file that changed on your main branch since the
 change's `base`, or, for a change in a cycle, since the cycle's plan.

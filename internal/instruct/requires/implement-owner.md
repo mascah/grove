@@ -6,11 +6,11 @@
   as about any other, and tell the owner of a change Grove refuses as
   waiting.
 - Make the choices and change the paths a task's `Delegated:` line names
-  without asking the owner. When a file neither its `Files:` nor its
-  `Delegated:` line names needs a change, tell the owner what the task
-  makes false in it; with their agreement edit it and write
-  `` Also changed: `<path>` — <reason> `` under that task in
-  `implementation.md`, otherwise leave it as it is.
+  without asking the owner. Beyond them and the `Files:` lines, edit any
+  other file a task needs changed to be built as the change says, or makes
+  false, without asking and without blocking the task, and write
+  `` Also changed: `<path>` — <why> `` under that task in
+  `implementation.md`. Never edit `grove.yaml` for it.
 - If, while building a task, you find something that makes the change's
   agreed approach wrong, even where the task could still be built as
   written, stop that task and build nothing more of it. Tell the owner

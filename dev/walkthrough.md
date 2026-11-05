@@ -522,34 +522,33 @@ Each step names the section of
   instructions propose` once for each and writes both on `delete`, the
   delete change naming the unknown-ID change in `depends_on`. `grove check`
   is clean.
-- **Delegated with me, ignored unattended** (§5; coordinating, "Building a
+- **Delegated, with me and unattended** (§5; coordinating, "Building a
   cycle unattended"). Approve a change whose T-01 names `ledger/records.py`
   and `tests/test_cli.py` on its `Files:` line and `tests/test_records.py`
   on a `Delegated:` line right after it. `/grove-implement <change-id>`
   creates `tests/test_records.py` for `find`'s own tests without asking.
   On a fresh fixture with the same change in a cycle of one,
-  `grove run <cycle-id>` leaves `tests/test_records.py` uncreated, puts
-  `find`'s tests in `tests/test_cli.py`, T-01's evidence names
-  `tests/test_records.py` and why it was left, and `implementation.md`
-  has no `Also changed:` line.
+  `grove run <cycle-id>` creates `tests/test_records.py` the same way, and
+  `implementation.md` has no `Also changed:` line for it.
 - **Planned against actual** (§6; reference, "Terminal commands"). Approve
   a change whose T-01 names `ledger/records.py` and `tests/fixtures/` as
   bullets. On a branch, write `implementation.md` with T-01 done and
   `` Also changed: `README.md` — T-01 makes its usage example false ``
   under it, change `ledger/records.py`, `tests/fixtures/records.json`,
   `README.md` and `Cargo.lock`, and commit. `grove review` lists
-  `Cargo.lock` as `named nowhere`, `README.md` as `agreed <change-id>:T-01`
-  with the reason, and the other two as `planned <change-id>:T-01`, and
+  `Cargo.lock` as `named nowhere`, `README.md` as
+  `also changed <change-id>:T-01` with the reason, and the other two as `planned <change-id>:T-01`, and
   exits 0; after `grove archive <change-id>` and a commit, the same. On a
   branch from main holding no change, it lists no files against a plan.
 - **A file no task names, with me** (§5; coordinating, "Building a cycle
   unattended"). Approve a change whose T-01 changes what `ledger delete`
   prints and names only `ledger/cli.py` and `tests/test_cli.py`. On a
   branch, a fresh `claude`, `/grove-implement <change-id>`: building T-01,
-  the session says the README's usage example is now false and asks. I
-  agree: it edits `README.md`, `implementation.md` has
-  `` Also changed: `README.md` — `` and the reason under T-01, and
-  `git diff main -- grove/changes/<change-id>-*/tasks.md` is empty. I ask
+  the session finds the README's usage example now false and, without
+  asking, edits `README.md`; `implementation.md` has
+  `` Also changed: `README.md` — `` and why under T-01, `grove review`
+  lists `README.md` as `also changed <change-id>:T-01` with that reason,
+  and `git diff main -- grove/changes/<change-id>-*/tasks.md` is empty. I ask
   for a second task that exports records: the session runs
   `grove instructions propose <change-id>` and adds T-02 with its
   `Files:` lines that way.
