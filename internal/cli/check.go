@@ -258,11 +258,13 @@ func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycl
 
 // sincePlan returns the paths changed by each commit on commit's
 // first-parent history since cy's planned commit that neither edits the
-// cycle file nor archives a change of a cycle cy depends on, directly or
-// through others, as at, the documents at commit, holds them. A commit that
-// edits the cycle file is the plan checking what it changed, so a squash or
-// merge commit of a revision and its re-plan leaves the plan fresh; one
-// that archives is a merge the plan expected.
+// cycle file, nor archives a change cy lists, read from cy as passed rather
+// than the target's copy, nor archives a change of a cycle cy depends on,
+// directly or through others, as at, the documents at commit, holds them.
+// A commit that edits the cycle file is the plan checking what it changed,
+// so a squash or merge commit of a revision and its re-plan leaves the plan
+// fresh; one that archives is a merge the plan expected, so the cycle can
+// reach the target one pull request per member.
 func sincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]string, error) {
 	planned, err := gitx.Run(p.Top, "rev-parse", "--verify", "--end-of-options", cy.Meta.Planned+"^{commit}")
 	if err != nil {
@@ -276,18 +278,22 @@ func sincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]s
 	for _, c := range strings.Split(log, "\x00")[1:] {
 		commits = append(commits, strings.Split(strings.TrimSpace(c), "\n"))
 	}
-	var archived []string // the folders the changes of the cycles cy depends on are archived in
+	var archived []string // the folders the changes of cy and the cycles it depends on are archived in
+	add := func(d *doc.Cycle) {
+		for _, ch := range at.Archived {
+			if slices.Contains(d.Meta.Changes, ch.ID) {
+				archived = append(archived, p.Root+"/"+ch.Dir+"/")
+			}
+		}
+	}
+	add(cy)
 	seen := map[string]bool{cy.ID: true}
 	var follow func(ids []string)
 	follow = func(ids []string) {
 		for _, id := range ids {
 			if d := at.Cycle(id); d != nil && !seen[id] {
 				seen[id] = true
-				for _, ch := range at.Archived {
-					if slices.Contains(d.Meta.Changes, ch.ID) {
-						archived = append(archived, p.Root+"/"+ch.Dir+"/")
-					}
-				}
+				add(d)
 				follow(d.Meta.DependsOn)
 			}
 		}

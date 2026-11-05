@@ -334,7 +334,16 @@ show-saved changes approved. Each step names the section of
    Re-plan it as step 5 does.
 
 8. **Building a cycle unattended** (coordinating, "Building a cycle
-   unattended"). From main, `git switch -c build-0.4`, a fresh session,
+   unattended"; planning, "Re-plan a cycle"). First, one change at a
+   time: from main, `git switch -c build-delete`, a fresh session,
+   `/grove-implement <delete-id> --unattended` builds and archives delete
+   alone. On the same branch, add a comment to `ledger/report.py`, which
+   budgets' T-01 names, commit, and squash-merge the branch into main:
+   `grove check` on main is clean, since that commit archives a change of
+   the cycle. Reset main to the commit before the merge, delete
+   `build-delete`, and go on.
+
+   From main, `git switch -c build-0.4`, a fresh session,
    `/grove-implement <0.4-cycle-id> --unattended`. Its instructions list
    delete and budgets in build order, each to be built with
    `grove instructions implement <change-id> --unattended`. The session

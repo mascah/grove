@@ -1499,6 +1499,8 @@ func TestFollows(t *testing.T) {
 	commitAll(t, dir, "Name B's file")
 	c, cDir := approve(t, dir, "c", "Monthly budgets in report", "")
 	d, dDir := approve(t, dir, "d", "Show saved records", "")
+	os.WriteFile(filepath.Join(dDir, "tasks.md"), []byte("## T-01 — Show saved records\n\nFiles: `ledger/cli.py`\n"), 0o644)
+	commitAll(t, dir, "Name D's file")
 	e, eDir := approve(t, dir, "e", "Export records", "")
 	f, fDir := approve(t, dir, "f", "Import a CSV", "")
 	k, l, m, n := "261023-k0000", "261023-p0000", "261023-q0000", "261023-r0000" // K follows L, L follows M
@@ -1512,7 +1514,10 @@ func TestFollows(t *testing.T) {
 	}
 	commitAll(t, dir, "Order the cycles")
 
-	clean, stale := "No problems in grove/.\n", "grove/cycles/"+k+"-cycle.yaml: planned: "+b+" changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan "+k+"\n"
+	staleOf := func(cycle, change string) string {
+		return "grove/cycles/" + cycle + "-cycle.yaml: planned: " + change + " changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan " + cycle + "\n"
+	}
+	clean, stale := "No problems in grove/.\n", staleOf(k, b)
 	state := func(want, selects, how string) {
 		t.Helper()
 		var stdout, stderr strings.Builder
@@ -1527,12 +1532,13 @@ func TestFollows(t *testing.T) {
 			t.Errorf("%s: check printed %q, grove run selects %q, want %q", how, stdout.String(), got, selects)
 		}
 	}
-	names := func(want bool, how string) {
+	namesIn := func(change, cycle string, want bool, how string) {
 		t.Helper()
-		if out := grove(t, "instructions", "implement", b); strings.Contains(out, "\n- Changed on main since cycle "+k+"'s plan ") != want {
-			t.Errorf("%s: implement %s names a moved file: %v, want %v", how, b, !want, want)
+		if out := grove(t, "instructions", "implement", change); strings.Contains(out, "\n- Changed on main since cycle "+cycle+"'s plan ") != want {
+			t.Errorf("%s: implement %s names a moved file: %v, want %v", how, change, !want, want)
 		}
 	}
+	names := func(want bool, how string) { t.Helper(); namesIn(b, k, want, how) }
 	edit := func(msg string) {
 		os.WriteFile(filepath.Join(dir, "ledger/cli.py"), []byte(read(t, filepath.Join(dir, "ledger/cli.py"))+"# "+msg+"\n"), 0o644)
 		commitAll(t, dir, msg)
@@ -1565,12 +1571,19 @@ func TestFollows(t *testing.T) {
 		t.Errorf("implement %s does not list its member:\n%.3000s", k, out)
 	}
 
-	// M lands in a merge commit, then L as two commits: a squash, then a
-	// squash or a merge commit. The older marked K waits until L is done.
+	// M lands in a merge commit, then L as two squashes, the last also as a
+	// merge commit. L's own archive leaves it fresh, though it edits a file
+	// d names; a commit archiving nothing does not. The older marked K waits
+	// until L is done.
 	land(e, eDir, false)
 	state(clean, l, "M's change archived in a merge commit")
-	land(c, cDir, false)
-	state(clean, l, "one of L's changes archived")
+	land(c, cDir, true)
+	state(clean, l, "one of L's changes archived, editing a file its other change names")
+	namesIn(d, l, false, "one of L's changes archived")
+	edit("Another change")
+	state(stale+staleOf(l, d), "", "a commit archiving nothing after one of L's changes")
+	namesIn(d, l, true, "a commit archiving nothing after one of L's changes")
+	git(t, dir, "reset", "-q", "--hard", "HEAD~1")
 	land(d, dDir, true)
 	state(clean, k, "L's last change archived in a squash")
 	git(t, dir, "reset", "-q", "--hard", "HEAD~1")
