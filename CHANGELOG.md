@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.7.0](https://github.com/mascah/grove/compare/v0.6.0...v0.7.0) (2026-11-05)
+
+
+### Features
+
+* **cli:** a cycle's own member merges keep its plan fresh ([#127](https://github.com/mascah/grove/issues/127)) ([78708a1](https://github.com/mascah/grove/commit/78708a12c049180982d85a911c821fd7234916a6))
+* **instruct:** cite only what the project's readers can open ([#104](https://github.com/mascah/grove/issues/104)) ([a5b5674](https://github.com/mascah/grove/commit/a5b5674382f588cf5e716ffce01abedf92374835))
+* **instruct:** implement edits a file a task needs and says why ([#128](https://github.com/mascah/grove/issues/128)) ([65252a4](https://github.com/mascah/grove/commit/65252a444c6826f90dc176d0eddb8c3b72dca625))
+* **instruct:** implement stops at checkpoints and hands off in the branch ([#130](https://github.com/mascah/grove/issues/130)) ([bf42534](https://github.com/mascah/grove/commit/bf42534832e2aac9ed4d9c12461ca392be73d41b))
+* **instruct:** plan brings a stale member up to date ([#129](https://github.com/mascah/grove/issues/129)) ([1a9af5c](https://github.com/mascah/grove/commit/1a9af5c0afb62ee8ac337369a0ab7e8e6043c836))
+
+
+### Bug Fixes
+
+* **cli:** report a misnamed cycle and a shallow clone plainly ([#131](https://github.com/mascah/grove/issues/131)) ([e19c7b7](https://github.com/mascah/grove/commit/e19c7b7bd9a4a3c4a8d541bb38a76c7d6d7571fb))
+
 ## [0.6.0](https://github.com/mascah/grove/compare/v0.5.0...v0.6.0) (2026-10-27)
 
 
