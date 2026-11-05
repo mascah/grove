@@ -43,3 +43,38 @@ Status: done
   bullet, which reads as the exception ("Beyond them and the `Files:`
   lines, ..."). Left as it is.
 - `just check`: passed (4031 Go lines, 1697 test lines, 8048 words).
+
+### T-02 — Trial case (c) expects the edit in both modes
+
+Status: done
+
+- `dev/trials/c.sh`: no scripted answers; `good` checks, on both
+  `unknown-id-impl` and `unknown-id-unattended`, that `ledger/records.py`
+  changed, that T-01 is `Status: done` with an
+  `` Also changed: `ledger/records.py` `` line (in the change folder or,
+  once archived, in `changes/archive/`), and that `python3 -m unittest`
+  passes. The check that the file stayed unchanged before an answer is
+  gone.
+- `dev/trials.md` case (c): "Owner's answers: none"; "A good run" and
+  "Checked by `good`" say both modes edit `ledger/records.py` without
+  asking and write an `Also changed:` line for it.
+- Checked on case (c)'s setup (`SETUP_ONLY=1 dev/trials/run.sh c`, clean),
+  with end states written by hand: with both branches changing
+  `ledger/records.py` and T-01 done with the line (the unattended one
+  archived), `good` printed nothing; with `unknown-id-unattended` leaving
+  the file, T-01 `Status: blocked` and no line, it printed one line for
+  each of the three checks.
+- The trials themselves (`just trials`) were not run in this session.
+
+## Scenarios
+
+- implement "A delegated path": internal/cli/walkthrough_test.go TestImplementInstructions shows both modes' text says to change the paths a `Delegated:` line names, passed; the agent creating the file is the walkthrough step "Delegated, with me and unattended", not run here: unverified
+- implement "A file nothing names": internal/cli/walkthrough_test.go TestImplementInstructions shows the owner text says to edit it without asking and write the line, passed; an agent doing so is the walkthrough step "A file no task names, with me", not run here: unverified
+- implement "Unattended": internal/cli/walkthrough_test.go TestImplementInstructions (unattended text) and TestPlanned (`also changed` with the reason), passed; an agent doing it unattended was not run here: unverified
+- implement "Unattended, a file the task needs": trial case (c)'s `good` checks it; the trial was not run here, only `good` on hand-written end states: unverified
+- implement "A draft, before and after building": internal/cli/walkthrough_test.go TestApprove (future work) and TestOneMerge (with its code), passed
+- implement "Planned, also changed and named nowhere": internal/cli/walkthrough_test.go TestPlanned, passed
+
+## Reconciliation
+
+- implement: applied to grove/specs/implement/spec.md

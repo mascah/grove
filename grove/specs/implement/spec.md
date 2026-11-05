@@ -158,36 +158,50 @@ again first.
 
 ### Requirement: Change only the files the tasks name
 
-The implement instructions shall have the agent change only the files the
-tasks' `Files:` lines name and, with the owner, also make the choices and
-change the paths a task's `Delegated:` line names without asking; for any
-other file a task makes false, they shall have it tell the owner and,
-only with their agreement, edit it and write `` Also changed: `<path>` —
-<reason> `` under that task in `implementation.md`; with `--unattended`,
-ignore `Delegated:` lines, write no `Also changed:` line, and name such a
-file, and why, in the task's evidence.
+The implement instructions shall have the agent change the files the
+tasks' `Files:` lines name, make the choices and change the paths a
+task's `Delegated:` line names, and, for any other file a task needs
+changed to be built as the change says or makes false, edit it without
+asking anyone and without marking the task blocked, and write
+`` Also changed: `<path>` — <why> `` under that task in
+`implementation.md`, with the owner and with `--unattended` alike; and
+edit none of the change's documents other than `implementation.md`, nor
+`grove.yaml`.
 
 #### Scenario: A delegated path
 
 - GIVEN T-01's `Files:` line names `tests/test_cli.py` and its
   `Delegated:` line names `tests/test_records.py`
 - WHEN the agent puts `find`'s tests in a new `tests/test_records.py`
-- THEN it creates the file without asking the owner
+- THEN it creates the file without asking the owner, with the owner or
+  unattended
 
 #### Scenario: A file nothing names
 
-- GIVEN the agent, building T-01, finds `README.md`, which no line of T-01
-  names, states what T-01 makes false
-- WHEN it tells the owner and they agree
-- THEN it edits `README.md` and writes `` Also changed: `README.md` ``
-  under T-01 with the reason; had they declined, nothing is written
+- GIVEN the agent, building T-01 with the owner, finds `README.md`, which
+  no line of T-01 names, states what T-01 makes false
+- WHEN it builds T-01
+- THEN it edits `README.md` without asking and writes
+  `` Also changed: `README.md` — T-01 makes its usage example false ``
+  under T-01
 
 #### Scenario: Unattended
 
 - GIVEN the same T-01, built by `/grove-implement K --unattended`
 - WHEN the agent builds it
-- THEN neither `tests/test_records.py` nor `README.md` is touched, T-01's
-  evidence names both and why, and there is no `Also changed:` line
+- THEN it creates `tests/test_records.py`, edits `README.md` and writes
+  its `Also changed:` line with why, and `grove review` shows `README.md`
+  as also changed by T-01 with that reason
+
+#### Scenario: Unattended, a file the task needs
+
+- GIVEN T-01 names only `ledger/cli.py` and `tests/test_cli.py`, and its
+  `Interfaces:` says `find` in `ledger/records.py` raises `ValueError` for
+  an unknown ID
+- WHEN `/grove-implement K --unattended` builds it
+- THEN `ledger/records.py` is changed, T-01 is `Status: done` with an
+  `Also changed:` line naming `ledger/records.py` and why, and T-01 is not
+  blocked
 
 ### Requirement: A task's file changed on the target
 
@@ -306,7 +320,7 @@ the branch holds a change open, or archived where the target does not
 hold it archived, `grove review` shall list each file outside the
 document root that the branch changes against the target, as planned,
 naming the task whose `Files:` line names it or a folder above it, as
-agreed, naming the task and the reason its `Also changed:` line in
+also changed, naming the task and the reason its `Also changed:` line in
 `implementation.md` gives, or as named nowhere.
 
 #### Scenario: A draft, before and after building
@@ -318,7 +332,7 @@ agreed, naming the task and the reason its `Also changed:` line in
   work and does not implement it; with D archived, its first line is
   "Merging rename into main approves change D with its code."
 
-#### Scenario: Planned, agreed and named nowhere
+#### Scenario: Planned, also changed and named nowhere
 
 - GIVEN branch `c-impl` holds approved change C, open or archived, whose
   T-01 names `ledger/records.py` and `tests/fixtures/` on its `Files:`
@@ -329,7 +343,7 @@ agreed, naming the task and the reason its `Also changed:` line in
 - WHEN the owner runs `grove review` on `c-impl`
 - THEN it names no change approved by the merge, and lists
   `ledger/records.py` and `tests/fixtures/records.json` as planned by
-  C:T-01, `README.md` as agreed by C:T-01 with that reason, and
+  C:T-01, `README.md` as also changed by C:T-01 with that reason, and
   `Cargo.lock` as named nowhere
 
 ## Known discrepancies
@@ -352,3 +366,4 @@ None recorded.
 - [261026-804yw](../../changes/archive/261026-804yw-instructions-list-the-change-s-documents-instead-of-embedding-them/) Instructions list the change's documents instead of embedding them
 - [261026-d1sb1](../../changes/archive/261026-d1sb1-re-base-a-change-after-its-dependency-lands/) Re-base a change after its dependency lands
 - [261031-kkzva](../../changes/archive/261031-kkzva-reconcile-the-implement-spec-with-current-behavior/) Reconcile the implement spec with current behavior
+- [261101-mg8hd](../../changes/archive/261101-mg8hd-unattended-edits-a-file-a-task-needs/) Implement edits a file a task needs and says why
