@@ -1,0 +1,6 @@
+title: "Implement stops at checkpoints and hands off in the branch"
+created: 2026-11-05T01:39:36Z
+description: Implement builds every task that waits on no one, stops once at the checkpoints it finds saying why each needs the owner, and leaves them in implementation.md for any later session to pick up.
+schema: default
+depends_on: [261030-t2pt7, 261101-mg8hd, 261105-gmpa4]
+base: 8a8d064ecf797da01117ee412fffc8f269e2fc9b
