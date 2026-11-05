@@ -47,7 +47,4 @@ Status: done
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- cycles: applied to grove/specs/cycles/spec.md
