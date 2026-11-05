@@ -1636,3 +1636,29 @@ func TestMisnamedCycle(t *testing.T) {
 		t.Errorf("changes with a misnamed cycle:\n%s", out)
 	}
 }
+
+// TestShallowClone follows the walkthrough's "A shallow clone": a base or
+// planned commit the clone did not fetch is named as missing from it.
+func TestShallowClone(t *testing.T) {
+	dir := setUp(t)
+	base := strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))
+	a, aDir := approve(t, dir, "a", "Editing an unknown ID prints an error", "base: "+base+"\n")
+	planCycle(t, dir, "261105-pr0t0", "2026-11-05T09:00:00Z", false, a) // planned is the commit before this one
+	planned := strings.TrimSpace(git(t, dir, "rev-parse", "HEAD~1"))
+	checks := func(want string) {
+		t.Helper()
+		var stdout, stderr strings.Builder
+		if run([]string{"check"}, &stdout, &stderr); !strings.Contains(stdout.String(), want) {
+			t.Errorf("check lacks %q:\n%s", want, stdout.String())
+		}
+	}
+	clone := t.TempDir()
+	git(t, dir, "clone", "-q", "--depth", "1", "file://"+dir, clone)
+	t.Chdir(clone)
+	checks("/.grove.yaml: base: " + base + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow\n")
+	checks("grove/cycles/261105-pr0t0-cycle.yaml: planned: " + planned + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow\n")
+	t.Chdir(dir)
+	file := filepath.Join(aDir, ".grove.yaml")
+	os.WriteFile(file, []byte(strings.Replace(read(t, file), "base: "+base, "base: 0000000", 1)), 0o644)
+	checks("/.grove.yaml: base: 0000000 is not a commit in this repository\n")
+}

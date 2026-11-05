@@ -41,3 +41,10 @@ func ResolveBranch(dir, name string) (string, error) {
 	out, err := Run(dir, "rev-parse", "--verify", "--end-of-options", "refs/heads/"+name+"^{commit}")
 	return strings.TrimSpace(out), err
 }
+
+// Shallow reports whether the repository at dir is a shallow clone, which
+// lacks the commits before the ones it fetched.
+func Shallow(dir string) bool {
+	out, err := Run(dir, "rev-parse", "--is-shallow-repository")
+	return err == nil && strings.TrimSpace(out) == "true"
+}
