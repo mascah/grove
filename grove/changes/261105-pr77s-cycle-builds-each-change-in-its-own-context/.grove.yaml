@@ -1,0 +1,5 @@
+title: "A cycle builds each change in its own context"
+created: 2026-11-05T06:07:17Z
+description: Each change of a cycle is built in a fresh context, ready changes with no shared file at once, and the session archives them one at a time.
+schema: default
+base: bc9c29b2cd1d9a42ade50d711f2141adeedf3e48
