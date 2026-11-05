@@ -523,10 +523,15 @@ func TestImplementInstructions(t *testing.T) {
 		out := grove(t, append([]string{"instructions", "implement"}, args...)...)
 		has(strings.Join(args, " "), out, []string{", change 1 of 1 in cycle " + k + ".", "## The cycle\n\nCycle " + k + ", \"Cycle " + k + "\", in build order:\n\n1. " + cid + " \"Allow editing older records\" — this change\n", "<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n" + cycle}, nil)
 	}
+	// Both modes build each member in a fresh context, unattended, and only
+	// the session archives and commits.
+	contexts := []string{"in a fresh context of your own, such as a\n  subagent", "`instructions implement <change-id> --unattended` and follow what it\n  prints, but neither archive nor commit",
+		"Start at once every change whose `after` changes are\n  archived and whose tasks' `Files:`", "Only you archive and commit, one returned change at a time", "run the\n  project's tests once both have returned",
+		"build the other again on its own", "put the checkpoints each returned change holds to the\n  owner at once", "Unattended, leave checkpoints\n  for your report", "Where you cannot start a fresh context, build each change yourself"}
 	out = grove(t, "instructions", "implement", k)
-	has("cycle instructions", out, []string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "with the owner", "run Grove's `instructions implement <change-id>` and", "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n", shared[3], "Finish: report the checkpoints of every change first"}, alone)
+	has("cycle instructions", out, append([]string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "with the owner", "run Grove's `instructions implement <change-id>` for each", "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n", shared[3], "Finish: report the checkpoints of every change first"}, contexts...), alone)
 	out = grove(t, "instructions", "implement", k, "--unattended")
-	has("unattended cycle instructions", out, append([]string{"asking no one", "run Grove's `instructions implement <change-id> --unattended` and", "\n1. " + cid + " \"Allow editing older records\"\n", shared[3], "Finish: report the checkpoints of every change first"}, alone...), owner)
+	has("unattended cycle instructions", out, append(append([]string{"asking no one", "run Grove's `instructions implement <change-id> --unattended` for each", "\n1. " + cid + " \"Allow editing older records\"\n", shared[3], "Finish: report the checkpoints of every change first"}, contexts...), alone...), owner)
 }
 
 func TestDropChange(t *testing.T) {
@@ -855,10 +860,11 @@ func TestCoordinating(t *testing.T) {
 		}
 	}
 
-	// Implementing a cycle unattended lists its changes in dependency order.
+	// Implementing a cycle unattended lists its changes in dependency order,
+	// each after the members it depends on.
 	out = grove(t, "instructions", "implement", k, "--unattended")
 	for _, s := range []string{"## What Grove requires of implement\n\n- Work in this working tree on a branch other than the target",
-		"## How to implement\n\nBuild these changes in this order", "\n1. " + unknown + " \"Editing an unknown ID prints an error\"\n2. " + del + " \"Add ledger delete ID\"\n"} {
+		"## How to implement\n\nThe changes in build order", "\n1. " + unknown + " \"Editing an unknown ID prints an error\"\n2. " + del + " \"Add ledger delete ID\" after " + unknown + "\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("cycle instructions lack %q:\n%s", s, out)
 		}

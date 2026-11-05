@@ -575,17 +575,24 @@ func mode(unattended bool) string {
 
 // Cycle returns the instructions for implementing cycle cy, whose file
 // holds content, with the owner or, unattended, asking no one: the members
-// ordered, in that order and one at a time, each with its own
-// instructions, and what each member in waiting waits on.
+// ordered, each after the members it depends on, and what each member in
+// waiting waits on.
 func Cycle(p Project, cy *doc.Cycle, content string, ordered, waiting []*doc.Change, unattended bool) (Instructions, error) {
 	each := "instructions implement <change-id>"
 	if unattended {
 		each += " --unattended"
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "Build these changes in this order, one at a time, each after the changes it depends on. For each, run Grove's `%s` and follow what it prints to the end; then the next.\n\n", each)
+	fmt.Fprintf(&b, "The changes in build order, each `after` the changes below it depends on. Building them yourself, run Grove's `%s` for each and follow what it prints to the end; then the next.\n\n", each)
 	for i, c := range ordered {
-		fmt.Fprintf(&b, "%d. %s %q%s\n", i+1, c.ID, c.Meta.Title, with(c.Meta.Schema))
+		after := slices.DeleteFunc(slices.Clone(c.Meta.DependsOn), func(id string) bool {
+			return !slices.ContainsFunc(ordered, func(o *doc.Change) bool { return o.ID == id })
+		})
+		mark := ""
+		if len(after) > 0 {
+			mark = " after " + strings.Join(after, ", ")
+		}
+		fmt.Fprintf(&b, "%d. %s %q%s%s\n", i+1, c.ID, c.Meta.Title, with(c.Meta.Schema), mark)
 	}
 	if len(ordered) == 0 {
 		b.WriteString("- None: every change in the cycle is archived in this working tree. There is nothing to build.\n")

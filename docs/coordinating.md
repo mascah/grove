@@ -89,14 +89,27 @@ you merge once. **Terminal:** `git switch -c build-0.4`. **Chat:**
 
 Grove lists the cycle's changes your working tree has not archived, in
 build order: each after the changes it depends on, otherwise oldest first.
-The agent takes them one at a time. For each, it runs
-`grove instructions implement <change-id> --unattended`. That prints the
-change's instructions with the cycle's list, naming the change's place in
-it. When the change's tasks are all done, the agent archives it on the
-branch. The next change in the list then finds its dependency archived as
-finished. A change in a cycle that is not done always gets the cycle's
-list, with you or without. So `/grove-implement 261019-p4x8d` shows you
-its place too.
+A change that depends on others in the list ends `after` their IDs:
+
+```text
+1. 261019-p4x8d "Editing an unknown ID prints an error"
+2. 261019-r2w7k "Add ledger delete ID" after 261019-p4x8d
+```
+
+The agent builds each change in a fresh context of its own, such as a
+Claude Code subagent, so no one context carries the whole cycle. Each
+follows `grove instructions implement <change-id> --unattended`, which
+prints the change's instructions with the cycle's list, naming the
+change's place in it, but neither archives nor commits. The agent starts at once every change
+whose `after` changes are archived and whose tasks' `Files:` share no file
+with a change being built; the others wait their turn. As each returns, the
+agent itself archives and commits it, one at a time. If two changes built
+together changed the same file anyway, through an `Also changed:` line, it
+runs the project's tests; if they fail, it archives the one started first
+and builds the other again on its own. Where the harness has no subagents,
+the agent builds each change itself, one after another. A change in a
+cycle that is not done always gets the cycle's list, with you or without.
+So `/grove-implement 261019-p4x8d` shows you its place too.
 
 `--unattended` builds a cycle whether or not it is marked `unattended`,
 and whatever its `needs_human` says. Only `grove run` reads those. Given a
@@ -123,7 +136,10 @@ Unattended, that task is marked blocked, naming the file, and is not
 built. With you, the agent asks what to do.
 
 Without `--unattended`, `/grove-implement 261020-m4k8t` builds the same
-cycle with you, each change as `/grove-implement <change-id>` does.
+cycle with you. Each change is still built in its own context, asking no
+one; when it returns, the agent puts its checkpoints to you at once and
+builds it again with your answers. An answer that changes what the change
+says goes through you and `/grove-propose`, as for one change.
 
 Some changes cannot be built in the session. A change may wait on one
 that is neither in the cycle nor archived as finished, because it was
