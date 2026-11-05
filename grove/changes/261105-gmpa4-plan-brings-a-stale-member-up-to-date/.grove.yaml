@@ -1,0 +1,6 @@
+title: "Plan brings a stale member up to date"
+created: 2026-11-05T00:38:46Z
+description: Planning a new cycle, plan brings each member grove check reports stale on its base up to date on the same branch, so one merge carries the revision and the plan.
+schema: default
+depends_on: [261030-t2pt7, 261101-mg8hd]
+base: 6090cb3bc2eb557d4c259652de42cd33273c0595
