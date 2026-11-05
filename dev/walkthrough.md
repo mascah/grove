@@ -372,18 +372,20 @@ show-saved changes approved. Each step names the section of
 
    From main, `git switch -c build-0.4`, a fresh session,
    `/grove-implement <0.4-cycle-id> --unattended`. Its instructions list
-   delete and budgets in build order, each to be built with
-   `grove instructions implement <change-id> --unattended`. The session
-   runs `grove instructions implement <delete-id> --unattended`, whose
-   `## The cycle` lists both and marks delete `this change`, builds and
-   archives delete, then does the same for budgets, whose list marks delete
+   delete, then budgets `after <delete-id>`, each to be built in a fresh
+   context that neither archives nor commits, by
+   `grove instructions implement <change-id> --unattended`. The session starts one subagent on
+   delete, whose `## The cycle` lists both and marks delete `this change`;
+   when it returns, the session archives and commits delete, and only then
+   starts one on budgets, whose list marks delete
    `archived in this working tree`; it builds budgets though `needs_human`
-   names it, and asks nothing. `grove instructions implement
-   <0.4-cycle-id> --unattended` on the branch then lists nothing to build.
-   One commit, one merge;
+   names it, and asks nothing. The session archives and commits budgets.
+   `grove instructions implement <0.4-cycle-id> --unattended` on the branch
+   then lists nothing to build. One merge;
    `grove changes` lists neither. `/grove-implement <0.4-cycle-id>` on
-   another branch instead builds the two with me, asking me where each
-   change's instructions say. `git branch -D delete-impl`.
+   another branch instead builds the two with me: each subagent still asks
+   no one, and the session puts each returned checkpoint to me and builds
+   that change again with my answer. `git branch -D delete-impl`.
 
 ## Running unattended
 
