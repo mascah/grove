@@ -217,7 +217,10 @@ It starts where coordinating changes ends: the delete, budgets and
 show-saved changes approved. Each step names the section of
 [Planning cycles](../docs/planning.md) it tests.
 
-1. **Plan a cycle** ("Plan a cycle"). From main, `git switch -c plan-0.4`,
+1. **Plan a cycle** ("Plan a cycle"). On main, add a comment to
+   `ledger/report.py`, which budgets' T-01 names, and commit: `grove check`
+   reports T-01's `ledger/report.py` changed on main since base.
+   From main, `git switch -c plan-0.4`,
    a fresh session, `/grove-plan 0.4: delete and budgets`. Its
    instructions, `grove instructions plan "0.4: delete and budgets"`, give
    `## What Grove requires of plan` before `## How to plan`. The session
@@ -225,10 +228,14 @@ show-saved changes approved. Each step names the section of
    about budgets, whose task has the report read clearly beside each
    category's total, whether it needs a person; I say yes, to judge the
    wording. It asks nothing about delete, nor about other cycles, there
-   being none. It writes
+   being none. Before writing the cycle, it says bringing budgets up to
+   date edits approved work, brings T-01 up to date with
+   `ledger/report.py` as main has it and sets budgets' `base` to main's
+   commit, without sending me to another session. It writes
    `grove/cycles/<cycle-id>-<slug>.yaml` with both under `changes`,
    budgets under `needs_human` with my reason, `created:` with the time,
-   `planned:` with main's full commit and no `unattended`. `git status` shows only that file, and
+   `planned:` with main's full commit and no `unattended`. `git status`
+   shows budgets' files beside that file, and no other, and
    `grove check`:
    > No problems in grove/.
 
@@ -239,7 +246,11 @@ show-saved changes approved. Each step names the section of
    a person, which re-plans the cycle on the same branch, and one merge
    removes that.
 
-2. **Merge the plan** ("Merge the plan"). Commit, then `grove review`:
+2. **Merge the plan** ("Merge the plan"). Commit, then `grove review`
+   lists budgets' revised files, each as
+   > changes  change           grove/changes/\<budgets>/\<file>
+
+   beside
    > adds     cycle            grove/cycles/\<cycle-id>-\<slug>.yaml
 
    Merge it. `grove changes` ends the delete and budgets lines with
