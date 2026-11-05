@@ -1,5 +1,11 @@
-- A cycle lists approved changes the owner means to build together. Its
-  file is the only thing you write: edit no change's files, and no code.
+- A cycle lists approved changes the owner means to build together. Write
+  its file and no code, and edit no change's files except as the next
+  line says.
+- A new cycle: before writing its file, run Grove's `check`. For each
+  member it reports stale on a requirement, or for a named file changed
+  since its base, tell the owner this edits approved work, bring the
+  member up to date on this branch as Grove's
+  `instructions propose <change-id>` says, then go on with the plan.
 - List under `changes` only changes the project index lists as approved.
   A change that is a draft, or archived, is not listed: tell the owner. A
   change is in at most one cycle that is not done; the project index lists

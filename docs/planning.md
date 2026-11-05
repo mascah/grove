@@ -26,8 +26,19 @@ it found and asks whether the change needs a person:
 
 Only a yes is written down, with your reason. The agent also tells you
 when a change waits on one outside the cycle that is not archived as
-finished. Then it writes one file, `grove/cycles/<cycle-id>-<slug>.yaml`.
-It edits no change:
+finished.
+
+Before it writes the cycle, the agent runs `grove check`. A change you
+agreed to may be stale on its base: a requirement it modifies was
+rewritten on main, or a file its tasks name changed there, often by the
+merge that archived a change it waits on. The agent tells you this edits
+approved work, and brings the change up to date on the same branch, as
+`/grove-propose <change-id>` would. It asks only where that needs a
+decision. So one merge brings the revision and the plan, with no second
+session.
+
+Then it writes `grove/cycles/<cycle-id>-<slug>.yaml`. It edits no other
+change:
 
 ```yaml
 title: "0.4 release"
