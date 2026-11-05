@@ -114,7 +114,8 @@ func planned(stdout io.Writer, p project, agreed, head *doc.Collection, span str
 }
 
 // mark says whether a task of changes plans path on its Files: line, or
-// failing that agrees to it on an Also changed: line, or none names it.
+// failing that records it, with why, on an Also changed: line, or none
+// names it.
 func mark(changes []*doc.Change, path string) string {
 	for _, c := range changes {
 		for _, t := range c.Tasks {
@@ -126,7 +127,7 @@ func mark(changes []*doc.Change, path string) string {
 	for _, c := range changes {
 		for _, t := range c.Tasks {
 			if reason, ok := t.Also[path]; ok {
-				return "agreed " + c.ID + ":" + t.ID + ": " + reason
+				return "also changed " + c.ID + ":" + t.ID + ": " + reason
 			}
 		}
 	}

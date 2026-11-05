@@ -315,11 +315,11 @@ func TestPropose(t *testing.T) {
 	req, how := strings.Index(out, "## What Grove requires of propose\n\n- Write the documents below"), strings.Index(out, "## How to propose\n\n**Propose says")
 	if !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") || req < 0 || how < req ||
 		!strings.Contains(out, "under `Files:` after `Result:`") || !strings.Contains(out, "\nFiles:\n- [`path/to/file`]\n") || strings.Contains(out, "file-by-file") ||
-		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 5. Check the change") || strings.Contains(out, "Assumptions to confirm") {
+		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 5. Check the change") || strings.Contains(out, "Assumptions to confirm") || strings.Contains(out, "implementing unattended ignores it") {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
 	for _, s := range []string{"say so and ask\n  whether to split it", "`depends_on`", "Order it by consequence: first what changes behavior, scope\n  or compatibility or loses data", "as\n  recommended defaults on one line, not a list, that a single \"yes\"\n  accepts",
-		"Write a task's `Delegated:` line", "only where the\n  owner agreed to it in the round", "A task may have a `Delegated:` line, right after `Files:`", "Delegated: test layout and private helpers"} {
+		"Write a task's `Delegated:` line", "only where the\n  owner agreed to it in the round", "A task may have a `Delegated:` line, right after `Files:`", "Implementing honors it,\n  with the owner and unattended.", "Delegated: test layout and private helpers"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("propose instructions lack %q", s)
 		}
@@ -392,7 +392,7 @@ func TestPlanned(t *testing.T) {
 		os.WriteFile(filepath.Join(dir, f), []byte("changed\n"), 0o644)
 	}
 	commitAll(t, dir, "Build")
-	want := "\n  named nowhere  Cargo.lock\n  agreed " + cid + ":T-01: T-01 makes its usage example false  README.md\n  planned " + cid + ":T-01  ledger/records.py\n  planned " + cid + ":T-01  tests/fixtures/records.json\n\n"
+	want := "\n  named nowhere  Cargo.lock\n  also changed " + cid + ":T-01: T-01 makes its usage example false  README.md\n  planned " + cid + ":T-01  ledger/records.py\n  planned " + cid + ":T-01  tests/fixtures/records.json\n\n"
 	if out := grove(t, "review"); !strings.Contains(out, want) {
 		t.Errorf("review does not mark the files against the plan:\n%.2000s", out)
 	}
@@ -480,9 +480,12 @@ func TestImplementInstructions(t *testing.T) {
 
 	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. When every task is done", "Commit only when the owner or the project's\nrules ask.",
 		"The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n"}
-	owner := []string{"ask the owner and\n  wait", "with their agreement edit it and write\n  `` Also changed: `<path>` — <reason> `` under that task", "by running Grove's\n  `instructions propose <change-id>` and following it, never editing a\n  `Files:` line or `.grove.yaml` by hand", "brought the file, recommend propose, which\n  re-bases the change", "tell the owner how to try it",
+	// Both modes edit a file a task needs or makes false, and say why.
+	shared = append(shared, "changed to be built as the change says, or makes", "`` Also changed: `<path>` — <why> `` under that task")
+	gone := []string{"with their agreement edit it", "stays as it is", "ignore\n  `Delegated:` lines", "write no\n  `Also changed:` line"}
+	owner := []string{"ask the owner and\n  wait", "without asking and without blocking the task", "by running Grove's\n  `instructions propose <change-id>` and following it, never editing a\n  `Files:` line or `.grove.yaml` by hand", "brought the file, recommend propose, which\n  re-bases the change", "tell the owner how to try it",
 		"Make the choices and change the paths a task's `Delegated:` line names\n  without asking the owner", "stop that task and build nothing more of it", "in `grove.yaml`, from one correction, quoting\n  it"}
-	alone := []string{"ask no one and wait for no one's answer", "A file no task's `Files:` line names stays as it is", "ignore\n  `Delegated:` lines", "mark that task `Status: blocked`, naming the file", "write no\n  `Also changed:` line", "whatever its\n  `needs_human` says", "Do not add it to `grove.yaml`."}
+	alone := []string{"ask no one and wait for no one's answer", "Make the choices and change the paths a task's `Delegated:` line names.\n", "mark that task `Status: blocked`, naming the file", "whatever its\n  `needs_human` says", "Do not add it to `grove.yaml`."}
 	has := func(what, out string, want, not []string) {
 		t.Helper()
 		for _, s := range want {
@@ -499,7 +502,7 @@ func TestImplementInstructions(t *testing.T) {
 	out := grove(t, "instructions", "implement", cid)
 	listed := "\n- `grove/changes/" + cid + "-allow-editing-older-records/specs/record-editing/spec.md`\n"
 	has("implement instructions", out, append(append([]string{"You are implementing approved change " + cid + ", \"Allow editing older records\", as main@", "with the owner, in their own working tree.", "### implementation: ", listed}, shared...), owner...),
-		append(alone, "### Requirement: Edit older records", ": differs from main", "### proposal: ", "### change-spec: ", "### tasks: ", "/.grove.yaml\">"))
+		append(append(alone, gone...), "### Requirement: Edit older records", ": differs from main", "### proposal: ", "### change-spec: ", "### tasks: ", "/.grove.yaml\">"))
 	// A document edited on the branch is named, with the approved text.
 	tasks := filepath.Join(dir, "grove/changes", cid+"-allow-editing-older-records/tasks.md")
 	os.WriteFile(tasks, []byte(read(t, tasks)+"\nResult: edited.\n"), 0o644)
@@ -507,7 +510,7 @@ func TestImplementInstructions(t *testing.T) {
 	has("implement after an edit", grove(t, "instructions", "implement", cid, "--unattended"), []string{"\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`: differs from main; `git show " + main + ":grove/changes/" + cid + "-allow-editing-older-records/tasks.md` prints the approved text\n", listed}, nil)
 	git(t, dir, "checkout", "-q", "--", ".")
 	out = grove(t, "instructions", "implement", cid, "--unattended")
-	has("unattended instructions", out, append(append([]string{"asking no one, in your own working tree.", "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n"}, shared...), alone...), owner)
+	has("unattended instructions", out, append(append([]string{"asking no one, in your own working tree.", "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n"}, shared...), alone...), append(owner, gone...))
 
 	// A member of a cycle, not marked, that needs a person, gets its plan.
 	planCycle(t, dir, k, "2026-10-22T09:00:00Z", false, cid)
