@@ -85,6 +85,14 @@ A pull request whose changes or specs have a problem fails with the lines
 `grove check` prints, such as
 `grove/changes/261020-cr2tr-monthly-budgets-in-report/.grove.yaml:5: unknown field "cycle"; ...`.
 
+`grove check` reads each change's `base` and each cycle's `planned`
+commit, so the checkout needs the full history: `fetch-depth: 0`, as
+above. Without it, check fails with
+
+```text
+grove/changes/261020-cr2tr-monthly-budgets-in-report/.grove.yaml: base: 8f2d6c1a4b9e0f7d3c5a2b1e6f4d8c0a9b7e5f3d is not in this shallow clone; fetch its full history, such as with git fetch --unshallow
+```
+
 After a push to main, each change has one issue labelled `grove`. Its
 title is the change's title, and its body is the change's main document
 ending with `<!-- grove:<id> -->`. The issue of an archived or dropped

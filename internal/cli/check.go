@@ -85,7 +85,7 @@ func stale(p project, root fs.FS, c *doc.Collection) error {
 		}
 		base, err := gitx.TreeFS(p.Top, ch.Meta.Base, p.Root)
 		if err != nil {
-			ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: ch.Dir + "/.grove.yaml", Message: "base: " + ch.Meta.Base + " is not a commit in this repository"})
+			ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: ch.Dir + "/.grove.yaml", Message: missing(p, "base", ch.Meta.Base)})
 			continue
 		}
 		for _, file := range slices.Sorted(maps.Keys(ch.Touches)) {
@@ -154,7 +154,7 @@ func stalePlans(p project, c *doc.Collection) error {
 		}
 		changed, err := changedSincePlan(p, target.Commit, target.Agreed, cy)
 		if err != nil {
-			cy.Diagnostics = append(cy.Diagnostics, doc.Diagnostic{Path: cy.Path, Message: "planned: " + cy.Meta.Planned + " is not a commit in this repository"})
+			cy.Diagnostics = append(cy.Diagnostics, doc.Diagnostic{Path: cy.Path, Message: missing(p, "planned", cy.Meta.Planned)})
 		}
 		for _, id := range changed {
 			cy.Diagnostics = append(cy.Diagnostics, doc.Diagnostic{Path: cy.Path,
@@ -226,6 +226,15 @@ func naming(ch *doc.Change, changed []string) []doc.Task {
 		}
 	}
 	return out
+}
+
+// missing says the commit field names is not in the repository; a shallow
+// clone may simply not have fetched it, so there it says how to.
+func missing(p project, field, commit string) string {
+	if gitx.Shallow(p.Top) {
+		return field + ": " + commit + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow"
+	}
+	return field + ": " + commit + " is not a commit in this repository"
 }
 
 // named returns every file ch's tasks name.

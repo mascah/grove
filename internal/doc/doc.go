@@ -172,6 +172,9 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 	}
 	for _, name := range cycles {
 		cy := &Cycle{Document: Document{ID: idOf(strings.TrimSuffix(path.Base(name), ".yaml")), Path: name}}
+		if cy.ID == "" {
+			cy.report(name, 0, "the file name must start with a cycle ID, such as 261015-k3m9q")
+		}
 		b, err := fs.ReadFile(fsys, name)
 		if err != nil {
 			return nil, err

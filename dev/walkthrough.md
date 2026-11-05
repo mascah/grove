@@ -316,6 +316,22 @@ show-saved changes approved. Each step names the section of
 
    and the same for budgets. Delete the copy.
 
+   Then rename the 0.4 cycle's file to
+   `grove/cycles/261105-proto-0-4.yaml`, a name that starts with no ID,
+   since IDs leave out `o`. `grove check` exits non-zero, reporting
+   > grove/cycles/261105-proto-0-4.yaml: the file name must start with a cycle ID, such as 261015-k3m9q
+
+   and `grove changes` shows delete and budgets with no `in cycle`. Rename
+   the file back.
+
+   Then `git clone --depth 1 file://$PWD ~/tmp/ledger-shallow`, and in it
+   `grove check` reports each `base` and `planned` older than the clone's
+   one commit, such as budgets' `base`, as
+   > grove/changes/\<budgets>/.grove.yaml: base: \<sha> is not in this shallow clone; fetch its full history, such as with git fetch --unshallow
+
+   while in `~/tmp/ledger` it reports neither. Delete
+   `~/tmp/ledger-shallow`.
+
 7. **A cycle that follows another** ("Follow another cycle", "Re-plan a
    cycle"). Approve `/grove-propose Import records from a CSV` (import), its
    task naming a file show-saved's T-01 names. `git switch -c plan-0.5`, a

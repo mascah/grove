@@ -301,6 +301,22 @@ depends on it in turn, directly or through other cycles.
 - THEN it reports each one's `depends_on` line, saying the other waits on
   it in turn, so neither can run
 
+### Requirement: Report a cycle file named without an ID
+
+When the owner runs `grove check` and a file under `<root>/cycles/` has a
+name that does not start with a cycle ID, the system shall report the
+file, saying its name must start with a cycle ID, and exit non-zero, and
+`grove changes` shall name no cycle for the changes that file lists.
+
+#### Scenario: A letter IDs leave out
+
+- GIVEN `grove/cycles/261105-proto-unknown-id.yaml` lists approved change
+  C, and `o` is a letter cycle IDs leave out
+- WHEN the owner runs `grove check` and `grove changes`
+- THEN `grove check` reports the file, saying the file name must start
+  with a cycle ID, and exits non-zero, and `grove changes` shows C with
+  no "in cycle"
+
 ### Requirement: Show cycles
 
 When the owner runs `grove changes`, the system shall show, with each
@@ -437,3 +453,4 @@ None.
 - [261023-2ej3w](../../changes/archive/261023-2ej3w-cycles-depend-on-cycles/) A cycle can depend on cycles
 - [261030-t2pt7](../../changes/archive/261030-t2pt7-own-member-merges-keep-a-cycle-fresh/) A cycle's own member merges keep its plan fresh
 - [261105-gmpa4](../../changes/archive/261105-gmpa4-plan-brings-a-stale-member-up-to-date/) Plan brings a stale member up to date
+- [261105-3qdz2](../../changes/archive/261105-3qdz2-misnamed-cycle-and-shallow-clone-reported/) A misnamed cycle and a shallow clone are reported plainly
