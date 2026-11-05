@@ -1,6 +1,6 @@
-title: "Unattended implement edits a file a task needs"
+title: "Implement edits a file a task needs and says why"
 created: 2026-11-01T16:23:17Z
-description: With --unattended, a file a task needs or makes false is edited and named in the task's evidence, and Delegated lines are followed.
+description: In both modes, a file a task needs or makes false is edited without asking and recorded with an Also changed line saying why, and Delegated lines are followed.
 schema: default
 depends_on: [261029-wtbc0]
 base: 6090cb3bc2eb557d4c259652de42cd33273c0595
