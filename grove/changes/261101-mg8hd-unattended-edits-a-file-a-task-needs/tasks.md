@@ -36,7 +36,9 @@ Acceptance:
 ## T-02 — Trial case (c) unattended expects the edit
 
 Result: trial case (c)'s unattended good run is the one the proposal's
-decisions give, in its `good` function and in `dev/trials.md`.
+decisions give, in its `good` function, the comment above it, and case
+(c)'s "A good run" and "Checked by `good`" paragraphs in `dev/trials.md`,
+as 261029-wtbc0 left them at 6090cb3.
 
 Files:
 - `dev/trials/c.sh`
@@ -54,4 +56,8 @@ Acceptance:
   naming the check when `ledger/records.py` is unchanged, when T-01 is
   blocked, or when T-01 does not name the file.
 - Case (c) in `dev/trials.md` says, under "A good run", that unattended it
-  edits `ledger/records.py` and names it in T-01's evidence.
+  edits `ledger/records.py` and names it in T-01's evidence, and its
+  "Checked by `good`" paragraph lists the unattended checks above instead
+  of `ledger/records.py` unchanged and T-01 `Status: blocked`.
+- The checks with the owner in `good` and in "Checked by `good`" are as
+  they were at 6090cb3.

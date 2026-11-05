@@ -3,4 +3,4 @@ created: 2026-11-01T16:23:17Z
 description: With --unattended, a file a task needs or makes false is edited and named in the task's evidence, and Delegated lines are followed.
 schema: default
 depends_on: [261029-wtbc0]
-base: 1a241671fee6a3d504867e2e24c87855868fda66
+base: 6090cb3bc2eb557d4c259652de42cd33273c0595
