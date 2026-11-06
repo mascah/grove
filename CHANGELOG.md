@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/mascah/grove/compare/v0.7.0...v0.8.0) (2026-11-05)
+
+
+### Features
+
+* **instruct:** a cycle builds each change in its own context ([#135](https://github.com/mascah/grove/issues/135)) ([c3f131e](https://github.com/mascah/grove/commit/c3f131ec44cd6efaac62d2ccea6e9b29a8ef1e6c))
+
 ## [0.7.0](https://github.com/mascah/grove/compare/v0.6.0...v0.7.0) (2026-11-05)
 
 
