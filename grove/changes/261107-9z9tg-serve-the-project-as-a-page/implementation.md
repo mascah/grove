@@ -32,7 +32,28 @@ Also changed: `go.mod` — goldmark moves from an indirect to a direct dependenc
 
 ### T-02 — The page
 
-Status: not started
+Status: to check
+
+`internal/cli/page.html`, 408 lines of HTML and script with no external
+resource, built from the prototype's page on the product's field names:
+readiness, in progress, graph, history and specs tabs with counts, a
+document pane rendering Markdown and showing YAML, relative links opening
+in the pane, and a refresh every 10 seconds that a checkbox stops.
+`justfile`: `just check` prints the page's line count and fails above 500.
+Driven through headless Chrome (Playwright) on the ledger fixture built
+with the states `TestServe` builds, in light and dark mode: no console
+error; readiness counts 3 open cycles, with the marked cycle "grove run
+would build it", the export cycle naming its member that needs a person
+and the budgets cycle stale; in progress counts 4 rows; a proposal opened
+in the pane, its relative link to the spec opened in the pane, and after a
+refresh the pane held the same document at the same scroll position, as
+did the main column; the draft's proposal showed no `<script>`; unchecking
+the box stopped the refresh. On Grove's own repository: no error, 0 open
+cycles, 1 row (this branch), 12 specs.
+
+Check: open the page on a project you know and judge how each view reads, in light and dark mode; how it looks is a person's call, and the fixture's run shows only that it works.
+
+Also changed: `internal/cli/serve.go` — the value gives each change its `files` and each cycle its `created`, which the pane and the timeline need.
 
 ### T-03 — Documentation
 

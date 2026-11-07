@@ -92,14 +92,16 @@ type value struct {
 // pageChange is a change as grove changes --json gives it.
 type pageChange struct {
 	*doc.Change
-	Cycle string `json:"cycle,omitempty"` // the cycle not done that lists it
-	Ready bool   `json:"ready"`           // approved and waiting on nothing
+	Cycle string   `json:"cycle,omitempty"` // the cycle not done that lists it
+	Ready bool     `json:"ready"`           // approved and waiting on nothing
+	Files []string `json:"files"`           // its documents, from the root
 }
 
 type pageCycle struct {
 	ID         string            `json:"id"`
 	Title      string            `json:"title"`
 	Goal       string            `json:"goal,omitempty"`
+	Created    string            `json:"created"`
 	Path       string            `json:"path"`
 	Planned    string            `json:"planned"`
 	Changes    []string          `json:"changes"`  // its open members in build order, then those waiting outside it
@@ -179,7 +181,7 @@ func (s *server) value() (*value, error) {
 	v := &value{Root: p.Root, Target: p.Target, Commit: commit, Read: time.Now(), Specs: c.Specs}
 	for _, ch := range slices.Concat(c.Changes, c.Archived) {
 		row := *ch // runnable below rewrites WaitsOn of a member waiting outside its cycle
-		pc := pageChange{Change: &row, Ready: ch.State == "approved" && len(ch.WaitsOn) == 0}
+		pc := pageChange{Change: &row, Ready: ch.State == "approved" && len(ch.WaitsOn) == 0, Files: ch.Files}
 		for _, cy := range c.Cycles {
 			if !cy.Done && slices.Contains(cy.Meta.Changes, ch.ID) {
 				pc.Cycle = cy.ID
@@ -188,7 +190,7 @@ func (s *server) value() (*value, error) {
 		v.Changes = append(v.Changes, pc)
 	}
 	for _, cy := range c.Cycles {
-		pc := pageCycle{ID: cy.ID, Title: cy.Meta.Title, Goal: cy.Meta.Goal, Path: cy.Path, Planned: cy.Meta.Planned,
+		pc := pageCycle{ID: cy.ID, Title: cy.Meta.Title, Goal: cy.Meta.Goal, Created: cy.Meta.Created, Path: cy.Path, Planned: cy.Meta.Planned,
 			DependsOn: cy.Meta.DependsOn, NeedsHuman: cy.Meta.NeedsHuman, Unattended: cy.Meta.Unattended, Done: cy.Done}
 		ordered, waiting := buildable(c, c, cy)
 		for _, ch := range slices.Concat(ordered, waiting) {
