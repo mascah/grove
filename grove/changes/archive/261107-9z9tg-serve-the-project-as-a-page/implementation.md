@@ -101,7 +101,4 @@ Also changed: `internal/cli/walkthrough_test.go` — `TestServe` checks the walk
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- serve: applied to specs/serve/spec.md, a new maintained spec
