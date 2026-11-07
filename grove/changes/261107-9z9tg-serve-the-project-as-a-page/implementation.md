@@ -49,23 +49,53 @@ in the pane, its relative link to the spec opened in the pane, and after a
 refresh the pane held the same document at the same scroll position, as
 did the main column; the draft's proposal showed no `<script>`; unchecking
 the box stopped the refresh. On Grove's own repository: no error, 0 open
-cycles, 1 row (this branch), 12 specs.
+cycles, 1 row (this branch), 12 specs. `serve.go` now also gives each
+change its `files` and each cycle its `created`, which the pane and the
+timeline read.
 
 Check: open the page on a project you know and judge how each view reads, in light and dark mode; how it looks is a person's call, and the fixture's run shows only that it works.
 
-Also changed: `internal/cli/serve.go` — the value gives each change its `files` and each cycle its `created`, which the pane and the timeline need.
-
 ### T-03 — Documentation
 
-Status: not started
+Status: done
+
+`docs/watching.md`, "Watching the project", explains starting the server
+and each view and the pane in plain words and links the serve spec;
+`mkdocs.yml` puts it after "Running unattended". `docs/reference.md`'s
+"Terminal commands" has rows for `grove serve` and `grove serve --addr`.
+`dev/walkthrough.md` has a "Watching the project" section whose four steps
+build the fixture's states and say what each view shows; `TestServe`
+follows it. `uvx zensical==0.0.71 build`, as the docs workflow runs it: no
+issues.
+
+Also changed: `docs/index.md` — its list of pages gains "Watching the project".
+Also changed: `internal/cli/walkthrough_test.go` — `TestServe` checks the walkthrough step's refusal of an address that is not loopback, and of a request for another host.
 
 ## Scenarios
 
-<!-- Before finishing, one line per scenario of the change specs: the check
-that shows it and its result, or `unverified` and why:
-
-    - record-editing "Update the note on a legacy record": tests/test_cli.py test_edit_legacy, passed
--->
+- serve "The default address": `internal/cli/walkthrough_test.go` TestServe, passed
+- serve "An address given": TestServe, with `--addr 127.0.0.1:0` rather than 8080 so the test takes a free port, passed
+- serve "The address is taken": TestServe, passed
+- serve "An approved change in no cycle": TestServe, passed
+- serve "A marked cycle that is fresh": TestServe, passed
+- serve "A member needs a person": TestServe, passed
+- serve "A member changed since the plan": TestServe, passed
+- serve "A branch squash-merged and overtaken": TestServe, passed
+- serve "A build in progress": TestServe, passed
+- serve "A draft": TestServe, passed
+- serve "The working tree": TestServe, passed
+- serve "A teammate's branch": TestServe, passed
+- serve "A pushed branch": TestServe, passed
+- serve "A timed-out attempt": TestServe, passed
+- serve "A change's life": TestServe, passed
+- serve "A commit outside the record": TestServe, passed
+- serve "A proposal at the target": TestServe, passed
+- serve "A cycle file": TestServe, passed
+- serve "A document on a branch": TestServe, passed
+- serve "Raw HTML in a document": TestServe, passed
+- serve "A path outside the root": TestServe, passed
+- serve "Readiness at a glance": unverified by a test, since rule 17 keeps browser harnesses out; driven by hand in headless Chrome on the fixture, where K read "grove run would build it" and L named C as needing a person (the count was 3, the fixture also holding stale cycle M); how it reads is T-02's checkpoint
+- serve "A refresh while reading": unverified by a test, as above; in headless Chrome the pane kept the document and both columns their scroll positions across a refresh
 
 ## Reconciliation
 

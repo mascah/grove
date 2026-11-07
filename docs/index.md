@@ -58,6 +58,8 @@ session. `grove run` is the only command that starts an agent.
   a person, and mark a cycle for `grove run`.
 - [Running unattended](running.md): `grove run` builds a cycle you
   marked in one Claude Code session, on its own or from a timer.
+- [Watching the project](watching.md): `grove serve` shows what is ready,
+  what is being built and what happened, on one page in your browser.
 - Guides: recipes others have tried, such as
   [pushing changes to a tracker](guides/push-to-a-tracker.md),
   [running Grove in CI](guides/run-grove-in-ci.md),

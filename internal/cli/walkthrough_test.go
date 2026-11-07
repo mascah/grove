@@ -1774,12 +1774,20 @@ func TestServe(t *testing.T) {
 	if url, stopped := serving(t); url != "" || !strings.Contains(<-stopped, "address already in use") {
 		t.Errorf("a second grove serve printed %q", url)
 	}
+	if url, stopped := serving(t, "--addr", "0.0.0.0:0"); url != "" || !strings.Contains(<-stopped, "--addr must be a loopback address") {
+		t.Errorf("grove serve on every address printed %q", url)
+	}
 	url, _ := serving(t, "--addr", "127.0.0.1:0")
 	url = strings.TrimSpace(url)
 	if !regexp.MustCompile(`^http://127\.0\.0\.1:[0-9]+/$`).MatchString(url) {
 		t.Fatalf("grove serve --addr printed %q", url)
 	}
 
+	req, _ := http.NewRequest("GET", url+"api/project", nil)
+	req.Host = "rebound.example:7070" // a name a site pointed at loopback
+	if res, err := http.DefaultClient.Do(req); err != nil || res.StatusCode != 403 {
+		t.Errorf("a request for another host answered %v, %v", res, err)
+	}
 	_, body := get(t, url+"api/project")
 	var v value
 	if err := json.Unmarshal([]byte(body), &v); err != nil {

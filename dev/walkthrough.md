@@ -509,6 +509,68 @@ Each step names the section of
    `grove/run-<attempt>` into `main`: `grove run` says there is nothing to
    apply.
 
+## Watching the project
+
+Each step names the section of [Watching the project](../docs/watching.md)
+it tests. Open the page in a browser, once in light mode and once in dark;
+the browser's console shows no error.
+
+1. **Start it** ("Start it"). `just fixture ~/tmp/ledger-watch`,
+   `grove init`, commit, and add a bare clone as `origin`. `grove serve`:
+   > http://127.0.0.1:7070/
+
+   The page opens at that address. `grove serve` in a second shell says
+   the address is already in use and exits non-zero;
+   `grove serve --addr 0.0.0.0:7070` says the address must be loopback;
+   `grove serve --addr 127.0.0.1:8080` prints that address and serves the
+   page there. Stop the extra ones with Ctrl-C.
+
+2. **The record** ("Readiness", "History"). In `~/tmp/ledger-watch`, as
+   coordinating step 1 does, approve unknown-ID (A), delete (B, with
+   `depends_on: [A]` and tasks T-01 and T-02), export (C), budgets (D),
+   show-saved (F) and import (E, with `depends_on: [F]`), each merged.
+   Revise F's proposal on `main`. On `apply/f`, write F's
+   `implementation.md` with every task done and edit the record-editing
+   maintained spec; squash-merge it into `main`. Plan F as a cycle of one
+   (N), archive F on `main`, then edit the spec again. Plan A and B as
+   cycle K and mark it `unattended`; plan C as cycle L with C under
+   `needs_human`; plan D as cycle M, marked, then revise D's proposal on
+   `main`. Commit a change to `ledger/records.py` alone, and push `main`.
+
+   Readiness counts 3 and shows K as one `grove run` would build, A then
+   B; L naming C as needing a person; M stale, naming D. E is under
+   "Approved, in no cycle", ready; N is under "Done". The problems name
+   M's stale plan. History lists, newest first, the commits that archived
+   F, planned N, built F (revised F, spec record-editing), revised F and
+   approved F, and none for the `ledger/records.py` commit.
+
+3. **Work in progress** ("In progress"). On `build-b` from `main`, write
+   B's `implementation.md` with T-01 `Status: done` and T-02
+   `Status: blocked`, commit and push it. On `teammate` from `main`, write
+   it with T-01 `Status: to check`, commit, push, and delete the local
+   branch. On `draft-notes`, propose a change G whose proposal holds a
+   `<script>` element, and commit it. Back on `main`, write C's
+   `implementation.md` and leave it uncommitted. Write
+   `.git/grove/261105-r0000.json` as `grove run` would, with outcome
+   `timed out` for K.
+
+   Within 10 seconds, In progress counts 4: the working tree with C in
+   progress, `build-b` "on origin too" with B 1 of 2 tasks done and T-02
+   blocked, `draft-notes` with G a draft and its documents new there, and
+   `origin/teammate` "only on origin" with T-01 to check. No row names
+   `apply/f`. The runs list the timed-out attempt with its cycle, times
+   and branch.
+
+4. **The pane** ("The pane", "Graph", "Specs"). Click B: the pane shows
+   its proposal rendered, with a button for each file on `main` and for
+   its `implementation.md` on `build-b` and on `origin/teammate`. Click
+   K: its YAML as text. Click G's `proposal.md` in In progress: it shows
+   that branch's version, with no script run. A link to the spec opens it
+   in the pane. Scroll the pane and the list, and wait 10 seconds: both
+   stay where they were. Uncheck "every 10 s": the read time stops
+   changing. The graph draws K, L and M as bands, an arrow from A to B,
+   and E below them; Specs lists record-editing.
+
 ## Other paths
 
 - **Propose from a description** (§3). On a new branch, with no exploration,
