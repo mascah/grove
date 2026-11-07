@@ -38,38 +38,48 @@ func check(stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := stale(p, root, c); err != nil {
+	found, err := diagnose(p, root, c)
+	if err != nil {
 		return err
 	}
-	if err := stalePlans(p, c); err != nil {
-		return err
+	for _, f := range found {
+		fmt.Fprintln(stdout, f)
 	}
-	if err := movedSinceBase(p, c); err != nil {
-		return err
-	}
-	shapes(root, c)
-	docs := append([]*doc.Document{}, c.Specs...)
-	for _, ch := range c.Changes {
-		docs = append(docs, &ch.Document)
-	}
-	for _, cy := range c.Cycles {
-		docs = append(docs, &cy.Document)
-	}
-	for _, diag := range c.Diagnostics {
-		fmt.Fprintf(stdout, "%s/%s\n", p.Root, diag)
-	}
-	n := len(unknown) + len(c.Diagnostics)
-	for _, d := range docs {
-		for _, diag := range d.Diagnostics {
-			fmt.Fprintf(stdout, "%s/%s\n", p.Root, diag)
-			n++
-		}
-	}
-	if n > 0 {
+	if n := len(unknown) + len(found); n > 0 {
 		return fmt.Errorf("%s found", plural(n, "problem"))
 	}
 	fmt.Fprintf(stdout, "No problems in %s/.\n", p.Root)
 	return nil
+}
+
+// diagnose returns every problem in c, the documents in root, each from
+// the project's top.
+func diagnose(p project, root fs.FS, c *doc.Collection) ([]string, error) {
+	if err := stale(p, root, c); err != nil {
+		return nil, err
+	}
+	if err := stalePlans(p, c); err != nil {
+		return nil, err
+	}
+	if err := movedSinceBase(p, c); err != nil {
+		return nil, err
+	}
+	shapes(root, c)
+	diags := slices.Clone(c.Diagnostics)
+	for _, d := range c.Specs {
+		diags = append(diags, d.Diagnostics...)
+	}
+	for _, ch := range c.Changes {
+		diags = append(diags, ch.Diagnostics...)
+	}
+	for _, cy := range c.Cycles {
+		diags = append(diags, cy.Diagnostics...)
+	}
+	var out []string
+	for _, d := range diags {
+		out = append(out, p.Root+"/"+d.String())
+	}
+	return out, nil
 }
 
 // stale reports each requirement a change in c modifies or removes that the
