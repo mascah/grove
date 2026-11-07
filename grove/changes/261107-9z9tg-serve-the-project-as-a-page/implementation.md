@@ -8,7 +8,7 @@ write "Status: dropped" here with their reason. -->
 
 ### T-01 — `grove serve` and the project value
 
-Status: to check
+Status: done
 
 `internal/cli/serve.go` listens on `--addr` (default `127.0.0.1:7070`),
 prints the URL and answers `/`, `/api/project` and `/api/doc`. The value's
@@ -24,6 +24,7 @@ every state the spec names and checks the value and documents: passed.
 repository: 0 branch rows, first request 0.9 s, then 0.1 s.
 
 Check: two refusals the spec does not name, built from rule 7's "on loopback": `--addr` with a host that is not loopback is refused ("--addr must be a loopback address and port, such as 127.0.0.1:7070"), and a request whose Host header is not a loopback name gets 403, so a site the browser visits cannot read the project through a DNS name it points at 127.0.0.1. Keep both, or drop either?
+Answer: "Keep both (Recommended)"
 
 Also changed: `internal/cli/check.go` — `check`'s problem-gathering moved into `diagnose`, which the value uses for the problems `grove check` would report on the target.
 Also changed: `internal/cli/run.go` — `latest` now reads through `attempts`, which the value uses for the recorded runs, newest first.
@@ -32,7 +33,7 @@ Also changed: `go.mod` — goldmark moves from an indirect to a direct dependenc
 
 ### T-02 — The page
 
-Status: to check
+Status: done
 
 `internal/cli/page.html`, 408 lines of HTML and script with no external
 resource, built from the prototype's page on the product's field names:
@@ -54,6 +55,7 @@ change its `files` and each cycle its `created`, which the pane and the
 timeline read.
 
 Check: open the page on a project you know and judge how each view reads, in light and dark mode; how it looks is a person's call, and the fixture's run shows only that it works.
+Answer: "Looks good"
 
 ### T-03 — Documentation
 
