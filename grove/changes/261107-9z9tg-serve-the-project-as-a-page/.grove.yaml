@@ -1,0 +1,5 @@
+title: "Serve the project's state as a local page"
+created: 2026-11-07T21:23:53Z
+description: "grove serve shows readiness, work in progress, the graph, history and documents in a browser, read from the checkout"
+schema: default
+base: e89dd0d9f0e29a5552a3dbc6a695de785e9ff7ae
