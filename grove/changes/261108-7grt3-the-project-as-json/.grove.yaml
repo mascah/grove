@@ -1,0 +1,6 @@
+title: "The project as JSON"
+created: 2026-11-08T18:41:39Z
+description: grove changes --json prints the whole project value serve computes, so a tracker projection is a script.
+schema: default
+depends_on: [261108-jpg8n]
+base: 81745945d291e7ab6e116c5a26cd3e37a3892577
