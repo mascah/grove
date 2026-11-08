@@ -10,7 +10,8 @@ to read it beside the list.
 The page reads the target branch, this checkout's branches, the working
 tree and `.git/grove/`. It writes nothing, fetches nothing from `origin`
 and starts no agent, so what it shows is what this checkout has: `git
-fetch` first to see your teammates' latest branches. The
+fetch` first to see your teammates' latest branches, and pull the target
+branch to see what was merged into it. The
 [serve spec](https://github.com/mascah/grove/blob/main/grove/specs/serve/spec.md)
 has the exact rules.
 
@@ -70,7 +71,8 @@ Grove looks at the branches not merged into the target and counts a file
 only when the target's history never held that version of it. A branch
 squash-merged into the target holds nothing the target never held, so it
 is left out, however much the target has moved since.
-A branch you pushed shows once, saying origin has it too; a teammate's
+A branch you pushed shows once, saying origin has it too, while origin
+holds the same commit; a teammate's
 branch you fetched but never checked out shows as `origin/<name>`, only
 on origin. Newest first.
 
@@ -90,9 +92,8 @@ cycles" to see the past as well.
 ## History
 
 A timeline with one row for each cycle not done and each change open, and
-below it each
-commit on the target's first-parent history that did something to the
-record, newest first, with what it did:
+below it the newest 200 commits on the target's first-parent history that
+did something to the record, newest first, with what it did:
 
 - **approved**: added a change;
 - **revised**: changed one of an approved change's files, such as its
@@ -113,5 +114,7 @@ Clicking a change, cycle or spec opens it in the pane on the right. A
 change shows its proposal and a button for each of its files on the
 target, and for its files new on each branch. Markdown is rendered and a
 cycle's YAML shown as text. A link from one document to another under the
-root opens in the pane. A refresh keeps the document you are reading, and
-where you scrolled to, in both columns.
+root opens in the pane, and a link to a change's folder opens its
+proposal. A refresh keeps the document you are reading as it was loaded,
+and where you scrolled to, in both columns; click it again to read its
+latest version.

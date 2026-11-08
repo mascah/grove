@@ -350,9 +350,9 @@ async function showDoc(ref, path) {
       // A relative link to another document under the root opens in this pane.
       for (const a of docEl.querySelectorAll('a[href]')) if (!/^[a-z]+:|^#/i.test(a.getAttribute('href'))) a.onclick = e => {
         e.preventDefault();
-        const parts = path.split('/').slice(0, -1);
-        for (const seg of a.getAttribute('href').split('#')[0].split('/')) seg === '..' ? parts.pop() : seg && seg !== '.' && parts.push(seg);
-        showDoc(ref, parts.join('/'));
+        const parts = path.split('/').slice(0, -1), href = a.getAttribute('href').split('#')[0];
+        for (const seg of href.split('/')) seg === '..' ? parts.pop() : seg && seg !== '.' && parts.push(seg);
+        showDoc(ref, parts.join('/') + (href.endsWith('/') ? '/proposal.md' : '')); // a folder link names a change
       };
     } else docEl = h('pre', {}, r.ok ? body : 'error: ' + body);
   } catch (e) {
