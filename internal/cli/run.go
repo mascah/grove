@@ -435,20 +435,28 @@ func (a attempt) save(dir string) error {
 
 // latest returns the most recently started attempt in dir, or an empty one.
 func latest(dir string) (attempt, error) {
-	var last attempt
+	all, err := attempts(dir)
+	if len(all) == 0 {
+		return attempt{}, err
+	}
+	return all[0], err
+}
+
+// attempts returns the attempts recorded in dir, newest first.
+func attempts(dir string) ([]attempt, error) {
+	var out []attempt
 	names, err := filepath.Glob(filepath.Join(dir, "*.json"))
 	for _, name := range names {
 		b, err := os.ReadFile(name)
 		if err != nil {
-			return last, err
+			return out, err
 		}
 		var a attempt
 		if err := json.Unmarshal(b, &a); err != nil {
-			return last, fmt.Errorf("%s: %w", name, err)
+			return out, fmt.Errorf("%s: %w", name, err)
 		}
-		if a.Started.After(last.Started) {
-			last = a
-		}
+		out = append(out, a)
 	}
-	return last, err
+	slices.SortFunc(out, func(a, b attempt) int { return b.Started.Compare(a.Started) })
+	return out, err
 }

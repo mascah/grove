@@ -16,6 +16,8 @@
 | `grove run <cycle-id>` | As `grove run`, but builds the cycle given, marked or not, and says why when it cannot. See [Running unattended](running.md), "Run a cycle you name". |
 | `grove run --retry` | Starts a new attempt even though the latest one's cycle is not archived. |
 | `grove run --timeout <duration>` | Stops the session after `<duration>`, such as `30m` or `1h30m`, rather than 2 hours. Goes with `--retry`. |
+| `grove serve` | Serves a page showing where the project stands, at `http://127.0.0.1:7070/`, until you press Ctrl-C: what `grove run` would do with each cycle, the branches and working tree holding work the target lacks, the runs recorded in this checkout, the dependency graph, the target's history of the record and the maintained specs, each document readable in a side pane. It reads Git and files, and writes and fetches nothing. See [Watching the project](watching.md). ([serve spec](https://github.com/mascah/grove/blob/main/grove/specs/serve/spec.md)) |
+| `grove serve --addr <host:port>` | Serves on another loopback address, such as `127.0.0.1:8080`. |
 | `grove version` | Prints the version of Grove, such as `grove 0.1.0`. A build from a checkout prints a Go pseudo-version naming its commit, and `dev` when Go recorded none. |
 
 Skills run these; you do not need to:

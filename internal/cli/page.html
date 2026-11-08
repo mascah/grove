@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grove</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --bg:#fff; --fg:#1a1a1a; --mut:#6e6e6e; --line:#e4e4e4; --card:#fbfbfb; --pane:#f6f6f6; --ok:#1e7f3c; --warn:#b35c00; --bad:#b00020; --info:#1f5fbf; --sel:#fff3c4;
+          --mono: ui-monospace, "SF Mono", Menlo, monospace; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141414; --fg:#e6e6e6; --mut:#9a9a9a; --line:#2e2e2e; --card:#1b1b1b; --pane:#181818; --ok:#5fcf7f; --warn:#f0a040; --bad:#ff6b6b; --info:#7fb0ff; --sel:#4a3d10; } }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin:0; font: 14px/1.45 system-ui, -apple-system, sans-serif; color:var(--fg); background:var(--bg); display:flex; flex-direction:column; }
+  header { display:flex; gap:14px; align-items:baseline; padding:10px 20px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header .brand { font-weight:700; letter-spacing:.02em; }
+  header .right { margin-left:auto; display:flex; gap:10px; align-items:center; }
+  .mut { color:var(--mut); } .mono { font-family: var(--mono); font-size: 12.5px; }
+  button { font:inherit; padding:4px 10px; border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:6px; cursor:pointer; }
+  button:hover { border-color: var(--mut); }
+  nav { display:flex; gap:2px; padding:0 20px; border-bottom:1px solid var(--line); overflow-x:auto; }
+  nav button { border:0; border-bottom:2px solid transparent; border-radius:0; background:none; padding:8px 12px; color:var(--mut); margin-bottom:-1px; white-space:nowrap; }
+  nav button:hover { color:var(--fg); } nav button.on { color:var(--fg); border-bottom-color: var(--fg); }
+  nav button b { font-weight:600; font-size:12px; margin-left:5px; padding:0 6px; border-radius:9px; background:var(--pane); color:var(--mut); }
+  nav button.on b { background:var(--fg); color:var(--bg); }
+  .wrap { display:grid; grid-template-columns: minmax(0,1fr) 500px; flex:1; min-height:0; }
+  main { padding:14px 20px 40px; overflow:auto; }
+  aside { border-left:1px solid var(--line); background:var(--pane); overflow:auto; display:flex; flex-direction:column; }
+  @media (max-width: 1000px) { .wrap { grid-template-columns: 1fr; } aside { border-left:0; border-top:1px solid var(--line); max-height:50vh; } }
+  section { display:none; } section.on { display:block; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin:22px 0 8px; font-weight:600; }
+  h2:first-child { margin-top:4px; }
+  h3 { margin:0; font-size:15px; font-weight:600; }
+  .card { border:1px solid var(--line); border-left-width:3px; background:var(--card); border-radius:8px; padding:12px 14px; margin:0 0 10px; overflow-x:auto; }
+  .card.ok { border-left-color: var(--ok); } .card.warn { border-left-color: var(--warn); } .card.info { border-left-color: var(--info); } .card.mut { border-left-color: var(--line); }
+  .head { display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }
+  .sub { color:var(--mut); font-size:13px; margin-top:2px; }
+  .verdict { margin:8px 0 6px; display:flex; gap:8px; align-items:baseline; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--mut); flex:none; position:relative; top:-1px; }
+  .dot.ok { background:var(--ok); } .dot.warn { background:var(--warn); } .dot.bad { background:var(--bad); }
+  .id { font-family: var(--mono); font-size:12.5px; cursor:pointer; color:var(--fg); border-bottom:1px dotted var(--mut); }
+  .id:hover { border-bottom-style: solid; } .id.sel { background:var(--sel); }
+  .chip { display:inline-block; font-size:11.5px; line-height:1.5; padding:0 7px; border-radius:10px; background: color-mix(in srgb, var(--mut) 12%, transparent); color:var(--mut); white-space:nowrap; vertical-align:middle; }
+  .chip.ok { color:var(--ok); background: color-mix(in srgb, var(--ok) 13%, transparent); } .chip.warn { color:var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+  .chip.bad { color:var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); } .chip.info { color:var(--info); background: color-mix(in srgb, var(--info) 13%, transparent); }
+  table { border-collapse: collapse; width:100%; }
+  th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); font-weight:600; padding:6px 10px 4px 0; border-bottom:1px solid var(--line); }
+  td { padding:5px 10px 5px 0; vertical-align:top; border-bottom:1px solid var(--line); }
+  tr:last-child td { border-bottom:0; } td.n, th.n { white-space:nowrap; }
+  .card table { margin-top:6px; }
+  .empty { color:var(--mut); margin:4px 0 8px; }
+  .change { display:grid; grid-template-columns: minmax(0,1fr) 180px; gap:4px 16px; padding:8px 0; border-top:1px solid var(--line); }
+  .change:first-of-type { border-top:0; }
+  .change .tasks { grid-column:1 / -1; display:flex; gap:4px; flex-wrap:wrap; align-items:center; }
+  .change .files { grid-column:1 / -1; font-size:13px; color:var(--mut); }
+  .change .files .id { margin-right:8px; }
+  .bar { height:6px; border-radius:3px; background: color-mix(in srgb, var(--mut) 18%, transparent); overflow:hidden; margin-top:6px; }
+  .bar i { display:block; height:100%; background:var(--ok); }
+  .bar.blocked i { background:var(--bad); }
+  .pct { font-size:12px; color:var(--mut); text-align:right; }
+  label { color:var(--mut); font-size:13px; cursor:pointer; } label input { vertical-align:-2px; }
+  pre { white-space:pre-wrap; font: 12.5px/1.5 var(--mono); margin:0; padding:14px 16px 40px; flex:1; }
+  .doc { padding:6px 20px 48px; font-size:14px; line-height:1.55; max-width:72ch; overflow-wrap:anywhere; }
+  .doc h1 { font-size:20px; margin:18px 0 8px; } .doc h2 { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--mut); margin:24px 0 8px; padding-top:12px; border-top:1px solid var(--line); }
+  .doc h3 { font-size:15px; margin:18px 0 6px; } .doc h4 { font-size:14px; margin:14px 0 4px; color:var(--mut); }
+  .doc p, .doc ul, .doc ol { margin:0 0 10px; } .doc li { margin:2px 0; } .doc ul, .doc ol { padding-left:22px; }
+  .doc code { font: 12.5px var(--mono); background: color-mix(in srgb, var(--mut) 14%, transparent); padding:1px 4px; border-radius:4px; }
+  .doc pre { padding:10px 12px; margin:0 0 12px; background: color-mix(in srgb, var(--mut) 10%, transparent); border-radius:6px; flex:none; } .doc pre code { background:none; padding:0; }
+  .doc table { margin:0 0 12px; width:auto; } .doc th, .doc td { padding:4px 12px 4px 0; }
+  .doc blockquote { margin:0 0 10px; padding:0 0 0 12px; border-left:3px solid var(--line); color:var(--mut); }
+  .doc a { color:var(--info); }
+  aside .top { padding:12px 16px 10px; border-bottom:1px solid var(--line); background:var(--pane); position:sticky; top:0; }
+  aside .close { margin-left:auto; padding:0 7px; line-height:1.4; }
+  aside .desc { margin-top:6px; font-size:13px; }
+  .files-tabs { display:flex; gap:4px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+  .files-tabs .lbl { font-size:11.5px; color:var(--mut); width:100%; margin-top:6px; }
+  .files-tabs button { font-size:12px; padding:2px 8px; font-family: var(--mono); }
+  .files-tabs button.on { background:var(--fg); color:var(--bg); border-color:var(--fg); }
+  .legend { display:flex; gap:14px; flex-wrap:wrap; color:var(--mut); font-size:12.5px; margin:8px 0; align-items:center; }
+  .legend .sw { display:inline-block; width:14px; height:10px; border:1.5px solid; border-radius:3px; vertical-align:-1px; margin-right:5px; background:var(--card); }
+  svg text { font: 11px system-ui, sans-serif; fill: var(--fg); }
+  svg .node rect { fill: var(--card); stroke: var(--mut); rx: 6; } svg .node.ready rect { stroke: var(--ok); stroke-width:2; }
+  svg .node.waits rect { stroke: var(--warn); stroke-width:2; } svg .node.archived rect, svg .node.dropped rect { stroke: var(--line); } svg .node.archived text { fill: var(--mut); }
+  svg .node.dropped text { text-decoration: line-through; fill: var(--mut); } svg .node.sel rect { fill: var(--sel); }
+  svg .node.wip rect { stroke-dasharray: 4 2; stroke: var(--info); stroke-width:2; }
+  svg .edge { fill:none; stroke: var(--mut); stroke-width:1.2; } svg .cedge { fill:none; stroke: var(--info); stroke-dasharray: 6 4; }
+  svg .box { fill: var(--info); fill-opacity: .05; stroke: var(--info); stroke-opacity:.4; rx: 10; } svg .box.done { stroke: var(--line); fill-opacity:.02; }
+  svg .tick { stroke: var(--line); } svg .today { stroke: var(--bad); stroke-dasharray: 3 3; }
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">grove</span>
+  <strong id="proj">loading</strong>
+  <span class="mut" id="at"></span>
+  <span class="right"><button id="refresh">Refresh</button><label><input type="checkbox" id="auto" checked> every 10 s</label></span>
+</header>
+<nav>
+  <button data-tab="ready" class="on">Readiness<b id="n-ready"></b></button>
+  <button data-tab="progress">In progress<b id="n-progress"></b></button>
+  <button data-tab="graph">Graph</button>
+  <button data-tab="history">History</button>
+  <button data-tab="specs">Specs<b id="n-specs"></b></button>
+</nav>
+<div class="wrap">
+  <main>
+    <section id="ready" class="on"></section>
+    <section id="progress"></section>
+    <section id="graph"></section>
+    <section id="history"></section>
+    <section id="specs"></section>
+  </main>
+  <aside id="docs"></aside>
+</div>
+<script>
+'use strict';
+let D = null, sel = null, selKind = 'change', showArchived = false, docRef = '', docPath = '';
+const $ = s => document.querySelector(s);
+function h(tag, attrs, ...kids) {
+  const el = tag.startsWith('svg:') ? document.createElementNS('http://www.w3.org/2000/svg', tag.slice(4)) : document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === 'class') el.setAttribute('class', v); else if (k.startsWith('on')) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat(Infinity)) if (kid != null && kid !== false) el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  return el;
+}
+const L = a => a || []; // the value leaves an empty list out
+const chip = (text, cls) => h('span', { class: 'chip ' + (cls || '') }, text);
+const dot = cls => h('span', { class: 'dot ' + (cls || '') });
+const idLink = (id, kind) => h('span', { class: 'id' + (sel === id ? ' sel' : ''), onclick: () => select(id, kind || 'change') }, id);
+const byId = () => Object.fromEntries(D.changes.map(c => [c.id, c]));
+const day = s => s ? s.slice(0, 10) : '';
+function ago(s) {
+  const d = Math.round((Date.now() - new Date(s)) / 864e5);
+  return isNaN(d) ? '' : d <= 0 ? 'today' : d === 1 ? 'yesterday' : d < 14 ? d + ' days ago' : d < 60 ? Math.round(d / 7) + ' weeks ago' : Math.round(d / 30) + ' months ago';
+}
+const kind = c => c.draft ? 'draft' : 'in progress';
+const wip = id => D.branches.filter(b => b.changes.some(c => c.id === id));
+const taskCls = t => t.status === 'done' ? 'ok' : t.status === 'blocked' ? 'bad' : t.status ? 'warn' : '';
+const taskChip = t => chip(t.id + ' ' + (t.status || 'not started'), taskCls(t));
+const cycleCls = cy => cy.done ? 'mut' : cy.runs ? 'ok' : 'warn';
+function status(c, cy) {
+  if (!c) return chip('missing', 'bad');
+  if (c.state !== 'approved') return chip(c.state);
+  if (cy && L(cy.stale).includes(c.id)) return chip('stale', 'warn');
+  if (L(c.waits_on).length) return chip('waits on ' + c.waits_on.join(', '), 'warn');
+  return chip('ready', 'ok');
+}
+const where = id => wip(id).map(b => [chip(kind(b.changes.find(x => x.id === id)) + ' on ' + b.name, 'info'), ' ']);
+
+async function load() {
+  const r = await fetch('/api/project');
+  if (!r.ok) { $('#proj').textContent = 'error: ' + await r.text(); return; }
+  D = await r.json();
+  for (const k of ['specs', 'changes', 'cycles', 'branches', 'runs', 'history', 'problems']) D[k] = L(D[k]);
+  render();
+}
+function render() {
+  $('#proj').replaceChildren(D.root + '/ ', h('span', { class: 'mono mut' }, D.target + ' @ ' + D.commit.slice(0, 7)));
+  $('#at').textContent = 'read at ' + new Date(D.read).toLocaleTimeString();
+  $('#n-ready').textContent = D.cycles.filter(c => !c.done).length;
+  $('#n-progress').textContent = D.branches.length;
+  $('#n-specs').textContent = D.specs.length;
+  const m = $('main'), a = $('aside'), ms = m.scrollTop, as = a.scrollTop;
+  readiness(); progress(); graph(); historyTab(); specs(); docs();
+  m.scrollTop = ms; a.scrollTop = as; // a refresh rebuilds every section; the reader stays where they were
+}
+
+function memberRows(ids, cy) {
+  const all = byId(), needs = (cy && cy.needs_human) || {};
+  return h('table', {}, h('tr', {}, h('th', { class: 'n' }, 'change'), h('th', {}, 'title'), h('th', {}, 'status'), h('th', {}, 'being built')),
+    ids.map(id => { const c = all[id]; return h('tr', {}, h('td', { class: 'n' }, idLink(id)), h('td', {}, c ? c.title : h('span', { class: 'mut' }, 'not on ' + D.target)),
+      h('td', { class: 'n' }, status(c, cy), id in needs ? [' ', chip('needs a person', 'warn')] : null),
+      h('td', {}, where(id), id in needs ? h('div', { class: 'mut', style: 'font-size:12.5px' }, needs[id]) : null)); }));
+}
+function readiness() {
+  const s = $('#ready'); s.replaceChildren();
+  const open = D.cycles.filter(c => !c.done), done = D.cycles.filter(c => c.done);
+  s.append(h('h2', {}, 'What grove run would do'));
+  if (!open.length) s.append(h('p', { class: 'empty' }, 'No cycle is open. Plan one with /grove-plan.'));
+  for (const cy of open) {
+    const cls = cycleCls(cy);
+    s.append(h('div', { class: 'card ' + cls },
+      h('div', { class: 'head' }, h('h3', {}, cy.title), idLink(cy.id, 'cycle'), cy.unattended ? chip('unattended', 'info') : null, L(cy.depends_on).length ? chip('follows ' + cy.depends_on.join(', ')) : null,
+        h('span', { class: 'mut', style: 'margin-left:auto; font-size:12.5px' }, 'created ' + ago(cy.created))),
+      cy.goal ? h('div', { class: 'sub' }, cy.goal) : null,
+      h('div', { class: 'verdict' }, dot(cls), h('span', {}, cy.verdict)),
+      memberRows(L(cy.changes), cy),
+      L(cy.archived).length ? h('div', { class: 'sub', style: 'margin-top:8px' }, 'archived: ', cy.archived.map(id => [idLink(id), ' '])) : null));
+  }
+  const loose = D.changes.filter(c => c.state === 'approved' && !c.cycle);
+  s.append(h('h2', {}, 'Approved, in no cycle'));
+  s.append(loose.length ? h('div', { class: 'card mut' }, memberRows(loose.map(c => c.id))) : h('p', { class: 'empty' }, 'Every approved change is in a cycle.'));
+  if (done.length) s.append(h('h2', {}, 'Done'), h('div', { class: 'sub' }, done.map(c => h('div', {}, idLink(c.id, 'cycle'), ' ' + c.title + ' · ' + L(c.archived).length + ' changes'))));
+  if (D.problems.length) s.append(h('h2', {}, 'Problems grove check reports on ' + D.target), h('ul', {}, D.problems.map(p => h('li', {}, p))));
+}
+
+function branchCard(b) {
+  return h('div', { class: 'card ' + (b.changes.some(c => c.draft) ? 'warn' : 'info') },
+    h('div', { class: 'head' }, h('h3', { class: 'mono', style: 'font-size:14px' }, b.name),
+      b.tip === 'worktree' ? chip('uncommitted', 'warn') : b.origin_only ? chip('only on origin', 'info') : b.pushed ? chip('on origin too') : chip('not pushed'),
+      h('span', { class: 'mut', style: 'margin-left:auto; font-size:12.5px' }, ago(b.date))),
+    b.tip === 'worktree' ? null : h('div', { class: 'sub' }, b.subject, ' ', h('span', { class: 'mono' }, b.tip.slice(0, 7))),
+    h('div', { style: 'margin-top:8px' }, b.changes.map(c => {
+      const tasks = L(c.tasks), done = tasks.filter(t => t.status === 'done').length, blocked = tasks.some(t => t.status === 'blocked');
+      return h('div', { class: 'change' },
+        h('div', {}, idLink(c.id), ' ', c.title, ' ', chip(kind(c), c.draft ? 'warn' : 'info')),
+        tasks.length ? h('div', {}, h('div', { class: 'pct' }, done + ' of ' + tasks.length + ' tasks done'), h('div', { class: 'bar' + (blocked ? ' blocked' : '') }, h('i', { style: 'width:' + Math.round(100 * done / tasks.length) + '%' }))) : h('div', { class: 'pct' }, 'no tasks'),
+        tasks.length ? h('div', { class: 'tasks' }, tasks.map(taskChip)) : null,
+        h('div', { class: 'files' }, 'new here: ', c.new.map(f => h('span', { class: 'id', onclick: () => { select(c.id, 'change'); showDoc(b.tip, f); } }, f.slice(c.dir.length + 1)))));
+    })));
+}
+function progress() {
+  const s = $('#progress'); s.replaceChildren();
+  const drafts = D.branches.filter(b => b.changes.some(c => c.draft)).length;
+  s.append(h('h2', {}, 'Work ' + D.target + ' does not have'));
+  if (!D.branches.length) s.append(h('p', { class: 'empty' }, 'Nothing is in progress: every branch holds only what ' + D.target + ' already has.'));
+  else s.append(h('p', { class: 'empty' }, D.branches.length + (D.branches.length === 1 ? ' branch holds' : ' branches hold') + ' work ' + D.target + ' does not have' + (drafts ? ', ' + drafts + ' of them a draft' : '') + '.'));
+  for (const b of D.branches) s.append(branchCard(b));
+  s.append(h('h2', {}, 'Runs recorded in this checkout'));
+  if (!D.runs.length) s.append(h('p', { class: 'empty' }, 'No run has been recorded in this checkout.'));
+  else s.append(h('div', { style: 'overflow-x:auto' }, h('table', {}, h('tr', {}, ['attempt', 'cycle', 'started', 'ended', 'outcome', 'branch'].map(x => h('th', {}, x))),
+    D.runs.map(r => h('tr', {}, h('td', { class: 'mono' }, r.id), h('td', {}, idLink(r.cycle, 'cycle')), h('td', { class: 'n' }, new Date(r.started).toLocaleString()), h('td', { class: 'n' }, r.ended ? new Date(r.ended).toLocaleString() : 'running'), h('td', {}, r.outcome ? chip(r.outcome, r.outcome === 'exit status 0' ? 'ok' : 'warn') : chip('running', 'info')), h('td', { class: 'mono' }, r.branch))))));
+}
+
+const archivedToggle = () => h('label', { style: 'margin-left:auto' }, h('input', { type: 'checkbox', ...(showArchived ? { checked: '' } : {}), onchange: e => { showArchived = e.target.checked; graph(); historyTab(); } }), ' show archived changes and done cycles');
+function graph() {
+  const s = $('#graph'); s.replaceChildren();
+  const sw = (style, label) => h('span', {}, h('i', { class: 'sw', style }), label);
+  s.append(h('div', { class: 'legend' }, sw('border-color:var(--ok)', 'ready'), sw('border-color:var(--warn)', 'waits'), sw('border-color:var(--info); border-style:dashed', 'on a branch'), sw('border-color:var(--line)', 'archived'),
+    h('span', {}, h('i', { class: 'sw', style: 'border-color:var(--info); opacity:.5; background: color-mix(in srgb, var(--info) 8%, transparent)' }), 'cycle'), h('span', {}, '→ depends on'), archivedToggle()));
+  const all = byId();
+  const nodes = D.changes.filter(c => showArchived || c.state === 'approved' || D.changes.some(d => d.state === 'approved' && L(d.depends_on).includes(c.id)));
+  if (!nodes.length) { s.append(h('p', { class: 'empty' }, 'No approved change to draw.')); return; }
+  const set = new Set(nodes.map(n => n.id));
+  const depth = {}, dep = id => depth[id] ??= Math.max(0, ...(L(all[id].depends_on).filter(d => set.has(d)).map(d => dep(d) + 1)));
+  nodes.forEach(n => dep(n.id));
+  // Each cycle is a horizontal band, so boxes never overlap; within a band,
+  // columns are dependency depth, so arrows still run left to right.
+  const shown = D.cycles.filter(cy => showArchived || !cy.done), cycleOf = {};
+  shown.forEach(cy => L(cy.changes).concat(L(cy.archived)).forEach(id => cycleOf[id] = cy.id));
+  const groups = shown.map(cy => ({ cy, nodes: nodes.filter(n => cycleOf[n.id] === cy.id) }));
+  groups.push({ cy: null, nodes: nodes.filter(n => !cycleOf[n.id]) });
+  const W = 230, H = 44, GX = 60, GY = 22, pos = {}, bands = [];
+  let yTop = 20;
+  for (const g of groups) {
+    if (!g.nodes.length) continue;
+    const cols = {}; g.nodes.forEach(n => (cols[depth[n.id]] ??= []).push(n));
+    let rows = 0;
+    for (const [l, ns] of Object.entries(cols)) {
+      ns.sort((a, b) => (a.created || '').localeCompare(b.created || ''));
+      ns.forEach((n, i) => pos[n.id] = { x: 30 + l * (W + GX), y: yTop + 26 + i * (H + GY) });
+      rows = Math.max(rows, ns.length);
+    }
+    const ls = Object.keys(cols).map(Number);
+    bands.push({ cy: g.cy, x0: 30 + Math.min(...ls) * (W + GX) - 12, x1: 30 + Math.max(...ls) * (W + GX) + W + 12, y0: yTop, y1: yTop + 26 + rows * (H + GY) - GY + 10 });
+    yTop = bands[bands.length - 1].y1 + 24;
+  }
+  const width = 60 + (Math.max(0, ...nodes.map(n => depth[n.id])) + 1) * (W + GX), height = yTop + 10;
+  const svg = h('svg:svg', { width, height, style: 'min-width:100%' },
+    h('svg:defs', {}, h('svg:marker', { id: 'arr', viewBox: '0 0 10 10', refX: 10, refY: 5, markerWidth: 8, markerHeight: 8, orient: 'auto-start-reverse' }, h('svg:path', { d: 'M0 0L10 5L0 10z', fill: 'var(--mut)' }))));
+  const boxes = {};
+  for (const b of bands) {
+    if (!b.cy) { svg.append(h('svg:text', { x: b.x0 + 8, y: b.y0 + 16 }, 'in no cycle')); continue; }
+    boxes[b.cy.id] = b;
+    svg.append(h('svg:rect', { class: 'box' + (b.cy.done ? ' done' : ''), x: b.x0, y: b.y0, width: b.x1 - b.x0, height: b.y1 - b.y0 }));
+    svg.append(h('svg:text', { x: b.x0 + 8, y: b.y0 + 16, style: 'cursor:pointer; font-weight:600', onclick: () => select(b.cy.id, 'cycle') }, b.cy.title + ' · ' + b.cy.id + (b.cy.unattended ? ' · unattended' : '') + (b.cy.done ? ' · done' : '')));
+  }
+  for (const cy of D.cycles) for (const d of L(cy.depends_on)) if (boxes[cy.id] && boxes[d]) {
+    const a = boxes[d], b = boxes[cy.id], x = Math.min(a.x0, b.x0) + 24, down = a.y1 <= b.y0;
+    svg.append(h('svg:path', { class: 'cedge', d: `M${x} ${down ? a.y1 : a.y0} L${x} ${down ? b.y0 : b.y1}`, 'marker-end': 'url(#arr)' }));
+  }
+  for (const n of nodes) for (const d of L(n.depends_on)) if (pos[d]) {
+    const a = pos[d], b = pos[n.id];
+    svg.append(h('svg:path', { class: 'edge', d: `M${a.x + W} ${a.y + H / 2} C ${a.x + W + 30} ${a.y + H / 2}, ${b.x - 30} ${b.y + H / 2}, ${b.x} ${b.y + H / 2}`, 'marker-end': 'url(#arr)' }));
+  }
+  for (const n of nodes) {
+    const p = pos[n.id], tasks = L(n.tasks), cls = ['node', n.state !== 'approved' ? n.state : n.ready ? 'ready' : 'waits', wip(n.id).length ? 'wip' : '', sel === n.id ? 'sel' : ''].join(' ');
+    svg.append(h('svg:g', { class: cls, transform: `translate(${p.x},${p.y})`, style: 'cursor:pointer', onclick: () => select(n.id, 'change') },
+      h('svg:rect', { width: W, height: H }),
+      h('svg:text', { x: 8, y: 17, style: 'font-family: var(--mono)' }, n.id + (tasks.length ? '  ' + tasks.filter(t => t.status === 'done').length + '/' + tasks.length : '')),
+      h('svg:text', { x: 8, y: 34 }, n.title.length > 34 ? n.title.slice(0, 33) + '…' : n.title)));
+  }
+  s.append(h('div', { style: 'overflow:auto' }, svg));
+}
+
+function historyTab() {
+  const s = $('#history'); s.replaceChildren();
+  const rows = D.changes.filter(c => showArchived || c.state === 'approved' || wip(c.id).length).sort((a, b) => (b.created || '').localeCompare(a.created || ''));
+  const cycles = D.cycles.filter(c => showArchived || !c.done);
+  const marks = {};
+  for (const e of D.history) for (const m of e.marks) (marks[m.id] ??= []).push({ ...m, t: new Date(e.date), commit: e.commit, subject: e.subject });
+  const sym = { approved: ['●', 'var(--ok)'], revised: ['○', 'var(--warn)'], archived: ['■', 'var(--mut)'], planned: ['◆', 'var(--info)'], 're-planned': ['◇', 'var(--info)'], spec: ['▲', 'var(--fg)'] };
+  s.append(h('div', { class: 'legend' }, Object.entries(sym).map(([k, [g, c]]) => h('span', { style: 'color:' + c }, g + ' ' + k)), archivedToggle()));
+  if (rows.length || cycles.length) {
+    const times = [new Date()].concat(rows.map(c => new Date(c.created)), cycles.map(c => new Date(c.created)), Object.values(marks).flat().map(m => m.t)).filter(t => !isNaN(t));
+    const t0 = Math.min(...times) - 864e5, t1 = Date.now() + 864e5, LW = 300, W = Math.max(700, s.clientWidth || 900), RH = 22, HT = 30 + (rows.length + cycles.length) * RH + 10;
+    const x = t => LW + (t - t0) / (t1 - t0) * (W - LW - 20);
+    const svg = h('svg:svg', { width: W, height: HT });
+    let lastTick = -1e9;
+    for (let d = new Date(t0); d < t1; d.setDate(d.getDate() + 1)) {
+      const monthly = d.getDate() === 1, weekly = (t1 - t0) < 90 * 864e5 && d.getDay() === 1;
+      if (!(monthly || weekly) || x(d) - lastTick < 80) continue;
+      lastTick = x(d);
+      svg.append(h('svg:line', { class: 'tick', x1: x(d), x2: x(d), y1: 16, y2: HT }), h('svg:text', { x: x(d) + 2, y: 12 }, d.toISOString().slice(0, 10)));
+    }
+    svg.append(h('svg:line', { class: 'today', x1: x(Date.now()), x2: x(Date.now()), y1: 16, y2: HT }));
+    const glyph = (m, y) => h('svg:text', { x: x(m.t) - 5, y: y + 4, style: 'fill:' + sym[m.kind][1] }, sym[m.kind][0], h('svg:title', {}, `${m.kind} ${m.commit.slice(0, 7)} ${day(m.t.toISOString())}: ${m.subject}`));
+    let y = 30;
+    for (const cy of cycles) {
+      svg.append(h('svg:text', { x: 4, y: y + 4, style: 'cursor:pointer; font-weight:600', onclick: () => select(cy.id, 'cycle') }, 'cycle ' + cy.title.slice(0, 30)));
+      svg.append(h('svg:line', { class: 'tick', x1: x(new Date(cy.created)), x2: x(Date.now()), y1: y, y2: y }));
+      for (const m of marks[cy.id] || []) svg.append(glyph(m, y));
+      y += RH;
+    }
+    for (const c of rows) {
+      const ms = marks[c.id] || [], end = ms.find(m => m.kind === 'archived')?.t || Date.now();
+      svg.append(h('svg:text', { x: 4, y: y + 4, style: 'cursor:pointer' + (sel === c.id ? '; font-weight:700' : ''), onclick: () => select(c.id, 'change') }, c.id + ' ' + c.title.slice(0, 26)));
+      svg.append(h('svg:line', { class: 'tick', x1: x(new Date(c.created)), x2: x(end), y1: y, y2: y, style: 'stroke:' + (c.state === 'approved' ? 'var(--ok)' : 'var(--line)') }));
+      for (const m of ms) svg.append(glyph(m, y));
+      y += RH;
+    }
+    s.append(h('div', { style: 'overflow:auto' }, svg));
+  } else s.append(h('p', { class: 'empty' }, 'Nothing is open; show archived changes to see the past.'));
+  s.append(h('h2', {}, 'Commits on ' + D.target + ' that touched the record'));
+  if (!D.history.length) s.append(h('p', { class: 'empty' }, 'No commit on ' + D.target + ' has touched a change, cycle or spec yet.'));
+  else s.append(h('div', { style: 'overflow-x:auto' }, h('table', {}, D.history.slice(0, 200).map(e => h('tr', {}, h('td', { class: 'mut n' }, day(e.date)), h('td', { class: 'mut mono n' }, e.commit.slice(0, 7)), h('td', { style: 'width:45%' }, e.subject),
+    h('td', {}, e.marks.map(m => [chip(m.kind + ' ' + m.id, m.kind === 'approved' ? 'ok' : m.kind === 'archived' || m.kind === 'spec' ? '' : m.kind === 'revised' ? 'warn' : 'info'), ' '])))))));
+}
+
+function specs() {
+  const s = $('#specs'); s.replaceChildren();
+  s.append(h('h2', {}, 'Maintained specs on ' + D.target));
+  if (!D.specs.length) { s.append(h('p', { class: 'empty' }, 'No maintained spec yet.')); return; }
+  s.append(h('table', {}, h('tr', {}, h('th', {}, 'spec'), h('th', {}, 'title'), h('th', {}, 'description')),
+    D.specs.map(sp => h('tr', {}, h('td', { class: 'n' }, idLink(sp.id, 'spec')), h('td', {}, sp.title), h('td', { class: 'mut' }, sp.description)))));
+}
+
+function select(id, kind) { sel = id; selKind = kind; docRef = ''; docPath = ''; docEl = null; render(); }
+// The loaded document, kept across renders so a refresh neither blanks nor
+// fetches it again.
+let docEl = null;
+async function showDoc(ref, path) {
+  docRef = ref; docPath = path; docEl = null; docs();
+  try {
+    const r = await fetch(`/api/doc?ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(path)}`), body = await r.text();
+    if (docRef !== ref || docPath !== path) return; // a later click won
+    if (r.ok && r.headers.get('content-type').startsWith('text/html')) {
+      docEl = h('div', { class: 'doc' }); docEl.innerHTML = body; // goldmark drops raw HTML, so this is its own markup only
+      // A relative link to another document under the root opens in this pane.
+      for (const a of docEl.querySelectorAll('a[href]')) if (!/^[a-z]+:|^#/i.test(a.getAttribute('href'))) a.onclick = e => {
+        e.preventDefault();
+        const parts = path.split('/').slice(0, -1), href = a.getAttribute('href').split('#')[0];
+        for (const seg of href.split('/')) seg === '..' ? parts.pop() : seg && seg !== '.' && parts.push(seg);
+        showDoc(ref, parts.join('/') + (href.endsWith('/') ? '/proposal.md' : '')); // a folder link names a change
+      };
+    } else docEl = h('pre', {}, r.ok ? body : 'error: ' + body);
+  } catch (e) {
+    docEl = h('pre', {}, 'error: ' + e.message);
+  }
+  docs();
+  $('aside').scrollTop = 0;
+}
+function docs() {
+  const a = $('#docs'); a.replaceChildren();
+  if (!sel) { a.append(h('div', { class: 'top' }, h('div', { class: 'mut' }, 'Click a change, cycle or spec to read its documents here.'))); return; }
+  const pre = h('div', {}, docEl || (docPath ? h('pre', {}, 'loading…') : null));
+  const close = h('button', { class: 'close', onclick: () => { sel = null; render(); } }, '×');
+  const tabs = (ref, files, label, strip) => files.length ? h('div', { class: 'files-tabs' }, label ? h('span', { class: 'lbl' }, label) : null,
+    files.map(f => h('button', { class: docRef === ref && docPath === f ? 'on' : '', onclick: () => showDoc(ref, f) }, strip ? f.slice(strip.length + 1) : f))) : null;
+  let top, main;
+  if (selKind === 'spec') {
+    const sp = D.specs.find(s => s.id === sel); if (!sp) return;
+    top = h('div', { class: 'top' }, h('div', { class: 'head' }, h('h3', {}, sp.title), close), h('div', { class: 'sub' }, 'maintained spec on ' + D.target), tabs('', [sp.path]));
+    main = sp.path;
+  } else if (selKind === 'cycle') {
+    const cy = D.cycles.find(c => c.id === sel); if (!cy) return;
+    top = h('div', { class: 'top' }, h('div', { class: 'head' }, h('h3', {}, cy.title), close), h('div', { class: 'sub' }, 'cycle ' + cy.id + ' · ' + cy.verdict), h('div', { class: 'desc' }, L(cy.changes).concat(L(cy.archived)).map(id => [idLink(id), ' '])), tabs('', [cy.path]));
+    main = cy.path;
+  } else {
+    const c = byId()[sel], bcs = D.branches.flatMap(b => b.changes.filter(bc => bc.id === sel).map(bc => [b, bc]));
+    if (!c && !bcs.length) return;
+    const dir = c ? c.path.slice(0, c.path.lastIndexOf('/')) : bcs[0][1].dir, title = c ? c.title : bcs[0][1].title;
+    top = h('div', { class: 'top' }, h('div', { class: 'head' }, h('h3', {}, title), close),
+      h('div', { class: 'sub' }, sel + ' · ' + (c ? c.state + (c.cycle ? ' · in cycle ' + c.cycle : '') + (L(c.depends_on).length ? ' · depends on ' + c.depends_on.join(', ') : '') + ' · created ' + day(c.created) : 'a draft, not on ' + D.target)),
+      c && c.description ? h('div', { class: 'desc' }, c.description) : null,
+      c ? tabs('', L(c.files), 'on ' + D.target, dir) : null);
+    for (const [b, bc] of bcs) top.append(tabs(b.tip, bc.new, 'new on ' + b.name + ' · ' + kind(bc), dir));
+    main = c ? c.path : null;
+    if (!c && !docPath) { a.append(top, pre); showDoc(bcs[0][0].tip, bcs[0][1].new[0]); return; }
+  }
+  a.append(top, pre);
+  if (!docPath && main) showDoc('', main);
+}
+
+function openTab(tab) {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.tab === tab));
+  document.querySelectorAll('main section').forEach(x => x.classList.toggle('on', x.id === tab));
+  history.replaceState(null, '', '#' + tab);
+}
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => openTab(b.dataset.tab));
+if (document.getElementById(location.hash.slice(1))) openTab(location.hash.slice(1));
+$('#refresh').onclick = load;
+setInterval(() => { if ($('#auto').checked) load(); }, 10000);
+load().catch(e => { $('#proj').textContent = 'error: ' + e.message; });
+</script>
+</body>
+</html>

@@ -36,6 +36,8 @@ With no command, open the reader on the maintained specs and approved changes.
                              implement the cycle given, or else the oldest marked
                              unattended, in one Claude Code session asking no one on a new
                              branch, then pause until it is archived
+  serve [--addr <host:port>] show the project's state on a local page, at
+                             127.0.0.1:7070 unless another loopback address is given
   archive <change-id>        move a change to changes/archive/
   review                     show what merging this branch into the target would approve
   specs                      list the maintained specs
@@ -85,6 +87,15 @@ func run(args []string, stdout, stderr io.Writer) int {
 			return 2
 		}
 		err = runAttempt(stdout, f.Arg(0), *retry, *timeout)
+	case len(args) > 0 && args[0] == "serve":
+		f := flag.NewFlagSet("serve", flag.ContinueOnError)
+		f.SetOutput(io.Discard)
+		addr := f.String("addr", "127.0.0.1:7070", "")
+		if f.Parse(args[1:]) != nil || f.NArg() > 0 {
+			fmt.Fprint(stderr, usage)
+			return 2
+		}
+		err = serve(stdout, *addr)
 	case len(args) == 2 && args[0] == "archive":
 		err = archive(stdout, args[1])
 	case len(args) == 1 && args[0] == "review":

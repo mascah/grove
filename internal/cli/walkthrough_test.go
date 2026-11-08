@@ -1,11 +1,16 @@
 package cli
 
 import (
+	"bufio"
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -1667,4 +1672,223 @@ func TestShallowClone(t *testing.T) {
 	file := filepath.Join(aDir, ".grove.yaml")
 	os.WriteFile(file, []byte(strings.Replace(read(t, file), "base: "+base, "base: 0000000", 1)), 0o644)
 	checks("/.grove.yaml: base: 0000000 is not a commit in this repository\n")
+}
+
+// serving starts grove serve with args in the working directory and
+// returns what it printed first, and its error once it stops.
+func serving(t *testing.T, args ...string) (string, <-chan string) {
+	t.Helper()
+	r, w := io.Pipe()
+	stopped := make(chan string, 1)
+	go func() {
+		var stderr strings.Builder
+		run(append([]string{"serve"}, args...), w, &stderr)
+		w.Close()
+		stopped <- stderr.String()
+	}()
+	line, _ := bufio.NewReader(r).ReadString('\n')
+	go io.Copy(io.Discard, r)
+	return line, stopped
+}
+
+func get(t *testing.T, url string) (int, string) {
+	t.Helper()
+	res, err := http.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	b, _ := io.ReadAll(res.Body)
+	return res.StatusCode, string(b)
+}
+
+// TestServe follows the walkthrough's "Watching the project": the fixture
+// with cycles ready, needing a person and stale, branches of every kind,
+// an uncommitted edit and a recorded run, served and read.
+func TestServe(t *testing.T) {
+	dir := setUp(t)
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	git(t, dir, "init", "-q", "--bare", remote)
+	git(t, dir, "remote", "add", "origin", remote)
+	write := func(rel, s string) { os.WriteFile(filepath.Join(dir, rel), []byte(s), 0o644) }
+	maintain(t, dir, olderEdits)
+	commitAll(t, dir, "Record editing")
+	a, _ := approve(t, dir, "a", "Editing an unknown ID prints an error", "")
+	b, bDir := approve(t, dir, "b", "Add ledger delete ID", "depends_on: ["+a+"]\n")
+	os.WriteFile(filepath.Join(bDir, "tasks.md"), []byte("## T-01 — Delete\n\n## T-02 — Confirm\n"), 0o644)
+	commitAll(t, dir, "Tasks for "+b)
+	c, cDir := approve(t, dir, "c", "Export the ledger as CSV", "")
+	d, dDir := approve(t, dir, "d", "Monthly budgets in report", "")
+	f, fDir := approve(t, dir, "f", "Editing a record prints what was saved", "")
+	e, _ := approve(t, dir, "e", "Import records from a CSV", "depends_on: ["+f+"]\n")
+	os.WriteFile(filepath.Join(fDir, "proposal.md"), []byte("# Editing a record prints what was saved\n\nRevised.\n"), 0o644)
+	commitAll(t, dir, "Revise "+f)
+	git(t, dir, "switch", "-q", "-c", "apply/f")
+	os.WriteFile(filepath.Join(fDir, "implementation.md"), []byte("### T-01\n\nStatus: done\n"), 0o644)
+	maintain(t, dir, olderEdits+"\nBuilt.\n")
+	commitAll(t, dir, "Build "+f)
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--squash", "apply/f")
+	commitAll(t, dir, "Build "+f+" (squashed)")
+	n, k, l, m := "261101-n0000", "261102-k0000", "261103-p0000", "261104-m0000"
+	planCycle(t, dir, n, "2026-11-01T00:00:00Z", false, f)
+	os.MkdirAll(filepath.Join(dir, "grove/changes/archive"), 0o755)
+	git(t, dir, "mv", fDir, filepath.Join(dir, "grove/changes/archive", filepath.Base(fDir)))
+	commitAll(t, dir, "Archive "+f)
+	maintain(t, dir, olderEdits+"\nEdited again.\n")
+	commitAll(t, dir, "Edit record-editing")
+	planCycle(t, dir, k, "2026-11-02T00:00:00Z", true, a, b)
+	write("grove/cycles/"+l+"-cycle.yaml", "title: Cycle L\ncreated: 2026-11-03T00:00:00Z\nchanges: ["+c+"]\nplanned: "+strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))+"\nneeds_human:\n  "+c+": a person judges the file\n")
+	commitAll(t, dir, "Plan "+l)
+	planCycle(t, dir, m, "2026-11-04T00:00:00Z", true, d)
+	os.WriteFile(filepath.Join(dDir, "proposal.md"), []byte("# Monthly budgets in report\n\nRevised.\n"), 0o644)
+	commitAll(t, dir, "Revise "+d)
+	write("ledger/records.py", "# records\n")
+	commitAll(t, dir, "Records only")
+	git(t, dir, "push", "-q", "origin", "main")
+	git(t, dir, "switch", "-q", "-c", "build-b")
+	os.WriteFile(filepath.Join(bDir, "implementation.md"), []byte("### T-01\n\nStatus: done\n\n### T-02\n\nStatus: blocked\n"), 0o644)
+	commitAll(t, dir, "Build "+b)
+	git(t, dir, "push", "-q", "origin", "build-b")
+	git(t, dir, "switch", "-q", "-c", "teammate", "main")
+	os.WriteFile(filepath.Join(bDir, "implementation.md"), []byte("### T-01\n\nStatus: to check\n"), 0o644)
+	commitAll(t, dir, "Build "+b+" elsewhere")
+	git(t, dir, "push", "-q", "origin", "teammate")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "branch", "-q", "-D", "teammate")
+	g, gDir := propose(t, dir, "draft-notes", "Notes on records", "")
+	os.WriteFile(filepath.Join(gDir, "proposal.md"), []byte("# Notes on records\n\n<script>alert(1)</script>\n"), 0o644)
+	commitAll(t, dir, "Draft "+g)
+	git(t, dir, "switch", "-q", "main")
+	os.WriteFile(filepath.Join(cDir, "implementation.md"), []byte("### T-01\n\nStatus: in progress\n"), 0o644)
+	os.MkdirAll(filepath.Join(dir, ".git/grove"), 0o755)
+	write(".git/grove/261105-r0000.json", `{"id":"261105-r0000","started":"2026-11-05T09:00:00Z","ended":"2026-11-05T11:00:00Z","outcome":"timed out","cycle":"`+k+`","branch":"grove/run-261105-r0000"}`)
+
+	// The default address, then that address taken, then one given.
+	if url, _ := serving(t); url != "http://127.0.0.1:7070/\n" {
+		t.Fatalf("grove serve printed %q", url)
+	}
+	if code, page := get(t, "http://127.0.0.1:7070/"); code != 200 || !strings.Contains(page, "<title>Grove</title>") {
+		t.Errorf("/ answered %d:\n%.300s", code, page)
+	}
+	if url, stopped := serving(t); url != "" || !strings.Contains(<-stopped, "address already in use") {
+		t.Errorf("a second grove serve printed %q", url)
+	}
+	if url, stopped := serving(t, "--addr", "0.0.0.0:0"); url != "" || !strings.Contains(<-stopped, "--addr must be a loopback address") {
+		t.Errorf("grove serve on every address printed %q", url)
+	}
+	url, _ := serving(t, "--addr", "127.0.0.1:0")
+	url = strings.TrimSpace(url)
+	if !regexp.MustCompile(`^http://127\.0\.0\.1:[0-9]+/$`).MatchString(url) {
+		t.Fatalf("grove serve --addr printed %q", url)
+	}
+
+	req, _ := http.NewRequest("GET", url+"api/project", nil)
+	req.Host = "rebound.example:7070" // a name a site pointed at loopback
+	if res, err := http.DefaultClient.Do(req); err != nil || res.StatusCode != 403 {
+		t.Errorf("a request for another host answered %v, %v", res, err)
+	}
+	_, body := get(t, url+"api/project")
+	var v value
+	if err := json.Unmarshal([]byte(body), &v); err != nil {
+		t.Fatalf("%v\n%.500s", err, body)
+	}
+	head := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
+	if v.Root != "grove" || v.Target != "main" || v.Commit != head || len(v.Specs) != 1 {
+		t.Errorf("value names %s %s %s with %d specs", v.Root, v.Target, v.Commit, len(v.Specs))
+	}
+	for _, ch := range v.Changes {
+		if ch.ID == e && (ch.Cycle != "" || !ch.Ready) || ch.ID == a && ch.Cycle != k {
+			t.Errorf("change %s in cycle %q, ready %v", ch.ID, ch.Cycle, ch.Ready)
+		}
+	}
+	verdicts := map[string]pageCycle{}
+	for _, cy := range v.Cycles {
+		verdicts[cy.ID] = cy
+	}
+	if cy := verdicts[k]; strings.Join(cy.Changes, " ") != a+" "+b || !cy.Runs || cy.Verdict != "grove run would build it" {
+		t.Errorf("cycle K: %+v", cy)
+	}
+	if cy := verdicts[l]; cy.Runs || !strings.HasPrefix(cy.Verdict, c+" needs a person") {
+		t.Errorf("cycle L: %+v", cy)
+	}
+	if cy := verdicts[m]; strings.Join(cy.Stale, " ") != d || !strings.Contains(cy.Verdict, "stale, since "+d+" changed") {
+		t.Errorf("cycle M: %+v", cy)
+	}
+	if cy := verdicts[n]; !cy.Done || strings.Join(cy.Archived, " ") != f {
+		t.Errorf("cycle N: %+v", cy)
+	}
+
+	var rows []string
+	for _, r := range v.Branches {
+		row := fmt.Sprintf("%s origin_only=%v pushed=%v", r.Name, r.OriginOnly, r.Pushed)
+		for _, ch := range r.Changes {
+			row += fmt.Sprintf(" %s draft=%v", ch.ID, ch.Draft)
+			for _, t := range ch.Tasks {
+				row += " " + t.ID + ":" + t.Status
+			}
+			row += " new=" + strings.Join(ch.New, ",")
+		}
+		rows = append(rows, row)
+	}
+	cRel, bRel, gRel := "changes/"+filepath.Base(cDir)+"/", "changes/"+filepath.Base(bDir)+"/", "changes/"+filepath.Base(gDir)+"/"
+	want := []string{
+		"working tree origin_only=false pushed=false " + c + " draft=false T-01:in progress new=" + cRel + "implementation.md",
+		"draft-notes origin_only=false pushed=false " + g + " draft=true T-01: new=" + strings.Join([]string{gRel + ".grove.yaml", gRel + "proposal.md", gRel + "tasks.md"}, ","),
+		"origin/teammate origin_only=true pushed=false " + b + " draft=false T-01:to check T-02: new=" + bRel + "implementation.md",
+		"build-b origin_only=false pushed=true " + b + " draft=false T-01:done T-02:blocked new=" + bRel + "implementation.md",
+	}
+	// The branches' commits share a second, so only the working tree, newest, has its place.
+	slices.Sort(rows[1:])
+	slices.Sort(want[1:])
+	if strings.Join(rows, "\n") != strings.Join(want, "\n") {
+		t.Errorf("branches:\n%s\nwant:\n%s", strings.Join(rows, "\n"), strings.Join(want, "\n"))
+	}
+	if len(v.Runs) != 1 || v.Runs[0].Outcome != "timed out" || v.Runs[0].Cycle != k || v.Runs[0].Branch != "grove/run-261105-r0000" || v.Runs[0].Ended.IsZero() {
+		t.Errorf("runs: %+v", v.Runs)
+	}
+
+	marks := map[string]string{}
+	var order []string
+	for _, ev := range v.History {
+		for _, mk := range ev.Marks {
+			marks[ev.Subject] += mk.Kind + " " + mk.ID + "; "
+		}
+		order = append(order, ev.Subject)
+	}
+	for subject, want := range map[string]string{
+		"Approve " + f: "approved " + f + "; ", "Revise " + f: "revised " + f + "; ",
+		"Build " + f + " (squashed)": "revised " + f + "; spec record-editing; ", "Plan " + n: "planned " + n + "; ",
+		"Archive " + f: "archived " + f + "; ", "Plan " + m: "planned " + m + "; ", "Records only": "",
+	} {
+		if marks[subject] != want {
+			t.Errorf("history marks %q as %q, want %q", subject, marks[subject], want)
+		}
+	}
+	if i, j := slices.Index(order, "Archive "+f), slices.Index(order, "Approve "+f); i < 0 || i > j {
+		t.Errorf("history is not newest first: %q", order)
+	}
+	if len(v.Problems) != 1 || !strings.Contains(v.Problems[0], d+" changed on main since this plan") {
+		t.Errorf("problems: %q", v.Problems)
+	}
+
+	// Documents: a proposal, a cycle file, a branch's file, raw HTML, a path outside the root.
+	tip := strings.TrimSpace(git(t, dir, "rev-parse", "build-b"))
+	draft := strings.TrimSpace(git(t, dir, "rev-parse", "draft-notes"))
+	for _, tc := range []struct{ query, want string }{
+		{"path=changes/" + filepath.Base(dDir) + "/proposal.md", "<h1>Monthly budgets in report</h1>"},
+		{"path=cycles/" + k + "-cycle.yaml", "unattended: true\n"},
+		{"ref=" + tip + "&path=" + bRel + "implementation.md", "<p>Status: blocked</p>"},
+		{"ref=worktree&path=" + cRel + "implementation.md", "<p>Status: in progress</p>"},
+		{"ref=" + draft + "&path=" + gRel + "proposal.md", "<!-- raw HTML omitted -->"},
+	} {
+		if code, got := get(t, url+"api/doc?"+tc.query); code != 200 || !strings.Contains(got, tc.want) || strings.Contains(got, "<script") {
+			t.Errorf("/api/doc?%s answered %d:\n%s", tc.query, code, got)
+		}
+	}
+	for _, query := range []string{"path=../grove.yaml", "path=notes.txt", "ref=main&path=cycles/" + k + "-cycle.yaml"} {
+		if code, _ := get(t, url+"api/doc?"+query); code != 400 {
+			t.Errorf("/api/doc?%s answered %d, want 400", query, code)
+		}
+	}
 }
