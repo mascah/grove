@@ -1,0 +1,5 @@
+title: "grove claim replaces grove run, with attempt records on a branch"
+created: 2026-11-08T18:41:39Z
+description: Grove starts no agent; claim selects and records the cycle on grove/runs, and whoever called it starts the harness.
+schema: default
+base: 81745945d291e7ab6e116c5a26cd3e37a3892577
