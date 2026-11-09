@@ -47,14 +47,20 @@ target does not hold archived as finished, by `waits on` and their IDs.
 ### Requirement: Print the project as data
 
 When the owner runs `grove changes --json`, the system shall print one
-JSON object holding `root`, `target`, `commit` (the target's full commit)
-and `changes`: every change the target holds, archived ones included, each
-with `id`, `path` (its main document under `root`), `title`, `created`,
-`description`, `schema`, `depends_on`, `base`, `state` (`approved`,
-`archived`, or `dropped` for a change archived without being built),
-`waits_on` (what `depends_on` names that is not archived as finished),
-and `tasks`, each task with `id`, `title` and `status` (its `Status:` line
-in `implementation.md`), leaving out a field that has no value.
+JSON object, the project value `grove serve` answers `/api/project` with
+(serve spec, "The project value"): `root`, `target`, `commit` (the
+target's full commit), `read` (the time of the read), `specs` (the
+maintained specs), `changes`: every change the target holds, archived
+ones included, each with `id`, `path` (its main document under `root`),
+`title`, `created`, `description`, `schema`, `depends_on`, `base`,
+`state` (`approved`, `archived`, or `dropped` for a change archived
+without being built), `waits_on` (what `depends_on` names that is not
+archived as finished), `tasks`, each task with `id`, `title` and `status`
+(its `Status:` line in `implementation.md`), `cycle` (the cycle not done
+that lists it), `ready` (approved and waiting on nothing) and `files`
+(its documents under `root`), leaving out a field that has no value; and
+`cycles`, `branches`, `runs`, `history` and `problems` as the serve spec
+gives them for `/api/project`.
 
 #### Scenario: One approved, one archived
 
@@ -78,6 +84,30 @@ in `implementation.md`), leaving out a field that has no value.
   target, and C has no `description`
 - WHEN the owner runs `grove changes --json`
 - THEN C's tasks have no `status`, and C has no `description` key
+
+#### Scenario: Cycles and attempts
+
+- GIVEN the target holds cycle K, marked `unattended`, listing approved
+  changes A and B, B with `depends_on: [A]`, and `origin/grove/runs`,
+  fetched, holds a record naming K from host H
+- WHEN the owner runs `grove changes --json`
+- THEN `cycles` holds K with its members A then B and a verdict that it is
+  claimed, B's `cycle` is K, and `runs` holds the record with H
+
+#### Scenario: A branch with work
+
+- GIVEN branch `build-B` from the target holds B's `implementation.md`
+  with T-01 `Status: done`, and the target approves B
+- WHEN the owner runs `grove changes --json`
+- THEN `branches` holds a row naming `build-B` with B in progress and T-01
+  done
+
+#### Scenario: The same value as the page
+
+- GIVEN `grove serve` running in the checkout
+- WHEN the owner runs `grove changes --json` and asks the server for
+  `/api/project`
+- THEN the two objects are equal but for `read`
 
 ### Requirement: Archive only a finished or dropped change
 
@@ -120,3 +150,4 @@ None.
 ## History
 
 - [261023-338jz](../../changes/archive/261023-338jz-plain-docs-exact-specs/) Plain docs, exact specs
+- [261108-7grt3](../../changes/archive/261108-7grt3-the-project-as-json/) The project as JSON

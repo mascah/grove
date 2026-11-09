@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -1815,6 +1816,19 @@ func TestServe(t *testing.T) {
 	record("261106-r0000", l, `"`+c+`"`, first)
 	if cy, recs := claimed(); cy.Runs || cy.Verdict != "grove claim --retry would claim it; the project is paused after attempt 261106-r0000 of cycle "+l || len(recs) != 2 || recs[0].ID != "261106-r0000" {
 		t.Errorf("cycle K while paused after L: %+v, runs %+v", cy, recs)
+	}
+	// grove changes --json prints the same value, but for the time of the
+	// read, which the working tree's row is dated with too.
+	var cmd, page map[string]any
+	_, body = get(t, url+"api/project")
+	json.Unmarshal([]byte(body), &page)
+	json.Unmarshal([]byte(grove(t, "changes", "--json")), &cmd)
+	for _, m := range []map[string]any{cmd, page} {
+		delete(m, "read")
+		delete(m["branches"].([]any)[0].(map[string]any), "date")
+	}
+	if page["runs"] == nil || !reflect.DeepEqual(cmd, page) {
+		t.Errorf("changes --json differs from /api/project:\n%v\n%v", cmd, page)
 	}
 
 	var rows []string

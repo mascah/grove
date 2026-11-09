@@ -18,8 +18,8 @@ already landed.
 This covers `grove serve`, its `--addr`, the page it serves and the value
 and documents the page reads. Readiness repeats the verdict
 `grove claim` gives (`grove/specs/runs/spec.md`) and the problems
-`grove check` reports; changes are given as `grove changes --json` gives
-them (`grove/specs/changes/spec.md`), which this does not extend. The
+`grove check` reports; the value is the one `grove changes --json` prints
+(`grove/specs/changes/spec.md`). The
 server listens only on loopback, holds nothing and writes nothing
 (`CONSTITUTION.md` rule 7); fetching from `origin`, editing a document,
 anything hosted and any authentication are outside it.
@@ -55,13 +55,14 @@ writing no file.
 ### Requirement: The project value
 
 When the page asks for `/api/project`, the system shall read the target
-branch's documents and answer with one JSON object holding the root, the
-target, its full commit, the time of the read, the maintained specs, every
-change as `grove changes --json` gives it, each with the cycle not done
-that lists it and whether it is approved and waits on nothing, every
-cycle, the branches with work, the recorded runs, the history and the
-problems `grove check` would report on the target's documents, as the
-requirements below say.
+branch's documents and answer with the one JSON object `grove changes
+--json` prints (changes spec, "Print the project as data"), holding the
+root, the target, its full commit, the time of the read, the maintained
+specs, every change as `grove changes --json` gives it, each with the
+cycle not done that lists it and whether it is approved and waits on
+nothing, every cycle, the branches with work, the recorded attempts, the
+history and the problems `grove check` would report on the target's
+documents, as the requirements below say.
 
 #### Scenario: An approved change in no cycle
 
@@ -69,6 +70,13 @@ requirements below say.
   `depends_on: [A]` and A archived as finished
 - WHEN the page asks for `/api/project`
 - THEN C appears with no cycle and as ready
+
+#### Scenario: The same value as the command
+
+- GIVEN a checkout of a Grove project with `grove serve` running
+- WHEN the page asks for `/api/project` and the owner runs
+  `grove changes --json` in the checkout
+- THEN the two objects are equal but for the time of the read
 
 ### Requirement: Readiness of each cycle
 
@@ -301,3 +309,4 @@ None.
 
 - [261107-9z9tg](../../changes/archive/261107-9z9tg-serve-the-project-as-a-page/) Serve the project's state as a local page
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
+- [261108-7grt3](../../changes/archive/261108-7grt3-the-project-as-json/) The project as JSON

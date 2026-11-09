@@ -74,7 +74,7 @@ func loopback(host string) bool {
 	return host == "localhost" || ip != nil && ip.IsLoopback()
 }
 
-// value is what /api/project answers.
+// value is what /api/project answers and grove changes --json prints.
 type value struct {
 	Root     string          `json:"root"`
 	Target   string          `json:"target"`
@@ -184,7 +184,7 @@ func (s *server) value() (*value, error) {
 		return nil, err
 	}
 	c := ip.Agreed
-	v := &value{Root: p.Root, Target: p.Target, Commit: commit, Read: time.Now(), Specs: c.Specs}
+	v := &value{Root: p.Root, Target: p.Target, Commit: commit, Read: time.Now(), Specs: c.Specs, Changes: []pageChange{}} // [] for no changes, as scripts iterate it
 	for _, ch := range slices.Concat(c.Changes, c.Archived) {
 		row := *ch // runnable below rewrites WaitsOn of a member waiting outside its cycle
 		pc := pageChange{Change: &row, Ready: ch.State == "approved" && len(ch.WaitsOn) == 0, Files: ch.Files}

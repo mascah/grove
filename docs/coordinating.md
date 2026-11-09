@@ -250,27 +250,38 @@ can find it.
 grove changes --json
 ```
 
-prints your main branch's changes as JSON, archived changes included, for your agent or a script to read:
+prints the project as one JSON object, for your agent or a script to read:
+your main branch's changes, archived ones included, and around them what
+`grove serve` shows (see [Watching the project](watching.md)). The page
+reads this same object, so the two agree but for the time of the read.
 
 ```json
 {
   "root": "grove",
   "target": "main",
   "commit": "8f2d6c1a4b9e0f7d3c5a2b1e6f4d8c0a9b7e5f3d",
+  "read": "2026-10-20T09:14:03Z",
+  "specs": [{"id": "record-editing", "path": "specs/record-editing/spec.md", "title": "Record editing"}],
   "changes": [
     {"id": "261019-r2w7k", "path": "changes/261019-r2w7k-add-ledger-delete/proposal.md",
      "title": "Add ledger delete ID", "created": "2026-10-19T14:02:11Z",
      "schema": "default", "depends_on": ["261019-p4x8d"],
      "base": "4f1c2a9e0b7d6c5e4f3a2b1c0d9e8f7a6b5c4d3e", "state": "approved",
-     "tasks": [{"id": "T-01", "title": "Add ledger delete ID"}]},
+     "tasks": [{"id": "T-01", "title": "Add ledger delete ID"}],
+     "cycle": "261020-m4k8t", "ready": true,
+     "files": ["changes/261019-r2w7k-add-ledger-delete/.grove.yaml", "changes/261019-r2w7k-add-ledger-delete/proposal.md",
+               "changes/261019-r2w7k-add-ledger-delete/tasks.md"]},
     {"id": "261019-p4x8d", "path": "changes/archive/261019-p4x8d-editing-an-unknown-id/proposal.md",
      "title": "Editing an unknown ID prints an error", "created": "2026-10-19T13:40:02Z",
      "schema": "default", "base": "4f1c2a9e0b7d6c5e4f3a2b1c0d9e8f7a6b5c4d3e",
-     "state": "archived", "tasks": [{"id": "T-01", "title": "Report an unknown ID", "status": "done"}]}
-  ]
+     "state": "archived", "tasks": [{"id": "T-01", "title": "Report an unknown ID", "status": "done"}],
+     "ready": false, "files": ["changes/archive/261019-p4x8d-editing-an-unknown-id/proposal.md"]}
+  ],
+  "cycles": [...], "branches": [...], "runs": [...], "history": [...], "problems": [...]
 }
 ```
 
+- `read` is when Grove read the project, and `specs` the maintained specs.
 - `path` is a change's main document, under `root`.
 - `state` is `approved`, `archived`, or `dropped` for a change archived
   without being built.
@@ -279,7 +290,21 @@ prints your main branch's changes as JSON, archived changes included, for your a
 - A task's `status` is its `Status:` line in `implementation.md`. That file
   usually reaches your main branch with the archive merge. So an approved
   change's tasks mostly have none.
+- `cycle` is the cycle not done that lists the change, and `ready` says it
+  is approved and waits on nothing; `files` are its documents, under
+  `root`.
 - A field with no value is left out.
+- `cycles`: each cycle, its members in build order, and what `grove
+  claim` would do with it, or why not.
+- `branches`: each branch, and the working tree, holding work the main
+  branch lacks, with each change's tasks and their status there.
+- `runs`: the attempts recorded on `grove/runs`, newest first, with
+  cycle, host, start time and branch.
+- `history`: the main branch's commits that did something to the record,
+  newest first, with what each did.
+- `problems`: what `grove check` would report on the main branch's
+  documents.
+- A list with nothing in it is `null`, but for `changes`, which is `[]`.
 
 The [changes spec](https://github.com/mascah/grove/blob/main/grove/specs/changes/spec.md) has the exact rules.
 

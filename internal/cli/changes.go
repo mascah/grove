@@ -6,31 +6,28 @@ import (
 	"io"
 	"slices"
 	"strings"
-
-	"github.com/mascah/grove/internal/doc"
 )
 
 // listChanges lists the target's approved changes, what each waits on and
-// the cycle not done that holds it;
-// as JSON, it prints its changes, archived ones included (D-64).
+// the cycle not done that holds it; as JSON, it prints the project value
+// serve answers /api/project with (D-64).
 func listChanges(stdout io.Writer, asJSON bool) error {
 	p, err := openProject()
 	if err != nil {
 		return err
 	}
+	if asJSON {
+		v, err := (&server{p: p, scans: map[string][]branchChange{}}).value()
+		if err != nil {
+			return err
+		}
+		enc := json.NewEncoder(stdout)
+		enc.SetIndent("", "  ")
+		return enc.Encode(v)
+	}
 	ip, err := p.agreed()
 	if err != nil {
 		return err
-	}
-	if asJSON {
-		enc := json.NewEncoder(stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(struct {
-			Root    string        `json:"root"`
-			Target  string        `json:"target"`
-			Commit  string        `json:"commit"`
-			Changes []*doc.Change `json:"changes"`
-		}{p.Root, p.Target, ip.Commit, append(append([]*doc.Change{}, ip.Agreed.Changes...), ip.Agreed.Archived...)})
 	}
 	for _, c := range ip.Agreed.Changes {
 		waits := ""
