@@ -128,7 +128,5 @@ that shows it and its result, or `unverified` and why:
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- changes: applied to specs/changes/spec.md
+- serve: applied to specs/serve/spec.md
