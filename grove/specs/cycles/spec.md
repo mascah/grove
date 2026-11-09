@@ -3,8 +3,8 @@
 ## Purpose
 
 A cycle lists approved changes to build together: `/grove-plan` writes it,
-asking which need a person, and `grove run <cycle-id>` builds it, as does
-a `grove run` given no cycle once it holds `unattended: true`. A cycle is
+asking which need a person, and `grove claim <cycle-id>` claims it for the agent its caller starts, as
+does a `grove claim` given no cycle once it holds `unattended: true`. A cycle is
 a file `<root>/cycles/<id>-<slug>.yaml`, and its members are the changes
 its `changes` lists. A cycle is done when the target holds every member
 archived, finished or dropped. A member "needs a person" when the cycle's
@@ -153,9 +153,9 @@ cycles the owner names.
 
 When the cycle file is written, the plan instructions shall have the agent
 tell the owner that `/grove-implement <cycle-id>` builds the cycle with
-them, then whether `grove run <cycle-id>` would build it, and that
-`unattended: true`, merged on its own, hands it to a `grove run` given no
-cycle, such as a timer's; and, for each obstacle, what removes it.
+them, then whether `grove claim <cycle-id>` would claim it, and that
+`unattended: true`, merged on its own, hands it to a `grove claim` given
+no cycle, such as a timer's; and, for each obstacle, what removes it.
 
 #### Scenario: Nothing in the way
 
@@ -163,8 +163,8 @@ cycle, such as a timer's; and, for each obstacle, what removes it.
   and neither waits on a change outside the cycle
 - WHEN the agent finishes the plan
 - THEN it names `/grove-implement <cycle-id>` first, says
-  `grove run <cycle-id>` would build the cycle, and says a `grove run`
-  given no cycle would build it once `unattended: true` is merged in, and
+  `grove claim <cycle-id>` would claim the cycle, and says a `grove claim`
+  given no cycle would claim it once `unattended: true` is merged in, and
   how that mark is added
 
 #### Scenario: A member needs a person
@@ -172,7 +172,7 @@ cycle, such as a timer's; and, for each obstacle, what removes it.
 - GIVEN the owner said member C needs a person, for judging how a new
   screen looks
 - WHEN the agent finishes the plan
-- THEN it names `/grove-implement <cycle-id>`, says `grove run` would
+- THEN it names `/grove-implement <cycle-id>`, says `grove claim` would
   refuse the cycle, given or marked, and that revising C with
   `/grove-propose C` so that its acceptance can be checked without a
   person, which re-plans the cycle on the same branch, and merging that
@@ -183,15 +183,16 @@ cycle, such as a timer's; and, for each obstacle, what removes it.
 - GIVEN member B depends on change D, neither in the cycle nor archived as
   finished
 - WHEN the agent finishes the plan
-- THEN it says `grove run` would not build the cycle until D is archived as
-  finished
+- THEN it says `grove claim` would not claim the cycle until D is archived
+  as finished
 
 #### Scenario: The cycle waits on a cycle
 
 - GIVEN the owner said the new cycle follows cycle L, which is not done
 - WHEN the agent finishes the plan
-- THEN it says `grove run` would not build the cycle until L is done, and
-  that the merges archiving L's changes leave its plan as it checked it
+- THEN it says `grove claim` would not claim the cycle until L is done,
+  and that the merges archiving L's changes leave its plan as it checked
+  it
 
 #### Scenario: The runner needs something set up
 
@@ -203,20 +204,20 @@ cycle, such as a timer's; and, for each obstacle, what removes it.
 
 ### Requirement: Mark a cycle unattended
 
-The system shall treat a cycle as handed to `grove run` only while the
+The system shall treat a cycle as handed to `grove claim` only while the
 target's cycle file holds `unattended: true`, and the plan instructions
 shall never write or remove that field.
 
 #### Scenario: Planned but not marked
 
 - GIVEN the target holds cycle K without `unattended`
-- WHEN `grove run` is invoked
-- THEN K is not built
+- WHEN `grove claim` is invoked
+- THEN K is not claimed
 
 ### Requirement: A cycle can depend on cycles
 
 Where a cycle file's `depends_on` names cycles, the system shall have
-`grove run` build none of that cycle, given or marked, while the target
+`grove claim` claim none of that cycle, given or marked, while the target
 does not hold one of them done, and have `/grove-implement <cycle-id>`
 build it as it would with no `depends_on`.
 
@@ -224,16 +225,16 @@ build it as it would with no `depends_on`.
 
 - GIVEN cycle K's `depends_on` names cycle L, and L's change C is not
   archived on the target
-- WHEN the operator runs `grove run K`
-- THEN no session is launched, and Grove says K waits on cycle L, which
-  is not done
+- WHEN the operator runs `grove claim K`
+- THEN nothing is recorded, no branch is created, and Grove says K waits
+  on cycle L, which is not done
 
 #### Scenario: The cycle it follows is done
 
 - GIVEN cycle K's `depends_on` names cycle L, every member of L is
-  archived on the target, and nothing else keeps K from being built
-- WHEN the operator runs `grove run K`
-- THEN a session is launched on K
+  archived on the target, and nothing else keeps K from being claimed
+- WHEN the operator runs `grove claim K`
+- THEN an attempt is recorded for K, and K's ID is printed
 
 #### Scenario: Built with the owner
 
@@ -270,7 +271,7 @@ naming what to do.
   after K's `planned` commit
 - WHEN the owner runs `grove check`
 - THEN it reports K, saying B changed since the plan and to re-plan K with
-  `/grove-plan K`, and `grove run` does not build K
+  `/grove-plan K`, and `grove claim` does not claim K
 
 ### Requirement: Report a malformed cycle
 
@@ -350,9 +351,9 @@ file as a cycle.
 When a commit on the target's first-parent history after a cycle's
 `planned` commit changes the folder of a member not yet archived, or a
 file one of its tasks names, the system shall treat the cycle as stale, in
-`grove check` and in `grove run`, unless that commit also edits the cycle
-file, archives a change the cycle itself lists, or archives a change that
-a cycle this one depends on, directly or through other cycles, lists.
+`grove check` and in `grove claim`, unless that commit also edits the
+cycle file, archives a change the cycle itself lists, or archives a change
+that a cycle this one depends on, directly or through other cycles, lists.
 
 #### Scenario: Revised and re-planned in one squash merge
 
@@ -360,7 +361,7 @@ a cycle this one depends on, directly or through other cycles, lists.
   proposal is revised and K's `planned` set to the target's commit
 - WHEN the branch is squash-merged into the target and the owner runs
   `grove check`
-- THEN it reports nothing for K, and `grove run` builds K
+- THEN it reports nothing for K, and `grove claim` claims K
 
 #### Scenario: Revised and re-planned in one merge commit
 
@@ -381,8 +382,8 @@ a cycle this one depends on, directly or through other cycles, lists.
 
 - GIVEN the revision of member B and the edit to cycle K's file reached
   the target as two commits, by rebase or fast-forward
-- WHEN the operator runs `grove run K`
-- THEN no session is launched, and Grove says K's plan is stale
+- WHEN the operator runs `grove claim K`
+- THEN nothing is recorded, and Grove says K's plan is stale
 
 #### Scenario: A member lands in its own squash merge
 
@@ -390,7 +391,7 @@ a cycle this one depends on, directly or through other cycles, lists.
   naming `ledger/cli.py`, and a squash merge into the target archives A,
   edits `ledger/cli.py` and leaves K's file as it is
 - WHEN the owner runs `grove check`
-- THEN it reports nothing for K, `grove run` builds K, and
+- THEN it reports nothing for K, `grove claim` claims K, and
   `grove instructions implement B` names no file changed since K's plan
 
 #### Scenario: Then a commit archiving nothing
@@ -407,7 +408,7 @@ a cycle this one depends on, directly or through other cycles, lists.
   has a task naming `docs/reference.md`, and a squash merge into the
   target archives L's only change and edits `docs/reference.md`
 - WHEN the owner runs `grove check`
-- THEN it reports nothing for K, and `grove run` builds K
+- THEN it reports nothing for K, and `grove claim` claims K
 
 #### Scenario: Stacked pull requests
 
@@ -415,7 +416,7 @@ a cycle this one depends on, directly or through other cycles, lists.
   stacked pull requests, and the target took them as two commits on its
   first-parent history, each archiving one of them and editing a file K's
   member B names
-- WHEN the operator runs `grove run K`
+- WHEN the operator runs `grove claim K`
 - THEN K's plan is not stale
 
 #### Scenario: Through another cycle
@@ -454,3 +455,4 @@ None.
 - [261030-t2pt7](../../changes/archive/261030-t2pt7-own-member-merges-keep-a-cycle-fresh/) A cycle's own member merges keep its plan fresh
 - [261105-gmpa4](../../changes/archive/261105-gmpa4-plan-brings-a-stale-member-up-to-date/) Plan brings a stale member up to date
 - [261105-3qdz2](../../changes/archive/261105-3qdz2-misnamed-cycle-and-shallow-clone-reported/) A misnamed cycle and a shallow clone are reported plainly
+- [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch

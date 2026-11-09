@@ -3,8 +3,8 @@
 ## Purpose
 
 The `context` in a project's `grove.yaml` is instructions the owner gives
-every skill, so they reach agents working through Grove, including the
-session `grove run` starts, and no other session.
+every skill, so they reach agents working through Grove, including a
+session started on a claimed cycle, and no other session.
 
 ## Boundaries
 
@@ -26,7 +26,7 @@ requires of the skill, in the instructions of every skill.
 - GIVEN the target's `grove.yaml` holds `context: Run python3 -m unittest
   before saying a task is done.`
 - WHEN `grove instructions implement <change-id> --unattended` runs, as
-  the session `grove run` starts does for each member of its cycle
+  the session started on a claimed cycle does for each of its members
 - THEN its output has a "Project context" section with that line, before
   "What Grove requires of implement"
 
@@ -60,3 +60,4 @@ None.
 
 - [261023-cnnhm](../../changes/archive/261023-cnnhm-restore-context/) Restore context in grove.yaml
 - [261023-g0a3h](../../changes/archive/261023-g0a3h-implement-builds-unattended/) Implement builds unattended, and apply goes
+- [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch

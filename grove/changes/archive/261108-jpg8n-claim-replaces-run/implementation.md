@@ -306,7 +306,9 @@ passed under `just check`.
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- config: applied to specs/config/spec.md
+- cycles: applied to specs/cycles/spec.md
+- implement: applied to specs/implement/spec.md
+- propose: applied to specs/propose/spec.md
+- runs: applied to specs/runs/spec.md
+- serve: applied to specs/serve/spec.md
