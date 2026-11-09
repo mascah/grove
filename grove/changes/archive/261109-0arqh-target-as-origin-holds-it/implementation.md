@@ -77,7 +77,4 @@ Status: done
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- config: applied to specs/config/spec.md
