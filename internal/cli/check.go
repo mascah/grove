@@ -247,6 +247,12 @@ func missing(p project, field, commit string) string {
 	return field + ": " + commit + " is not a commit in this repository"
 }
 
+// absent is check's line for file's field naming commit, which is not in
+// the repository, as an error.
+func absent(p project, file, field, commit string) error {
+	return fmt.Errorf("%s/%s: %s", p.Root, file, missing(p, field, commit))
+}
+
 // named returns every file ch's tasks name.
 func named(ch *doc.Change) []string {
 	var out []string

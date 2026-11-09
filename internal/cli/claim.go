@@ -232,7 +232,7 @@ func runnable(p project, ip instruct.Project, cy *doc.Cycle) ([]*doc.Change, err
 	}
 	changed, err := changedSincePlan(p, ip.Commit, ip.Agreed, cy)
 	if err != nil {
-		return nil, err
+		return nil, absent(p, cy.Path, "planned", cy.Meta.Planned)
 	}
 	if len(changed) > 0 {
 		return nil, fmt.Errorf("cycle %s's plan is stale, since %s changed on %s after it; re-plan it with /grove-plan %s", cy.ID, strings.Join(changed, " and "), p.Target, cy.ID)
