@@ -146,6 +146,8 @@ function status(c, cy) {
   if (L(c.waits_on).length) return chip('waits on ' + c.waits_on.join(', '), 'warn');
   return chip('ready', 'ok');
 }
+const questions = c => c.open_questions ? [' ', chip('open questions', 'warn')] : null;
+const blocked = c => (ids => ids.length ? [' ', chip(ids.join(', ') + ' blocked', 'bad')] : null)(L(c.tasks).filter(t => t.status === 'blocked').map(t => t.id));
 const where = id => wip(id).map(b => [chip(kind(b.changes.find(x => x.id === id)) + ' on ' + b.name, 'info'), ' ']);
 
 async function load() {
@@ -170,7 +172,7 @@ function memberRows(ids, cy) {
   const all = byId(), needs = (cy && cy.needs_human) || {};
   return h('table', {}, h('tr', {}, h('th', { class: 'n' }, 'change'), h('th', {}, 'title'), h('th', {}, 'status'), h('th', {}, 'being built')),
     ids.map(id => { const c = all[id]; return h('tr', {}, h('td', { class: 'n' }, idLink(id)), h('td', {}, c ? c.title : h('span', { class: 'mut' }, 'not on ' + D.target)),
-      h('td', { class: 'n' }, status(c, cy), id in needs ? [' ', chip('needs a person', 'warn')] : null),
+      h('td', { class: 'n' }, status(c, cy), c ? [questions(c), blocked(c)] : null, id in needs ? [' ', chip('needs a person', 'warn')] : null),
       h('td', {}, where(id), id in needs ? h('div', { class: 'mut', style: 'font-size:12.5px' }, needs[id]) : null)); }));
 }
 function readiness() {
@@ -206,7 +208,7 @@ function branchCard(b) {
       return h('div', { class: 'change' },
         h('div', {}, idLink(c.id), ' ', c.title, ' ', chip(kind(c), c.draft ? 'warn' : 'info')),
         tasks.length ? h('div', {}, h('div', { class: 'pct' }, done + ' of ' + tasks.length + ' tasks done'), h('div', { class: 'bar' + (blocked ? ' blocked' : '') }, h('i', { style: 'width:' + Math.round(100 * done / tasks.length) + '%' }))) : h('div', { class: 'pct' }, 'no tasks'),
-        tasks.length ? h('div', { class: 'tasks' }, tasks.map(taskChip)) : null,
+        tasks.length || c.open_questions ? h('div', { class: 'tasks' }, tasks.map(taskChip), questions(c)) : null,
         h('div', { class: 'files' }, 'new here: ', c.new.map(f => h('span', { class: 'id', onclick: () => { select(c.id, 'change'); showDoc(b.tip, f); } }, f.slice(c.dir.length + 1)))));
     })));
 }

@@ -523,18 +523,24 @@ the browser's console shows no error.
    coordinating step 1 does, approve unknown-ID (A), delete (B, with
    `depends_on: [A]` and tasks T-01 and T-02), export (C), budgets (D),
    show-saved (F) and import (E, with `depends_on: [F]`), each merged.
-   Revise F's proposal on `main`. On `apply/f`, write F's
+   On `main`, give A's proposal an "Open questions" section asking "Should
+   IDs be six digits? Blocks T-02.", tasks T-01, T-02 and T-04, and an
+   `implementation.md` with T-01 `Status: done` and T-02 and T-04
+   `Status: blocked`, and give B's proposal the question "Ask before
+   deleting?"; commit. Revise F's proposal on `main`. On `apply/f`, write F's
    `implementation.md` with every task done and edit the record-editing
    maintained spec; squash-merge it into `main`. Plan F as a cycle of one
    (N), archive F on `main`, then edit the spec again. Plan A and B as
    cycle K and mark it `unattended`; plan C as cycle L with C under
    `needs_human`; plan D as cycle M, marked, then revise D's proposal on
-   `main`. Commit a change to `ledger/records.py` alone, and push `main`.
+   `main`, its "Open questions" holding the template's comment and
+   "None.". Commit a change to `ledger/records.py` alone, and push `main`.
 
    Readiness counts 3 and shows K as one `grove claim` would claim, A then
-   B; L naming C as needing a person; M stale, naming D. E is under
-   "Approved, in no cycle", ready; N is under "Done". The problems name
-   M's stale plan. History lists, newest first, the commits that archived
+   B, A's status `ready`, `open questions` and `T-02, T-04 blocked`, B's
+   `waits on` A and `open questions`; L naming C as needing a person; M
+   stale, naming D. E is under "Approved, in no cycle", ready; N is under
+   "Done". The problems name M's stale plan. History lists, newest first, the commits that archived
    F, planned N, built F (revised F, spec record-editing), revised F and
    approved F, and none for the `ledger/records.py` commit.
 
@@ -543,7 +549,8 @@ the browser's console shows no error.
    `Status: blocked`, commit and push it. On `teammate` from `main`, write
    it with T-01 `Status: to check`, commit, push, and delete the local
    branch. On `draft-notes`, propose a change G whose proposal holds a
-   `<script>` element, and commit it. Back on `main`, write C's
+   `<script>` element and the open question "Should notes be dated?", and
+   commit it. Back on `main`, write C's
    `implementation.md` and leave it uncommitted. In a second clone of
    `origin`, `~/tmp/ledger-watch2`, `grove claim` prints K's ID; commit a
    file outside `grove/` on the attempt's branch there and push that branch. Back in
@@ -552,17 +559,25 @@ the browser's console shows no error.
 
    Within 10 seconds, In progress counts 4: the working tree with C in
    progress, `build-b` "on origin too" with B 1 of 2 tasks done and T-02
-   blocked, `draft-notes` with G a draft and its documents new there, and
+   blocked, `draft-notes` with G a draft, `open questions` beside its
+   task, and its documents new there, and
    `origin/teammate` "only on origin" with T-01 to check. No row names
    `apply/f`, `grove/runs` or the attempt's branch. The attempts list the
    one from `ledger-watch2` with its cycle, start time, host and branch,
    and the time of the commit pushed on that branch. Readiness says K is
-   claimed, naming the host, the start time and the branch.
+   claimed, naming the host, the start time and the branch; B's row there
+   still shows no blocked task.
+   `grove changes` ("A change that waits") ends A's line
+   `in cycle <K>, unattended  open questions  T-02, T-04 blocked`, B's
+   `waits on <A>  in cycle <K>, unattended  open questions`, naming no
+   blocked task, and D's `in cycle <M>, unattended`.
    `grove changes --json` and `curl -s http://127.0.0.1:7070/api/project`
    print the same object but for `read` and the working tree's `date`,
    both the time of the read: K's verdict says it is claimed, B's `cycle`
    is K, `runs` holds the attempt from `ledger-watch2`'s host, and
-   `branches` has `build-b` with T-01 done.
+   `branches` has `build-b` with T-01 done. A's `open_questions` is
+   "Should IDs be six digits? Blocks T-02.", D has none ("The project as
+   data"), and `draft-notes`'s G has "Should notes be dated?".
 
 4. **The pane** ("The pane", "Graph", "Specs"). Click B: the pane shows
    its proposal rendered, with a button for each file on `main` and for

@@ -133,12 +133,13 @@ type branchRow struct {
 }
 
 type branchChange struct {
-	ID    string     `json:"id"`
-	Title string     `json:"title"`
-	Dir   string     `json:"dir"`
-	Draft bool       `json:"draft"` // the target does not hold it; otherwise it approves it
-	Tasks []doc.Task `json:"tasks"`
-	New   []string   `json:"new"` // its files, from the root, whose blob the target's history never held
+	ID            string     `json:"id"`
+	Title         string     `json:"title"`
+	Dir           string     `json:"dir"`
+	Draft         bool       `json:"draft"` // the target does not hold it; otherwise it approves it
+	Tasks         []doc.Task `json:"tasks"`
+	New           []string   `json:"new"` // its files, from the root, whose blob the target's history never held
+	OpenQuestions string     `json:"open_questions,omitempty"`
 }
 
 // event is a commit on the target that did something to the record.
@@ -369,7 +370,7 @@ func (s *server) classify(fresh []string, fsys fs.FS, c *doc.Collection) ([]bran
 			}
 		}
 		if len(files) > 0 && !c.InArchive(ch.ID) {
-			out = append(out, branchChange{ID: ch.ID, Title: ch.Meta.Title, Dir: ch.Dir, Draft: c.Change(ch.ID) == nil, Tasks: ch.Tasks, New: files})
+			out = append(out, branchChange{ID: ch.ID, Title: ch.Meta.Title, Dir: ch.Dir, Draft: c.Change(ch.ID) == nil, Tasks: ch.Tasks, New: files, OpenQuestions: ch.OpenQuestions})
 		}
 	}
 	return out, nil

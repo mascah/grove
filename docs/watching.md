@@ -59,7 +59,8 @@ would give it today, the first that applies:
   attempt while the project is paused after another cycle's.
 
 Each card lists the members in the order they would be built, with their
-status and where each is being built, then the members already archived.
+status, `open questions` when the proposal has any, the tasks the
+target's `implementation.md` marks blocked, and where each is being built, then the members already archived.
 Below the cards are the approved changes in no cycle, each ready or
 waiting, the cycles done, and the problems `grove check` would report on
 the target's documents. The tab counts the cycles not done.
@@ -70,7 +71,9 @@ One card for each branch, and for the working tree, that holds a change's
 files the target never held: a draft the target does not hold yet, or a
 change it approves that is being built. Each change shows how many of its
 tasks are done, each task's status from that branch's `implementation.md`,
-and the files that are new there. Click a file to read that branch's
+`open questions` when that branch's proposal has any, and the files that
+are new there. A task blocked only on a branch shows on its card, not in
+Readiness. Click a file to read that branch's
 version.
 
 Grove looks at the branches not merged into the target and counts a file
