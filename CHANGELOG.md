@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.9.0](https://github.com/mascah/grove/compare/v0.8.0...v0.9.0) (2026-11-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** with an `origin`, a merge made on the local target counts only once it is pushed; push local merges so Grove reads them.
+* **cli:** `grove run` and `--timeout` are gone. Use `K=$(grove claim) && timeout 2h claude -p "/grove-implement $K --unattended"`; attempt records move from `.git/grove/` to the branch `grove/runs`.
+
+### Features
+
+* **cli:** grove changes --json prints the whole project value ([#153](https://github.com/mascah/grove/issues/153)) ([5466256](https://github.com/mascah/grove/commit/5466256c3e5f3436dea32c86d9039594211cf85b))
+* **cli:** grove claim replaces grove run, with attempt records on grove/runs ([#152](https://github.com/mascah/grove/issues/152)) ([f89c9d5](https://github.com/mascah/grove/commit/f89c9d5da4c736f45780aec67abbc2c4c4f8f9df))
+* **cli:** grove serve shows the project's state on a local page ([#139](https://github.com/mascah/grove/issues/139)) ([8174594](https://github.com/mascah/grove/commit/81745945d291e7ab6e116c5a26cd3e37a3892577))
+* **cli:** read the target as this checkout and origin both hold it ([#156](https://github.com/mascah/grove/issues/156)) ([71493e4](https://github.com/mascah/grove/commit/71493e4ea4695ea1c75f1f436a4e6b93fde36248))
+* **cli:** show what is undecided and blocked ([#154](https://github.com/mascah/grove/issues/154)) ([4ec97b5](https://github.com/mascah/grove/commit/4ec97b59f94eacbe0cd7b1e555e3728ea475e289))
+
+
+### Bug Fixes
+
+* **cli:** implement and claim name a missing base or planned commit ([#155](https://github.com/mascah/grove/issues/155)) ([8052c75](https://github.com/mascah/grove/commit/8052c75c8d7253e43f280edd648c0f693a5834e5))
+
 ## [0.8.0](https://github.com/mascah/grove/compare/v0.7.0...v0.8.0) (2026-11-05)
 
 
