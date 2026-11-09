@@ -1,5 +1,6 @@
-title: "Implement and run name a missing base or planned commit"
+title: "Implement and claim name a missing base or planned commit"
 created: 2026-11-08T23:49:30Z
-description: grove instructions implement and grove run <cycle-id> say what check says when a base or planned commit is not in the repository, instead of Git's error text.
+description: grove instructions implement and grove claim <cycle-id> say what check says when a base or planned commit is not in the repository, instead of Git's error text.
 schema: bugfix
+depends_on: [261108-jpg8n]
 base: ccaee4dd7b7ac6755ce73da691b16c55d6c42da4
