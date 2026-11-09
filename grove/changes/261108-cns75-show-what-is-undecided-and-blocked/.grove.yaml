@@ -1,0 +1,5 @@
+title: "Show what is undecided and blocked"
+created: 2026-11-08T23:26:41Z
+description: grove changes and the serve page mark a change with open questions or blocked tasks, and the JSON carries the questions.
+schema: default
+base: ccaee4dd7b7ac6755ce73da691b16c55d6c42da4
