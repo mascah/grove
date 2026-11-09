@@ -43,6 +43,16 @@ reads your main branch. Implementing reads your working tree. On a
 branch, that holds everything main held when the branch started, plus
 what you archived on it.
 
+A line also ends with `open questions` when the change's proposal has
+any, and with the tasks its `implementation.md` marks `Status: blocked`:
+
+> 261019-r2w7k  Add ledger delete ID  approved  waits on 261019-p4x8d  open questions  T-02, T-04 blocked
+
+The "Open questions" section counts unless, without its HTML comments, it
+is empty or says "None.". The line reports what your main branch holds: a
+task blocked on a branch not merged yet shows on that branch's card in
+`grove serve` (see [Watching the project](watching.md)), not here.
+
 Building a change that waits is refused. **Chat:**
 
 ```text
@@ -287,6 +297,9 @@ reads this same object, so the two agree but for the time of the read.
   without being built.
 - `waits_on` lists what `depends_on` names that is not archived as finished;
   it is left out when the change waits on nothing.
+- `open_questions` is the text of the "Open questions" section of the
+  change's main document, without its HTML comments; it is left out when
+  that is empty or says "None".
 - A task's `status` is its `Status:` line in `implementation.md`. That file
   usually reaches your main branch with the archive merge. So an approved
   change's tasks mostly have none.
@@ -297,7 +310,8 @@ reads this same object, so the two agree but for the time of the read.
 - `cycles`: each cycle, its members in build order, and what `grove
   claim` would do with it, or why not.
 - `branches`: each branch, and the working tree, holding work the main
-  branch lacks, with each change's tasks and their status there.
+  branch lacks, with each change's tasks and their status there, and its
+  `open_questions` as that branch holds it.
 - `runs`: the attempts recorded on `grove/runs`, newest first, with
   cycle, host, start time and branch.
 - `history`: the main branch's commits that did something to the record,
