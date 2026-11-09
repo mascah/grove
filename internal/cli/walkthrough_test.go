@@ -514,7 +514,7 @@ func TestImplementInstructions(t *testing.T) {
 	has("implement after an edit", grove(t, "instructions", "implement", cid, "--unattended"), []string{"\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`: differs from main; `git show " + main + ":grove/changes/" + cid + "-allow-editing-older-records/tasks.md` prints the approved text\n", listed}, nil)
 	git(t, dir, "checkout", "-q", "--", ".")
 	out = grove(t, "instructions", "implement", cid, "--unattended")
-	has("unattended instructions", out, append(append([]string{"asking no one, in your own working tree.", "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n"}, shared...), alone...), append(owner, gone...))
+	has("unattended instructions", out, append(append([]string{"asking no one, in your own working tree.", "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n", "only `grove claim` reads them"}, shared...), alone...), slices.Concat(owner, gone, []string{"grove run"}))
 
 	// A member of a cycle, not marked, that needs a person, gets its plan.
 	planCycle(t, dir, k, "2026-10-22T09:00:00Z", false, cid)
@@ -881,7 +881,7 @@ func TestCoordinating(t *testing.T) {
 		!strings.Contains(out, "1. "+unknown+" \"Editing an unknown ID prints an error\" — archived in this working tree\n2. "+del+" \"Add ledger delete ID\" — this change\n") {
 		t.Errorf("implement after its dependency is archived on the branch:\n%s", out)
 	}
-	if out := grove(t, "instructions", "implement", k, "--unattended"); !strings.Contains(out, "\n1. "+del+" \"Add ledger delete ID\"\n\n## Project index") {
+	if out := grove(t, "instructions", "implement", k, "--unattended"); !strings.Contains(out, "\n1. "+del+" \"Add ledger delete ID\"\n\n## Project index") || !strings.Contains(out, "hands one to `grove claim`") || strings.Contains(out, "grove run") {
 		t.Errorf("cycle after archiving on the branch:\n%s", out)
 	}
 	git(t, dir, "checkout", "-q", "--", ".")
@@ -1025,16 +1025,16 @@ func TestCycles(t *testing.T) {
 	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
 		"\ntitle: \"<title>\"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n",
 		"\n# depends_on: [", "ask the owner\n  whether it follows any of them",
-		"A new cycle: before writing its file, run Grove's `check`.", "tell the owner this edits approved work, bring the\n  member up to date on this branch as Grove's\n  `instructions propose <change-id>` says", "`grove run` builds\n    nothing of the cycle until it is"} {
+		"A new cycle: before writing its file, run Grove's `check`.", "tell the owner this edits approved work, bring the\n  member up to date on this branch as Grove's\n  `instructions propose <change-id>` says", "`grove claim` will\n    not claim the cycle until it is"} {
 		if m == nil || !strings.Contains(out, s) {
 			t.Errorf("plan instructions lack %q:\n%s", s, out)
 		}
 	}
-	if strings.Contains(out, "the only thing you write") {
-		t.Errorf("plan instructions still say the cycle file is the only thing written")
+	if strings.Contains(out, "the only thing you write") || strings.Contains(out, "grove run") {
+		t.Errorf("plan instructions still say the cycle file is the only thing written, or name grove run")
 	}
-	// The finish names implement, then run given the cycle, then the mark.
-	if i, r, u := strings.Index(out, "say `/grove-implement <cycle-id>`"), strings.Index(out, "say whether `grove run <cycle-id>`"), strings.Index(out, "say `unattended: true`"); i < 0 || i > r || r > u {
+	// The finish names implement, then claim given the cycle, then the mark.
+	if i, r, u := strings.Index(out, "say `/grove-implement <cycle-id>`"), strings.Index(out, "say whether `grove claim <cycle-id>`"), strings.Index(out, "say `unattended: true`"); i < 0 || i > r || r > u {
 		t.Errorf("plan's finish is not in order:\n%s", out)
 	}
 	if out := grove(t, "instructions", "plan", a); !strings.Contains(out, "with approved change "+a+", \"Editing an unknown ID prints an error\", as its only member") {

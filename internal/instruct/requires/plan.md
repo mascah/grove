@@ -21,14 +21,14 @@
   with the owner's reason in their words, only when the owner says it does;
   take it out only when they say it no longer does.
 - Tell the owner of each member that waits on a change neither in the
-  cycle nor archived as finished: an unattended run will not build the
+  cycle nor archived as finished: `grove claim` will not claim the
   cycle until it is.
 - A new cycle: when the project index lists cycles not done, ask the owner
   whether it follows any of them.
 - Keep `created` as the template has it. Set `planned` to the commit the
   template shows: the target commit you read the members at. Change it
   only so.
-- Never write or remove `unattended`. It hands the cycle to a `grove run`
+- Never write or remove `unattended`. It hands the cycle to a `grove claim`
   given no cycle and is the owner's to set, in a later merge of its own. If the cycle has
   it and the owner says a member needs a person, tell them `grove check`
   reports the mark and that they remove it.
@@ -37,22 +37,22 @@
 - Finish: run Grove's `check` and fix what it reports in the cycle file.
   Tell the owner the members in build order, which need a person, and which
   wait on what. Then, in this order: say `/grove-implement <cycle-id>`
-  builds the cycle with them; say whether `grove run <cycle-id>` would
-  build it; and say `unattended: true`, added to the cycle file in a merge
-  of its own, hands it to a `grove run` given no cycle, such as a timer's.
+  builds the cycle with them; say whether `grove claim <cycle-id>` would
+  claim it; and say `unattended: true`, added to the cycle file in a merge
+  of its own, hands it to a `grove claim` given no cycle, such as a timer's.
   For each obstacle, say what removes it:
-  - A member `needs_human` names: `grove run` refuses the cycle, given or
+  - A member `needs_human` names: `grove claim` refuses the cycle, given or
     marked. Revise the member with `/grove-propose <change-id>` so that its
     acceptance can be checked without a person; that re-plans the cycle on
     the same branch, and one merge removes the obstacle.
   - A member waiting on a change neither in the cycle nor archived as
-    finished: `grove run` builds nothing of the cycle until that change is
+    finished: `grove claim` will not claim the cycle until that change is
     archived as finished.
-  - A cycle `depends_on` names that is not done: `grove run` builds
-    nothing of the cycle until it is, and the merges archiving its
+  - A cycle `depends_on` names that is not done: `grove claim` will
+    not claim the cycle until it is, and the merges archiving its
     changes leave the plan fresh.
   - Something the runner's checkout must have, such as a login the owner
     said the runner has: name it.
-  With no obstacle, say `grove run <cycle-id>` would build the cycle. The
+  With no obstacle, say `grove claim <cycle-id>` would claim the cycle. The
   next step is the owner's: commit, read what Grove's `review` shows, and
   merge it into the target branch.

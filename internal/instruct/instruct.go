@@ -739,7 +739,7 @@ func (p Project) index(b *strings.Builder) {
 	b.WriteString("\n")
 	open := slices.DeleteFunc(slices.Clone(p.Agreed.Cycles), func(cy *doc.Cycle) bool { return cy.Done })
 	if len(open) > 0 {
-		b.WriteString("Cycles not done (planned; `unattended: true` hands one to `grove run`):\n")
+		b.WriteString("Cycles not done (planned; `unattended: true` hands one to `grove claim`):\n")
 	}
 	for _, cy := range open {
 		more := []string{"changes: " + strings.Join(cy.Meta.Changes, ", ")}

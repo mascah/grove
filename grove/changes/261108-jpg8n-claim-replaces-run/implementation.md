@@ -110,7 +110,42 @@ Also changed: `internal/cli/claim.go` — the pause test moved into `pausing`, s
 
 ### T-03 — Instruction text names `grove claim`
 
-Status: not started
+Status: done
+
+In `internal/instruct/requires/plan.md`, every `grove run` became
+`grove claim`. The finish now says whether `grove claim <cycle-id>` would
+claim the cycle. A marked cycle goes to a `grove claim` given no cycle,
+and the needs-person obstacle says `grove claim` refuses the cycle. A
+member waiting outside the cycle, or a cycle it depends on that is not
+done, means `grove claim` will not claim the cycle until that is settled.
+"An unattended run will not build" also became "`grove claim` will not
+claim". In `internal/instruct/requires/implement-unattended.md`, "only
+`grove claim` reads them". The project index in
+`internal/instruct/instruct.go` says "`unattended: true` hands one to
+`grove claim`". No instruction text names `grove run`.
+
+Tests in `internal/cli/walkthrough_test.go`:
+
+- `TestCycles` wants the new wording and the finish's order, implement,
+  then `grove claim <cycle-id>`, then the mark. It also checks that the
+  plan instructions name no `grove run`.
+- `TestImplementInstructions` checks that the unattended instructions say
+  "only `grove claim` reads them" and name no `grove run`. The cycle's
+  unattended instructions carry the index line naming `grove claim` and no
+  `grove run`.
+
+The config scenario (the project context in the unattended instructions)
+is checked by the existing `TestImplementInstructions` case. The propose
+scenarios' instruction text names neither command and was unchanged.
+
+`just check` passes: 4338 Go lines, 1977 test lines, 408 page lines, 8613
+instruction words. On a fixture, `bin/grove instructions plan "x"` prints
+`grove claim` 8 times and `grove run` none. `just trials`
+(`CONTRIBUTING.md`, for a pull request changing instruction text) was not
+run. It drives Claude Code and Codex headless, so whoever opens the pull
+request runs it.
+
+Also changed: `internal/cli/walkthrough_test.go` — its plan and unattended-implement checks matched the `grove run` wording.
 
 ### T-04 — Documentation and the walkthrough
 
