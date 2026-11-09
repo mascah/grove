@@ -1678,9 +1678,14 @@ func TestServe(t *testing.T) {
 	write := func(rel, s string) { os.WriteFile(filepath.Join(dir, rel), []byte(s), 0o644) }
 	maintain(t, dir, olderEdits)
 	commitAll(t, dir, "Record editing")
-	a, _ := approve(t, dir, "a", "Editing an unknown ID prints an error", "")
+	a, aDir := approve(t, dir, "a", "Editing an unknown ID prints an error", "")
+	os.WriteFile(filepath.Join(aDir, "proposal.md"), []byte("# Editing an unknown ID prints an error\n\n## Open questions\n\n<!-- Say which. -->\nShould IDs be six digits? Blocks T-02.\n\n## Related documents\n"), 0o644)
+	os.WriteFile(filepath.Join(aDir, "tasks.md"), []byte("## T-01 — Parse\n\n## T-02 — Print\n\n## T-04 — Exit\n"), 0o644)
+	os.WriteFile(filepath.Join(aDir, "implementation.md"), []byte("### T-01\n\nStatus: done\n\n### T-02\n\nStatus: blocked\n\n### T-04\n\nStatus: blocked\n"), 0o644)
+	commitAll(t, dir, "Questions and blocked tasks for "+a)
 	b, bDir := approve(t, dir, "b", "Add ledger delete ID", "depends_on: ["+a+"]\n")
 	os.WriteFile(filepath.Join(bDir, "tasks.md"), []byte("## T-01 — Delete\n\n## T-02 — Confirm\n"), 0o644)
+	os.WriteFile(filepath.Join(bDir, "proposal.md"), []byte("# Add ledger delete ID\n\n## Open questions\n\nAsk before deleting?\n"), 0o644)
 	commitAll(t, dir, "Tasks for "+b)
 	c, cDir := approve(t, dir, "c", "Export the ledger as CSV", "")
 	d, dDir := approve(t, dir, "d", "Monthly budgets in report", "")
@@ -1706,7 +1711,7 @@ func TestServe(t *testing.T) {
 	write("grove/cycles/"+l+"-cycle.yaml", "title: Cycle L\ncreated: 2026-11-03T00:00:00Z\nchanges: ["+c+"]\nplanned: "+strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))+"\nneeds_human:\n  "+c+": a person judges the file\n")
 	commitAll(t, dir, "Plan "+l)
 	planCycle(t, dir, m, "2026-11-04T00:00:00Z", true, d)
-	os.WriteFile(filepath.Join(dDir, "proposal.md"), []byte("# Monthly budgets in report\n\nRevised.\n"), 0o644)
+	os.WriteFile(filepath.Join(dDir, "proposal.md"), []byte("# Monthly budgets in report\n\nRevised.\n\n## Open questions\n\n<!-- Say which. -->\nNone.\n"), 0o644)
 	commitAll(t, dir, "Revise "+d)
 	write("ledger/records.py", "# records\n")
 	commitAll(t, dir, "Records only")
@@ -1722,7 +1727,7 @@ func TestServe(t *testing.T) {
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "branch", "-q", "-D", "teammate")
 	g, gDir := propose(t, dir, "draft-notes", "Notes on records", "")
-	os.WriteFile(filepath.Join(gDir, "proposal.md"), []byte("# Notes on records\n\n<script>alert(1)</script>\n"), 0o644)
+	os.WriteFile(filepath.Join(gDir, "proposal.md"), []byte("# Notes on records\n\n<script>alert(1)</script>\n\n## Open questions\n\nShould notes be dated?\n"), 0o644)
 	commitAll(t, dir, "Draft "+g)
 	git(t, dir, "switch", "-q", "main")
 	os.WriteFile(filepath.Join(cDir, "implementation.md"), []byte("### T-01\n\nStatus: in progress\n"), 0o644)
@@ -1760,7 +1765,15 @@ func TestServe(t *testing.T) {
 	if v.Root != "grove" || v.Target != "main" || v.Commit != head || len(v.Specs) != 1 {
 		t.Errorf("value names %s %s %s with %d specs", v.Root, v.Target, v.Commit, len(v.Specs))
 	}
+	// What the target holds is undecided and blocked; build-b's blocked T-02 is not.
+	if got := grove(t, "changes"); !strings.Contains(got, a+"  Editing an unknown ID prints an error  approved  in cycle "+k+", unattended  open questions  T-02, T-04 blocked\n") ||
+		!strings.Contains(got, b+"  Add ledger delete ID  approved  waits on "+a+"  in cycle "+k+", unattended  open questions\n") || !strings.Contains(got, d+"  Monthly budgets in report  approved  in cycle "+m+", unattended\n") {
+		t.Errorf("changes printed:\n%s", got)
+	}
 	for _, ch := range v.Changes {
+		if q := map[string]string{a: "Should IDs be six digits? Blocks T-02.", b: "Ask before deleting?"}[ch.ID]; ch.OpenQuestions != q {
+			t.Errorf("change %s gives open_questions %q", ch.ID, ch.OpenQuestions)
+		}
 		if ch.ID == e && (ch.Cycle != "" || !ch.Ready) || ch.ID == a && ch.Cycle != k {
 			t.Errorf("change %s in cycle %q, ready %v", ch.ID, ch.Cycle, ch.Ready)
 		}
@@ -1835,7 +1848,7 @@ func TestServe(t *testing.T) {
 	for _, r := range v.Branches {
 		row := fmt.Sprintf("%s origin_only=%v pushed=%v", r.Name, r.OriginOnly, r.Pushed)
 		for _, ch := range r.Changes {
-			row += fmt.Sprintf(" %s draft=%v", ch.ID, ch.Draft)
+			row += fmt.Sprintf(" %s draft=%v q=%q", ch.ID, ch.Draft, ch.OpenQuestions)
 			for _, t := range ch.Tasks {
 				row += " " + t.ID + ":" + t.Status
 			}
@@ -1845,10 +1858,10 @@ func TestServe(t *testing.T) {
 	}
 	cRel, bRel, gRel := "changes/"+filepath.Base(cDir)+"/", "changes/"+filepath.Base(bDir)+"/", "changes/"+filepath.Base(gDir)+"/"
 	want := []string{
-		"working tree origin_only=false pushed=false " + c + " draft=false T-01:in progress new=" + cRel + "implementation.md",
-		"draft-notes origin_only=false pushed=false " + g + " draft=true T-01: new=" + strings.Join([]string{gRel + ".grove.yaml", gRel + "proposal.md", gRel + "tasks.md"}, ","),
-		"origin/teammate origin_only=true pushed=false " + b + " draft=false T-01:to check T-02: new=" + bRel + "implementation.md",
-		"build-b origin_only=false pushed=true " + b + " draft=false T-01:done T-02:blocked new=" + bRel + "implementation.md",
+		"working tree origin_only=false pushed=false " + c + " draft=false q=\"\" T-01:in progress new=" + cRel + "implementation.md",
+		"draft-notes origin_only=false pushed=false " + g + " draft=true q=\"Should notes be dated?\" T-01: new=" + strings.Join([]string{gRel + ".grove.yaml", gRel + "proposal.md", gRel + "tasks.md"}, ","),
+		"origin/teammate origin_only=true pushed=false " + b + " draft=false q=\"Ask before deleting?\" T-01:to check T-02: new=" + bRel + "implementation.md",
+		"build-b origin_only=false pushed=true " + b + " draft=false q=\"Ask before deleting?\" T-01:done T-02:blocked new=" + bRel + "implementation.md",
 	}
 	// The branches' commits share a second, so only the working tree, newest, has its place.
 	slices.Sort(rows[1:])

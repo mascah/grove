@@ -67,12 +67,13 @@ type Document struct {
 // changes/archive/<id>-<slug>/.
 type Change struct {
 	Document
-	State   string            `json:"state"`              // approved, or archived or dropped once archived
-	WaitsOn []string          `json:"waits_on,omitempty"` // what DependsOn names that is not archived as finished
-	Tasks   []Task            `json:"tasks,omitempty"`    // from tasks.md, with their status from implementation.md
-	Files   []string          `json:"-"`                  // every Markdown file in Dir and its .grove.yaml, relative to the root, sorted
-	Touches map[string]string `json:"-"`                  // file → the capability it is about, for each file at a schema path with <capability>
-	Dropped bool              `json:"-"`                  // implementation.md says Status: dropped
+	State         string            `json:"state"`                    // approved, or archived or dropped once archived
+	WaitsOn       []string          `json:"waits_on,omitempty"`       // what DependsOn names that is not archived as finished
+	Tasks         []Task            `json:"tasks,omitempty"`          // from tasks.md, with their status from implementation.md
+	Files         []string          `json:"-"`                        // every Markdown file in Dir and its .grove.yaml, relative to the root, sorted
+	Touches       map[string]string `json:"-"`                        // file → the capability it is about, for each file at a schema path with <capability>
+	Dropped       bool              `json:"-"`                        // implementation.md says Status: dropped
+	OpenQuestions string            `json:"open_questions,omitempty"` // its main document's "Open questions" section, or ""
 }
 
 // Task is one T-NN heading of a change's tasks.md, with the status
@@ -319,6 +320,8 @@ func loadChange(fsys fs.FS, name string, layout Layout) (*Change, error) {
 		if err := ch.heading(fsys, ch.Dir+"/"+main, "missing; it is the change's main document in schema "+ch.Meta.Schema); err != nil {
 			return nil, err
 		}
+		src, _ := fs.ReadFile(fsys, ch.Path) // heading reported it missing
+		ch.OpenQuestions = openQuestions(string(src))
 	}
 	err = fs.WalkDir(fsys, ch.Dir, func(name string, d fs.DirEntry, err error) error {
 		if err == nil && !d.IsDir() && (strings.HasSuffix(name, ".md") || name == ch.Dir+"/.grove.yaml") {
@@ -416,6 +419,25 @@ func (ch *Change) tasks(fsys fs.FS) {
 			t.Files = nil
 		}
 	}
+}
+
+var (
+	htmlComment = regexp.MustCompile(`(?s)<!--.*?-->`)
+	nextSection = regexp.MustCompile(`(?m)^#{1,2} `)
+	none        = regexp.MustCompile(`(?i)^none\.?$`)
+)
+
+// openQuestions returns the text of src's "Open questions" section without
+// its HTML comments, or "" when what is left is empty or says None.
+func openQuestions(src string) string {
+	_, s, ok := strings.Cut(htmlComment.ReplaceAllString(src, ""), "\n## Open questions\n")
+	if i := nextSection.FindStringIndex(s); i != nil {
+		s = s[:i[0]]
+	}
+	if s = strings.TrimSpace(s); !ok || none.MatchString(s) {
+		return ""
+	}
+	return s
 }
 
 // idOf returns the ID a change folder name starts with, or "".

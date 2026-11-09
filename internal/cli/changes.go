@@ -8,8 +8,9 @@ import (
 	"strings"
 )
 
-// listChanges lists the target's approved changes, what each waits on and
-// the cycle not done that holds it; as JSON, it prints the project value
+// listChanges lists the target's approved changes, what each waits on, the
+// cycle not done that holds it, and whether it has open questions or
+// blocked tasks; as JSON, it prints the project value
 // serve answers /api/project with (D-64).
 func listChanges(stdout io.Writer, asJSON bool) error {
 	p, err := openProject()
@@ -41,6 +42,18 @@ func listChanges(stdout io.Writer, asJSON bool) error {
 					waits += ", waits on cycle " + strings.Join(cy.WaitsOn, ", ")
 				}
 			}
+		}
+		if c.OpenQuestions != "" {
+			waits += "  open questions"
+		}
+		var blocked []string
+		for _, t := range c.Tasks {
+			if t.Status == "blocked" {
+				blocked = append(blocked, t.ID)
+			}
+		}
+		if len(blocked) > 0 {
+			waits += "  " + strings.Join(blocked, ", ") + " blocked"
 		}
 		fmt.Fprintf(stdout, "%s  %s  approved%s\n", c.ID, c.Meta.Title, waits)
 		problems(stdout, c.Diagnostics)
