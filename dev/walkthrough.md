@@ -331,7 +331,13 @@ show-saved changes approved. Each step names the section of
    one commit, such as budgets' `base`, as
    > grove/changes/\<budgets>/.grove.yaml: base: \<sha> is not in this shallow clone; fetch its full history, such as with git fetch --unshallow
 
-   while in `~/tmp/ledger` it reports neither. Delete
+   and `grove instructions implement <budgets-id>`, the same with
+   `--unattended`, `grove instructions implement <0.4-cycle-id>` and
+   `grove claim <0.4-cycle-id>` each print no instructions and exit
+   non-zero with check's line for the cycle, `claim` recording nothing:
+   > grove: grove/cycles/\<0.4-cycle>.yaml: planned: \<sha> is not in this shallow clone; fetch its full history, such as with git fetch --unshallow
+
+   while in `~/tmp/ledger` `grove check` reports neither. Delete
    `~/tmp/ledger-shallow`.
 
 7. **A cycle that follows another** ("Follow another cycle", "Re-plan a

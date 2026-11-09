@@ -1618,9 +1618,18 @@ func TestMisnamedCycle(t *testing.T) {
 func TestShallowClone(t *testing.T) {
 	dir := setUp(t)
 	base := strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))
-	a, aDir := approve(t, dir, "a", "Editing an unknown ID prints an error", "base: "+base+"\n")
-	planCycle(t, dir, "261105-pr0t0", "2026-11-05T09:00:00Z", false, a) // planned is the commit before this one
+	a, _ := approve(t, dir, "a", "Editing an unknown ID prints an error", "base: "+base+"\n")
+	b, bDir := approve(t, dir, "b", "Add ledger delete ID", "base: "+base+"\n")
+	planCycle(t, dir, "261105-pr0t0", "2026-11-05T09:00:00Z", true, a) // planned is the commit before this one
 	planned := strings.TrimSpace(git(t, dir, "rev-parse", "HEAD~1"))
+	// implement and claim refuse with check's line, printing nothing else.
+	refuses := func(want string, args ...string) {
+		t.Helper()
+		var stdout, stderr strings.Builder
+		if code := run(args, &stdout, &stderr); code != 1 || stdout.Len() > 0 || stderr.String() != "grove: "+want+"\n" {
+			t.Errorf("grove %v: status %d, want %q:\n%s%s", args, code, want, stdout.String(), stderr.String())
+		}
+	}
 	checks := func(want string) {
 		t.Helper()
 		var stdout, stderr strings.Builder
@@ -1633,10 +1642,22 @@ func TestShallowClone(t *testing.T) {
 	t.Chdir(clone)
 	checks("/.grove.yaml: base: " + base + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow\n")
 	checks("grove/cycles/261105-pr0t0-cycle.yaml: planned: " + planned + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow\n")
+	plan := "grove/cycles/261105-pr0t0-cycle.yaml: planned: " + planned + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow"
+	refuses(bDir[len(dir)+1:]+"/.grove.yaml: base: "+base+" is not in this shallow clone; fetch its full history, such as with git fetch --unshallow", "instructions", "implement", b)
+	refuses(plan, "instructions", "implement", a)
+	refuses(plan, "instructions", "implement", a, "--unattended")
+	refuses(plan, "instructions", "implement", "261105-pr0t0")
+	refuses(plan, "claim", "261105-pr0t0")
+	refuses("nothing to claim on main at "+strings.TrimSpace(git(t, clone, "rev-parse", "--short=7", "HEAD")), "claim")
+	if out := git(t, clone, "for-each-ref", "refs/heads/grove", "refs/remotes/origin/grove") + git(t, dir, "for-each-ref", "refs/heads/grove"); out != "" {
+		t.Errorf("claim recorded or branched:\n%s", out)
+	}
 	t.Chdir(dir)
-	file := filepath.Join(aDir, ".grove.yaml")
+	file := filepath.Join(bDir, ".grove.yaml")
 	os.WriteFile(file, []byte(strings.Replace(read(t, file), "base: "+base, "base: 0000000", 1)), 0o644)
+	commitAll(t, dir, "Base "+b+" on no commit")
 	checks("/.grove.yaml: base: 0000000 is not a commit in this repository\n")
+	refuses(bDir[len(dir)+1:]+"/.grove.yaml: base: 0000000 is not a commit in this repository", "instructions", "implement", b)
 }
 
 // serving starts grove serve with args in the working directory and

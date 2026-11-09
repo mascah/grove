@@ -205,11 +205,15 @@ func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *
 	var tasks []doc.Task
 	since := ""
 	if err == nil && cy == nil && !inOpenCycle(tree, id) && c.Meta.Base != "" {
-		tasks, err = moved(p, ip.Commit, c)
+		if tasks, err = moved(p, ip.Commit, c); err != nil {
+			err = absent(p, c.Dir+"/.grove.yaml", "base", c.Meta.Base)
+		}
 		since = "base " + c.Meta.Base[:min(7, len(c.Meta.Base))]
 	} else if err == nil && cy != nil && cy.Meta.Planned != "" {
 		var paths []string
-		paths, err = sincePlan(p, ip.Commit, ip.Agreed, cy)
+		if paths, err = sincePlan(p, ip.Commit, ip.Agreed, cy); err != nil {
+			err = absent(p, cy.Path, "planned", cy.Meta.Planned)
+		}
 		tasks, since = naming(c, paths), "cycle "+cy.ID+"'s plan "+cy.Meta.Planned[:min(7, len(cy.Meta.Planned))]
 	}
 	var named []string
@@ -235,8 +239,13 @@ func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *
 
 // instructionsCycle prints the instructions for implementing each member
 // of cycle cy that tree has not archived, with the owner or unattended, in
-// build order.
+// build order, or check's line when cy's planned is not a commit.
 func instructionsCycle(stdout io.Writer, p project, ip instruct.Project, tree *doc.Collection, cy *doc.Cycle, unattended bool) error {
+	if !cy.Done && cy.Meta.Planned != "" {
+		if _, err := sincePlan(p, ip.Commit, ip.Agreed, cy); err != nil {
+			return absent(p, cy.Path, "planned", cy.Meta.Planned)
+		}
+	}
 	fsys, err := gitx.TreeFS(p.Top, ip.Commit, p.Root)
 	if err != nil {
 		return err
