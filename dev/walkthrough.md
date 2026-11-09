@@ -209,7 +209,9 @@ It starts where the main line's step 6 ends: one archived change and the
 
 6. **The project as data** ("The project as data"). `grove changes --json`
    shows the unknown-ID and recategorize changes as `archived` with `T-01` `done`, and the delete change with no
-   `waits_on`, since the unknown-ID change is archived.
+   `waits_on`, since the unknown-ID change is archived; the delete change
+   is `ready`, and the object holds `read`, `specs`, `cycles`,
+   `branches`, `runs`, `history` and `problems`.
 
 ## Planning cycles
 
@@ -556,6 +558,11 @@ the browser's console shows no error.
    one from `ledger-watch2` with its cycle, start time, host and branch,
    and the time of the commit pushed on that branch. Readiness says K is
    claimed, naming the host, the start time and the branch.
+   `grove changes --json` and `curl -s http://127.0.0.1:7070/api/project`
+   print the same object but for `read` and the working tree's `date`,
+   both the time of the read: K's verdict says it is claimed, B's `cycle`
+   is K, `runs` holds the attempt from `ledger-watch2`'s host, and
+   `branches` has `build-b` with T-01 done.
 
 4. **The pane** ("The pane", "Graph", "Specs"). Click B: the pane shows
    its proposal rendered, with a button for each file on `main` and for

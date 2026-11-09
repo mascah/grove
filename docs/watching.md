@@ -12,7 +12,9 @@ The page reads the target branch, this checkout's branches, the working
 tree and `grove/runs`. It writes nothing, fetches nothing from `origin`
 and starts no agent, so what it shows is what this checkout has: `git
 fetch` first to see your teammates' latest branches, and pull the target
-branch to see what was merged into it. The
+branch to see what was merged into it. `grove changes --json` prints the
+object the page reads (see [Coordinating changes](coordinating.md), "The
+project as data"). The
 [serve spec](https://github.com/mascah/grove/blob/main/grove/specs/serve/spec.md)
 has the exact rules.
 
