@@ -41,6 +41,13 @@ saving or ending a conversation approves nothing. Merge commits and squash
 merges both count. If you commit a proposal straight onto your main branch,
 that commit approves it.
 
+Grove reads your main branch at the newest commit it shares with
+origin's `main`, as your checkout last fetched it; Grove fetches nothing.
+So a change merged on your machine is approved once you push it, and
+until then Grove reads main at a commit behind your own. In a checkout
+with no local `main`, such as a pull-request job's, origin's counts; in a
+repository with no `origin`, your main branch does.
+
 A small change can take one merge instead of two. Propose it on a branch,
 then build it there with `/grove-implement <change-id>`, with you in the
 session. Merging that branch approves the change with its code. The same
@@ -241,7 +248,8 @@ holds.
   one of its tasks names changed on the target since its base. A cycle is
   stale when one of its changes, or a file their tasks name, changed on the
   target since it was planned.
-- **Target:** the branch whose contents count as agreed, usually `main`.
+- **Target:** the branch whose contents count as agreed, usually `main`,
+  read at the newest commit your main branch and origin's both hold.
 - **Unattended:** built with no one in the session, asking no one. A cycle
   marked `unattended: true` is handed to a `grove claim` given no cycle.
 - **Waits on:** a change waits on each change its `depends_on` names until

@@ -97,6 +97,10 @@ and the implement instructions, for a change or a cycle, fail with the
 same line for its `base` or its cycle's `planned`, printing no
 instructions.
 
+A pull-request job's checkout has `origin/main` and no local `main`.
+Grove reads the target there at `origin/main`, so `grove check` needs no
+extra step.
+
 After a push to main, each change has one issue labelled `grove`. Its
 title is the change's title, and its body is the change's main document
 ending with `<!-- grove:<id> -->`. The issue of an archived or dropped

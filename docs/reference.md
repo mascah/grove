@@ -128,7 +128,7 @@ rules:
 | Field | Default | Meaning |
 | --- | --- | --- |
 | `root` | `grove` | The folder that holds `specs/`, `changes/` and `cycles/`. |
-| `target` | `main` | The branch whose contents count as agreed. Merging into it approves. |
+| `target` | `main` | The branch whose contents count as agreed, read at the newest commit both the local branch and this checkout's `origin/<target>` hold, or at the one that exists, fetching nothing. Merging into it approves; with an `origin`, once the merge is pushed. |
 | `agents` | `claude` and `codex`, as `skills` | Each harness `init` writes Grove's skills for, and whether as `skills` or `commands` (see "Harnesses"). The first `init` chooses them. |
 | `schema` | `default` | The change schema a new change has unless the owner names another while proposing. See "Change schemas". |
 | `context` | empty | Instructions given to every skill, so they reach agents working through Grove and no other session; project facts every session needs stay in `CLAUDE.md` or `AGENTS.md`. |

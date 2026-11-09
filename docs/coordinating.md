@@ -24,8 +24,10 @@ depends_on: [261019-p4x8d]
 base: 4f1c2a9e0b7d6c5e4f3a2b1c0d9e8f7a6b5c4d3e
 ```
 
-`base` is the commit of your main branch that the change was proposed from.
-Grove's template writes it, so you never type it.
+`base` is the commit your main branch and origin's both held when the
+change was proposed. It stays in origin's history whatever you later
+squash or rebase on your machine. Grove's template writes it, so you never
+type it.
 
 **Terminal**, once both changes are merged:
 
@@ -214,9 +216,9 @@ To bring the change up to date, revise it on a branch. **Chat:**
 
 The agent rewrites that MODIFIED or REMOVED requirement from your main
 branch's text, keeping what the change itself alters. It sets `base` to
-your main branch's commit. `grove check` is clean again. Merge it, and the
-revised change is approved. Do not edit `base` by hand: that hides the
-report without bringing the change up to date.
+the commit your main branch and origin's both hold. `grove check` is clean
+again. Merge it, and the revised change is approved. Do not edit `base`
+by hand: that hides the report without bringing the change up to date.
 
 The code can move too. Each task names the files it touches on its
 `Files:` line. `grove check` reports a named file that changed on your
