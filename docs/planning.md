@@ -50,8 +50,9 @@ needs_human:
 planned: 8f2d6c1a4b9e0f7d3c5a2b1e6f4d8c0a9b7e5f3d
 ```
 
-`created` is when the plan started, and `planned` the commit of your main
-branch it read. Grove's template writes both, so you never type them.
+`created` is when the plan started, and `planned` the commit your main
+branch and origin's both held when it read them. Grove's template writes
+both, so you never type them.
 
 The agent ends with a verdict. It names `/grove-implement <cycle-id>`,
 which builds the cycle with you. It says whether `grove claim <cycle-id>`
@@ -154,19 +155,20 @@ this cycle`.
 
 revises the cycle as you ask. The agent reads its changes as your main
 branch holds them and asks about them as for a new plan. It sets
-`planned` to your main branch's commit. Merge it. Say a file a change's
-task names has moved, and you are content to build the change on the new
-text. Then re-planning is all it takes; the change itself stays as it
-is.
+`planned` to the commit your main branch and origin's both hold. Merge
+it. Say a file a change's task names has moved, and you are content to
+build the change on the new text. Then re-planning is all it takes; the
+change itself stays as it is.
 
 Revising a change in the cycle re-plans it too.
 `/grove-propose 261019-r2w7k` prints the cycle's file beside the change.
 On the same branch, the agent asks whether the change needs a person, as
-planning does. It sets `planned` to your main branch's commit. It never
-writes or removes `unattended`. Merge the branch as one commit, a squash
-or a merge commit, and the plan holds. A rebase or fast-forward brings the
-revision and the re-plan to main as two commits. Then the revision is a
-change the plan did not check, and the cycle is stale.
+planning does. It sets `planned` to the commit your main branch and
+origin's both hold. It never writes or removes `unattended`. Merge the
+branch as one commit, a squash or a merge commit, and the plan holds. A
+rebase or fast-forward brings the revision and the re-plan to main as two
+commits. Then the revision is a change the plan did not check, and the
+cycle is stale.
 
 A cycle is done when every change in it is archived, finished or dropped.
 Its file stays. A change is in at most one cycle that is not done.

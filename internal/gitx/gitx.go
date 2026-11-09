@@ -36,9 +36,29 @@ func TopLevel(dir string) (string, error) {
 	return strings.TrimSuffix(out, "\n"), err
 }
 
-// ResolveBranch returns the commit at the tip of the local branch name.
+// ResolveBranch returns the newest commit that both the local branch name and
+// origin's hold, or the one of them that exists: a commit origin has that is
+// never ahead of this checkout, so what is recorded from it stays resolvable.
 func ResolveBranch(dir, name string) (string, error) {
-	out, err := Run(dir, "rev-parse", "--verify", "--end-of-options", "refs/heads/"+name+"^{commit}")
+	remote, err := resolve(dir, "refs/remotes/origin/"+name)
+	if err != nil {
+		return LocalBranch(dir, name)
+	}
+	local, err := LocalBranch(dir, name)
+	if err != nil {
+		return remote, nil
+	}
+	out, err := Run(dir, "merge-base", local, remote)
+	return strings.TrimSpace(out), err
+}
+
+// LocalBranch returns the commit at the tip of the local branch name.
+func LocalBranch(dir, name string) (string, error) {
+	return resolve(dir, "refs/heads/"+name)
+}
+
+func resolve(dir, ref string) (string, error) {
+	out, err := Run(dir, "rev-parse", "--verify", "--end-of-options", ref+"^{commit}")
 	return strings.TrimSpace(out), err
 }
 

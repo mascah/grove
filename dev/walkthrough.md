@@ -893,6 +893,25 @@ the browser's console shows no error.
   and the reason in `implementation.md`, and moves it without touching the
   specs. Before that, `grove archive <change-id>` says
   > T-01 is not done in implementation.md; archive a change when every task is done or the file says Status: dropped
+- **The target as origin holds it** (concepts, "Approval is a merge";
+  coordinating, "A change that waits"; the CI guide). On a fresh fixture,
+  after `grove init` and its commit, `git clone --bare .
+  ~/tmp/ledger-origin.git`, add it as `origin`, `git fetch origin`, and
+  `git clone` it to `~/tmp/ledger-2`. Commit a `notes.txt` on `main` and
+  do not push it. `git switch -c budgets` and `/grove-propose Monthly
+  budgets in report`: its `.grove.yaml` has `base:` with `origin/main`'s
+  full commit, not `main`'s. Commit, then squash-merge it as a host does:
+  `git switch main && git reset --hard origin/main && git merge --squash
+  budgets && git commit -m "Approve budgets" && git push origin main`. In
+  `~/tmp/ledger-2`, `git pull`: `grove check` says there are no problems
+  and `grove changes` lists budgets. There, propose a delete change on a
+  branch and `git merge --no-ff` it into `main` without pushing:
+  `grove changes` lists only budgets; after `git push origin main`, both.
+  Then `git init ~/tmp/ledger-ci`, add the bare repository as `origin`,
+  `git fetch origin` and `git switch --detach origin/main`, a
+  pull-request job's checkout with no local `main`: `grove check` says
+  there are no problems and `grove changes` prints what it printed in
+  `~/tmp/ledger-2`.
 
 ## Decided
 
