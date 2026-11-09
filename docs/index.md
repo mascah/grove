@@ -42,8 +42,8 @@ Some agents type skills another way, such as `$grove-explore`; the
 Once several changes are approved, `/grove-plan` puts them in a cycle.
 `/grove-implement <cycle-id>` builds them in order with you, and
 `--unattended` builds them without asking you; you merge once. Mark the
-cycle `unattended`, and `grove run` builds it for you in one Claude Code
-session. `grove run` is the only command that starts an agent.
+cycle `unattended`, and `grove claim` hands it to an agent you start
+without you, from any harness. Grove starts no agent.
 
 ## Where to go next
 
@@ -55,9 +55,9 @@ session. `grove run` is the only command that starts an agent.
 - [Coordinating changes](coordinating.md): changes that wait on others,
   stale plans, and the project as data.
 - [Planning cycles](planning.md): group approved changes, say which need
-  a person, and mark a cycle for `grove run`.
-- [Running unattended](running.md): `grove run` builds a cycle you
-  marked in one Claude Code session, on its own or from a timer.
+  a person, and mark a cycle for `grove claim`.
+- [Running unattended](running.md): `grove claim` claims a cycle you
+  marked for an agent you start, by hand or from a timer.
 - [Watching the project](watching.md): `grove serve` shows what is ready,
   what is being built and what happened, on one page in your browser.
 - Guides: recipes others have tried, such as

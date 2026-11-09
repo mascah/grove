@@ -1242,7 +1242,7 @@ func TestClaim(t *testing.T) {
 	git(t, h1, "checkout", "-q", "--", ".")
 	hook := filepath.Join(remote, "hooks", "pre-receive")
 	os.WriteFile(hook, []byte("#!/bin/sh\necho not allowed >&2\nexit 1\n"), 0o755)
-	claims(h1, "", `^grove: git push: .*not allowed`)
+	claims(h1, "", `^grove: the record was refused, so nothing is recorded: git push: .*not allowed`)
 	if got := git(t, h1, "for-each-ref", "refs/remotes/origin/grove"); got != "" {
 		t.Errorf("a refused push left %q", got)
 	}

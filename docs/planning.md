@@ -2,7 +2,7 @@
 
 A cycle is approved changes you mean to build together, such as a release.
 Planning one finds out, with you, which of its changes need a person. A
-cycle is also how work reaches `grove run`: it builds a cycle you name or
+cycle is also how work reaches `grove claim`: it claims a cycle you name or
 have marked `unattended`, never a change on its own (see
 [Running unattended](running.md)). The [cycles spec](https://github.com/mascah/grove/blob/main/grove/specs/cycles/spec.md) has the exact
 rules for cycles.
@@ -54,19 +54,19 @@ planned: 8f2d6c1a4b9e0f7d3c5a2b1e6f4d8c0a9b7e5f3d
 branch it read. Grove's template writes both, so you never type them.
 
 The agent ends with a verdict. It names `/grove-implement <cycle-id>`,
-which builds the cycle with you. It says whether `grove run <cycle-id>`
-would build it. It says that `unattended: true`, merged on its own, hands
-the cycle to a `grove run` given no cycle. And for each obstacle, it says
+which builds the cycle with you. It says whether `grove claim <cycle-id>`
+would claim it. It says that `unattended: true`, merged on its own, hands
+the cycle to a `grove claim` given no cycle. And for each obstacle, it says
 what removes it. For this one:
 
-> Build this cycle with `/grove-implement 261020-m4k8t`. grove run would refuse it, given as `grove run 261020-m4k8t` or marked: 261019-r2w7k needs a person. To remove that, revise it with `/grove-propose 261019-r2w7k` so its acceptance can be checked without a person; that re-plans the cycle on the same branch, and one merge removes it.
+> Build this cycle with `/grove-implement 261020-m4k8t`. grove claim would refuse it, given as `grove claim 261020-m4k8t` or marked: 261019-r2w7k needs a person. To remove that, revise it with `/grove-propose 261019-r2w7k` so its acceptance can be checked without a person; that re-plans the cycle on the same branch, and one merge removes it.
 
 For a cycle with nothing in the way:
 
-> Build this cycle with `/grove-implement 261020-m4k8t`, or have `grove run 261020-m4k8t` build it. Adding `unattended: true` to its file in a merge of its own hands it to a `grove run` given no cycle, such as a timer's.
+> Build this cycle with `/grove-implement 261020-m4k8t`, or have `grove claim 261020-m4k8t` claim it for an agent you start. Adding `unattended: true` to its file in a merge of its own hands it to a `grove claim` given no cycle, such as a timer's.
 
-Say a change in the cycle waits on a change outside it. Then `grove run`
-does not build the cycle until that outside change is archived as
+Say a change in the cycle waits on a change outside it. Then `grove claim`
+does not claim the cycle until that outside change is archived as
 finished. The verdict also names what the runner's checkout must have,
 such as a login you said the runner has.
 
@@ -87,7 +87,7 @@ follows any of them, and writes only those you name:
 depends_on: [261020-m4k8t]
 ```
 
-`grove run` builds nothing of the cycle while a cycle it follows is not
+`grove claim` claims nothing of the cycle while a cycle it follows is not
 done. `grove changes` says so: `in cycle 261021-q2w9e, waits on cycle
 261020-m4k8t`. A cycle it follows, directly or through others, lands in
 merges that archive its changes. Those merges may edit files that this
@@ -114,7 +114,7 @@ you, as `/grove-implement <change-id>` does.
 
 ## Mark it unattended
 
-Handing a cycle to `grove run` is a merge of its own. On a branch, add one
+Handing a cycle to `grove claim` is a merge of its own. On a branch, add one
 line to the cycle file:
 
 ```yaml
@@ -124,10 +124,10 @@ unattended: true
 and merge it. `grove changes` then says `in cycle 261020-m4k8t, unattended`.
 No skill writes or removes the line, and re-planning keeps it.
 
-`grove check` reports a marked cycle that `grove run` would skip. One whose
+`grove check` reports a marked cycle that `grove claim` would skip. One whose
 `needs_human` names a change:
 
-> grove/cycles/261020-m4k8t-0-4-release.yaml:8: unattended: 261019-r2w7k needs a person, as needs_human says, so grove run skips this cycle; remove unattended, or build the cycle with /grove-implement 261020-m4k8t
+> grove/cycles/261020-m4k8t-0-4-release.yaml:8: unattended: 261019-r2w7k needs a person, as needs_human says, so grove claim skips this cycle; remove unattended, or build the cycle with /grove-implement 261020-m4k8t
 
 And one whose plan is stale (see "Re-plan a cycle").
 
@@ -145,7 +145,7 @@ first-parent history, so a squash or a merge commit counts as one commit.
 
 > grove/cycles/261020-m4k8t-0-4-release.yaml: planned: 261019-p4x8d changed on main since this plan; re-plan it with /grove-plan 261020-m4k8t
 
-For a marked cycle, the line says `since this plan, so grove run skips
+For a marked cycle, the line says `since this plan, so grove claim skips
 this cycle`.
 
 ```text

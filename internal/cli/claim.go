@@ -127,7 +127,7 @@ func claim(stdout io.Writer, id string, retry bool) error {
 		if _, moved, ferr := fetch(p, origin); ferr == nil && moved != tip {
 			return claim(stdout, id, retry) // another claim recorded first; decide again on its record
 		}
-		return err
+		return fmt.Errorf("the record was refused, so nothing is recorded: %w", err)
 	}
 	if _, err := gitx.Run(p.Top, "switch", "-q", "-c", a.Branch, commit); err != nil {
 		return err
