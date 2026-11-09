@@ -1660,6 +1660,62 @@ func TestShallowClone(t *testing.T) {
 	refuses(bDir[len(dir)+1:]+"/.grove.yaml: base: 0000000 is not a commit in this repository", "instructions", "implement", b)
 }
 
+// TestOriginTarget follows the walkthrough's "The target as origin holds
+// it": two clones of one origin, the first with a commit of its own on main,
+// and a checkout with origin's main and no local one.
+func TestOriginTarget(t *testing.T) {
+	owner := setUp(t)
+	tmp := t.TempDir()
+	remote, c1, c2, ci := filepath.Join(tmp, "remote.git"), filepath.Join(tmp, "c1"), filepath.Join(tmp, "c2"), filepath.Join(tmp, "ci")
+	git(t, owner, "clone", "-q", "--bare", owner, remote)
+	git(t, owner, "clone", "-q", remote, c1)
+	git(t, owner, "clone", "-q", remote, c2)
+	shared := strings.TrimSpace(git(t, c1, "rev-parse", "main"))
+	os.WriteFile(filepath.Join(c1, "notes.txt"), []byte("mine\n"), 0o644)
+	commitAll(t, c1, "A note never pushed")
+	t.Chdir(c1)
+	if out := grove(t, "instructions", "propose"); !strings.Contains(out, "\nbase: "+shared+"\n") {
+		t.Errorf("propose in c1 does not base on origin's main %s:\n%.3000s", shared[:7], out)
+	}
+	cid, _ := propose(t, c1, "older-edits", "Allow editing older records", "base: "+shared+"\n")
+	commitAll(t, c1, "Propose")
+	// Squash-merged as a host does, onto origin's main without c1's note.
+	git(t, c1, "switch", "-q", "main")
+	git(t, c1, "reset", "-q", "--hard", "origin/main")
+	git(t, c1, "merge", "-q", "--squash", "older-edits")
+	commitAll(t, c1, "Approve "+cid)
+	git(t, c1, "push", "-q", "origin", "main")
+
+	t.Chdir(c2)
+	git(t, c2, "pull", "-q")
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check in c2 printed %q", got)
+	}
+	// A local merge counts once pushed.
+	d, _ := approve(t, c2, "delete", "Add ledger delete ID", "")
+	if strings.Contains(grove(t, "changes"), d) {
+		t.Errorf("changes lists %s before it is pushed", d)
+	}
+	git(t, c2, "push", "-q", "origin", "main")
+	listed := grove(t, "changes")
+	if !strings.Contains(listed, d) {
+		t.Errorf("changes omits %s once pushed", d)
+	}
+
+	// A pull-request job's checkout: origin's main fetched, no local main.
+	git(t, tmp, "init", "-q", ci)
+	git(t, ci, "remote", "add", "origin", remote)
+	git(t, ci, "fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main")
+	git(t, ci, "switch", "-q", "--detach", "origin/main")
+	t.Chdir(ci)
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check with no local main printed %q", got)
+	}
+	if got := grove(t, "changes"); got != listed {
+		t.Errorf("changes with no local main printed %q, want %q", got, listed)
+	}
+}
+
 // serving starts grove serve with args in the working directory and
 // returns what it printed first, and its error once it stops.
 func serving(t *testing.T, args ...string) (string, <-chan string) {

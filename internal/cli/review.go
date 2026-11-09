@@ -51,7 +51,7 @@ func review(stdout io.Writer) error {
 	if approves == 0 {
 		fmt.Fprintf(stdout, "Merging %s into %s approves no new change.\n", branch, p.Target)
 	}
-	span := p.Target + "...HEAD"
+	span := ip.Commit + "...HEAD"
 	names, err := gitx.Run(p.Top, "diff", "--name-status", "--no-renames", span, "--", p.Root)
 	if err != nil {
 		return err

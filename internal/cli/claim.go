@@ -45,7 +45,7 @@ func claim(stdout io.Writer, id string, retry bool) error {
 	} else if out != "" {
 		return errors.New("the checkout has uncommitted changes; commit, stash or discard them first")
 	}
-	local, err := gitx.ResolveBranch(p.Top, p.Target)
+	local, err := gitx.LocalBranch(p.Top, p.Target)
 	if err != nil {
 		return err
 	}
