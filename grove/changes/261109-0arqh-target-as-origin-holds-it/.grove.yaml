@@ -1,0 +1,5 @@
+title: "The target is what this checkout and origin both hold"
+created: 2026-11-09T01:38:44Z
+description: Every command reads the target at the newest commit the local branch and origin/<target> both hold, so base and planned name commits origin has, and a checkout with no local main works.
+schema: default
+base: ccaee4dd7b7ac6755ce73da691b16c55d6c42da4
