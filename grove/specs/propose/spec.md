@@ -285,7 +285,7 @@ write or remove `unattended`.
 - WHEN the owner runs `/grove-propose C`, has its acceptance checked by a
   test, and says C no longer needs a person
 - THEN the agent takes C out of `needs_human` and sets K's `planned`, and
-  once the branch is squash-merged `grove run K` builds K
+  once the branch is squash-merged `grove claim K` claims K
 
 #### Scenario: A change in no cycle
 
@@ -518,3 +518,4 @@ None.
 - [261026-ar7ec](../../changes/archive/261026-ar7ec-files-lists-one-path-per-line-and-review-shows-planned-against-actual/) Files lists one path per line, and review shows planned against actual
 - [261026-804yw](../../changes/archive/261026-804yw-instructions-list-the-change-s-documents-instead-of-embedding-them/) Instructions list the change's documents instead of embedding them
 - [261026-d1sb1](../../changes/archive/261026-d1sb1-re-base-a-change-after-its-dependency-lands/) Re-base a change after its dependency lands
+- [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch

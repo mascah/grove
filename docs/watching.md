@@ -1,14 +1,15 @@
 # Watching the project
 
 `grove serve` shows where a project stands on one page in your browser:
-what `grove run` would do with each cycle, which branches hold work the
-target does not have yet, the runs recorded in this checkout, how changes
+what `grove claim` would do with each cycle and who has claimed one, which
+branches hold work the target does not have yet, the attempts recorded on
+`grove/runs`, how changes
 and cycles depend on each other, what the target's history did to the
 record, and the maintained specs. Click any change, cycle, spec or file
 to read it beside the list.
 
 The page reads the target branch, this checkout's branches, the working
-tree and `.git/grove/`. It writes nothing, fetches nothing from `origin`
+tree and `grove/runs`. It writes nothing, fetches nothing from `origin`
 and starts no agent, so what it shows is what this checkout has: `git
 fetch` first to see your teammates' latest branches, and pull the target
 branch to see what was merged into it. The
@@ -40,7 +41,7 @@ loopback, and if the port is taken it says so and exits.
 
 ## Readiness
 
-One card for each cycle that is not done, with the answer `grove run`
+One card for each cycle that is not done, with the answer `grove claim`
 would give it today, the first that applies:
 
 - a member needs a person, as the cycle's `needs_human` says;
@@ -49,8 +50,11 @@ would give it today, the first that applies:
   finished;
 - a member changed on the target since the plan, so the plan is stale and
   needs `/grove-plan <cycle-id>` again;
-- otherwise `grove run` would build it, or `grove run <cycle-id>` would,
-  when it is not marked `unattended`.
+- otherwise, when the latest record on `grove/runs` names it, that it is
+  claimed, with the host, the start time and the attempt's branch;
+- otherwise `grove claim` would claim it, or `grove claim <cycle-id>`
+  would, when it is not marked `unattended`, adding `--retry` and the
+  attempt while the project is paused after another cycle's.
 
 Each card lists the members in the order they would be built, with their
 status and where each is being built, then the members already archived.
@@ -76,9 +80,12 @@ holds the same commit; a teammate's
 branch you fetched but never checked out shows as `origin/<name>`, only
 on origin. Newest first.
 
-Below the branches are the runs recorded in this checkout, newest first:
-each attempt's cycle, when it started and ended, its outcome and its
-branch, as [Running unattended](running.md) describes them.
+Below the branches are the attempts recorded on `origin/grove/runs`, or
+on the local `grove/runs` when origin has none, newest first: each
+attempt's cycle, when it started, the host that claimed it, its branch
+and when that branch, here or on origin, last had a commit, as
+[Running unattended](running.md) describes them. `git fetch` brings in
+the records other checkouts pushed.
 
 ## Graph
 

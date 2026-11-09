@@ -84,7 +84,7 @@ type value struct {
 	Changes  []pageChange    `json:"changes"`
 	Cycles   []pageCycle     `json:"cycles"`
 	Branches []branchRow     `json:"branches"`
-	Runs     []attempt       `json:"runs"`
+	Runs     []pageRun       `json:"runs"`
 	History  []event         `json:"history"`
 	Problems []string        `json:"problems"`
 }
@@ -111,8 +111,14 @@ type pageCycle struct {
 	Stale      []string          `json:"stale,omitempty"` // members changed on the target since the plan
 	Unattended bool              `json:"unattended"`
 	Done       bool              `json:"done"`
-	Runs       bool              `json:"runs"`    // grove run would build it
-	Verdict    string            `json:"verdict"` // what grove run would do with it, or why not
+	Runs       bool              `json:"runs"`    // grove claim would claim it
+	Verdict    string            `json:"verdict"` // what grove claim would do with it, or why not
+}
+
+// pageRun is an attempt with its branch's latest commit time, local or on origin.
+type pageRun struct {
+	attempt
+	Moved string `json:"moved,omitempty"`
 }
 
 // branchRow is a branch, or the working tree, holding work the target lacks.
@@ -189,6 +195,22 @@ func (s *server) value() (*value, error) {
 		}
 		v.Changes = append(v.Changes, pc)
 	}
+	tip := tipOf(p.Top, "refs/remotes/origin/grove/runs")
+	if tip == "" {
+		tip = tipOf(p.Top, runs)
+	}
+	recs, err := records(p.Top, tip)
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range recs {
+		moved, err := gitx.Run(p.Top, "for-each-ref", "--sort=-committerdate", "--count=1", "--format=%(committerdate:iso-strict)", "refs/heads/"+a.Branch, "refs/remotes/origin/"+a.Branch)
+		if err != nil {
+			return nil, err
+		}
+		v.Runs = append(v.Runs, pageRun{a, strings.TrimSpace(moved)})
+	}
+	last := pausing(recs, c)
 	for _, cy := range c.Cycles {
 		pc := pageCycle{ID: cy.ID, Title: cy.Meta.Title, Goal: cy.Meta.Goal, Created: cy.Meta.Created, Path: cy.Path, Planned: cy.Meta.Planned,
 			DependsOn: cy.Meta.DependsOn, NeedsHuman: cy.Meta.NeedsHuman, Unattended: cy.Meta.Unattended, Done: cy.Done}
@@ -202,21 +224,21 @@ func (s *server) value() (*value, error) {
 		}
 		if _, err := runnable(p, ip, cy); err != nil {
 			pc.Verdict = err.Error()
-		} else if pc.Runs = true; cy.Meta.Unattended {
-			pc.Verdict = "grove run would build it"
+		} else if last != nil && last.Cycle == cy.ID {
+			pc.Verdict = fmt.Sprintf("claimed by attempt %s, which %s started at %s on branch %s", last.ID, last.Host, last.Started.Format(time.RFC3339), last.Branch)
 		} else {
-			pc.Verdict = "grove run " + cy.ID + " would build it; it is not marked unattended"
+			cmd, why := "grove claim", ""
+			if !cy.Meta.Unattended {
+				cmd, why = cmd+" "+cy.ID, "; it is not marked unattended"
+			}
+			if last != nil {
+				cmd, why = cmd+" --retry", why+"; the project is paused after attempt "+last.ID+" of cycle "+last.Cycle
+			}
+			pc.Runs, pc.Verdict = last == nil, cmd+" would claim it"+why
 		}
 		v.Cycles = append(v.Cycles, pc)
 	}
 	if v.Branches, err = s.branches(commit, c); err != nil {
-		return nil, err
-	}
-	gitDir, err := gitx.Run(p.Top, "rev-parse", "--absolute-git-dir")
-	if err != nil {
-		return nil, err
-	}
-	if v.Runs, err = attempts(filepath.Join(strings.TrimSpace(gitDir), "grove")); err != nil {
 		return nil, err
 	}
 	if v.History, err = history(p, commit); err != nil {
@@ -253,7 +275,8 @@ func (s *server) branches(commit string, c *doc.Collection) ([]branchRow, error)
 	for line := range strings.Lines(refs) {
 		f := strings.Split(strings.TrimSuffix(line, "\n"), "\x00")
 		name, remote := strings.CutPrefix(f[0], "refs/remotes/origin/")
-		if remote && (name == "HEAD" || name == p.Target) {
+		// grove/runs holds records, sharing no history with the target.
+		if name == runs || remote && (name == "HEAD" || name == p.Target || name == "grove/runs") {
 			continue
 		}
 		if i, ok := local[name]; remote && ok && rows[i].Tip == f[2] {

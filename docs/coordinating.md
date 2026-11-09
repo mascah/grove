@@ -112,7 +112,7 @@ cycle that is not done always gets the cycle's list, with you or without.
 So `/grove-implement 261019-p4x8d` shows you its place too.
 
 `--unattended` builds a cycle whether or not it is marked `unattended`,
-and whatever its `needs_human` says. Only `grove run` reads those. Given a
+and whatever its `needs_human` says. Only `grove claim` reads those. Given a
 change's ID, `/grove-implement 261019-p4x8d --unattended` builds that one
 change the same way, with no cycle to plan first.
 
@@ -169,8 +169,8 @@ Nothing in the session needs you. It creates a branch if it is on your
 main branch. It settles no question itself. It commits only when a rule in
 `grove.yaml` asks, such as `Commit after each task, naming its task ID.`
 under `rules.skills.implement`. That rule counts with you and without (see
-[Reference](reference.md), "grove.yaml"). `grove run` starts such a
-session for a cycle you name or mark `unattended` (see
+[Reference](reference.md), "grove.yaml"). `grove claim` claims a cycle you name
+or mark `unattended` for such a session that you start (see
 [Running unattended](running.md)).
 
 ## When the plan is stale

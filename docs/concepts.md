@@ -45,7 +45,7 @@ A small change can take one merge instead of two. Propose it on a branch,
 then build it there with `/grove-implement <change-id>`, with you in the
 session. Merging that branch approves the change with its code. The same
 merge lands the updated specs and the archived change. Grove sets no size; you
-decide what is small. `--unattended` and `grove run` build only changes
+decide what is small. `--unattended` and `grove claim` take only changes
 your main branch already holds.
 
 Your team already reviews and merges work into the main branch, and Git
@@ -175,10 +175,10 @@ and reads. Skills run in your agent's chat: each one runs
 `grove instructions <skill>` and follows what it prints, so Grove works with
 the agent you already use, in the checkout and branch you already have.
 
-Grove makes no commits. `grove run` is the one command that starts an
-agent: one Claude Code session that builds a cycle unattended (see
-[Running unattended](running.md)). Every other command leaves running
-your agent to you.
+Grove makes no commits of your work and starts no agent. `grove claim`
+records an attempt at a cycle on the branch `grove/runs` and prints the
+cycle's ID; you start the agent that builds it unattended (see
+[Running unattended](running.md)). Running your agent is always yours.
 
 ## IDs
 
@@ -198,8 +198,8 @@ holds.
   `changes/archive/`.
 - **Archived as finished:** archived with every task done. A change that
   waits on another can be built once that one is archived as finished.
-- **Attempt:** one session that `grove run` starts, with its own ID, branch
-  and record in `.git/grove/`.
+- **Attempt:** one claim of a cycle by `grove claim`, with its own ID,
+  branch and record, a commit on the branch `grove/runs`.
 - **Base:** the commit of the target a change was proposed from, written in
   its `.grove.yaml`.
 - **Blocked:** a task the agent did not build: a checkpoint where a wrong
@@ -230,8 +230,8 @@ holds.
 - **Maintained spec:** agreed behavior of one capability.
 - **Needs a person:** said of a change in a cycle whose `needs_human` names
   it, because you said an unattended session cannot build it.
-- **Paused:** after an attempt, `grove run` starts nothing until the
-  attempt's cycle is archived on the target.
+- **Paused:** after an attempt, `grove claim` claims nothing, from any
+  checkout, until the attempt's cycle is archived on the target.
 - **Planned:** the commit of the target a cycle's plan read, written in its
   file as `planned`.
 - **Skill:** a chat command Grove installs for your harness.
@@ -243,7 +243,7 @@ holds.
   target since it was planned.
 - **Target:** the branch whose contents count as agreed, usually `main`.
 - **Unattended:** built with no one in the session, asking no one. A cycle
-  marked `unattended: true` is handed to a `grove run` given no cycle.
+  marked `unattended: true` is handed to a `grove claim` given no cycle.
 - **Waits on:** a change waits on each change its `depends_on` names until
   that one is archived as finished; a cycle waits on each cycle its
   `depends_on` names until that one is done.

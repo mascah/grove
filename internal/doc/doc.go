@@ -50,7 +50,7 @@ type Meta struct {
 	Changes    []string          `json:"-"` // its members
 	Planned    string            `json:"-"` // the target commit its plan checked
 	NeedsHuman map[string]string `json:"-"` // member to the owner's reason it needs a person
-	Unattended bool              `json:"-"` // handed to grove run
+	Unattended bool              `json:"-"` // handed to grove claim
 }
 
 // Document is a maintained spec, a change or a cycle, with its metadata.
@@ -251,7 +251,7 @@ func (c *Collection) members() {
 				in[id] = cy.ID
 			}
 			if _, ok := cy.Meta.NeedsHuman[id]; ok && cy.Meta.Unattended {
-				cy.report(cy.Path, cy.lines["unattended"], "unattended: "+id+" needs a person, as needs_human says, so grove run skips this cycle; remove unattended, or build the cycle with /grove-implement "+cy.ID)
+				cy.report(cy.Path, cy.lines["unattended"], "unattended: "+id+" needs a person, as needs_human says, so grove claim skips this cycle; remove unattended, or build the cycle with /grove-implement "+cy.ID)
 			}
 		}
 	}

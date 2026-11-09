@@ -33,8 +33,8 @@ To install the `grove` command, see [Install](docs/install.md). Then
 Before proposing, `/grove-explore` talks an idea through, and
 `/grove-prototype <question>` tries it out on a throwaway branch. Once
 several changes are approved, `/grove-plan` puts them in a cycle to build
-together. `grove run` builds a cycle unattended, in one time-limited
-Claude Code session. See [Running unattended](docs/running.md).
+together. `grove claim` claims a cycle for an agent you start unattended, in
+any harness, bounded as you like. See [Running unattended](docs/running.md).
 
 The documentation is at <https://mascah.github.io/grove/>, built from
 [`docs/`](docs/index.md).

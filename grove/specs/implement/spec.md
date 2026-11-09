@@ -11,8 +11,8 @@ instead. "The owner" is the person in whose session the skill runs.
 
 This covers the implement instructions in both modes, `grove.yaml`'s
 rules for implement, and how `grove review` names what an implementation
-branch approves and builds. Starting a session with no one watching
-belongs to `grove run` ([runs](../runs/spec.md)); when a cycle member
+branch approves and builds. Claiming a cycle for a session with no one
+watching belongs to `grove claim` ([runs](../runs/spec.md)); when a cycle member
 counts as changed since its plan, to [cycles](../cycles/spec.md);
 revising a change off its implementation branch, to
 [propose](../propose/spec.md). What makes a revision approved is the
@@ -68,7 +68,7 @@ waits on a change neither being built nor archived as finished.
 - WHEN `/grove-implement K` is run, with or without `--unattended`
 - THEN K's instructions list B `after A`, and A and then B are built on
   one branch, each by `grove instructions implement <change-id>`, B's
-  instructions naming it the second of two in K's plan; only `grove run`
+  instructions naming it the second of two in K's plan; only `grove claim`
   reads `unattended` and `needs_human`
 
 #### Scenario: A member left out
@@ -513,3 +513,4 @@ None recorded.
 - [261101-mg8hd](../../changes/archive/261101-mg8hd-unattended-edits-a-file-a-task-needs/) Implement edits a file a task needs and says why
 - [261105-va9qn](../../changes/archive/261105-va9qn-implement-stops-at-checkpoints/) Implement stops at checkpoints and hands off in the branch
 - [261105-pr77s](../../changes/archive/261105-pr77s-cycle-builds-each-change-in-its-own-context/) A cycle builds each change in its own context
+- [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch

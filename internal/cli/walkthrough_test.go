@@ -11,11 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
-	"syscall"
 	"testing"
-	"time"
 )
 
 // fixture creates the ledger fixture as a fresh repository, as `just fixture`
@@ -517,7 +514,7 @@ func TestImplementInstructions(t *testing.T) {
 	has("implement after an edit", grove(t, "instructions", "implement", cid, "--unattended"), []string{"\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`: differs from main; `git show " + main + ":grove/changes/" + cid + "-allow-editing-older-records/tasks.md` prints the approved text\n", listed}, nil)
 	git(t, dir, "checkout", "-q", "--", ".")
 	out = grove(t, "instructions", "implement", cid, "--unattended")
-	has("unattended instructions", out, append(append([]string{"asking no one, in your own working tree.", "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n"}, shared...), alone...), append(owner, gone...))
+	has("unattended instructions", out, append(append([]string{"asking no one, in your own working tree.", "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n", "only `grove claim` reads them"}, shared...), alone...), slices.Concat(owner, gone, []string{"grove run"}))
 
 	// A member of a cycle, not marked, that needs a person, gets its plan.
 	planCycle(t, dir, k, "2026-10-22T09:00:00Z", false, cid)
@@ -884,7 +881,7 @@ func TestCoordinating(t *testing.T) {
 		!strings.Contains(out, "1. "+unknown+" \"Editing an unknown ID prints an error\" — archived in this working tree\n2. "+del+" \"Add ledger delete ID\" — this change\n") {
 		t.Errorf("implement after its dependency is archived on the branch:\n%s", out)
 	}
-	if out := grove(t, "instructions", "implement", k, "--unattended"); !strings.Contains(out, "\n1. "+del+" \"Add ledger delete ID\"\n\n## Project index") {
+	if out := grove(t, "instructions", "implement", k, "--unattended"); !strings.Contains(out, "\n1. "+del+" \"Add ledger delete ID\"\n\n## Project index") || !strings.Contains(out, "hands one to `grove claim`") || strings.Contains(out, "grove run") {
 		t.Errorf("cycle after archiving on the branch:\n%s", out)
 	}
 	git(t, dir, "checkout", "-q", "--", ".")
@@ -1028,16 +1025,16 @@ func TestCycles(t *testing.T) {
 	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
 		"\ntitle: \"<title>\"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n",
 		"\n# depends_on: [", "ask the owner\n  whether it follows any of them",
-		"A new cycle: before writing its file, run Grove's `check`.", "tell the owner this edits approved work, bring the\n  member up to date on this branch as Grove's\n  `instructions propose <change-id>` says", "`grove run` builds\n    nothing of the cycle until it is"} {
+		"A new cycle: before writing its file, run Grove's `check`.", "tell the owner this edits approved work, bring the\n  member up to date on this branch as Grove's\n  `instructions propose <change-id>` says", "`grove claim` will\n    not claim the cycle until it is"} {
 		if m == nil || !strings.Contains(out, s) {
 			t.Errorf("plan instructions lack %q:\n%s", s, out)
 		}
 	}
-	if strings.Contains(out, "the only thing you write") {
-		t.Errorf("plan instructions still say the cycle file is the only thing written")
+	if strings.Contains(out, "the only thing you write") || strings.Contains(out, "grove run") {
+		t.Errorf("plan instructions still say the cycle file is the only thing written, or name grove run")
 	}
-	// The finish names implement, then run given the cycle, then the mark.
-	if i, r, u := strings.Index(out, "say `/grove-implement <cycle-id>`"), strings.Index(out, "say whether `grove run <cycle-id>`"), strings.Index(out, "say `unattended: true`"); i < 0 || i > r || r > u {
+	// The finish names implement, then claim given the cycle, then the mark.
+	if i, r, u := strings.Index(out, "say `/grove-implement <cycle-id>`"), strings.Index(out, "say whether `grove claim <cycle-id>`"), strings.Index(out, "say `unattended: true`"); i < 0 || i > r || r > u {
 		t.Errorf("plan's finish is not in order:\n%s", out)
 	}
 	if out := grove(t, "instructions", "plan", a); !strings.Contains(out, "with approved change "+a+", \"Editing an unknown ID prints an error\", as its only member") {
@@ -1101,13 +1098,13 @@ func TestCycles(t *testing.T) {
 
 	// A marked cycle with a change that needs a person.
 	os.WriteFile(cycle, []byte(plan+"needs_human:\n  "+a+": judging the error's wording\nunattended: true\n"), 0o644)
-	checks(file + ":7: unattended: " + a + " needs a person, as needs_human says, so grove run skips this cycle; remove unattended, or build the cycle with /grove-implement " + k + "\n")
+	checks(file + ":7: unattended: " + a + " needs a person, as needs_human says, so grove claim skips this cycle; remove unattended, or build the cycle with /grove-implement " + k + "\n")
 	git(t, dir, "checkout", "-q", "--", ".")
 
 	// A marked cycle whose member changed on main since its plan.
 	os.WriteFile(filepath.Join(aDir, "proposal.md"), []byte("# Editing an unknown ID prints an error\n\nRevised.\n"), 0o644)
 	commitAll(t, dir, "Revise "+a)
-	checks(file + ": planned: " + a + " changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan " + k + "\n")
+	checks(file + ": planned: " + a + " changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan " + k + "\n")
 
 	// A malformed cycle, and one change in two cycles not done.
 	os.WriteFile(cycle, []byte(strings.Replace(plan, "planned: "+main, "planned: "+strings.TrimSpace(git(t, dir, "rev-parse", "main")), 1)), 0o644)
@@ -1154,47 +1151,71 @@ func TestCycles(t *testing.T) {
 	}
 }
 
-// TestRun follows the walkthrough's "Running unattended" with a
-// stand-in claude on PATH, in an operator's clone of the fixture's remote.
-func TestRun(t *testing.T) {
+// TestMain runs the test binary as grove when a test starts it so, to
+// claim from a second checkout at the same moment as the test's own claim.
+func TestMain(m *testing.M) {
+	if os.Getenv("GROVE_TEST_MAIN") != "" {
+		os.Exit(Main(os.Args[1:]))
+	}
+	os.Exit(m.Run())
+}
+
+// TestClaim follows the walkthrough's "Running unattended" with a bare
+// origin and two operators' clones of it, h1 and h2.
+func TestClaim(t *testing.T) {
 	owner := setUp(t)
-	remote, checkout, stub := filepath.Join(t.TempDir(), "remote.git"), filepath.Join(t.TempDir(), "checkout"), t.TempDir()
+	remote, h1, h2 := filepath.Join(t.TempDir(), "remote.git"), filepath.Join(t.TempDir(), "h1"), filepath.Join(t.TempDir(), "h2")
 	git(t, owner, "clone", "-q", "--bare", owner, remote)
 	git(t, owner, "remote", "add", "origin", remote)
-	git(t, owner, "clone", "-q", remote, checkout)
-	t.Setenv("PATH", stub+":/usr/bin:/bin")
-	// standIn writes claude to record its arguments and process group, then run body.
-	standIn := func(body string) {
-		os.WriteFile(filepath.Join(stub, "claude"), []byte("#!/bin/sh\necho \"$@\" > "+stub+"/args\necho $$ > "+stub+"/pgid\n"+body+"\n"), 0o755)
+	git(t, owner, "clone", "-q", remote, h1)
+	git(t, owner, "clone", "-q", remote, h2)
+	for _, k := range []string{"GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
+		t.Setenv(k, "operator@example.com")
 	}
-	gone := func(when string) { // no process is left in the session's group
-		pgid, _ := strconv.Atoi(strings.TrimSpace(read(t, filepath.Join(stub, "pgid"))))
-		if err := syscall.Kill(-pgid, 0); err != syscall.ESRCH {
-			t.Errorf("%s, the session's process group is still running: %v", when, err)
+	host, _ := os.Hostname()
+	recorded := func() int {
+		if git(t, remote, "for-each-ref", "refs/heads/grove/runs") == "" {
+			return 0
 		}
+		return strings.Count(git(t, remote, "log", "--format=%H", "grove/runs"), "\n")
 	}
-	runs := func(want string, args ...string) {
+	latest := func(dir, ref string) (a attempt) {
+		json.Unmarshal([]byte(git(t, dir, "log", "-1", "--format=%B", ref)), &a)
+		return
+	}
+	// claims runs grove claim in checkout, wanting standard output out and
+	// standard error matching want; refused, it records nothing and
+	// creates no branch.
+	claims := func(checkout, out, want string, args ...string) {
 		t.Helper()
 		t.Chdir(checkout)
+		branches, n := git(t, checkout, "for-each-ref", "refs/heads"), recorded()
 		var stdout, stderr strings.Builder
-		run(append([]string{"run"}, args...), &stdout, &stderr)
-		if got := stdout.String() + stderr.String(); !regexp.MustCompile(want).MatchString(got) {
-			t.Errorf("grove run %v printed %q, want %s", args, got, want)
+		code := run(append([]string{"claim"}, args...), &stdout, &stderr)
+		if stdout.String() != out || !regexp.MustCompile(want).MatchString(stderr.String()) || (code == 0) != (out != "") ||
+			out == "" && (git(t, checkout, "for-each-ref", "refs/heads") != branches || recorded() != n) {
+			t.Errorf("grove claim %v in %s: status %d, %q, %q; want %q, %s", args, filepath.Base(checkout), code, stdout.String(), stderr.String(), out, want)
 		}
 	}
-	runs(`^Nothing to apply on main at [0-9a-f]{7}\.\n$`)
-
-	// Nothing to apply: changes in no cycle, a cycle not marked, a marked
-	// cycle gone stale.
-	t.Chdir(owner)
-	a, aDir := approve(t, owner, "a", "Editing an unknown ID prints an error", "")
-	b, bDir := approve(t, owner, "b", "Add ledger delete ID", "depends_on: ["+a+"]\n")
-	c, cDir := approve(t, owner, "c", "Monthly budgets in report", "")
+	if code := run([]string{"run"}, io.Discard, io.Discard); code != 2 {
+		t.Errorf("grove run: status %d, want the usage's 2", code)
+	}
 	nothing := func() {
 		t.Helper()
 		git(t, owner, "push", "-q", "origin", "main")
-		runs(`^Nothing to apply on main at [0-9a-f]{7}\.\n$`)
+		claims(h1, "", `^grove: nothing to claim on main at [0-9a-f]{7}\n$`)
 	}
+	nothing()
+
+	// Nothing to claim: changes in no cycle, a cycle not marked, a marked
+	// cycle gone stale. Claude Code need not be listed under agents.
+	t.Chdir(owner)
+	config := read(t, filepath.Join(owner, "grove.yaml"))
+	os.WriteFile(filepath.Join(owner, "grove.yaml"), []byte(strings.Replace(config, "  claude: skills\n", "", 1)), 0o644)
+	commitAll(t, owner, "Codex only")
+	a, aDir := approve(t, owner, "a", "Editing an unknown ID prints an error", "")
+	b, bDir := approve(t, owner, "b", "Add ledger delete ID", "depends_on: ["+a+"]\n")
+	c, cDir := approve(t, owner, "c", "Monthly budgets in report", "")
 	nothing()
 	k, l := "261022-z0000", "261022-00000" // l the lower ID, k created first the same day
 	planCycle(t, owner, k, "2026-10-22T09:00:00Z", false, a, b)
@@ -1205,79 +1226,54 @@ func TestRun(t *testing.T) {
 	nothing()
 	planCycle(t, owner, k, "2026-10-22T09:00:00Z", true, a, b)
 	planCycle(t, owner, l, "2026-10-22T10:00:00Z", true, c)
-
-	config := read(t, filepath.Join(owner, "grove.yaml"))
-	os.WriteFile(filepath.Join(owner, "grove.yaml"), []byte(strings.Replace(config, "  claude: skills\n", "", 1)), 0o644)
-	commitAll(t, owner, "Codex only")
-	git(t, owner, "push", "-q", "origin", "main")
-	runs(`^grove: run needs Claude Code listed under agents in grove.yaml, as skills or commands\n$`)
-	os.WriteFile(filepath.Join(owner, "grove.yaml"), []byte(config), 0o644)
-	commitAll(t, owner, "Claude Code again")
 	git(t, owner, "push", "-q", "origin", "main")
 
-	// Refusals: a local target of its own, an unclean checkout.
-	os.WriteFile(filepath.Join(checkout, "notes.txt"), []byte("mine\n"), 0o644)
-	commitAll(t, checkout, "A note of the operator's")
-	runs(`^grove: the local main has commits origin's does not, so it cannot be fast-forwarded\n$`)
-	git(t, checkout, "reset", "-q", "--hard", "HEAD~1")
-	os.WriteFile(filepath.Join(checkout, "README.md"), []byte("edited\n"), 0o644)
-	runs(`^grove: the checkout has uncommitted changes; commit, stash or discard them first\n$`)
-	git(t, checkout, "checkout", "-q", "--", ".")
+	// Refusals: a local target of its own, an unclean checkout, even with
+	// --retry, and a push origin refuses.
+	os.WriteFile(filepath.Join(h1, "notes.txt"), []byte("mine\n"), 0o644)
+	commitAll(t, h1, "A note of the operator's")
+	claims(h1, "", `^grove: the local main has commits origin's does not, so it cannot be fast-forwarded\n$`)
+	git(t, h1, "reset", "-q", "--hard", "HEAD~1")
+	os.WriteFile(filepath.Join(h1, "README.md"), []byte("edited\n"), 0o644)
+	claims(h1, "", `^grove: the checkout has uncommitted changes; commit, stash or discard them first\n$`, "--retry")
+	if read(t, filepath.Join(h1, "README.md")) != "edited\n" {
+		t.Error("the interrupted edit is gone")
+	}
+	git(t, h1, "checkout", "-q", "--", ".")
+	hook := filepath.Join(remote, "hooks", "pre-receive")
+	os.WriteFile(hook, []byte("#!/bin/sh\necho not allowed >&2\nexit 1\n"), 0o755)
+	claims(h1, "", `^grove: the record was refused, so nothing is recorded: git push: .*not allowed`)
+	if got := git(t, h1, "for-each-ref", "refs/remotes/origin/grove"); got != "" {
+		t.Errorf("a refused push left %q", got)
+	}
+	os.Remove(hook)
 
-	// An ordinary run, with a second run while it goes, its session leaving a
-	// child behind and emitting events, which the log holds before it ends.
-	events := `{"type":"system","subtype":"init","model":"claude-opus"}
-{"type":"assistant","message":{"content":[{"type":"text","text":"Building the cycle.\nFirst A."},{"type":"tool_use","name":"Bash","input":{"description":"Read","command":"grove instructions implement x --unattended\necho"}}]}}
-{"type":"user","message":{"content":[{"type":"tool_result","content":"# Grove instructions: implement\nmore"}]}}
-{"type":"assistant","message":{"content":[{"type":"thinking","thinking":"a"}]}}
-{"type":"assistant","message":{"content":[{"type":"thinking","thinking":"b"}]}}
-{"type":"assistant","message":{"content":[{"type":"thinking","thinking":"c"}]}}
-{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"ledger.py"}}]}}
-{"type":"user","message":{"content":[{"type":"tool_result","is_error":true,"content":[{"type":"text","text":"File does not exist.\n"}]}]}}
-{"type":"result","subtype":"success","result":"Done.","num_turns":3,"total_cost_usd":0.4213}
-`
-	os.WriteFile(filepath.Join(stub, "events"), []byte(events), 0o644)
-	standIn("sleep 30 &\ncat " + stub + "/events\ntouch " + stub + "/started\nwhile [ ! -f " + stub + "/release ]; do sleep 0.05; done")
-	first := make(chan string)
-	go func() {
-		var stdout, stderr strings.Builder
-		run([]string{"run"}, &stdout, &stderr)
-		first <- stdout.String() + stderr.String()
-	}()
-	for _, err := os.Stat(filepath.Join(stub, "started")); err != nil; _, err = os.Stat(filepath.Join(stub, "started")) {
-		time.Sleep(20 * time.Millisecond)
+	// Two hosts at once: h1 claims while h2's push is under way, so h2's is
+	// refused, and h2, reading again, finds the project paused.
+	bin, _ := os.Executable()
+	h1Out := filepath.Join(t.TempDir(), "h1.out")
+	os.WriteFile(filepath.Join(h2, ".git/hooks/pre-push"), []byte("#!/bin/sh\nunset GIT_DIR\nrm \"$0\"\ncd "+h1+" && GROVE_TEST_MAIN=1 "+bin+" claim > "+h1Out+"\n"), 0o755)
+	t.Chdir(h2)
+	var stdout, stderr strings.Builder
+	h2Branches := git(t, h2, "for-each-ref", "refs/heads")
+	if code := run([]string{"claim"}, &stdout, &stderr); code != 1 || stdout.String() != "" || git(t, h2, "for-each-ref", "refs/heads") != h2Branches ||
+		!regexp.MustCompile(`^grove: the project is paused after attempt [0-9]{6}-[0-9a-z]{5}, which `+regexp.QuoteMeta(host)+` started at \S+ on branch grove/[0-9]{6}-[0-9a-z]{5}; once you have dealt with it, run grove claim --retry\n$`).MatchString(stderr.String()) {
+		t.Errorf("h2's claim at the same moment: status %d, %q, %q", code, stdout.String(), stderr.String())
 	}
-	runs(`^grove: a run is in progress in this checkout\n$`)
-	logged := func() string {
-		logs, _ := filepath.Glob(filepath.Join(checkout, ".git/grove/*.log"))
-		if len(logs) == 0 {
-			return ""
-		}
-		return read(t, logs[0])
-	}
-	for end := time.Now().Add(5 * time.Second); logged() != events && time.Now().Before(end); {
-		time.Sleep(20 * time.Millisecond)
-	}
-	if got := logged(); got != events {
-		t.Errorf("while the session ran, its log held %q", got)
-	}
-	os.WriteFile(filepath.Join(stub, "release"), nil, 0o644)
-	if got := <-first; !regexp.MustCompile(`^[0-9:]{8} ▶ started: model claude-opus\n[0-9:]{8} • Building the cycle\.\n[0-9:]{8} › Bash grove instructions implement x --unattended\n` +
-		`[0-9:]{8} · thinking \(×3\)\n[0-9:]{8} › Read ledger\.py\n[0-9:]{8} ✗ File does not exist\.\n[0-9:]{8} ■ result: success, 3 turns, \$0\.42\nAttempt [0-9]{6}-[0-9a-z]{5} ended: exit status 0; its output is .*/\.git/grove/[0-9]{6}-[0-9a-z]{5}\.log\.\n$`).MatchString(got) {
-		t.Errorf("the first run printed %q", got)
-	}
-	gone("after the session exited")
 	main := strings.TrimSpace(git(t, owner, "rev-parse", "main"))
-	var rec attempt
-	recs, _ := filepath.Glob(filepath.Join(checkout, ".git/grove/*.json"))
-	json.Unmarshal([]byte(read(t, recs[0])), &rec)
-	if read(t, filepath.Join(stub, "args")) != "-p /grove-implement "+k+" --unattended --output-format stream-json --verbose\n" || logged() != events || rec.Cycle != k || strings.Join(rec.Changes, " ") != a+" "+b || rec.Commit != main || rec.Outcome != "exit status 0" ||
-		strings.TrimSpace(git(t, checkout, "branch", "--show-current")) != rec.Branch || strings.TrimSpace(git(t, checkout, "rev-parse", "main")) != main || git(t, checkout, "status", "--porcelain") != "" {
-		t.Errorf("after the first run: %+v, %s", rec, git(t, checkout, "status"))
+	rec := latest(remote, "grove/runs")
+	if read(t, h1Out) != k+"\n" || recorded() != 1 || git(t, remote, "ls-tree", "grove/runs") != "" || rec.Cycle != k || strings.Join(rec.Changes, " ") != a+" "+b ||
+		rec.Commit != main || rec.Host != host || rec.Started.IsZero() || strings.TrimSpace(git(t, h1, "branch", "--show-current")) != rec.Branch ||
+		strings.TrimSpace(git(t, h1, "rev-parse", "HEAD", "main")) != main+"\n"+main || git(t, h1, "status", "--porcelain") != "" {
+		t.Errorf("after h1's claim: %s, %+v, %s", read(t, h1Out), rec, git(t, h1, "status"))
+	}
+	if _, err := os.Stat(filepath.Join(h1, ".git/grove")); err == nil {
+		t.Error("claim wrote .git/grove/")
 	}
 
-	// Paused, though another cycle is marked, until the cycle is archived.
-	runs(`^grove: the project is paused after attempt ` + rec.ID + `, whose output is ` + regexp.QuoteMeta(rec.Output) + `; once you have dealt with it, run grove run --retry\n$`)
+	// Paused, though another cycle is marked, until the cycle is archived:
+	// a finished, b dropped.
+	claims(h1, "", `^grove: the project is paused after attempt `+rec.ID+`, `)
 	t.Chdir(owner)
 	os.WriteFile(filepath.Join(aDir, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
 	os.WriteFile(filepath.Join(bDir, "implementation.md"), []byte("Status: dropped\n"), 0o644)
@@ -1286,44 +1282,14 @@ func TestRun(t *testing.T) {
 	grove(t, "archive", b)
 	commitAll(t, owner, "Archive the batch")
 	git(t, owner, "push", "-q", "origin", "main")
-	standIn("")
-	runs(`^Attempt .* ended: exit status 0;`)
-	if recs, _ = filepath.Glob(filepath.Join(checkout, ".git/grove/*.json")); len(recs) != 2 {
-		t.Fatalf("records: %v", recs)
-	}
-	if last, _ := latest(filepath.Join(checkout, ".git/grove")); last.Cycle != l || strings.Join(last.Changes, " ") != c {
-		t.Errorf("the run after the merge selected %s %v, want %s %s", last.Cycle, last.Changes, l, c)
+	claims(h2, l+"\n", "^$")
+	if last := latest(remote, "grove/runs"); recorded() != 2 || last.Cycle != l || strings.Join(last.Changes, " ") != c || latest(remote, "grove/runs~1").ID != rec.ID {
+		t.Errorf("the claim after the merge recorded %+v", last)
 	}
 
-	// Failed to start, then paused.
-	os.Remove(filepath.Join(stub, "claude"))
-	runs(`^grove: attempt .* ended: failed to start;`, "--retry")
-	runs(`^grove: the project is paused after attempt `)
-
-	// Cancelled after a visible edit; retry refuses until it is dealt with.
-	standIn("echo edit >> README.md\ntouch " + stub + "/started\nsleep 30")
-	os.Remove(filepath.Join(stub, "started"))
-	go func() {
-		for _, err := os.Stat(filepath.Join(stub, "started")); err != nil; _, err = os.Stat(filepath.Join(stub, "started")) {
-			time.Sleep(20 * time.Millisecond)
-		}
-		syscall.Kill(os.Getpid(), syscall.SIGINT)
-	}()
-	runs(`^grove: attempt .* ended: cancelled;`, "--retry")
-	gone("after cancelling")
-	runs(`^grove: the checkout has uncommitted changes;`, "--retry")
-	if !strings.HasSuffix(read(t, filepath.Join(checkout, "README.md")), "edit\n") {
-		t.Error("the interrupted edit is gone")
-	}
-	git(t, checkout, "checkout", "-q", "--", ".")
-
-	// Timed out, with a child that ignores the request to stop.
-	standIn("sh -c 'trap \"\" TERM; sleep 30' &\nsleep 30")
-	runs(`^grove: attempt .* ended: timed out;`, "--retry", "--timeout", "1s")
-	gone("after the time limit")
-
-	// A cycle given: built though not marked while l is, and refused, naming
-	// why, when there is no such cycle or a member needs a person.
+	// A cycle given: refused, naming why, when there is no such cycle, a
+	// member needs a person, or the project is paused; with --retry, claimed
+	// though not marked while l is, l's record and branch kept.
 	t.Chdir(owner)
 	d, _ := approve(t, owner, "d", "Show saved records", "")
 	e, _ := approve(t, owner, "e", "Export records", "")
@@ -1332,41 +1298,39 @@ func TestRun(t *testing.T) {
 	planCycle(t, owner, n, "2026-10-23T10:00:00Z", false, e)
 	nFile := filepath.Join(owner, "grove/cycles", n+"-cycle.yaml")
 	os.WriteFile(nFile, []byte(read(t, nFile)+"needs_human:\n  "+e+": judging the export\n"), 0o644)
-	os.WriteFile(filepath.Join(owner, "grove.yaml"), []byte(strings.Replace(config, "claude: skills", "claude: commands", 1)), 0o644)
-	commitAll(t, owner, "Export needs a person, and Claude Code as commands")
+	commitAll(t, owner, "Export needs a person")
 	git(t, owner, "push", "-q", "origin", "main")
-	branches := git(t, checkout, "branch")
-	runs(`^grove: main at [0-9a-f]{7} holds no cycle 261099-zzzzz\n$`, "--retry", "261099-zzzzz")
-	runs(`^grove: `+e+` needs a person, as cycle `+n+`'s needs_human says; build the cycle with /grove-implement `+n+`\n$`, "--retry", n)
-	if got := git(t, checkout, "branch"); got != branches {
-		t.Errorf("a refused run left branches %q, want %q", got, branches)
-	}
-	runs(`^Attempt .* ended: exit status 0;`, "--retry", m)
-	if last, _ := latest(filepath.Join(checkout, ".git/grove")); last.Cycle != m || read(t, filepath.Join(stub, "args")) != "-p /grove:implement "+m+" --unattended --output-format stream-json --verbose\n" {
-		t.Errorf("the run given %s selected %s", m, last.Cycle)
+	claims(h2, "", `^grove: main at [0-9a-f]{7} holds no cycle 261099-zzzzz\n$`, "--retry", "261099-zzzzz")
+	claims(h2, "", `^grove: `+e+` needs a person, as cycle `+n+`'s needs_human says; build the cycle with /grove-implement `+n+`\n$`, "--retry", n)
+	claims(h2, "", `^grove: the project is paused after attempt `, m)
+	lBranch := strings.TrimSpace(git(t, h2, "branch", "--show-current"))
+	claims(h2, m+"\n", "^$", "--retry", m)
+	if recorded() != 3 || latest(remote, "grove/runs").Cycle != m || latest(remote, "grove/runs~1").Cycle != l || git(t, h2, "branch", "--list", lBranch) == "" {
+		t.Errorf("the claim given %s recorded %+v", m, latest(remote, "grove/runs"))
 	}
 
 	// No remote: the local target, commits of its own and all, is the fetched
-	// one, and merging the attempt's branch into it ends the pause.
-	git(t, checkout, "remote", "remove", "origin")
-	git(t, checkout, "switch", "-q", "main")
-	os.WriteFile(filepath.Join(checkout, "notes.txt"), []byte("mine\n"), 0o644)
-	commitAll(t, checkout, "A note of the operator's")
-	local := strings.TrimSpace(git(t, checkout, "rev-parse", "main"))
-	standIn("")
-	runs(`^Attempt .* ended: exit status 0;`, "--retry")
-	if last, _ := latest(filepath.Join(checkout, ".git/grove")); last.Commit != local || last.Cycle != l {
-		t.Errorf("the run with no remote recorded %s %s, want %s %s", last.Cycle, last.Commit, l, local)
+	// one, the record goes on the local grove/runs, and merging the attempt's
+	// branch into the local target ends the pause.
+	git(t, h1, "fetch", "-q", "origin", "main:main")
+	git(t, h1, "remote", "remove", "origin")
+	git(t, h1, "switch", "-q", "main")
+	os.WriteFile(filepath.Join(h1, "notes.txt"), []byte("mine\n"), 0o644)
+	commitAll(t, h1, "A note of the operator's")
+	local := strings.TrimSpace(git(t, h1, "rev-parse", "main"))
+	claims(h1, l+"\n", "^$")
+	if last := latest(h1, "grove/runs"); last.Commit != local || last.Cycle != l || recorded() != 3 {
+		t.Errorf("the claim with no remote recorded %+v, want %s %s", last, l, local)
 	}
-	runs(`^grove: the project is paused after attempt `)
+	claims(h1, "", `^grove: the project is paused after attempt `)
 	cRel, _ := filepath.Rel(owner, cDir)
-	os.WriteFile(filepath.Join(checkout, cRel, "implementation.md"), []byte("Status: dropped\n"), 0o644)
+	os.WriteFile(filepath.Join(h1, cRel, "implementation.md"), []byte("Status: dropped\n"), 0o644)
 	grove(t, "archive", c)
-	commitAll(t, checkout, "Drop "+c)
-	branch := strings.TrimSpace(git(t, checkout, "branch", "--show-current"))
-	git(t, checkout, "switch", "-q", "main")
-	git(t, checkout, "merge", "-q", "--no-ff", "-m", "Merge the attempt", branch)
-	runs(`^Nothing to apply on main at [0-9a-f]{7}\.\n$`)
+	commitAll(t, h1, "Drop "+c)
+	branch := strings.TrimSpace(git(t, h1, "branch", "--show-current"))
+	git(t, h1, "switch", "-q", "main")
+	git(t, h1, "merge", "-q", "--no-ff", "-m", "Merge the attempt", branch)
+	claims(h1, "", `^grove: nothing to claim on main at [0-9a-f]{7}\n$`)
 }
 
 // TestReplan follows the walkthrough's planning step 5 and running step 6:
@@ -1377,7 +1341,7 @@ func TestReplan(t *testing.T) {
 	b, bDir := approve(t, dir, "b", "Add ledger delete ID", "")
 	k := "261023-k0000"
 	planCycle(t, dir, k, "2026-10-23T09:00:00Z", true, b)
-	stale := "grove/cycles/" + k + "-cycle.yaml: planned: " + b + " changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan " + k + "\n"
+	stale := "grove/cycles/" + k + "-cycle.yaml: planned: " + b + " changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan " + k + "\n"
 	fresh := func(want bool, how string) {
 		t.Helper()
 		var stdout, stderr strings.Builder
@@ -1387,7 +1351,7 @@ func TestReplan(t *testing.T) {
 		cy, _ := eligible(p, ip)
 		wantOut := map[bool]string{true: "No problems in grove/.\n", false: stale}[want]
 		if got := stdout.String(); got != wantOut || (cy != nil) != want {
-			t.Errorf("%s: check printed %q, grove run would build the cycle: %v", how, got, cy != nil)
+			t.Errorf("%s: check printed %q, grove claim would claim the cycle: %v", how, got, cy != nil)
 		}
 	}
 	revise := func(branch, words string, commits int) {
@@ -1494,10 +1458,10 @@ func TestMovedFiles(t *testing.T) {
 	checks("grove/cycles/" + k + "-cycle.yaml: planned: 0000000 is not a commit in this repository\n")
 	os.WriteFile(cycle, []byte(planned+"unattended: true\n"), 0o644)
 	commitAll(t, dir, "Mark")
-	checks(stale + ", so grove run skips this cycle; re-plan it with /grove-plan " + k + "\n")
+	checks(stale + ", so grove claim skips this cycle; re-plan it with /grove-plan " + k + "\n")
 	p, _ := openProject()
 	if ip, err := p.agreed(); err != nil || func() bool { cy, _ := eligible(p, ip); return cy != nil }() {
-		t.Errorf("grove run would build a cycle whose member's file moved: %v", err)
+		t.Errorf("grove claim would claim a cycle whose member's file moved: %v", err)
 	}
 
 	// A comma line, wrapped, still reads; a Files: line Grove cannot read.
@@ -1539,7 +1503,7 @@ func TestFollows(t *testing.T) {
 	commitAll(t, dir, "Order the cycles")
 
 	staleOf := func(cycle, change string) string {
-		return "grove/cycles/" + cycle + "-cycle.yaml: planned: " + change + " changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan " + cycle + "\n"
+		return "grove/cycles/" + cycle + "-cycle.yaml: planned: " + change + " changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan " + cycle + "\n"
 	}
 	clean, stale := "No problems in grove/.\n", staleOf(k, b)
 	state := func(want, selects, how string) {
@@ -1553,7 +1517,7 @@ func TestFollows(t *testing.T) {
 			got = cy.ID
 		}
 		if stdout.String() != want || got != selects {
-			t.Errorf("%s: check printed %q, grove run selects %q, want %q", how, stdout.String(), got, selects)
+			t.Errorf("%s: check printed %q, grove claim selects %q, want %q", how, stdout.String(), got, selects)
 		}
 	}
 	namesIn := func(change, cycle string, want bool, how string) {
@@ -1588,8 +1552,8 @@ func TestFollows(t *testing.T) {
 	state(clean, "", "planned")
 	var stdout, stderr strings.Builder
 	branches := git(t, dir, "branch")
-	if code := run([]string{"run", k}, &stdout, &stderr); code != 1 || stderr.String() != "grove: cycle "+k+" waits on cycle "+l+", which is not done\n" || git(t, dir, "branch") != branches {
-		t.Errorf("grove run %s: status %d, %q", k, code, stderr.String())
+	if code := run([]string{"claim", k}, &stdout, &stderr); code != 1 || stderr.String() != "grove: cycle "+k+" waits on cycle "+l+", which is not done\n" || git(t, dir, "branch") != branches {
+		t.Errorf("grove claim %s: status %d, %q", k, code, stderr.String())
 	}
 	if out := grove(t, "instructions", "implement", k); !strings.Contains(out, "\n1. "+b+" \"Add ledger delete ID\"\n") {
 		t.Errorf("implement %s does not list its member:\n%.3000s", k, out)
@@ -1704,7 +1668,7 @@ func get(t *testing.T, url string) (int, string) {
 
 // TestServe follows the walkthrough's "Watching the project": the fixture
 // with cycles ready, needing a person and stale, branches of every kind,
-// an uncommitted edit and a recorded run, served and read.
+// an uncommitted edit and attempts recorded on origin, served and read.
 func TestServe(t *testing.T) {
 	dir := setUp(t)
 	remote := filepath.Join(t.TempDir(), "remote.git")
@@ -1761,8 +1725,6 @@ func TestServe(t *testing.T) {
 	commitAll(t, dir, "Draft "+g)
 	git(t, dir, "switch", "-q", "main")
 	os.WriteFile(filepath.Join(cDir, "implementation.md"), []byte("### T-01\n\nStatus: in progress\n"), 0o644)
-	os.MkdirAll(filepath.Join(dir, ".git/grove"), 0o755)
-	write(".git/grove/261105-r0000.json", `{"id":"261105-r0000","started":"2026-11-05T09:00:00Z","ended":"2026-11-05T11:00:00Z","outcome":"timed out","cycle":"`+k+`","branch":"grove/run-261105-r0000"}`)
 
 	// The default address, then that address taken, then one given.
 	if url, _ := serving(t); url != "http://127.0.0.1:7070/\n" {
@@ -1806,7 +1768,7 @@ func TestServe(t *testing.T) {
 	for _, cy := range v.Cycles {
 		verdicts[cy.ID] = cy
 	}
-	if cy := verdicts[k]; strings.Join(cy.Changes, " ") != a+" "+b || !cy.Runs || cy.Verdict != "grove run would build it" {
+	if cy := verdicts[k]; strings.Join(cy.Changes, " ") != a+" "+b || !cy.Runs || cy.Verdict != "grove claim would claim it" || len(v.Runs) != 0 {
 		t.Errorf("cycle K: %+v", cy)
 	}
 	if cy := verdicts[l]; cy.Runs || !strings.HasPrefix(cy.Verdict, c+" needs a person") {
@@ -1817,6 +1779,42 @@ func TestServe(t *testing.T) {
 	}
 	if cy := verdicts[n]; !cy.Done || strings.Join(cy.Archived, " ") != f {
 		t.Errorf("cycle N: %+v", cy)
+	}
+
+	// Attempts another host recorded on origin, none in this checkout: K
+	// claimed, then the project paused after L's.
+	record := func(id, cycle, changes, parent string) string {
+		tree := strings.TrimSpace(git(t, dir, "hash-object", "-t", "tree", "-w", "/dev/null"))
+		args := []string{"commit-tree", tree, "-m", `{"id":"` + id + `","started":"2026-11-05T09:00:00Z","cycle":"` + cycle + `","changes":[` + changes + `],"host":"h2.example","branch":"grove/` + id + `"}`}
+		if parent != "" {
+			args = append(args, "-p", parent)
+		}
+		rec, work := strings.TrimSpace(git(t, dir, args...)), strings.TrimSpace(git(t, dir, "commit-tree", "main^{tree}", "-p", "main", "-m", "Work on "+cycle))
+		git(t, dir, "push", "-q", "origin", rec+":refs/heads/grove/runs", work+":refs/heads/grove/"+id)
+		return rec
+	}
+	claimed := func() (pageCycle, []pageRun) {
+		var w value
+		_, body := get(t, url+"api/project")
+		json.Unmarshal([]byte(body), &w)
+		for _, cy := range w.Cycles {
+			if cy.ID == k {
+				return cy, w.Runs
+			}
+		}
+		return pageCycle{}, w.Runs
+	}
+	first := record("261105-r0000", k, `"`+a+`","`+b+`"`, "")
+	cy, recs := claimed()
+	if cy.Runs || cy.Verdict != "claimed by attempt 261105-r0000, which h2.example started at 2026-11-05T09:00:00Z on branch grove/261105-r0000" ||
+		len(recs) != 1 || recs[0].Host != "h2.example" || recs[0].Cycle != k || recs[0].Branch != "grove/261105-r0000" || recs[0].Started.IsZero() || recs[0].Moved <= "2026-11-05" ||
+		git(t, dir, "for-each-ref", "refs/heads/grove") != "" {
+		t.Errorf("cycle K claimed elsewhere: %+v, runs %+v", cy, recs)
+	}
+	git(t, dir, "branch", "grove/runs", first) // a local copy, not a branch of work
+	record("261106-r0000", l, `"`+c+`"`, first)
+	if cy, recs := claimed(); cy.Runs || cy.Verdict != "grove claim --retry would claim it; the project is paused after attempt 261106-r0000 of cycle "+l || len(recs) != 2 || recs[0].ID != "261106-r0000" {
+		t.Errorf("cycle K while paused after L: %+v, runs %+v", cy, recs)
 	}
 
 	var rows []string
@@ -1843,9 +1841,6 @@ func TestServe(t *testing.T) {
 	slices.Sort(want[1:])
 	if strings.Join(rows, "\n") != strings.Join(want, "\n") {
 		t.Errorf("branches:\n%s\nwant:\n%s", strings.Join(rows, "\n"), strings.Join(want, "\n"))
-	}
-	if len(v.Runs) != 1 || v.Runs[0].Outcome != "timed out" || v.Runs[0].Cycle != k || v.Runs[0].Branch != "grove/run-261105-r0000" || v.Runs[0].Ended.IsZero() {
-		t.Errorf("runs: %+v", v.Runs)
 	}
 
 	marks := map[string]string{}

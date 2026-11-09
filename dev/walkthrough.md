@@ -240,7 +240,7 @@ show-saved changes approved. Each step names the section of
    > No problems in grove/.
 
    It ends by naming `/grove-implement <cycle-id>` first, then saying
-   `grove run` would refuse the cycle, given or marked, because budgets
+   `grove claim` would refuse the cycle, given or marked, because budgets
    needs a person, and that revising budgets with
    `/grove-propose <budgets-id>` so its acceptance can be checked without
    a person, which re-plans the cycle on the same branch, and one merge
@@ -260,9 +260,9 @@ show-saved changes approved. Each step names the section of
    fresh session, `/grove-plan <show-saved>`. It asks whether to keep the
    change's title for the cycle and, finding nothing that needs a person,
    writes a cycle listing only show-saved. It ends by naming
-   `/grove-implement <cycle-id>`, then saying `grove run <cycle-id>` would
-   build the cycle, then that `unattended: true`, added to its file in a
-   merge of its own, hands it to a `grove run` given no cycle. Commit and
+   `/grove-implement <cycle-id>`, then saying `grove claim <cycle-id>` would
+   claim the cycle, then that `unattended: true`, added to its file in a
+   merge of its own, hands it to a `grove claim` given no cycle. Commit and
    merge.
 
 4. **Mark it unattended** ("Mark it unattended"). `git switch -c mark`, add
@@ -270,14 +270,14 @@ show-saved changes approved. Each step names the section of
    commit and merge. `grove changes` ends the show-saved line with
    `in cycle <cycle-id>, unattended`. Add the same line to the 0.4 cycle:
    `grove check` reports it and exits non-zero:
-   > grove/cycles/\<0.4-cycle>.yaml:\<line>: unattended: \<budgets-id> needs a person, as needs_human says, so grove run skips this cycle; remove unattended, or build the cycle with /grove-implement \<0.4-cycle-id>
+   > grove/cycles/\<0.4-cycle>.yaml:\<line>: unattended: \<budgets-id> needs a person, as needs_human says, so grove claim skips this cycle; remove unattended, or build the cycle with /grove-implement \<0.4-cycle-id>
 
    Discard the edit.
 
 5. **A stale plan** ("Re-plan a cycle"). On a branch,
    add a sentence to show-saved's proposal, commit and merge. On main,
    `grove check`:
-   > grove/cycles/\<show-saved-cycle>.yaml: planned: \<show-saved> changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan \<show-saved-cycle-id>
+   > grove/cycles/\<show-saved-cycle>.yaml: planned: \<show-saved> changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan \<show-saved-cycle-id>
 
    `git switch -c replan`, a fresh session, `/grove-plan <show-saved-cycle-id>`.
    It reads show-saved as main holds it, asks nothing new, keeps
@@ -337,8 +337,8 @@ show-saved changes approved. Each step names the section of
    task naming a file show-saved's T-01 names. `git switch -c plan-0.5`, a
    fresh session, `/grove-plan 0.5: import`. It asks whether the new cycle
    follows the 0.4 or the show-saved cycle; I name show-saved. It writes
-   `depends_on: [<show-saved-cycle-id>]`, and ends saying `grove run` would
-   not build it until the show-saved cycle is done, and that the merges
+   `depends_on: [<show-saved-cycle-id>]`, and ends saying `grove claim` would
+   not claim it until the show-saved cycle is done, and that the merges
    archiving its changes leave the plan fresh. Commit and merge, then add
    `unattended: true` in a merge of its own. `grove changes` ends import's line with
    `in cycle <0.5-cycle-id>, unattended, waits on cycle <show-saved-cycle-id>`.
@@ -356,7 +356,7 @@ show-saved changes approved. Each step names the section of
    is clean, and `grove changes` ends import's line with
    `in cycle <0.5-cycle-id>, unattended`. Then add a comment to that file,
    commit and merge: `grove check` reports
-   > grove/cycles/\<0.5-cycle>.yaml: planned: \<import> changed on main since this plan, so grove run skips this cycle; re-plan it with /grove-plan \<0.5-cycle-id>
+   > grove/cycles/\<0.5-cycle>.yaml: planned: \<import> changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan \<0.5-cycle-id>
 
    Re-plan it as step 5 does.
 
@@ -390,92 +390,81 @@ show-saved changes approved. Each step names the section of
 ## Running unattended
 
 Each step names the section of
-[Running unattended](../docs/running.md) it tests. Claude Code only.
+[Running unattended](../docs/running.md) it tests. `origin` is a bare
+repository and the operator has two clones of it, standing in for two
+hosts. The sessions are Claude Code's.
 
 1. **Set up a checkout** ("Set up a checkout", "Tell the agent to commit and
    open a pull request"). `just fixture ~/tmp/ledger`, `grove init`, add
-   the two `rules.skills.implement` lines from the page to `grove.yaml`, commit.
-   Create a private, disposable GitHub repository, add it as `origin` and
-   push `main`. `git clone` it to `~/tmp/ledger-run`, the operator's
-   checkout, and in it write `.claude/settings.local.json` and the
-   `.git/info/exclude` line from the page. In `~/tmp/ledger-run`,
-   `grove run`:
-   > Nothing to apply on main at \<sha7>.
+   the two `rules.skills.implement` lines from the page to `grove.yaml`,
+   commit. `git init -q --bare ~/tmp/ledger.git`, add it as `origin` and
+   push `main`. `git clone` it to `~/tmp/ledger-run` and
+   `~/tmp/ledger-run2`, the operator's checkouts, and in each write
+   `.claude/settings.local.json` and the `.git/info/exclude` line from the
+   page. In `~/tmp/ledger-run`, `grove claim` prints nothing on standard
+   output, says
+   > grove: nothing to claim on main at \<sha7>
 
-2. **An ordinary run** ("An ordinary run"). In `~/tmp/ledger`, approve two
-   changes as coordinating step 1 does, the delete change waiting on the
-   unknown-ID change, and push `main`. In `~/tmp/ledger-run`, `grove run`
-   says there is nothing to apply: neither change is in a cycle. In
-   `~/tmp/ledger`, plan the two as a cycle as planning step 1 does, with
-   nothing under `needs_human`, merge and push: still nothing to apply.
-   Mark it `unattended`, merge and push. In `~/tmp/ledger-run`, `grove run`.
-   While it runs, `grove run` in a second shell there says
-   > grove: a run is in progress in this checkout
+   and `echo $?` prints 1.
 
-   and `grove run` in another project's checkout proceeds. While the first
-   runs, it prints one row per event as it comes, each with a time and a
-   mark: a green `▶` start naming the model, `•` messages, cyan `›` tool
-   calls such as `› Bash grove instructions implement <change-id> --unattended`,
-   no row for a tool result unless it is a red `✗` error, faint `·`
-   thinking whose `(×N)` count goes up in place, and a `■` result with its
-   turns and cost. Narrow the terminal: new rows are cut to its width. It
-   ends
-   > Attempt \<attempt> ended: exit status 0; its output is \<checkout>/.git/grove/\<attempt>.log.
+2. **Claim a cycle** ("Claim a cycle", "The record"). In `~/tmp/ledger`,
+   approve two changes as coordinating step 1 does, the delete change
+   waiting on the unknown-ID change, and push `main`. In
+   `~/tmp/ledger-run`, `grove claim` says there is nothing to claim:
+   neither change is in a cycle. In `~/tmp/ledger`, plan the two as a
+   cycle as planning step 1 does, with nothing under `needs_human`, merge
+   and push: still nothing to claim. Mark it `unattended`, merge and push.
+   In `~/tmp/ledger-run`, `K=$(grove claim) && echo "$K"` prints the
+   cycle's ID alone. The checkout is on `grove/<attempt>`, at `main`'s
+   commit, and `git status` shows nothing. `git log -1 --format=%B
+   origin/grove/runs` prints the record: the attempt, its start time, the
+   cycle, the unknown-ID then the delete change, `main`'s commit, the
+   host, the checkout and the branch. `git -C ~/tmp/ledger.git ls-tree
+   grove/runs` prints nothing.
 
-   `head -1` of that log is a JSON object, as is every line after it.
+3. **Composed with a harness** ("Claim a cycle"). In `~/tmp/ledger-run`,
+   on the attempt's branch, `timeout 2h claude -p "/grove-implement $K
+   --unattended"`. The session runs `grove instructions implement
+   <change-id> --unattended` once for each change, the unknown-ID one
+   first, builds and archives both, commits each task with its ID and
+   pushes the branch; with no GitHub behind `origin`, `gh pr create`
+   fails and the session says so.
 
-   The checkout is on `grove/run-<attempt>`, whose commits build and archive
-   both changes, the unknown-ID one first, each task with its ID. The
-   record's prompt was `/grove-implement <cycle-id> --unattended`, and the
-   output shows the session ran `grove instructions implement <change-id>
-   --unattended` once for each. The pull request lists both.
-   `.git/grove/<attempt>.json` names the cycle, both changes and `main`'s
-   commit, and `git status` shows nothing.
+4. **The pause, from two checkouts** ("The pause", "Two checkouts at
+   once"). In `~/tmp/ledger-run2`, `grove claim` says
+   > grove: the project is paused after attempt \<attempt>, which \<host> started at \<time> on branch grove/\<attempt>; once you have dealt with it, run grove claim --retry
 
-3. **The pause** ("The pause"). `grove run` says
-   > grove: the project is paused after attempt \<attempt>, whose output is \<checkout>/.git/grove/\<attempt>.log; once you have dealt with it, run grove run --retry
+   In `~/tmp/ledger`, approve the budgets change, plan it as a cycle of
+   one with `/grove-plan <budgets-id>`, merge it, mark it `unattended`,
+   merge and push: still paused, from either clone. Merge the attempt's
+   branch into `main` and push, as merging its pull request would. Then
+   `(cd ~/tmp/ledger-run && grove claim) & (cd ~/tmp/ledger-run2 && grove claim); wait`:
+   one prints the budgets cycle's ID; the other says the project is paused
+   after that attempt and creates no branch. `git -C ~/tmp/ledger.git log
+   --oneline grove/runs` lists two records.
 
-   In `~/tmp/ledger`, approve the budgets change, plan it as a cycle of one
-   with `/grove-plan <budgets-id>`, merge it, mark it `unattended`, merge
-   and push: still paused. Merge the pull request:
-   `grove run > ~/tmp/run.txt` starts an attempt that selects only the
-   budgets cycle. Let it finish and close its pull request unmerged.
-   `~/tmp/run.txt` holds the same rows as a terminal shows, with no color
-   codes, none cut short, and each thinking count on one line.
-
-4. **When a session is stopped** ("When a session is stopped").
-   `grove run --retry`, and once it prints an `Edit:` or `Write:` line,
-   press Ctrl-C:
-   > grove: attempt \<attempt> ended: cancelled; its output is \<checkout>/.git/grove/\<attempt>.log
-
-   `ps -o pid,pgid,command -g <pid of that claude -p>` lists nothing, and
-   the branch, the edit and the output are there; the log holds each event
-   up to the stop, one JSON object per line, the edit's tool call among them. `grove run --retry` says
-   > grove: the checkout has uncommitted changes; commit, stash or discard them first
-
-   and the edit is untouched. Discard it as the page shows, then
-   `grove run --retry --timeout 1m`: after a minute it ends `timed out`,
-   leaving no process of the session.
-
-5. **Refusals and failures** ("An ordinary run", "Retry"). Commit a file
-   on the operator's `main` and `grove run` from it:
+5. **Refusals** ("Claim a cycle", "Two checkouts at once", "When a session
+   is stopped"). In the clone whose claim lost, commit a file on `main`
+   and `grove claim --retry`:
    > grove: the local main has commits origin's does not, so it cannot be fast-forwarded
 
-   Reset it. With `agents` holding only `codex` on `origin`'s `main`,
-   `grove run --retry` says
-   > grove: run needs Claude Code listed under agents in grove.yaml, as skills or commands
+   Reset it. Edit `README.md` without committing, as a stopped session
+   leaves an edit, and `grove claim --retry`:
+   > grove: the checkout has uncommitted changes; commit, stash or discard them first
 
-   Put `claude` back. With `PATH` missing `claude`, `grove run --retry`
-   ends `failed to start`, the reason in its output, and the next
-   `grove run` says the project is paused.
+   The edit is untouched; discard it as the page shows. Write
+   `~/tmp/ledger.git/hooks/pre-receive` as `echo not allowed >&2; exit
+   1`, executable: `grove claim --retry` says the record was refused,
+   quoting Git's `not allowed`, creates no branch, and `origin`'s `grove/runs`
+   still lists two records. Remove the hook.
 
-6. **Run a cycle you name** ("Run a cycle you name"). In `~/tmp/ledger`,
-   approve `/grove-propose Editing a record prints what was saved`
-   (show-saved), plan it as a cycle of one, merge and push, without
-   marking it. Approve `/grove-propose Export the ledger as CSV` (export),
-   plan it as a cycle of one, telling the session export needs a person to
-   judge the file, merge and push. In
-   `~/tmp/ledger-run`, `grove run --retry <export-cycle-id>`:
+6. **Claim a cycle you name** ("Claim a cycle you name", "Retry"). In
+   `~/tmp/ledger`, approve `/grove-propose Editing a record prints what
+   was saved` (show-saved), plan it as a cycle of one, merge and push,
+   without marking it. Approve `/grove-propose Export the ledger as CSV`
+   (export), plan it as a cycle of one, telling the session export needs
+   a person to judge the file, merge and push. In `~/tmp/ledger-run2`,
+   `grove claim --retry <export-cycle-id>`:
    > grove: \<export-id> needs a person, as cycle \<export-cycle-id>'s needs_human says; build the cycle with /grove-implement \<export-cycle-id>
 
    and `git branch` lists no new branch. In `~/tmp/ledger`, on a branch, a
@@ -485,29 +474,32 @@ Each step names the section of
    whether it still needs a person, takes it out of `needs_human` when I
    say no, sets `planned` to main's commit and adds no `unattended`.
    `grove check` is clean. Squash-merge the branch and push. In
-   `~/tmp/ledger-run`, `grove run --retry <export-cycle-id>` starts a
-   session; stop it with Ctrl-C and discard what it left.
-   `grove run --retry 261099-zzzzz`
-   says `main` holds no such cycle. In `~/tmp/ledger`, approve
-   `/grove-propose Import records from a CSV` (import), plan it as a cycle
-   of one that follows the export cycle, merge and push. In
-   `~/tmp/ledger-run`, `grove run --retry <import-cycle-id>`:
+   `~/tmp/ledger-run2`, `grove claim <export-cycle-id>` says the project
+   is paused; `grove claim --retry <export-cycle-id>` prints its ID, and
+   `origin`'s `grove/runs` keeps the earlier records under the new one.
+   `grove claim --retry 261099-zzzzz` says `main` holds no such cycle. In
+   `~/tmp/ledger`, approve `/grove-propose Import records from a CSV`
+   (import), plan it as a cycle of one that follows the export cycle,
+   merge and push. In `~/tmp/ledger-run2`, `grove claim --retry
+   <import-cycle-id>`:
    > grove: cycle \<import-cycle-id> waits on cycle \<export-cycle-id>, which is not done
 
-   and `git branch` lists no new branch. `grove run --retry <show-saved-cycle-id>`
-   starts a session on `/grove-implement <show-saved-cycle-id> --unattended` though the
+   and `git branch` lists no new branch. `grove claim --retry
+   <show-saved-cycle-id>` prints the show-saved cycle's ID though the
    budgets cycle is marked, and its record names the show-saved cycle.
 
 7. **Without a remote** ("Without a remote"). `just fixture
    ~/tmp/ledger-local`, `grove init`, commit, approve the unknown-ID
    change, plan it as a cycle of one, mark it `unattended` and merge, with
    `Commit after each task, naming its task ID.` and the page's
-   commit-what-is-left line under `rules.skills.implement`; write `.claude/settings.local.json` and the
-   `.git/info/exclude` line from the page. `git remote` lists nothing.
-   `grove run` fetches nothing, ends `exit status 0`, and its record holds
-   `main`'s commit. `grove run` says the project is paused. Merge
-   `grove/run-<attempt>` into `main`: `grove run` says there is nothing to
-   apply.
+   commit-what-is-left line under `rules.skills.implement`. `git remote`
+   lists nothing. `grove claim` fetches nothing, prints the cycle's ID,
+   and `git log -1 --format=%B grove/runs` holds `main`'s commit.
+   `grove claim` says the project is paused. Archive the change on the
+   attempt's branch as the session would, commit, and merge
+   `grove/<attempt>` into `main`: `grove claim` says there is nothing to
+   claim, and `K=$(grove claim) && claude -p "/grove-implement $K
+   --unattended"` starts no session and exits 1.
 
 ## Watching the project
 
@@ -537,7 +529,7 @@ the browser's console shows no error.
    `needs_human`; plan D as cycle M, marked, then revise D's proposal on
    `main`. Commit a change to `ledger/records.py` alone, and push `main`.
 
-   Readiness counts 3 and shows K as one `grove run` would build, A then
+   Readiness counts 3 and shows K as one `grove claim` would claim, A then
    B; L naming C as needing a person; M stale, naming D. E is under
    "Approved, in no cycle", ready; N is under "Done". The problems name
    M's stale plan. History lists, newest first, the commits that archived
@@ -550,16 +542,20 @@ the browser's console shows no error.
    it with T-01 `Status: to check`, commit, push, and delete the local
    branch. On `draft-notes`, propose a change G whose proposal holds a
    `<script>` element, and commit it. Back on `main`, write C's
-   `implementation.md` and leave it uncommitted. Write
-   `.git/grove/261105-r0000.json` as `grove run` would, with outcome
-   `timed out` for K.
+   `implementation.md` and leave it uncommitted. In a second clone of
+   `origin`, `~/tmp/ledger-watch2`, `grove claim` prints K's ID; commit a
+   file outside `grove/` on the attempt's branch there and push that branch. Back in
+   `~/tmp/ledger-watch`, `git fetch`; the checkout has no `grove/runs` of
+   its own.
 
    Within 10 seconds, In progress counts 4: the working tree with C in
    progress, `build-b` "on origin too" with B 1 of 2 tasks done and T-02
    blocked, `draft-notes` with G a draft and its documents new there, and
    `origin/teammate` "only on origin" with T-01 to check. No row names
-   `apply/f`. The runs list the timed-out attempt with its cycle, times
-   and branch.
+   `apply/f`, `grove/runs` or the attempt's branch. The attempts list the
+   one from `ledger-watch2` with its cycle, start time, host and branch,
+   and the time of the commit pushed on that branch. Readiness says K is
+   claimed, naming the host, the start time and the branch.
 
 4. **The pane** ("The pane", "Graph", "Specs"). Click B: the pane shows
    its proposal rendered, with a button for each file on `main` and for
@@ -619,7 +615,8 @@ the browser's console shows no error.
   on a `Delegated:` line right after it. `/grove-implement <change-id>`
   creates `tests/test_records.py` for `find`'s own tests without asking.
   On a fresh fixture with the same change in a cycle of one,
-  `grove run <cycle-id>` creates `tests/test_records.py` the same way, and
+  `K=$(grove claim <cycle-id>) && claude -p "/grove-implement $K --unattended"`
+  creates `tests/test_records.py` the same way, and
   `implementation.md` has no `Also changed:` line for it.
 - **Planned against actual** (§6; reference, "Terminal commands"). Approve
   a change whose T-01 names `ledger/records.py` and `tests/fixtures/` as

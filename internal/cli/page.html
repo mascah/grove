@@ -176,7 +176,7 @@ function memberRows(ids, cy) {
 function readiness() {
   const s = $('#ready'); s.replaceChildren();
   const open = D.cycles.filter(c => !c.done), done = D.cycles.filter(c => c.done);
-  s.append(h('h2', {}, 'What grove run would do'));
+  s.append(h('h2', {}, 'What grove claim would do'));
   if (!open.length) s.append(h('p', { class: 'empty' }, 'No cycle is open. Plan one with /grove-plan.'));
   for (const cy of open) {
     const cls = cycleCls(cy);
@@ -217,10 +217,10 @@ function progress() {
   if (!D.branches.length) s.append(h('p', { class: 'empty' }, 'Nothing is in progress: every branch holds only what ' + D.target + ' already has.'));
   else s.append(h('p', { class: 'empty' }, D.branches.length + (D.branches.length === 1 ? ' branch holds' : ' branches hold') + ' work ' + D.target + ' does not have' + (drafts ? ', ' + drafts + ' of them a draft' : '') + '.'));
   for (const b of D.branches) s.append(branchCard(b));
-  s.append(h('h2', {}, 'Runs recorded in this checkout'));
-  if (!D.runs.length) s.append(h('p', { class: 'empty' }, 'No run has been recorded in this checkout.'));
-  else s.append(h('div', { style: 'overflow-x:auto' }, h('table', {}, h('tr', {}, ['attempt', 'cycle', 'started', 'ended', 'outcome', 'branch'].map(x => h('th', {}, x))),
-    D.runs.map(r => h('tr', {}, h('td', { class: 'mono' }, r.id), h('td', {}, idLink(r.cycle, 'cycle')), h('td', { class: 'n' }, new Date(r.started).toLocaleString()), h('td', { class: 'n' }, r.ended ? new Date(r.ended).toLocaleString() : 'running'), h('td', {}, r.outcome ? chip(r.outcome, r.outcome === 'exit status 0' ? 'ok' : 'warn') : chip('running', 'info')), h('td', { class: 'mono' }, r.branch))))));
+  s.append(h('h2', {}, 'Attempts recorded on grove/runs'));
+  if (!D.runs.length) s.append(h('p', { class: 'empty' }, 'No attempt has been recorded on grove/runs.'));
+  else s.append(h('div', { style: 'overflow-x:auto' }, h('table', {}, h('tr', {}, ['attempt', 'cycle', 'started', 'host', 'branch', 'last commit'].map(x => h('th', {}, x))),
+    D.runs.map(r => h('tr', {}, h('td', { class: 'mono' }, r.id), h('td', {}, idLink(r.cycle, 'cycle')), h('td', { class: 'n' }, new Date(r.started).toLocaleString()), h('td', {}, r.host), h('td', { class: 'mono' }, r.branch), h('td', { class: 'n' }, r.moved ? ago(r.moved) : 'no branch here'))))));
 }
 
 const archivedToggle = () => h('label', { style: 'margin-left:auto' }, h('input', { type: 'checkbox', ...(showArchived ? { checked: '' } : {}), onchange: e => { showArchived = e.target.checked; graph(); historyTab(); } }), ' show archived changes and done cycles');
