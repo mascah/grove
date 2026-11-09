@@ -212,11 +212,7 @@ func (s *server) value() (*value, error) {
 	if v.Branches, err = s.branches(commit, c); err != nil {
 		return nil, err
 	}
-	gitDir, err := gitx.Run(p.Top, "rev-parse", "--absolute-git-dir")
-	if err != nil {
-		return nil, err
-	}
-	if v.Runs, err = attempts(filepath.Join(strings.TrimSpace(gitDir), "grove")); err != nil {
+	if v.Runs, err = records(p.Top, tipOf(p.Top, runs)); err != nil {
 		return nil, err
 	}
 	if v.History, err = history(p, commit); err != nil {

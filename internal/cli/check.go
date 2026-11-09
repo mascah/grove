@@ -168,7 +168,7 @@ func stalePlans(p project, c *doc.Collection) error {
 		}
 		for _, id := range changed {
 			cy.Diagnostics = append(cy.Diagnostics, doc.Diagnostic{Path: cy.Path,
-				Message: fmt.Sprintf("planned: %s changed on %s since this plan%s; re-plan it with /grove-plan %s", id, p.Target, map[bool]string{true: ", so grove run skips this cycle"}[cy.Meta.Unattended], cy.ID)})
+				Message: fmt.Sprintf("planned: %s changed on %s since this plan%s; re-plan it with /grove-plan %s", id, p.Target, map[bool]string{true: ", so grove claim skips this cycle"}[cy.Meta.Unattended], cy.ID)})
 		}
 	}
 	return nil
