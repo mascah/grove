@@ -1668,7 +1668,7 @@ func get(t *testing.T, url string) (int, string) {
 
 // TestServe follows the walkthrough's "Watching the project": the fixture
 // with cycles ready, needing a person and stale, branches of every kind,
-// an uncommitted edit and a recorded run, served and read.
+// an uncommitted edit and attempts recorded on origin, served and read.
 func TestServe(t *testing.T) {
 	dir := setUp(t)
 	remote := filepath.Join(t.TempDir(), "remote.git")
@@ -1768,7 +1768,7 @@ func TestServe(t *testing.T) {
 	for _, cy := range v.Cycles {
 		verdicts[cy.ID] = cy
 	}
-	if cy := verdicts[k]; strings.Join(cy.Changes, " ") != a+" "+b || !cy.Runs || cy.Verdict != "grove run would build it" {
+	if cy := verdicts[k]; strings.Join(cy.Changes, " ") != a+" "+b || !cy.Runs || cy.Verdict != "grove claim would claim it" || len(v.Runs) != 0 {
 		t.Errorf("cycle K: %+v", cy)
 	}
 	if cy := verdicts[l]; cy.Runs || !strings.HasPrefix(cy.Verdict, c+" needs a person") {
@@ -1779,6 +1779,42 @@ func TestServe(t *testing.T) {
 	}
 	if cy := verdicts[n]; !cy.Done || strings.Join(cy.Archived, " ") != f {
 		t.Errorf("cycle N: %+v", cy)
+	}
+
+	// Attempts another host recorded on origin, none in this checkout: K
+	// claimed, then the project paused after L's.
+	record := func(id, cycle, changes, parent string) string {
+		tree := strings.TrimSpace(git(t, dir, "hash-object", "-t", "tree", "-w", "/dev/null"))
+		args := []string{"commit-tree", tree, "-m", `{"id":"` + id + `","started":"2026-11-05T09:00:00Z","cycle":"` + cycle + `","changes":[` + changes + `],"host":"h2.example","branch":"grove/` + id + `"}`}
+		if parent != "" {
+			args = append(args, "-p", parent)
+		}
+		rec, work := strings.TrimSpace(git(t, dir, args...)), strings.TrimSpace(git(t, dir, "commit-tree", "main^{tree}", "-p", "main", "-m", "Work on "+cycle))
+		git(t, dir, "push", "-q", "origin", rec+":refs/heads/grove/runs", work+":refs/heads/grove/"+id)
+		return rec
+	}
+	claimed := func() (pageCycle, []pageRun) {
+		var w value
+		_, body := get(t, url+"api/project")
+		json.Unmarshal([]byte(body), &w)
+		for _, cy := range w.Cycles {
+			if cy.ID == k {
+				return cy, w.Runs
+			}
+		}
+		return pageCycle{}, w.Runs
+	}
+	first := record("261105-r0000", k, `"`+a+`","`+b+`"`, "")
+	cy, recs := claimed()
+	if cy.Runs || cy.Verdict != "claimed by attempt 261105-r0000, which h2.example started at 2026-11-05T09:00:00Z on branch grove/261105-r0000" ||
+		len(recs) != 1 || recs[0].Host != "h2.example" || recs[0].Cycle != k || recs[0].Branch != "grove/261105-r0000" || recs[0].Started.IsZero() || recs[0].Moved <= "2026-11-05" ||
+		git(t, dir, "for-each-ref", "refs/heads/grove") != "" {
+		t.Errorf("cycle K claimed elsewhere: %+v, runs %+v", cy, recs)
+	}
+	git(t, dir, "branch", "grove/runs", first) // a local copy, not a branch of work
+	record("261106-r0000", l, `"`+c+`"`, first)
+	if cy, recs := claimed(); cy.Runs || cy.Verdict != "grove claim --retry would claim it; the project is paused after attempt 261106-r0000 of cycle "+l || len(recs) != 2 || recs[0].ID != "261106-r0000" {
+		t.Errorf("cycle K while paused after L: %+v, runs %+v", cy, recs)
 	}
 
 	var rows []string

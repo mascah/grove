@@ -76,8 +76,7 @@ func claim(stdout io.Writer, id string, retry bool) error {
 	if err != nil {
 		return err
 	}
-	if len(recs) > 0 && !retry && slices.ContainsFunc(recs[0].Changes, func(ch string) bool { return !ip.Agreed.InArchive(ch) }) {
-		last := recs[0]
+	if last := pausing(recs, ip.Agreed); last != nil && !retry {
 		return fmt.Errorf("the project is paused after attempt %s, which %s started at %s on branch %s; once you have dealt with it, run grove claim --retry", last.ID, last.Host, last.Started.Format(time.RFC3339), last.Branch)
 	}
 	cy, ordered := eligible(p, ip)
@@ -162,6 +161,15 @@ func fetch(p project, origin bool) (commit, tip string, err error) {
 func tipOf(dir, ref string) string {
 	out, _ := gitx.Run(dir, "rev-parse", "-q", "--verify", ref) // fails only when there is none
 	return strings.TrimSpace(out)
+}
+
+// pausing returns the latest of recs while a change it names is not
+// archived in c, or else nil.
+func pausing(recs []attempt, c *doc.Collection) *attempt {
+	if len(recs) > 0 && slices.ContainsFunc(recs[0].Changes, func(id string) bool { return !c.InArchive(id) }) {
+		return &recs[0]
+	}
+	return nil
 }
 
 // records returns the attempts on grove/runs from tip back, newest first.

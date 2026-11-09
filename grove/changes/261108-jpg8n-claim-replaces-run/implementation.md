@@ -65,7 +65,48 @@ Also changed: `internal/doc/doc.go` — check's `needs_human` message and a comm
 
 ### T-02 — `serve` reads the records and names `grove claim`
 
-Status: not started
+Status: done
+
+`internal/cli/serve.go` reads the records on `origin/grove/runs`, or on the
+local `grove/runs` when there is no `origin/grove/runs`. Each run on the
+page is the record plus `moved`: the latest commit time of its branch,
+local or on `origin`. A cycle's verdict, after the existing refusals from
+`runnable`, is one of these:
+
+- "claimed by attempt X, which H started at T on branch B", when the latest
+  record names it and a member is still open;
+- otherwise `grove claim would claim it`, with the cycle's ID when it is
+  not marked and "; it is not marked unattended";
+- while the project is paused after another cycle's attempt, `--retry` in
+  the command and "; the project is paused after attempt X of cycle Y",
+  with `runs` false.
+
+The pause test is now one helper, `pausing` in `claim.go`, used by both
+`claim` and `serve`. `serve`'s branches no longer list `grove/runs`, local
+or on `origin`. Without that exclusion, a `grove/runs` branch broke
+`/api/project`, because the record branch shares no history with the
+target: `git diff: ... no merge base`. `internal/cli/page.html` heads
+readiness "What grove claim would do". Its runs table, "Attempts recorded on
+grove/runs", shows attempt, cycle, started, host, branch and last commit.
+
+`TestServe` checks the following:
+
+- K's verdict is "grove claim would claim it" with no runs.
+- After a record from host `h2.example` is pushed to `origin/grove/runs`,
+  with its branch pushed to `origin` and no local attempt, K is claimed,
+  naming the host, time and branch. The run carries its host, cycle,
+  branch, start and the branch's commit time.
+- With a local copy of `grove/runs` (not listed as a branch) and a second
+  record naming L, K says `grove claim --retry would claim it; the project
+  is paused after attempt 261106-r0000 of cycle L`, and the runs are newest
+  first.
+
+`just check` passes: 4338 Go lines, 1977 test lines, 408 page lines, 8614
+instruction words. How the runs table looks in a browser was not looked
+at. Its cells are the ones the old table had, apart from the host and last
+commit columns.
+
+Also changed: `internal/cli/claim.go` — the pause test moved into `pausing`, so `claim` and `serve` share it.
 
 ### T-03 — Instruction text names `grove claim`
 
