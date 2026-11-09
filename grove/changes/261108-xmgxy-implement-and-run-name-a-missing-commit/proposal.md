@@ -1,4 +1,4 @@
-# Implement and run name a missing base or planned commit
+# Implement and claim name a missing base or planned commit
 
 <!-- A bug fix describes future work. It becomes approved future work when
 it is merged into the target branch, which says nothing about
@@ -53,23 +53,28 @@ ccaee4d.
    `internal/cli/run.go` at ccaee4d returns `changedSincePlan`'s error as
    its own. `eligible`, for a `run` given no cycle, skips such a cycle,
    with the comment "A planned that is no commit is check's to report".
-   Not run on the fixture, since `run` starts a session.
+   Not run on the fixture, since `run` starts a session. Approved change
+   [261108-jpg8n](../261108-jpg8n-claim-replaces-run/proposal.md)
+   proposes that `grove claim` replace `grove run`, with the selection in
+   `internal/cli/claim.go`; this change names `claim` (decision 1).
 
 ## Expected
 
 The owner, 2026-11-08: "Im fine with fixing these independently lets just
 confirm first", then "yes to the bugfix", accepting the round recorded
-under Decisions.
+under Decisions; and, 2026-11-09, "Yes" to naming `grove claim` in place
+of `grove run` (decision 1).
 
 - `grove instructions implement <change-id>`, attended or `--unattended`,
-  `grove instructions implement <cycle-id>` and `grove run <cycle-id>`
+  `grove instructions implement <cycle-id>` and `grove claim <cycle-id>`
   refuse with the line `grove check` prints for the missing commit,
   prefixed `grove: ` as every error is, exit non-zero and print no
   instructions: for a change in no cycle, its `base`; for a cycle, or a
   member of a cycle not done, the cycle's `planned`; in the shallow-clone
   wording in a shallow clone, otherwise "is not a commit in this
   repository".
-- `grove run` given no cycle keeps skipping such a cycle silently.
+- `grove claim` given no cycle keeps skipping such a cycle silently,
+  recording nothing.
 
 ## Reproduction
 
@@ -98,23 +103,34 @@ no change spec.
 
 ## Decisions
 
-The owner accepted every item below with "yes to the bugfix", 2026-11-08.
+The owner accepted every item below with "yes to the bugfix", 2026-11-08,
+and revised items 1, 2, 3 and 4 on 2026-11-09 while planning cycle
+261109-cpb3q, answering "Yes" to each as worded there.
 
 1. **Scope:** `grove instructions implement`, for a change and for a
-   cycle, attended and `--unattended`, and `grove run <cycle-id>`.
-   Approved change
-   [261108-jpg8n](../261108-jpg8n-claim-replaces-run/proposal.md) also
-   names `internal/cli/run.go`; whichever of the two lands second
-   re-bases with propose.
+   cycle, attended and `--unattended`, and `grove claim <cycle-id>`.
+   Revised 2026-11-09: as proposed, the scope named `grove run
+   <cycle-id>` and said that whichever of this change and approved change
+   [261108-jpg8n](../261108-jpg8n-claim-replaces-run/proposal.md) landed
+   second would re-base with propose. Cycle 261109-cpb3q builds jpg8n
+   first, which removes `grove run`, so this change names `grove claim`
+   and `internal/cli/claim.go`, the file jpg8n's T-01 creates, and the
+   Observed section stays as evidence at ccaee4d.
 2. **Behavior:** each refuses with `check`'s exact line and exits
    non-zero, printing no instructions. The cycle form refuses when the
-   cycle's `planned` is missing. A `run` given no cycle keeps skipping
-   the cycle silently.
+   cycle's `planned` is missing. A `claim` given no cycle keeps skipping
+   the cycle silently and records nothing, as jpg8n's runs change spec
+   has it record nothing for a stale cycle.
 3. **Observed, not agreed:** no change spec, as 261105-3qdz2 decided for
    `check`'s message. The CI guide's "What to expect" says the implement
-   instructions fail the same way; walkthrough step 6 gains the implement
-   and run lines.
-4. **No `depends_on`.**
+   instructions fail the same way; the walkthrough's shallow-clone step
+   gains the implement and claim lines, and since `claim` starts no
+   process the claim line runs on the fixture.
+4. **`depends_on: [261108-jpg8n]`.** Revised 2026-11-09 from "No
+   `depends_on`": the task names `grove claim` and `internal/cli/claim.go`,
+   which exist only once jpg8n is built. In cycle 261109-cpb3q jpg8n is a
+   member, so the cycle waits on nothing outside it; alone, this change
+   waits on jpg8n archived as finished.
 5. **Routine defaults:** one task starting with a test in
    `TestShallowClone`; its files as `tasks.md` names them; test layout,
    private helpers and `internal/cli/check.go` delegated, the last should
