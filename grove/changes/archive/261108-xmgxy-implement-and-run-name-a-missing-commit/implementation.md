@@ -50,7 +50,4 @@ behavior (decision 3). Its acceptance is shown by
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+No change spec; no maintained spec changes.
