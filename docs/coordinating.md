@@ -123,8 +123,8 @@ the agent builds each change itself, one after another. A change in a
 cycle that is not done always gets the cycle's list, with you or without.
 So `/grove-implement 261019-p4x8d` shows you its place too.
 
-`--unattended` builds a cycle whether or not it is marked `unattended`,
-and whatever its `needs_human` says. Only `grove claim` reads those. Given a
+`--unattended` builds a cycle whether or not it is marked `unattended`.
+Only `grove claim` reads that. Given a
 change's ID, `/grove-implement 261019-p4x8d --unattended` builds that one
 change the same way, with no cycle to plan first.
 

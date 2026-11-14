@@ -228,26 +228,23 @@ show-saved changes approved. Each step names the section of
    instructions, `grove instructions plan "0.4: delete and budgets"`, give
    `## What Grove requires of plan` before `## How to plan`. The session
    lists the approved changes and I agree to delete and budgets. It asks
-   about budgets, whose task has the report read clearly beside each
-   category's total, whether it needs a person; I say yes, to judge the
-   wording. It asks nothing about delete, nor about other cycles, there
-   being none. Before writing the cycle, it says bringing budgets up to
+   nothing about either, nor about the cycle's title, which it writes
+   itself, nor about other cycles, there being none. Before writing the
+   cycle, it says bringing budgets up to
    date edits approved work, brings T-01 up to date with
    `ledger/report.py` as main has it and sets budgets' `base` to main's
    commit, without sending me to another session. It writes
    `grove/cycles/<cycle-id>-<slug>.yaml` with both under `changes`,
-   budgets under `needs_human` with my reason, `created:` with the time,
+   `created:` with the time,
    `planned:` with main's full commit and no `unattended`. `git status`
    shows budgets' files beside that file, and no other, and
    `grove check`:
    > No problems in grove/.
 
    It ends by naming `/grove-implement <cycle-id>` first, then saying
-   `grove claim` would refuse the cycle, given or marked, because budgets
-   needs a person, and that revising budgets with
-   `/grove-propose <budgets-id>` so its acceptance can be checked without
-   a person, which re-plans the cycle on the same branch, and one merge
-   removes that.
+   `grove claim <cycle-id>` would claim the cycle, then that
+   `unattended: true`, added to its file in a merge of its own, hands it
+   to a `grove claim` given no cycle.
 
 2. **Merge the plan** ("Merge the plan"). Commit, then `grove review`
    lists budgets' revised files, each as
@@ -260,9 +257,9 @@ show-saved changes approved. Each step names the section of
    `in cycle <cycle-id>`, and the show-saved line with nothing.
 
 3. **A cycle of one** ("Plan a cycle"). `git switch -c plan-show-saved`, a
-   fresh session, `/grove-plan <show-saved>`. It asks whether to keep the
-   change's title for the cycle and, finding nothing that needs a person,
-   writes a cycle listing only show-saved. It ends by naming
+   fresh session, `/grove-plan <show-saved>`. It asks nothing, takes the
+   change's title for the cycle, and writes a cycle listing only
+   show-saved. It ends by naming
    `/grove-implement <cycle-id>`, then saying `grove claim <cycle-id>` would
    claim the cycle, then that `unattended: true`, added to its file in a
    merge of its own, hands it to a `grove claim` given no cycle. Commit and
@@ -271,9 +268,11 @@ show-saved changes approved. Each step names the section of
 4. **Mark it unattended** ("Mark it unattended"). `git switch -c mark`, add
    `unattended: true` to the show-saved cycle, `grove check` is clean;
    commit and merge. `grove changes` ends the show-saved line with
-   `in cycle <cycle-id>, unattended`. Add the same line to the 0.4 cycle:
-   `grove check` reports it and exits non-zero:
-   > grove/cycles/\<0.4-cycle>.yaml:\<line>: unattended: \<budgets-id> needs a person, as needs_human says, so grove claim skips this cycle; remove unattended, or build the cycle with /grove-implement \<0.4-cycle-id>
+   `in cycle <cycle-id>, unattended`. Add `needs_human:` with
+   `<budgets-id>: judging the wording` under it to the 0.4 cycle, as a
+   cycle written before Grove dropped the field holds: `grove check`
+   reports it and exits non-zero:
+   > grove/cycles/\<0.4-cycle>.yaml:\<line>: unknown field "needs_human"; this file takes title, created, changes, planned, goal, depends_on and unattended
 
    Discard the edit.
 
@@ -387,8 +386,7 @@ show-saved changes approved. Each step names the section of
    delete, whose `## The cycle` lists both and marks delete `this change`;
    when it returns, the session archives and commits delete, and only then
    starts one on budgets, whose list marks delete
-   `archived in this working tree`; it builds budgets though `needs_human`
-   names it, and asks nothing. The session archives and commits budgets.
+   `archived in this working tree`; it builds budgets and asks nothing. The session archives and commits budgets.
    `grove instructions implement <0.4-cycle-id> --unattended` on the branch
    then lists nothing to build. One merge;
    `grove changes` lists neither. `/grove-implement <0.4-cycle-id>` on
@@ -421,7 +419,7 @@ hosts. The sessions are Claude Code's.
    waiting on the unknown-ID change, and push `main`. In
    `~/tmp/ledger-run`, `grove claim` says there is nothing to claim:
    neither change is in a cycle. In `~/tmp/ledger`, plan the two as a
-   cycle as planning step 1 does, with nothing under `needs_human`, merge
+   cycle as planning step 1 does, merge
    and push: still nothing to claim. Mark it `unattended`, merge and push.
    In `~/tmp/ledger-run`, `K=$(grove claim) && echo "$K"` prints the
    cycle's ID alone. The checkout is on `grove/<attempt>`, at `main`'s
@@ -471,18 +469,7 @@ hosts. The sessions are Claude Code's.
    `~/tmp/ledger`, approve `/grove-propose Editing a record prints what
    was saved` (show-saved), plan it as a cycle of one, merge and push,
    without marking it. Approve `/grove-propose Export the ledger as CSV`
-   (export), plan it as a cycle of one, telling the session export needs
-   a person to judge the file, merge and push. In `~/tmp/ledger-run2`,
-   `grove claim --retry <export-cycle-id>`:
-   > grove: \<export-id> needs a person, as cycle \<export-cycle-id>'s needs_human says; build the cycle with /grove-implement \<export-cycle-id>
-
-   and `git branch` lists no new branch. In `~/tmp/ledger`, on a branch, a
-   fresh session, `/grove-propose <export-id>`, asking for export's
-   acceptance to be checked by a test that reads the CSV back. The session
-   prints the export cycle's file with the change, revises export, asks
-   whether it still needs a person, takes it out of `needs_human` when I
-   say no, sets `planned` to main's commit and adds no `unattended`.
-   `grove check` is clean. Squash-merge the branch and push. In
+   (export), plan it as a cycle of one, merge and push. In
    `~/tmp/ledger-run2`, `grove claim <export-cycle-id>` says the project
    is paused; `grove claim --retry <export-cycle-id>` prints its ID, and
    `origin`'s `grove/runs` keeps the earlier records under the new one.
@@ -528,7 +515,8 @@ the browser's console shows no error.
 
 2. **The record** ("Readiness", "History"). In `~/tmp/ledger-watch`, as
    coordinating step 1 does, approve unknown-ID (A), delete (B, with
-   `depends_on: [A]` and tasks T-01 and T-02), export (C), budgets (D),
+   `depends_on: [A]` and tasks T-01 and T-02), budgets (D), export (C,
+   with `depends_on: [D]`),
    show-saved (F) and import (E, with `depends_on: [F]`), each merged.
    On `main`, give A's proposal an "Open questions" section asking "Should
    IDs be six digits? Blocks T-02.", tasks T-01, T-02 and T-04, and an
@@ -538,14 +526,13 @@ the browser's console shows no error.
    `implementation.md` with every task done and edit the record-editing
    maintained spec; squash-merge it into `main`. Plan F as a cycle of one
    (N), archive F on `main`, then edit the spec again. Plan A and B as
-   cycle K and mark it `unattended`; plan C as cycle L with C under
-   `needs_human`; plan D as cycle M, marked, then revise D's proposal on
+   cycle K and mark it `unattended`; plan C as cycle L; plan D as cycle M, marked, then revise D's proposal on
    `main`, its "Open questions" holding the template's comment and
    "None.". Commit a change to `ledger/records.py` alone, and push `main`.
 
    Readiness counts 3 and shows K as one `grove claim` would claim, A then
    B, A's status `ready`, `open questions` and `T-02, T-04 blocked`, B's
-   `waits on` A and `open questions`; L naming C as needing a person; M
+   `waits on` A and `open questions`; L naming C as waiting on D; M
    stale, naming D. E is under "Approved, in no cycle", ready; N is under
    "Done". The problems name M's stale plan. History lists, newest first, the commits that archived
    F, planned N, built F (revised F, spec record-editing), revised F and

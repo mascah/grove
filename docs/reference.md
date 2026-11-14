@@ -27,7 +27,7 @@ Skills run these; you do not need to:
 | `grove instructions prototype "<question>"` | Answer the question with a throwaway experiment on a `prototype/<slug>` branch that is never merged, writing no Grove document ([prototype spec](https://github.com/mascah/grove/blob/main/grove/specs/prototype/spec.md)). |
 | `grove instructions propose [--schema <name>] ["<description>"]` | Write a new change from the conversation or the description, after one round of questions, with the project's change schema or the one named; check it, then offer to merge it now or build it on this branch first ([propose spec](https://github.com/mascah/grove/blob/main/grove/specs/propose/spec.md)). |
 | `grove instructions propose <change-id>` | Revise a drafted change; for a change in a cycle not done, re-plan that cycle on the same branch too. |
-| `grove instructions plan ["<description>"]` | Write a new cycle of approved changes, asking which need a person, editing no change (see [Planning cycles](planning.md); [cycles spec](https://github.com/mascah/grove/blob/main/grove/specs/cycles/spec.md)). |
+| `grove instructions plan ["<description>"]` | Write a new cycle of approved changes, titled by the agent, editing no change (see [Planning cycles](planning.md); [cycles spec](https://github.com/mascah/grove/blob/main/grove/specs/cycles/spec.md)). |
 | `grove instructions plan <change-id>` | Write a new cycle whose only change is that approved change. |
 | `grove instructions plan <cycle-id>` | Revise the cycle as the working tree holds it, setting `planned` to the target's commit. |
 | `grove instructions implement <change-id>` | Build a change with the owner, asking them what it leaves open and, with their agreement, revising it on the branch; record progress, and archive it when every task is done. The change may be approved, or a draft this working tree holds. Refuses a change that waits on one not archived as finished ([implement spec](https://github.com/mascah/grove/blob/main/grove/specs/implement/spec.md)). |
@@ -358,10 +358,11 @@ A cycle file's name starts with its ID. It holds:
 - `changes`, the IDs of the approved changes in it;
 - optionally `depends_on`, the IDs of the cycles it follows;
 - `planned`, the full commit of the target its plan read;
-- optionally `needs_human`, each change the owner said needs a person,
-  with their reason;
 - optionally `unattended: true`, which hands it to `grove claim` (see
   [Planning cycles](planning.md)).
+
+Grove no longer reads `needs_human`: `grove check` reports it as an
+unknown field. Delete the key and its entries.
 
 The change folder above is `default`'s. `schemas/` holds the project's own
 change schemas (see "Change schemas").

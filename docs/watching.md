@@ -46,7 +46,6 @@ loopback, and if the port is taken it says so and exits.
 One card for each cycle that is not done, with the answer `grove claim`
 would give it today, the first that applies:
 
-- a member needs a person, as the cycle's `needs_human` says;
 - the cycle waits on another cycle that is not done;
 - a member waits on a change that is neither in the cycle nor archived as
   finished;

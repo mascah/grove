@@ -1,8 +1,7 @@
 # Planning cycles
 
 A cycle is approved changes you mean to build together, such as a release.
-Planning one finds out, with you, which of its changes need a person. A
-cycle is also how work reaches `grove claim`: it claims a cycle you name or
+A cycle is also how work reaches `grove claim`: it claims a cycle you name or
 have marked `unattended`, never a change on its own (see
 [Running unattended](running.md)). The [cycles spec](https://github.com/mascah/grove/blob/main/grove/specs/cycles/spec.md) has the exact
 rules for cycles.
@@ -17,16 +16,10 @@ Start from your main branch with the changes approved. **Terminal:**
 ```
 
 The agent lists the approved changes, asks which belong in the cycle, and
-reads each one you agree to. Some changes call for something an
-unattended session may not be able to do: a login the runner lacks, a
-manual step, or judging how a screen looks. For each, the agent says what
-it found and asks whether the change needs a person:
-
-> 261019-r2w7k's T-01 asks that the new list "reads clearly". Does this change need a person to build it?
-
-Only a yes is written down, with your reason. The agent also tells you
+reads each one you agree to. It titles the cycle itself. It tells you
 when a change waits on one outside the cycle that is not archived as
-finished.
+finished. Whether a change needed a person is settled when you review
+its build, not in the plan.
 
 Before it writes the cycle, the agent runs `grove check`. A change you
 agreed to may be stale on its base: a requirement it modifies was
@@ -45,8 +38,6 @@ title: "0.4 release"
 created: 2026-10-20T09:12:40Z
 goal: Delete and budgets in the README's planned list
 changes: [261019-p4x8d, 261019-r2w7k]
-needs_human:
-  261019-r2w7k: judging whether the new list reads clearly
 planned: 8f2d6c1a4b9e0f7d3c5a2b1e6f4d8c0a9b7e5f3d
 ```
 
@@ -58,18 +49,14 @@ The agent ends with a verdict. It names `/grove-implement <cycle-id>`,
 which builds the cycle with you. It says whether `grove claim <cycle-id>`
 would claim it. It says that `unattended: true`, merged on its own, hands
 the cycle to a `grove claim` given no cycle. And for each obstacle, it says
-what removes it. For this one:
-
-> Build this cycle with `/grove-implement 261020-m4k8t`. grove claim would refuse it, given as `grove claim 261020-m4k8t` or marked: 261019-r2w7k needs a person. To remove that, revise it with `/grove-propose 261019-r2w7k` so its acceptance can be checked without a person; that re-plans the cycle on the same branch, and one merge removes it.
-
-For a cycle with nothing in the way:
+what removes it. For a cycle with nothing in the way:
 
 > Build this cycle with `/grove-implement 261020-m4k8t`, or have `grove claim 261020-m4k8t` claim it for an agent you start. Adding `unattended: true` to its file in a merge of its own hands it to a `grove claim` given no cycle, such as a timer's.
 
 Say a change in the cycle waits on a change outside it. Then `grove claim`
 does not claim the cycle until that outside change is archived as
 finished. The verdict also names what the runner's checkout must have,
-such as a login you said the runner has.
+such as a login one of its changes calls for.
 
 To send one change on its own, plan a cycle of one from its ID:
 
@@ -125,12 +112,8 @@ unattended: true
 and merge it. `grove changes` then says `in cycle 261020-m4k8t, unattended`.
 No skill writes or removes the line, and re-planning keeps it.
 
-`grove check` reports a marked cycle that `grove claim` would skip. One whose
-`needs_human` names a change:
-
-> grove/cycles/261020-m4k8t-0-4-release.yaml:8: unattended: 261019-r2w7k needs a person, as needs_human says, so grove claim skips this cycle; remove unattended, or build the cycle with /grove-implement 261020-m4k8t
-
-And one whose plan is stale (see "Re-plan a cycle").
+`grove check` reports a marked cycle that `grove claim` would skip because
+its plan is stale (see "Re-plan a cycle").
 
 ## Re-plan a cycle
 
@@ -154,7 +137,7 @@ this cycle`.
 ```
 
 revises the cycle as you ask. The agent reads its changes as your main
-branch holds them and asks about them as for a new plan. It sets
+branch holds them, as for a new plan. It sets
 `planned` to the commit your main branch and origin's both hold. Merge
 it. Say a file a change's task names has moved, and you are content to
 build the change on the new text. Then re-planning is all it takes; the
@@ -162,8 +145,7 @@ change itself stays as it is.
 
 Revising a change in the cycle re-plans it too.
 `/grove-propose 261019-r2w7k` prints the cycle's file beside the change.
-On the same branch, the agent asks whether the change needs a person, as
-planning does. It sets `planned` to the commit your main branch and
+On the same branch, the agent sets `planned` to the commit your main branch and
 origin's both hold. It never writes or removes `unattended`. Merge the
 branch as one commit, a squash or a merge commit, and the plan holds. A
 rebase or fast-forward brings the revision and the re-plan to main as two
