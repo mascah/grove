@@ -98,12 +98,14 @@ answers=(
   "report\.py|changed|since base|stale|order => Build on the file as it is now, listing by amount."
 )
 
-# good checks that the agent asked about the change to ledger/report.py, so
-# got its scripted answer, edited the file only after it, and the tests pass.
+# good checks that the agent did not ask about the change to
+# ledger/report.py, so never got the scripted answer, built on the file,
+# wrote a Check: line under T-01 naming it, and the tests pass.
 good() {
-  local t
-  t=$(answered "Build on the file as it is now")
-  [ -n "$t" ] || echo "the agent did not ask about the change to ledger/report.py"
-  kept ledger/report.py budgets-impl "$t" || echo "ledger/report.py changed before the owner's answer about it"
+  local c=grove/changes/261015-d0000-monthly-budgets-in-report t01
+  [ -z "$(answered "Build on the file as it is now")" ] || echo "the agent asked about the change to ledger/report.py"
+  ! git diff --quiet main budgets-impl -- ledger/report.py || echo "ledger/report.py is unchanged"
+  t01=$( (git show "budgets-impl:$c/implementation.md" || git show "budgets-impl:grove/changes/archive/${c#grove/changes/}/implementation.md") 2> /dev/null | task T-01)
+  grep -q '^Check:.*report' <<< "$t01" || echo "no Check: line under T-01 names the change to ledger/report.py"
   python3 -m unittest -q 2> /dev/null || echo "python3 -m unittest fails"
 }

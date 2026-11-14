@@ -20,8 +20,8 @@ a cycle this one depends on, directly or through other cycles, lists.
 
 This covers the cycle file, `/grove-plan`, the `unattended` mark, `grove
 check`'s reports on cycles, and how `grove changes`, `grove review` and
-the project index show them. Building a cycle, with the owner or with
-`--unattended`, belongs to `grove/specs/implement/spec.md`, and building
+the project index show them. Building a cycle belongs to
+`grove/specs/implement/spec.md`, and building
 it with no one watching to `grove/specs/runs/spec.md`. What makes a plan,
 and the mark, count is the merge into the target (`CONSTITUTION.md` rule
 4).

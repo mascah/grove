@@ -27,9 +27,9 @@ With no command, open the reader on the maintained specs and approved changes.
                              print the instructions for planning a new cycle
   instructions plan <cycle-id>
                              print the instructions for revising a cycle
-  instructions implement <change-id> | <cycle-id> [--unattended]
+  instructions implement <change-id> | <cycle-id>
                              print the instructions for implementing an approved change,
-                             or each change of a cycle, with the owner or asking no one
+                             or each change of a cycle, asking no one
   instructions archive <change-id>
                              print the instructions for archiving a change
   claim [--retry] [<cycle-id>]
@@ -72,9 +72,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "plan":
 		err = instructionsPlan(stdout, args[2])
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "implement":
-		err = instructionsImplement(stdout, args[2], false)
-	case len(args) == 4 && args[0] == "instructions" && args[1] == "implement" && args[3] == "--unattended":
-		err = instructionsImplement(stdout, args[2], true)
+		err = instructionsImplement(stdout, args[2])
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "archive":
 		err = instructionsArchive(stdout, args[2])
 	case len(args) > 0 && args[0] == "claim":

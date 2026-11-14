@@ -182,26 +182,24 @@ The merge is the approval. Approved means agreed future work, not built.
 /grove-implement 261015-k3m9q
 ```
 
-The agent works through the tasks with tests, without stopping between
-them. It records each task's status and evidence in the change's
-`implementation.md`. A task only you can judge, such as how a screen
-looks, or one an open question decides, is a checkpoint. The agent builds
-its guess and marks it `Status: to check`. Where a wrong guess would be
-costly, to data or to an interface other tasks build on, it builds nothing
-and marks it `Status: blocked`. Either way it writes a `Check:` line
-saying what to try or decide, and why, and leaves unbuilt a task that
-builds on it. Once the rest is built, it stops once and puts the
-checkpoints to you:
+The agent works through the tasks with tests, asking no one and waiting
+for no one. It records each task's status and evidence in the change's
+`implementation.md`. Before it calls a task's acceptance something only
+you can judge, such as how a screen looks, it runs the app or command and
+looks. Where the change leaves a choice open, or it could not see the
+result, it builds its best choice and writes a `Check:` line for you under
+the done task:
 
 ```markdown
-Status: to check
+Status: done
 
-Check: try `ledger report` with a budget; the change does not say how an overspent line reads
+Check: an overspent line reads in red; the change does not say how it reads
 ```
 
-It writes your answer under the task, `Answer: "red is fine"`, and builds
-on it. A task `to check` is not done, so the change is archived only once
-you answer.
+Only where a wrong choice would cost data, break an interface other tasks
+build on, or be hard to undo, it builds nothing of the task, marks it
+`Status: blocked` with the question on a `Check:` line, and builds the
+rest. Its report lists every `Check:` line first, for review.
 
 Before it finishes, the agent checks its work:
 
@@ -217,34 +215,25 @@ Its report, and archiving, name each unverified scenario.
 A task's `Delegated:` line names choices and paths the agent may take
 without asking you. Another file the task needs changed, or makes false,
 it edits without asking too, and writes an `Also changed:` line under the
-task in `implementation.md`, naming the file and why; `tasks.md` stays as
-approved. `/grove-implement --unattended` does the same. You judge the
-edit in review.
+task in `implementation.md`, naming the file and why. You judge the edit
+in review.
 
-The agent may find that the agreed approach is wrong. Then it stops that
-task, even if the task could still be built as written. It tells you what
-it found and the revision the change needs.
+The agent may find that the agreed approach is wrong, or you may say
+something in the session that changes what the change says. Then it
+revises the change on this branch, through
+`grove instructions propose <change-id>`, writes a `Check:` line under
+each task the revision touches, and builds to it; it never edits a
+`Files:` line by hand. Merging the branch approves the revision with the
+code, and `grove review` shows it.
 
-When your answer or your feedback changes what the change says, the agent
-tells you which of its proposal, specs and tasks it would edit and how. Once
-you agree, it edits them on this branch, through
-`grove instructions propose <change-id>`, and builds to them; it never edits
-a `Files:` line by hand. The implement instructions give only the template
-of `implementation.md`, and leave the others to propose. Merging the
-branch approves the revision with the code, and `grove review` shows it.
+Given a cycle's ID, it builds each change of the cycle the same way (see
+[Planning cycles](planning.md)). An agent you start on a cycle
+`grove claim` claims runs it too (see [Running unattended](running.md)).
 
-`/grove-implement 261015-k3m9q --unattended` builds the change without
-you. It asks no one. It marks blocked a task that an open question decides,
-and it never edits the change, or `grove.yaml`. Given a cycle's ID, it builds each change of
-the cycle the same way (see [Planning cycles](planning.md)). An agent you
-start on a cycle `grove claim` claims runs it too (see
-[Running unattended](running.md)).
-
-If you corrected the agent in a way that would apply to future work, such
-as how to name tests, it suggests one line for `context` or `rules` in
-`grove.yaml` when it finishes, quoting you. It adds the line on this branch
-only if you agree. `--unattended` may name such a line in its report, for
-you to add yourself.
+If you corrected the agent, or it found something, that would apply to
+future work, such as how to name tests, its report names one line for
+`context` or `rules` in `grove.yaml`. It adds the line on this branch only
+if you agree in the session.
 
 When every task is done, the agent archives the change. It merges the
 change's specs into the maintained specs in `grove/specs/`. Then it runs

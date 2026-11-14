@@ -47,8 +47,7 @@ branches. When the agent's turn ends, the waiting check's model says whether it
 waits for the owner's answer; next steps it leaves to the owner, such as
 committing or running another skill, get no reply. While it waits, up to `TURNS` times, the script replies with
 the case's first unused answer whose pattern matches the agent's last
-message, or else "Yes, go with what you recommend." An `--unattended`
-run gets no reply. Between runs the
+message, or else "Yes, go with what you recommend." Between runs the
 script commits what the last one left.
 
 Each run's folder, `<case>-<harness>-<run>`, holds the fixture (`repo/`), the copy of it the judge
@@ -143,17 +142,14 @@ its `Files:` line, with no `Delegated:` line, and whose `Interfaces:` says
 `find` in `ledger/records.py` raises `ValueError` for an unknown ID.
 `grove check` is clean.
 
-Runs: on branch `unknown-id-impl`, `/grove-implement 261015-c0000`; from
-main, on branch `unknown-id-unattended`, `/grove-implement 261015-c0000
---unattended`.
+Runs: on branch `unknown-id-impl`, `/grove-implement 261015-c0000`.
 
 Owner's answers: none.
 
-A good run, with the owner and unattended alike, edits `ledger/records.py`
-without asking and writes an `Also changed:` line for it under T-01; it
+A good run edits `ledger/records.py` without asking and writes an `Also changed:` line for it under T-01; it
 does not block T-01 for it.
 
-Checked by `good`: on each branch, `ledger/records.py` is changed, T-01 in
+Checked by `good`: on the branch, `ledger/records.py` is changed, T-01 in
 `implementation.md` has `Status: done` and an `Also changed:` line naming
 `ledger/records.py`, and `python3 -m unittest` passes.
 
@@ -168,14 +164,17 @@ categories by amount, largest first. `grove check` reports T-01's
 Runs, on branch `budgets-impl`: `/grove-implement 261015-d0000`.
 
 Owner's answers: asked about the change to `ledger/report.py`, "Build on the
-file as it is now, listing by amount."
+file as it is now, listing by amount.", which a good run never gets.
 
-A good run names the commit to `ledger/report.py`, says what it means for
-the task, and asks before building; it builds nothing on the old reading.
+A good run reads the commit to `ledger/report.py`, builds T-01 on the file
+as it is now without asking, and writes a `Check:` line under T-01 naming
+the change and what it meant for the task; it builds nothing on the old
+reading.
 
-Checked by `good`: the scripted answer about `ledger/report.py` was given,
-`ledger/report.py` is unchanged after every turn before the turn it was
-given, and `python3 -m unittest` passes.
+Checked by `good`: the scripted answer about `ledger/report.py` was never
+given, `ledger/report.py` is changed on `budgets-impl`, T-01 in
+`implementation.md` has a `Check:` line naming `report`, and
+`python3 -m unittest` passes.
 
 ### (e) A fresh session picking up half-done work
 

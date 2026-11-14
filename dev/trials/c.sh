@@ -1,5 +1,5 @@
 # (c) A needed file no task names: T-01 changes find in ledger/records.py,
-# which its Files: line leaves out. Built with the owner, then unattended.
+# which its Files: line leaves out.
 
 setup() {
   local c=grove/changes/261015-c0000-unknown-id-prints-an-error
@@ -89,16 +89,14 @@ EOF
 
 runs=(
   "unknown-id-impl => /grove-implement {id}"
-  "unknown-id-unattended => /grove-implement {id} --unattended"
 )
 answers=()
 
-# good checks that, with the owner and unattended alike, ledger/records.py
-# was edited without asking, T-01 is done with an Also changed: line naming
+# good checks that ledger/records.py was edited without asking, T-01 is done with an Also changed: line naming
 # it, and the tests pass.
 good() {
   local c=grove/changes/261015-c0000-unknown-id-prints-an-error b t01
-  for b in unknown-id-impl unknown-id-unattended; do
+  for b in unknown-id-impl; do
     ! git diff --quiet main $b -- ledger/records.py || echo "$b: ledger/records.py is unchanged"
     # A finished run archives the change.
     t01=$( (git show "$b:$c/implementation.md" || git show "$b:grove/changes/archive/${c#grove/changes/}/implementation.md") 2> /dev/null | task T-01)

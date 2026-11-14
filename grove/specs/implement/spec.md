@@ -3,13 +3,15 @@
 ## Purpose
 
 `/grove-implement` builds an approved change, a draft, or each change of a
-cycle on a branch, asking the owner where the change does not settle a
-task; with `--unattended` it asks no one and marks the task blocked
-instead. "The owner" is the person in whose session the skill runs.
+cycle on a branch, asking no one and waiting for no one, and ends with the
+branch ready for review: it records each choice the change left open for
+the reviewer, revises the change on the branch where it must, and blocks
+only a costly choice. "The owner" is the person who started the session,
+whether or not they are still in it.
 
 ## Boundaries
 
-This covers the implement instructions in both modes, `grove.yaml`'s
+This covers the implement instructions, `grove.yaml`'s
 rules for implement, and how `grove review` names what an implementation
 branch approves and builds. Claiming a cycle for a session with no one
 watching belongs to `grove claim` ([runs](../runs/spec.md)); when a cycle member

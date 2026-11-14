@@ -40,8 +40,8 @@ Some agents type skills another way, such as `$grove-explore`; the
 ## Doing more
 
 Once several changes are approved, `/grove-plan` puts them in a cycle.
-`/grove-implement <cycle-id>` builds them in order with you, and
-`--unattended` builds them without asking you; you merge once. Mark the
+`/grove-implement <cycle-id>` builds them in order without asking you,
+and you merge once. Mark the
 cycle `unattended`, and `grove claim` hands it to an agent you start
 without you, from any harness. Grove starts no agent.
 

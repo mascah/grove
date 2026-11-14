@@ -20,8 +20,8 @@ a buildable cycle that holds `unattended: true`.
 
 This covers `grove claim`, its cycle argument and `--retry`: claiming,
 refusing, recording and pausing attempts. What the session builds, and how
-task progress is recorded, belong to the implement instructions with
-`--unattended` (`grove/specs/implement/spec.md`) and `implementation.md`.
+task progress is recorded, belong to the implement instructions
+(`grove/specs/implement/spec.md`) and `implementation.md`.
 Recovering an interrupted attempt, creating checkouts, opening pull
 requests and scheduling are outside it (`CONSTITUTION.md` rules 2 and 11);
 Grove pushes only `grove/runs`. Starting, bounding, stopping and logging

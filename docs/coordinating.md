@@ -89,14 +89,14 @@ The order comes from `depends_on`. A change can be built once every change
 it waits on is archived as finished. Changes that do not wait on each
 other can be built in parallel, on separate branches.
 
-## Building a cycle unattended
+## Building a cycle
 
 One session can build every change of a cycle (see
 [Planning cycles](planning.md)), on one branch, without asking you, and
 you merge once. **Terminal:** `git switch -c build-0.4`. **Chat:**
 
 ```text
-/grove-implement 261020-m4k8t --unattended
+/grove-implement 261020-m4k8t
 ```
 
 Grove lists the cycle's changes your working tree has not archived, in
@@ -110,7 +110,7 @@ A change that depends on others in the list ends `after` their IDs:
 
 The agent builds each change in a fresh context of its own, such as a
 Claude Code subagent, so no one context carries the whole cycle. Each
-follows `grove instructions implement <change-id> --unattended`, which
+follows `grove instructions implement <change-id>`, which
 prints the change's instructions with the cycle's list, naming the
 change's place in it, but neither archives nor commits. The agent starts at once every change
 whose `after` changes are archived and whose tasks' `Files:` share no file
@@ -120,15 +120,15 @@ together changed the same file anyway, through an `Also changed:` line, it
 runs the project's tests; if they fail, it archives the one started first
 and builds the other again on its own. Where the harness has no subagents,
 the agent builds each change itself, one after another. A change in a
-cycle that is not done always gets the cycle's list, with you or without.
-So `/grove-implement 261019-p4x8d` shows you its place too.
+cycle that is not done always gets the cycle's list, so
+`/grove-implement 261019-p4x8d` shows you its place too.
 
-`--unattended` builds a cycle whether or not it is marked `unattended`.
-Only `grove claim` reads that. Given a
-change's ID, `/grove-implement 261019-p4x8d --unattended` builds that one
-change the same way, with no cycle to plan first.
+`/grove-implement` builds a cycle whether or not it is marked
+`unattended`; only `grove claim` reads the mark. Given a change's ID,
+`/grove-implement 261019-p4x8d` builds that one change the same way, with
+no cycle to plan first.
 
-With you or unattended, the agent changes the files a change's tasks
+The agent changes the files a change's tasks
 name on their `Files:` lines and the paths their `Delegated:` lines name.
 It may find another file the task needs changed, or makes false. It edits
 that file without asking and writes an `Also changed:` line under the task
@@ -144,43 +144,35 @@ you read the reason beside it.
 
 A task may name a file that changed on your main branch since the
 change's `base`, or, for a change in a cycle, since the cycle's plan.
-Unattended, that task is marked blocked, naming the file, and is not
-built. With you, the agent asks what to do.
-
-Without `--unattended`, `/grove-implement 261020-m4k8t` builds the same
-cycle with you. Each change is still built in its own context, asking no
-one; when it returns, the agent puts its checkpoints to you at once and
-builds it again with your answers. An answer that changes what the change
-says goes through you and `/grove-propose`, as for one change.
+The agent reads what changed, builds on the file as it is now, and writes
+a `Check:` line under the task saying so. Where the change no longer fits
+the file, it revises the change on the branch first.
 
 Some changes cannot be built in the session. A change may wait on one
 that is neither in the cycle nor archived as finished, because it was
 dropped or does not exist. That change is left out and named, and
-`grove check` says why. A change with a checkpoint (see
-[Getting started](getting-started.md)) stays open, with its `Check:` line
-in `implementation.md`. A change that waits on it is refused and stays as
-it is. The agent's report lists the checkpoints first, then which changes
+`grove check` says why. A change with a blocked task (see
+[Getting started](getting-started.md)) stays open, with its question on a
+`Check:` line in `implementation.md`. A change that waits on it is refused
+and stays as it is. The agent's report lists every `Check:` line first,
+then which changes
 were archived, which are blocked and on what, and which were left out. The [implement spec](https://github.com/mascah/grove/blob/main/grove/specs/implement/spec.md) has the exact rules for building a cycle.
 
 The branch holds the code, the updated specs and each archived change.
 Review the pull request and merge once. A task its `implementation.md`
 already marks done is not built twice.
 
-A later session on the same branch picks up the checkpoints. Run
-`/grove-implement 261019-p4x8d` there: the agent puts each `Check:` line
-to you, writes your answer under its task as an `Answer:` line, builds on
-it and archives the change once every task is done. Or start an
-unattended session with your answer beside the command, as a workflow
-could pass on a pull request comment: `/grove-implement 261019-p4x8d
---unattended` with "use six-digit IDs". An answer that changes what the
-change says still needs `/grove-propose <change-id>`: unattended, the task
-stays blocked, naming the revision. Revise the change, merge, and build
-again.
+A later session on the same branch takes your answers to blocked tasks.
+Start it with your answer beside the command, as a workflow could pass on
+a pull request comment: `/grove-implement 261019-p4x8d` with "use
+six-digit IDs". The agent writes your answer under its task as an
+`Answer:` line, builds on it, revising the change on the branch if the
+answer changes it, and archives the change once every task is done.
 
 Nothing in the session needs you. It creates a branch if it is on your
-main branch. It settles no question itself. It commits only when a rule in
-`grove.yaml` asks, such as `Commit after each task, naming its task ID.`
-under `rules.skills.implement`. That rule counts with you and without (see
+main branch. It commits only when a rule in `grove.yaml` asks, such as
+`Commit after each task, naming its task ID.` under
+`rules.skills.implement`, and opens a pull request only when one asks (see
 [Reference](reference.md), "grove.yaml"). `grove claim` claims a cycle you name
 or mark `unattended` for such a session that you start (see
 [Running unattended](running.md)).
@@ -229,15 +221,16 @@ such file once:
 
 Only main counts. A branch building the change edits that file, and is
 not reported for it. `/grove-implement 261019-s5v3m` names the task and
-file. The agent tells you what changed and asks before building that task.
+file. The agent builds on the file as it is now and says so in a `Check:`
+line under the task.
 
 A change that depends on another is usually proposed before that one
 lands, so the files the dependency touches are reported once it merges.
 That is expected: run `/grove-propose 261019-s5v3m`. The agent brings the
 tasks up to date with the files as your main branch has them and sets
-`base` to its commit, and `grove check` is clean again. With you,
-`/grove-implement` recommends this when the file came with a dependency;
-`--unattended` marks the task blocked.
+`base` to its commit, and `grove check` is clean again.
+`/grove-implement` does this itself, on its branch, when the file no
+longer fits what the change says.
 
 A change in a cycle that is not done is not reported against its `base`.
 A moved file makes its cycle stale instead (see

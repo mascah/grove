@@ -7,7 +7,7 @@ the checkout and prints the cycle's ID. Then you start the agent, in
 any harness, bounded as you like:
 
 ```sh
-K=$(grove claim) && timeout 2h claude -p "/grove-implement $K --unattended"
+K=$(grove claim) && timeout 2h claude -p "/grove-implement $K"
 ```
 
 Grove starts no process but Git. It does not start, bound, stop or log
@@ -16,7 +16,7 @@ paused, from every checkout of it, until the cycle's changes are archived
 on the target, as finished or dropped.
 
 `grove claim` claims nothing but cycles. An approved change in no cycle
-is yours to build with `/grove-implement`, with `--unattended` or not. To
+is yours to build with `/grove-implement`. To
 send one change, plan a cycle of one (see [Planning cycles](planning.md)).
 Grove does not schedule itself: run the line by hand, or from a timer as
 in [Run on a timer](guides/run-on-a-timer.md). The
@@ -129,8 +129,8 @@ In the line at the top, `$(...)` keeps that ID, and `&&` starts the
 agent only when `grove claim` exits 0. So when there is nothing to claim,
 the project is paused or a refusal names something to fix, nothing
 starts and the line exits non-zero. Otherwise the agent builds the
-cycle's changes in turn on the attempt's branch, as "Building a cycle
-unattended" in [Coordinating changes](coordinating.md) says. It archives
+cycle's changes in turn on the attempt's branch, as "Building a cycle"
+in [Coordinating changes](coordinating.md) says. It archives
 each one it finishes and, as the rules say, it commits, pushes and opens
 the pull request. The session's output is the harness's own; redirect it
 to a file to keep it.
@@ -183,7 +183,7 @@ quoting Git.
 To build a planned cycle once, without marking it, name it:
 
 ```sh
-K=$(grove claim 261020-m4k8t) && timeout 2h claude -p "/grove-implement $K --unattended"
+K=$(grove claim 261020-m4k8t) && timeout 2h claude -p "/grove-implement $K"
 ```
 
 Grove claims that cycle whether or not it is marked `unattended`. In
@@ -277,7 +277,7 @@ Until the checkout is clean, `grove claim` refuses, with `--retry` too:
 ## Retry
 
 ```sh
-K=$(grove claim --retry) && timeout 2h claude -p "/grove-implement $K --unattended"
+K=$(grove claim --retry) && timeout 2h claude -p "/grove-implement $K"
 ```
 
 records a new attempt even while the project is paused, as an unpaused

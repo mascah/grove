@@ -10,7 +10,7 @@ Grove does not schedule itself. On a Mac, launchd can run the line from
 for one project:
 
 ```sh
-K=$(grove claim) && timeout 2h claude -p "/grove-implement $K --unattended"
+K=$(grove claim) && timeout 2h claude -p "/grove-implement $K"
 ```
 
 A cycle you mark `unattended` is then started without anyone watching.
@@ -47,7 +47,7 @@ project:
   <array>
     <string>/bin/sh</string>
     <string>-c</string>
-    <string>K=$(grove claim) &amp;&amp; timeout 2h claude -p "/grove-implement $K --unattended"</string>
+    <string>K=$(grove claim) &amp;&amp; timeout 2h claude -p "/grove-implement $K"</string>
   </array>
   <key>WorkingDirectory</key>
   <string>/Users/you/grove-runs/ledger</string>

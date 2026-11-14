@@ -62,16 +62,6 @@ snapshot() { git ls-files -co --exclude-standard -z | xargs -0 shasum 2> /dev/nu
 
 # answered prints the turn whose owner's message holds $1, such as a scripted answer.
 answered() { awk -F'\t' -v a="$1" 'index($3, a) {print $1; exit}' "$dir/turns.txt"; }
-# kept reports whether path $1 stayed as it was at the start of branch $2's
-# run after each of its turns before turn $3, or after all of them.
-kept() {
-  local t first="" h
-  for t in $(awk -F'\t' -v b="$2" '$2 == b {print $1}' "$dir/turns.txt"); do
-    [ -n "$first" ] || { first=$t h=$(awk -v p="$1" '$2 == p {print $1}' "$dir/start-$t.txt"); }
-    [ -z "${3:-}" ] || [ "$t" -lt "$3" ] || break
-    [ "$(awk -v p="$1" '$2 == p {print $1}' "$dir/snapshot-$t.txt")" = "$h" ] || return 1
-  done
-}
 # task prints task $1's section of the implementation.md on stdin.
 task() { awk -v t="### $1 " 'index($0, t) == 1 {on = 1; next} on && /^##/ {exit} on'; }
 
@@ -215,8 +205,7 @@ trial() {
     snapshot > "$dir/start-$((n + 1)).txt"
     turn "$prompt"
     local k=0
-    # An unattended run has no owner to answer it.
-    [[ $prompt == *--unattended* ]] || while [ $((k += 1)) -le "$turns" ] && waiting; do reply && turn "$answer"; done
+    while [ $((k += 1)) -le "$turns" ] && waiting; do reply && turn "$answer"; done
     new=$(comm -13 <(echo "$had") <(ls grove/changes 2> /dev/null) | grep -v '^archive$' | head -1 || true)
     [ -z "$new" ] || id=${new:0:12}
   done
