@@ -193,14 +193,15 @@ It starts where the main line's step 6 ends: one archived change and the
    T-01 names `ledger/report.py` on its `Files:` line. On a branch, add a
    comment to `ledger/report.py`: `grove check` there is clean, since only
    the branch changed it. Commit and merge; on main, `grove check` reports
-   > grove/changes/\<budgets>/tasks.md: T-01's ledger/report.py changed on main since base \<sha7>; revise the change with propose, which also re-bases it after a dependency lands
+   > grove/changes/\<budgets>/tasks.md: ledger/report.py changed on main since base \<sha7>; revise the change with propose, which also re-bases it after a dependency lands
 
    `grove instructions implement <budgets-id>` names T-01 and
    `ledger/report.py` as changed since base, and a fresh session's
    `/grove-implement <budgets-id>`, reaching T-01, tells me what changed
    and asks before building; I stop it there. Name the folder `ledger/`
-   in place of `ledger/report.py`: `grove check` reports T-01's
-   `ledger/report.py` the same way. Write `Files: ledger/report.py`
+   in place of `ledger/report.py`: `grove check` reports
+   `ledger/report.py` the same way, and a second task naming
+   `ledger/report.py` too leaves it one line naming the file once. Write `Files: ledger/report.py`
    without backticks in a task: `grove check` reports the line, naming
    both forms and that a folder ends in `/`, and exits non-zero. Discard
    those edits. Then, on a branch, a fresh `/grove-propose <budgets-id>`:
@@ -221,7 +222,7 @@ show-saved changes approved. Each step names the section of
 
 1. **Plan a cycle** ("Plan a cycle"). On main, add a comment to
    `ledger/report.py`, which budgets' T-01 names, and commit: `grove check`
-   reports T-01's `ledger/report.py` changed on main since base.
+   reports `ledger/report.py` changed on main since base.
    From main, `git switch -c plan-0.4`,
    a fresh session, `/grove-plan 0.4: delete and budgets`. Its
    instructions, `grove instructions plan "0.4: delete and budgets"`, give
