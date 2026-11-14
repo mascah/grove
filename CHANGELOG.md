@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.10.0](https://github.com/mascah/grove/compare/v0.9.0...v0.10.0) (2026-11-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* **instruct:** `--unattended` is gone from `/grove-implement` and `grove instructions implement`. Implement now always asks no one and ends at a branch ready for review. Drop ` --unattended` from prompts, scripts and timers, for example `K=$(grove claim) && claude -p "/grove-implement $K"`. `Status: to check` is no longer written: a choice the agent made is a `Status: done` task with a `Check:` line.
+* **cli:** `needs_human` is gone from cycle files. `grove check` now reports it as an unknown field and exits non-zero. Delete the key and its entries from each cycle file that has it. `grove claim` no longer refuses a cycle for it, and `grove serve`'s cycle object no longer has a `needs_human` key.
+
+### Features
+
+* **cli:** remove needs_human; plan titles the cycle itself ([#161](https://github.com/mascah/grove/issues/161)) ([0699680](https://github.com/mascah/grove/commit/06996806081b3d112a37c1cdf3594cbb79f5929f))
+* **instruct:** implement asks no one and ends at a branch ready for review ([#160](https://github.com/mascah/grove/issues/160)) ([2f03a4f](https://github.com/mascah/grove/commit/2f03a4fee612e251cef5a449bef8b87719c4dae5))
+
+
+### Bug Fixes
+
+* **cli:** check names a change's moved files once ([#159](https://github.com/mascah/grove/issues/159)) ([6778f7a](https://github.com/mascah/grove/commit/6778f7a3d0a9519dac86f610691733f466fcfe24))
+
 ## [0.9.0](https://github.com/mascah/grove/compare/v0.8.0...v0.9.0) (2026-11-09)
 
 
