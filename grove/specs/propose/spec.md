@@ -61,11 +61,11 @@ use, with no code, commands or steps.
 
 ### Requirement: Report a named file that moved
 
-When the owner runs `grove check`, the system shall report, for each
-change in no cycle that is not done, each task whose named file, or a file
-under a folder it names, differs on the target from the same file at the
-change's `base`, naming the task and the file and saying to revise the
-change with propose.
+When the owner runs `grove check`, the system shall report, once for each
+change in no cycle that is not done, each file a task names, or a file
+under a folder a task names, that differs on the target from the same file
+at the change's `base`, naming each such file once and saying to revise
+the change with propose.
 
 #### Scenario: A file changed since base
 
@@ -73,7 +73,7 @@ change with propose.
   `internal/cli/run.go`, and the target has since merged a commit touching
   that file
 - WHEN the owner runs `grove check`
-- THEN it reports C's `tasks.md`, saying T-01's `internal/cli/run.go`
+- THEN it reports C's `tasks.md` once, saying `internal/cli/run.go`
   changed since base b143991 and to revise the change with propose
 
 #### Scenario: A file under a named folder
@@ -81,9 +81,17 @@ change with propose.
 - GIVEN change C, in no cycle, with T-01 naming `tests/fixtures/`, and the
   target has since merged a commit touching `tests/fixtures/records.json`
 - WHEN the owner runs `grove check`
-- THEN it reports C's `tasks.md`, saying T-01's
-  `tests/fixtures/records.json` changed since base and to revise the
-  change with propose
+- THEN it reports C's `tasks.md`, saying `tests/fixtures/records.json`
+  changed since base and to revise the change with propose
+
+#### Scenario: Several files, several tasks
+
+- GIVEN change C, in no cycle, with T-01 naming `ledger/cli.py` and
+  `tests/test_cli.py` and T-02 naming `ledger/cli.py`, and the target has
+  since changed both files
+- WHEN the owner runs `grove check`
+- THEN it reports one problem, on C's `tasks.md`, naming
+  `ledger/cli.py` and `tests/test_cli.py` once each
 
 #### Scenario: A member of a cycle
 
@@ -465,7 +473,7 @@ none of their text.
 
 ### Requirement: Say that revising re-bases
 
-When `grove check` reports a task's named file as changed on the target
+When `grove check` reports a change's named files as changed on the target
 since the change's `base`, the system shall say, in the same sentence,
 that revising the change with propose also re-bases it after a dependency
 lands.
@@ -475,8 +483,8 @@ lands.
 - GIVEN change C, in no cycle, proposed at `base` b143991, whose T-01
   names `ledger/cli.py`, which the target has since changed
 - WHEN the owner runs `grove check`
-- THEN it reports "T-01's ledger/cli.py changed on main since base
-  b143991; revise the change with propose, which also re-bases it after a
+- THEN it reports "ledger/cli.py changed on main since base b143991;
+  revise the change with propose, which also re-bases it after a
   dependency lands"
 
 ### Requirement: Re-base a change whose named file moved
@@ -519,3 +527,4 @@ None.
 - [261026-804yw](../../changes/archive/261026-804yw-instructions-list-the-change-s-documents-instead-of-embedding-them/) Instructions list the change's documents instead of embedding them
 - [261026-d1sb1](../../changes/archive/261026-d1sb1-re-base-a-change-after-its-dependency-lands/) Re-base a change after its dependency lands
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
+- [261114-40gd5](../../changes/archive/261114-40gd5-check-names-each-moved-file-once/) Check names each moved file once per change

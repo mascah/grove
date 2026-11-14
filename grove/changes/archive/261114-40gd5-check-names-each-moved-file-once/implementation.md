@@ -31,3 +31,5 @@ Also changed: `go.mod` — the pre-commit hook's `go mod tidy` check failed, as 
 - propose "The message": TestMovedFiles, the sentence ends "; revise the change with propose, which also re-bases it after a dependency lands", passed
 
 ## Reconciliation
+
+- propose: applied to specs/propose/spec.md
