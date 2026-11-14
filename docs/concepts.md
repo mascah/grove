@@ -235,8 +235,6 @@ holds.
 - **Harness:** the program you run your coding agent in. `grove init` writes
   skills for each harness `grove.yaml` lists.
 - **Maintained spec:** agreed behavior of one capability.
-- **Needs a person:** said of a change in a cycle whose `needs_human` names
-  it, because you said an unattended session cannot build it.
 - **Paused:** after an attempt, `grove claim` claims nothing, from any
   checkout, until the attempt's cycle is archived on the target.
 - **Planned:** the commit of the target a cycle's plan read, written in its

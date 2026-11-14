@@ -46,11 +46,10 @@ type Meta struct {
 	Base        string   `json:"base,omitempty"`       // the target commit this change was proposed from
 
 	// A cycle's, which grove changes --json does not print.
-	Goal       string            `json:"-"`
-	Changes    []string          `json:"-"` // its members
-	Planned    string            `json:"-"` // the target commit its plan checked
-	NeedsHuman map[string]string `json:"-"` // member to the owner's reason it needs a person
-	Unattended bool              `json:"-"` // handed to grove claim
+	Goal       string   `json:"-"`
+	Changes    []string `json:"-"` // its members
+	Planned    string   `json:"-"` // the target commit its plan checked
+	Unattended bool     `json:"-"` // handed to grove claim
 }
 
 // Document is a maintained spec, a change or a cycle, with its metadata.
@@ -180,7 +179,7 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 		if err != nil {
 			return nil, err
 		}
-		cy.lines = cy.parse(name, b, []string{"title", "created", "changes", "planned"}, []string{"goal", "depends_on", "needs_human", "unattended"})
+		cy.lines = cy.parse(name, b, []string{"title", "created", "changes", "planned"}, []string{"goal", "depends_on", "unattended"})
 		cy.Done = !slices.ContainsFunc(cy.Meta.Changes, func(id string) bool { return !c.InArchive(id) })
 		c.Cycles = append(c.Cycles, cy)
 	}
@@ -233,8 +232,7 @@ func (c *Collection) follows() {
 }
 
 // members reports each cycle's member that is no change, or that a cycle
-// not done before it lists too, and each member needs_human names while the
-// cycle is marked unattended.
+// not done before it lists too.
 func (c *Collection) members() {
 	all, in := map[string]bool{}, map[string]string{} // in: change → the first cycle not done to list it
 	for _, ch := range slices.Concat(c.Changes, c.Archived) {
@@ -250,9 +248,6 @@ func (c *Collection) members() {
 				cy.report(cy.Path, cy.lines["changes"], "changes: "+id+" is also in cycle "+in[id]+", which is not done")
 			default:
 				in[id] = cy.ID
-			}
-			if _, ok := cy.Meta.NeedsHuman[id]; ok && cy.Meta.Unattended {
-				cy.report(cy.Path, cy.lines["unattended"], "unattended: "+id+" needs a person, as needs_human says, so grove claim skips this cycle; remove unattended, or build the cycle with /grove-implement "+cy.ID)
 			}
 		}
 	}

@@ -108,7 +108,6 @@ Grove refuses while the checkout has uncommitted changes. Then it:
    - it is not done;
    - it follows no cycle that is not done (see
      [Planning cycles](planning.md), "Follow another cycle");
-   - `needs_human` names none of its changes;
    - none of its changes waits on a change that is neither in the cycle
      nor archived as finished;
    - its plan is not stale (see [Planning cycles](planning.md), "Mark it
@@ -202,13 +201,10 @@ is one of these:
 - it follows a cycle that is not done;
 - a change in it waits on one that is neither in the cycle nor archived
   as finished;
-- its plan is stale;
-- a change in it needs a person.
+- its plan is stale.
 
 Such as:
 
-> grove: 261019-p4x8d needs a person, as cycle 261020-m4k8t's needs_human says; build the cycle with /grove-implement 261020-m4k8t
->
 > grove: cycle 261021-q2w9e waits on cycle 261020-m4k8t, which is not done
 
 ## Without a remote

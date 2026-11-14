@@ -28,7 +28,7 @@ func (d *Document) read(fsys fs.FS, required []string, optional ...string) (map[
 // field of required that is missing or empty, and every field that is
 // neither required nor optional, and returns the line of each field it set.
 // Every field is a scalar but depends_on and changes, lists of change IDs,
-// needs_human, a map of change ID to reason, and unattended, a boolean.
+// and unattended, a boolean.
 func (d *Document) parse(file string, src []byte, required, optional []string) map[string]int {
 	var root yaml.Node
 	if err := yaml.NewDecoder(bytes.NewReader(src)).Decode(&root); err != nil && !errors.Is(err, io.EOF) {
@@ -41,7 +41,7 @@ func (d *Document) parse(file string, src []byte, required, optional []string) m
 		return nil
 	}
 	values, lines, lists := map[string]string{}, map[string]int{}, map[string][]string{}
-	needs, unattended := map[string]string(nil), false
+	unattended := false
 	if len(root.Content) > 0 {
 		n := root.Content[0]
 		if n.Kind != yaml.MappingNode {
@@ -63,12 +63,6 @@ func (d *Document) parse(file string, src []byte, required, optional []string) m
 				} else {
 					lists[key.Value], lines[key.Value] = ids, key.Line
 				}
-			case key.Value == "needs_human":
-				if value.Decode(&needs) != nil || len(needs) == 0 {
-					d.report(file, key.Line, "needs_human: expected each change ID with the owner's reason, such as 261015-k3m9q: judging the new screen")
-				} else {
-					lines[key.Value] = key.Line
-				}
 			case key.Value == "unattended":
 				if value.Decode(&unattended) != nil {
 					d.report(file, key.Line, "unattended: expected true or false")
@@ -89,7 +83,7 @@ func (d *Document) parse(file string, src []byte, required, optional []string) m
 	}
 	d.Meta = Meta{Title: values["title"], Created: values["created"], Description: values["description"], Schema: values["schema"],
 		DependsOn: lists["depends_on"], Base: values["base"],
-		Goal: values["goal"], Changes: lists["changes"], Planned: values["planned"], NeedsHuman: needs, Unattended: unattended}
+		Goal: values["goal"], Changes: lists["changes"], Planned: values["planned"], Unattended: unattended}
 	return lines
 }
 

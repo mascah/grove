@@ -490,7 +490,7 @@ func TestImplementInstructions(t *testing.T) {
 	gone := []string{"with their agreement edit it", "stays as it is", "ignore\n  `Delegated:` lines", "write no\n  `Also changed:` line", "tell the owner how to try it", "an open question in the change decides"}
 	owner := []string{"stop it at once, ask the owner and wait", "without asking and without blocking the task", "by running Grove's\n  `instructions propose <change-id>` and following it, never editing a\n  `Files:` line or `.grove.yaml` by hand", "brought the file, recommend propose, which\n  re-bases the change", "Do not stop between tasks.", "stop once: put each checkpoint to the owner",
 		"Make the choices and change the paths a task's `Delegated:` line names\n  without asking the owner", "stop that task and build nothing more of it", "in `grove.yaml`, from one correction, quoting\n  it"}
-	alone := []string{"ask no one and wait for no one's answer", "checkpoint for a later session and finish", "naming the revision the change needs", "Make the choices and change the paths a task's `Delegated:` line names.\n", "mark that task `Status: blocked`, naming the file", "whatever its\n  `needs_human` says", "Do not add it to `grove.yaml`."}
+	alone := []string{"ask no one and wait for no one's answer", "checkpoint for a later session and finish", "naming the revision the change needs", "Make the choices and change the paths a task's `Delegated:` line names.\n", "mark that task `Status: blocked`, naming the file", "marked `unattended`: only\n  `grove claim` reads it", "Do not add it to `grove.yaml`."}
 	has := func(what, out string, want, not []string) {
 		t.Helper()
 		for _, s := range want {
@@ -515,13 +515,11 @@ func TestImplementInstructions(t *testing.T) {
 	has("implement after an edit", grove(t, "instructions", "implement", cid, "--unattended"), []string{"\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`: differs from main; `git show " + main + ":grove/changes/" + cid + "-allow-editing-older-records/tasks.md` prints the approved text\n", listed}, nil)
 	git(t, dir, "checkout", "-q", "--", ".")
 	out = grove(t, "instructions", "implement", cid, "--unattended")
-	has("unattended instructions", out, append(append([]string{"asking no one, in your own working tree.", "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n", "only `grove claim` reads them"}, shared...), alone...), slices.Concat(owner, gone, []string{"grove run"}))
+	has("unattended instructions", out, append(append([]string{"asking no one, in your own working tree.", "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n"}, shared...), alone...), slices.Concat(owner, gone, []string{"grove run"}))
 
-	// A member of a cycle, not marked, that needs a person, gets its plan.
+	// A member of a cycle, not marked, gets its plan.
 	planCycle(t, dir, k, "2026-10-22T09:00:00Z", false, cid)
-	cycle := read(t, filepath.Join(dir, "grove/cycles", k+"-cycle.yaml")) + "needs_human:\n  " + cid + ": the owner judges it\n"
-	os.WriteFile(filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"), []byte(cycle), 0o644)
-	commitAll(t, dir, "Needs a person")
+	cycle := read(t, filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"))
 	for _, args := range [][]string{{cid}, {cid, "--unattended"}} {
 		out := grove(t, append([]string{"instructions", "implement"}, args...)...)
 		has(strings.Join(args, " "), out, []string{", change 1 of 1 in cycle " + k + ".", "## The cycle\n\nCycle " + k + ", \"Cycle " + k + "\", in build order:\n\n1. " + cid + " \"Allow editing older records\" — this change\n", "<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n" + cycle}, nil)
@@ -1025,13 +1023,13 @@ func TestCycles(t *testing.T) {
 	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.yaml`").FindStringSubmatch(out)
 	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
 		"\ntitle: \"<title>\"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n",
-		"\n# depends_on: [", "ask the owner\n  whether it follows any of them",
+		"\n# depends_on: [", "ask the owner\n  whether it follows any of them", "write its title yourself from its members, without asking",
 		"A new cycle: before writing its file, run Grove's `check`.", "tell the owner this edits approved work, bring the\n  member up to date on this branch as Grove's\n  `instructions propose <change-id>` says", "`grove claim` will\n    not claim the cycle until it is"} {
 		if m == nil || !strings.Contains(out, s) {
 			t.Errorf("plan instructions lack %q:\n%s", s, out)
 		}
 	}
-	if strings.Contains(out, "the only thing you write") || strings.Contains(out, "grove run") {
+	if strings.Contains(out, "the only thing you write") || strings.Contains(out, "grove run") || strings.Contains(out, "needs_human") || strings.Contains(out, "a person") {
 		t.Errorf("plan instructions still say the cycle file is the only thing written, or name grove run")
 	}
 	// The finish names implement, then claim given the cycle, then the mark.
@@ -1082,11 +1080,11 @@ func TestCycles(t *testing.T) {
 			t.Errorf("revising a member lacks %q:\n%.4000s", s, revise)
 		}
 	}
+	if strings.Contains(revise, "needs_human") || strings.Contains(revise, "a person") {
+		t.Errorf("revising a member asks about a person:\n%.4000s", revise)
+	}
 	if out := grove(t, "instructions", "propose", b); strings.Contains(out, "## The cycle") || strings.Contains(out, "### cycle: ") {
 		t.Errorf("revising a change in no cycle prints a cycle:\n%.3000s", out)
-	}
-	if out := grove(t, "instructions", "plan"); !strings.Contains(out, "that re-plans the cycle on\n    the same branch, and one merge removes the obstacle") {
-		t.Errorf("plan's finish does not name the shorter way:\n%.3000s", out)
 	}
 	checks := func(want string) {
 		t.Helper()
@@ -1097,9 +1095,9 @@ func TestCycles(t *testing.T) {
 	}
 	file := "grove/cycles/" + k + "-0-4-release.yaml"
 
-	// A marked cycle with a change that needs a person.
+	// A marked cycle with a needs_human left over: an unknown field.
 	os.WriteFile(cycle, []byte(plan+"needs_human:\n  "+a+": judging the error's wording\nunattended: true\n"), 0o644)
-	checks(file + ":7: unattended: " + a + " needs a person, as needs_human says, so grove claim skips this cycle; remove unattended, or build the cycle with /grove-implement " + k + "\n")
+	checks(file + ":5: unknown field \"needs_human\"; this file takes title, created, changes, planned, goal, depends_on and unattended\n")
 	git(t, dir, "checkout", "-q", "--", ".")
 
 	// A marked cycle whose member changed on main since its plan.
@@ -1114,7 +1112,7 @@ func TestCycles(t *testing.T) {
 	checks("grove/cycles/261099-zzzzy-bare.yaml: created: required field is missing\n" +
 		"grove/cycles/261099-zzzzy-bare.yaml: changes: required field is missing\n" +
 		"grove/cycles/261099-zzzzy-bare.yaml: planned: required field is missing\n" +
-		"grove/cycles/261099-zzzzz-later.yaml:4: unknown field \"start\"; this file takes title, created, changes, planned, goal, depends_on, needs_human and unattended\n" +
+		"grove/cycles/261099-zzzzz-later.yaml:4: unknown field \"start\"; this file takes title, created, changes, planned, goal, depends_on and unattended\n" +
 		"grove/cycles/261099-zzzzz-later.yaml: planned: required field is missing\n" +
 		"grove/cycles/261099-zzzzz-later.yaml:3: changes: " + a + " is also in cycle " + k + ", which is not done\n" +
 		"grove/cycles/261099-zzzzz-later.yaml:3: changes: 260101-zzzzz is no change, open or archived\n")
@@ -1288,9 +1286,9 @@ func TestClaim(t *testing.T) {
 		t.Errorf("the claim after the merge recorded %+v", last)
 	}
 
-	// A cycle given: refused, naming why, when there is no such cycle, a
-	// member needs a person, or the project is paused; with --retry, claimed
-	// though not marked while l is, l's record and branch kept.
+	// A cycle given: refused, naming why, when there is no such cycle or the
+	// project is paused; with --retry, claimed though not marked while l is,
+	// l's record and branch kept; a needs_human left over refuses nothing.
 	t.Chdir(owner)
 	d, _ := approve(t, owner, "d", "Show saved records", "")
 	e, _ := approve(t, owner, "e", "Export records", "")
@@ -1299,16 +1297,16 @@ func TestClaim(t *testing.T) {
 	planCycle(t, owner, n, "2026-10-23T10:00:00Z", false, e)
 	nFile := filepath.Join(owner, "grove/cycles", n+"-cycle.yaml")
 	os.WriteFile(nFile, []byte(read(t, nFile)+"needs_human:\n  "+e+": judging the export\n"), 0o644)
-	commitAll(t, owner, "Export needs a person")
+	commitAll(t, owner, "Export with a needs_human left over")
 	git(t, owner, "push", "-q", "origin", "main")
 	claims(h2, "", `^grove: main at [0-9a-f]{7} holds no cycle 261099-zzzzz\n$`, "--retry", "261099-zzzzz")
-	claims(h2, "", `^grove: `+e+` needs a person, as cycle `+n+`'s needs_human says; build the cycle with /grove-implement `+n+`\n$`, "--retry", n)
 	claims(h2, "", `^grove: the project is paused after attempt `, m)
 	lBranch := strings.TrimSpace(git(t, h2, "branch", "--show-current"))
 	claims(h2, m+"\n", "^$", "--retry", m)
 	if recorded() != 3 || latest(remote, "grove/runs").Cycle != m || latest(remote, "grove/runs~1").Cycle != l || git(t, h2, "branch", "--list", lBranch) == "" {
 		t.Errorf("the claim given %s recorded %+v", m, latest(remote, "grove/runs"))
 	}
+	claims(h2, n+"\n", "^$", "--retry", n)
 
 	// No remote: the local target, commits of its own and all, is the fetched
 	// one, the record goes on the local grove/runs, and merging the attempt's
@@ -1320,7 +1318,7 @@ func TestClaim(t *testing.T) {
 	commitAll(t, h1, "A note of the operator's")
 	local := strings.TrimSpace(git(t, h1, "rev-parse", "main"))
 	claims(h1, l+"\n", "^$")
-	if last := latest(h1, "grove/runs"); last.Commit != local || last.Cycle != l || recorded() != 3 {
+	if last := latest(h1, "grove/runs"); last.Commit != local || last.Cycle != l || recorded() != 4 {
 		t.Errorf("the claim with no remote recorded %+v, want %s %s", last, l, local)
 	}
 	claims(h1, "", `^grove: the project is paused after attempt `)
@@ -1765,8 +1763,8 @@ func TestServe(t *testing.T) {
 	os.WriteFile(filepath.Join(bDir, "tasks.md"), []byte("## T-01 — Delete\n\n## T-02 — Confirm\n"), 0o644)
 	os.WriteFile(filepath.Join(bDir, "proposal.md"), []byte("# Add ledger delete ID\n\n## Open questions\n\nAsk before deleting?\n"), 0o644)
 	commitAll(t, dir, "Tasks for "+b)
-	c, cDir := approve(t, dir, "c", "Export the ledger as CSV", "")
 	d, dDir := approve(t, dir, "d", "Monthly budgets in report", "")
+	c, cDir := approve(t, dir, "c", "Export the ledger as CSV", "depends_on: ["+d+"]\n")
 	f, fDir := approve(t, dir, "f", "Editing a record prints what was saved", "")
 	e, _ := approve(t, dir, "e", "Import records from a CSV", "depends_on: ["+f+"]\n")
 	os.WriteFile(filepath.Join(fDir, "proposal.md"), []byte("# Editing a record prints what was saved\n\nRevised.\n"), 0o644)
@@ -1786,7 +1784,7 @@ func TestServe(t *testing.T) {
 	maintain(t, dir, olderEdits+"\nEdited again.\n")
 	commitAll(t, dir, "Edit record-editing")
 	planCycle(t, dir, k, "2026-11-02T00:00:00Z", true, a, b)
-	write("grove/cycles/"+l+"-cycle.yaml", "title: Cycle L\ncreated: 2026-11-03T00:00:00Z\nchanges: ["+c+"]\nplanned: "+strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))+"\nneeds_human:\n  "+c+": a person judges the file\n")
+	write("grove/cycles/"+l+"-cycle.yaml", "title: Cycle L\ncreated: 2026-11-03T00:00:00Z\nchanges: ["+c+"]\nplanned: "+strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))+"\n")
 	commitAll(t, dir, "Plan "+l)
 	planCycle(t, dir, m, "2026-11-04T00:00:00Z", true, d)
 	os.WriteFile(filepath.Join(dDir, "proposal.md"), []byte("# Monthly budgets in report\n\nRevised.\n\n## Open questions\n\n<!-- Say which. -->\nNone.\n"), 0o644)
@@ -1863,7 +1861,7 @@ func TestServe(t *testing.T) {
 	if cy := verdicts[k]; strings.Join(cy.Changes, " ") != a+" "+b || !cy.Runs || cy.Verdict != "grove claim would claim it" || len(v.Runs) != 0 {
 		t.Errorf("cycle K: %+v", cy)
 	}
-	if cy := verdicts[l]; cy.Runs || !strings.HasPrefix(cy.Verdict, c+" needs a person") {
+	if cy := verdicts[l]; cy.Runs || !strings.HasPrefix(cy.Verdict, c+" waits on "+d) {
 		t.Errorf("cycle L: %+v", cy)
 	}
 	if cy := verdicts[m]; strings.Join(cy.Stale, " ") != d || !strings.Contains(cy.Verdict, "stale, since "+d+" changed") {

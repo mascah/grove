@@ -1,6 +1,5 @@
-**Plan says "Build these together."** It puts approved changes in a cycle
-and finds out, with the owner, which of them need a person. It plans no
-implementation: no file-by-file plan, no estimates.
+**Plan says "Build these together."** It puts approved changes in a
+cycle. It plans no implementation: no file-by-file plan, no estimates.
 
 ### 1. Read what is approved
 
@@ -14,9 +13,8 @@ implementation: no file-by-file plan, no estimates.
 
 - Say which changes you would put in the cycle, in build order, and what
   each waits on.
-- Ask about each change that may need a person, one at a time, saying what
-  in it does.
-- Ask for the cycle's title and, if the owner wants one, a one-line goal.
+- Title the cycle yourself; write a one-line goal only if the owner gives
+  one.
 
 ### 3. Write the cycle file
 

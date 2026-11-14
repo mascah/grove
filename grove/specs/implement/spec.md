@@ -64,12 +64,12 @@ waits on a change neither being built nor archived as finished.
 #### Scenario: A cycle
 
 - GIVEN cycle K lists A and B, B depending on A, K not marked
-  `unattended` and its `needs_human` naming B
+  `unattended`
 - WHEN `/grove-implement K` is run, with or without `--unattended`
 - THEN K's instructions list B `after A`, and A and then B are built on
   one branch, each by `grove instructions implement <change-id>`, B's
   instructions naming it the second of two in K's plan; only `grove claim`
-  reads `unattended` and `needs_human`
+  reads `unattended`
 
 #### Scenario: A member left out
 
@@ -514,3 +514,4 @@ None recorded.
 - [261105-va9qn](../../changes/archive/261105-va9qn-implement-stops-at-checkpoints/) Implement stops at checkpoints and hands off in the branch
 - [261105-pr77s](../../changes/archive/261105-pr77s-cycle-builds-each-change-in-its-own-context/) A cycle builds each change in its own context
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
+- [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human

@@ -749,9 +749,6 @@ func (p Project) index(b *strings.Builder) {
 		if len(cy.Meta.DependsOn) > 0 {
 			more = append(more, "follows "+strings.Join(cy.Meta.DependsOn, ", "))
 		}
-		for _, id := range slices.Sorted(maps.Keys(cy.Meta.NeedsHuman)) {
-			more = append(more, "needs a person: "+id+", "+cy.Meta.NeedsHuman[id])
-		}
 		if cy.Meta.Unattended {
 			more = append(more, "unattended: true")
 		}

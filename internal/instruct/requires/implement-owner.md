@@ -2,9 +2,7 @@
   says, stop it at once, ask the owner and wait for the answer; do not
   settle it yourself. If the owner says to leave it, mark the task
   `Status: blocked`, write the question under it, and go on with the other
-  tasks. Ask about a change the cycle's `needs_human` names
-  as about any other, and tell the owner of a change Grove refuses as
-  waiting.
+  tasks. Tell the owner of a change Grove refuses as waiting.
 - Make the choices and change the paths a task's `Delegated:` line names
   without asking the owner. Beyond them and the `Files:` lines, edit any
   other file a task needs changed to be built as the change says, or makes

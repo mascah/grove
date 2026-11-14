@@ -98,21 +98,20 @@ type pageChange struct {
 }
 
 type pageCycle struct {
-	ID         string            `json:"id"`
-	Title      string            `json:"title"`
-	Goal       string            `json:"goal,omitempty"`
-	Created    string            `json:"created"`
-	Path       string            `json:"path"`
-	Planned    string            `json:"planned"`
-	Changes    []string          `json:"changes"`  // its open members in build order, then those waiting outside it
-	Archived   []string          `json:"archived"` // its members archived
-	DependsOn  []string          `json:"depends_on,omitempty"`
-	NeedsHuman map[string]string `json:"needs_human,omitempty"`
-	Stale      []string          `json:"stale,omitempty"` // members changed on the target since the plan
-	Unattended bool              `json:"unattended"`
-	Done       bool              `json:"done"`
-	Runs       bool              `json:"runs"`    // grove claim would claim it
-	Verdict    string            `json:"verdict"` // what grove claim would do with it, or why not
+	ID         string   `json:"id"`
+	Title      string   `json:"title"`
+	Goal       string   `json:"goal,omitempty"`
+	Created    string   `json:"created"`
+	Path       string   `json:"path"`
+	Planned    string   `json:"planned"`
+	Changes    []string `json:"changes"`  // its open members in build order, then those waiting outside it
+	Archived   []string `json:"archived"` // its members archived
+	DependsOn  []string `json:"depends_on,omitempty"`
+	Stale      []string `json:"stale,omitempty"` // members changed on the target since the plan
+	Unattended bool     `json:"unattended"`
+	Done       bool     `json:"done"`
+	Runs       bool     `json:"runs"`    // grove claim would claim it
+	Verdict    string   `json:"verdict"` // what grove claim would do with it, or why not
 }
 
 // pageRun is an attempt with its branch's latest commit time, local or on origin.
@@ -214,7 +213,7 @@ func (s *server) value() (*value, error) {
 	last := pausing(recs, c)
 	for _, cy := range c.Cycles {
 		pc := pageCycle{ID: cy.ID, Title: cy.Meta.Title, Goal: cy.Meta.Goal, Created: cy.Meta.Created, Path: cy.Path, Planned: cy.Meta.Planned,
-			DependsOn: cy.Meta.DependsOn, NeedsHuman: cy.Meta.NeedsHuman, Unattended: cy.Meta.Unattended, Done: cy.Done}
+			DependsOn: cy.Meta.DependsOn, Unattended: cy.Meta.Unattended, Done: cy.Done}
 		ordered, waiting := buildable(c, c, cy)
 		for _, ch := range slices.Concat(ordered, waiting) {
 			pc.Changes = append(pc.Changes, ch.ID)

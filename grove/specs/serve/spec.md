@@ -83,8 +83,7 @@ documents, as the requirements below say.
 When the page asks for `/api/project`, the system shall give every cycle
 on the target with its members in build order, the members archived, and
 the verdict `grove claim` would give it: done when every member is
-archived; otherwise the member that needs a person, as `needs_human`
-names it; otherwise the cycle it waits on that is not done; otherwise the
+archived; otherwise the cycle it waits on that is not done; otherwise the
 member that waits on a change neither in the cycle nor archived as
 finished; otherwise the members that changed on the target since its
 plan, making it stale; otherwise, when the latest record on `grove/runs`
@@ -103,11 +102,12 @@ another cycle's attempt.
 - THEN K's members are A then B and its verdict is that `grove claim`
   would claim it
 
-#### Scenario: A member needs a person
+#### Scenario: A member waits outside the cycle
 
-- GIVEN cycle L's `needs_human` names member C
+- GIVEN cycle L's member C depends on change Z, neither in L nor archived
+  as finished
 - WHEN the page asks for `/api/project`
-- THEN L's verdict names C as needing a person
+- THEN L's verdict names C as waiting on Z
 
 #### Scenario: A member changed since the plan
 
@@ -285,10 +285,10 @@ positions across a refresh.
 #### Scenario: Readiness at a glance
 
 - GIVEN the fixture with cycle K fresh and marked, and cycle L with a
-  member that needs a person
+  member that waits on a change outside it
 - WHEN the owner opens the URL
 - THEN the readiness tab shows K as a cycle `grove claim` would claim and
-  L with the member that needs a person named, and the tab's count is 2
+  L with the waiting member named, and the tab's count is 2
 
 #### Scenario: A refresh while reading
 
@@ -346,3 +346,4 @@ None.
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
 - [261108-7grt3](../../changes/archive/261108-7grt3-the-project-as-json/) The project as JSON
 - [261108-cns75](../../changes/archive/261108-cns75-show-what-is-undecided-and-blocked/) Show what is undecided and blocked
+- [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human

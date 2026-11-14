@@ -272,28 +272,18 @@ did not agree to; Grove shall read nothing on that line.
 
 When the owner runs `/grove-propose <change-id>` for a change that a cycle
 not yet done lists, the propose instructions shall print that cycle's file
-and have the agent, on the same branch as the revision, ask the owner
-whether the change needs a person as the plan instructions do, set the
-cycle's `planned` to the target commit the instructions name, and never
-write or remove `unattended`.
+and have the agent, on the same branch as the revision, set the cycle's
+`planned` to the target commit the instructions name, change nothing else
+in it, and never write or remove `unattended`.
 
 #### Scenario: A blocked member answered
 
 - GIVEN cycle K, marked `unattended`, lists change B, left blocked by an
   open question
 - WHEN the owner runs `/grove-propose B` and answers the question
-- THEN the agent revises B, asks whether B needs a person, sets K's
-  `planned` to the target commit the instructions name, and leaves
-  `unattended: true` as it is
-
-#### Scenario: A member that no longer needs a person
-
-- GIVEN cycle K's `needs_human` names C, for judging how a new screen
-  looks
-- WHEN the owner runs `/grove-propose C`, has its acceptance checked by a
-  test, and says C no longer needs a person
-- THEN the agent takes C out of `needs_human` and sets K's `planned`, and
-  once the branch is squash-merged `grove claim K` claims K
+- THEN the agent revises B, sets K's `planned` to the target commit the
+  instructions name, asks nothing about whether B needs a person, and
+  leaves `unattended: true` as it is
 
 #### Scenario: A change in no cycle
 
@@ -528,3 +518,4 @@ None.
 - [261026-d1sb1](../../changes/archive/261026-d1sb1-re-base-a-change-after-its-dependency-lands/) Re-base a change after its dependency lands
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
 - [261114-40gd5](../../changes/archive/261114-40gd5-check-names-each-moved-file-once/) Check names each moved file once per change
+- [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human
