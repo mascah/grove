@@ -48,4 +48,41 @@ check`: No problems in grove/.
 
 ## Scenarios
 
+All tests are in `internal/cli/walkthrough_test.go`; `just check` passed
+after both tasks. Where a scenario is what an agent does, the test checks
+the instructions it follows; no agent session was run for those, and the
+walkthrough's planning steps were not run by hand.
+
+- cycles "Two approved changes": `TestCycles`, plan instructions and template, passed; the agent's run unverified (no session).
+- cycles "The agent titles the cycle": `TestCycles`, plan instructions say "write its title yourself from its members, without asking" and name no person, passed; the agent's run unverified (no session).
+- cycles "A draft change named": `TestCycles`, plan instructions list only approved changes, passed; the agent's run unverified (no session).
+- cycles "A member stale on its base": `TestCycles`, plan instructions bring a stale member up to date, passed; the agent's run unverified (no session).
+- cycles "Nothing in the way": `TestCycles`, plan's finish in order, passed; the agent's run unverified (no session).
+- cycles "A member waits on a change outside the cycle": `TestCycles`, plan's finish names that obstacle, passed; the agent's run unverified (no session).
+- cycles "The cycle waits on a cycle": `TestCycles`, plan's finish names that obstacle, passed; the agent's run unverified (no session).
+- cycles "The runner needs something set up": unverified: only the instruction line "Something the runner's checkout must have" shows it, and no test names it.
+- cycles "Marked and stale": `TestCycles`, check reports `planned: <a> changed on main since this plan`, passed.
+- cycles "Marked and a member's file moved": `TestMovedFiles`, passed.
+- cycles "One change in two cycles": `TestCycles`, passed.
+- cycles "A needs_human left over": `TestCycles`, check reports line 5 as `unknown field "needs_human"`, passed.
+- cycles "A dependency on no cycle": `TestCycles`, passed.
+- cycles "Cycles that wait on each other": `TestCycles`, passed.
+- runs "A needs_human left over": `TestClaim`, `grove claim --retry <n>` prints n's ID with `needs_human` in its file, passed.
+- runs "A stale plan": `TestReplan`, passed.
+- runs "A cycle it follows not done": `TestClaim`, passed.
+- runs "No such cycle": `TestClaim`, passed.
+- serve "A marked cycle that is fresh": `TestServe`, cycle K, passed.
+- serve "A member waits outside the cycle": `TestServe`, cycle L's verdict starts `<c> waits on <d>`, passed.
+- serve "A member changed since the plan": `TestServe`, cycle M, passed.
+- serve "A claimed cycle": `TestServe`, passed.
+- serve "Readiness at a glance": `TestServe` checks the value the page draws; how the page shows it unverified (no browser run).
+- serve "A refresh while reading": unverified: the page's script, unchanged here but for the chip, was not run in a browser.
+- propose "A blocked member answered": `TestCycles`, the revise instructions print the cycle, keep `unattended` and name no person, passed; the agent's run unverified (no session).
+- propose "A change in no cycle": `TestCycles`, passed.
+- implement "An approved change": `TestImplementInstructions`, passed.
+- implement "A draft": `TestImplementInstructions`, passed.
+- implement "A change that waits": existing waiting tests in `walkthrough_test.go`, passed.
+- implement "A cycle": `TestImplementInstructions`, a member of a cycle not marked gets its plan, and the unattended instructions say only `grove claim` reads `unattended`, passed.
+- implement "A member left out": existing test of a member waiting outside its cycle, passed.
+
 ## Reconciliation

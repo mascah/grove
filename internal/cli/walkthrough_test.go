@@ -1023,13 +1023,13 @@ func TestCycles(t *testing.T) {
 	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.yaml`").FindStringSubmatch(out)
 	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
 		"\ntitle: \"<title>\"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n",
-		"\n# depends_on: [", "ask the owner\n  whether it follows any of them",
+		"\n# depends_on: [", "ask the owner\n  whether it follows any of them", "write its title yourself from its members, without asking",
 		"A new cycle: before writing its file, run Grove's `check`.", "tell the owner this edits approved work, bring the\n  member up to date on this branch as Grove's\n  `instructions propose <change-id>` says", "`grove claim` will\n    not claim the cycle until it is"} {
 		if m == nil || !strings.Contains(out, s) {
 			t.Errorf("plan instructions lack %q:\n%s", s, out)
 		}
 	}
-	if strings.Contains(out, "the only thing you write") || strings.Contains(out, "grove run") {
+	if strings.Contains(out, "the only thing you write") || strings.Contains(out, "grove run") || strings.Contains(out, "needs_human") || strings.Contains(out, "a person") {
 		t.Errorf("plan instructions still say the cycle file is the only thing written, or name grove run")
 	}
 	// The finish names implement, then claim given the cycle, then the mark.
@@ -1079,6 +1079,9 @@ func TestCycles(t *testing.T) {
 		if !strings.Contains(revise, s) {
 			t.Errorf("revising a member lacks %q:\n%.4000s", s, revise)
 		}
+	}
+	if strings.Contains(revise, "needs_human") || strings.Contains(revise, "a person") {
+		t.Errorf("revising a member asks about a person:\n%.4000s", revise)
 	}
 	if out := grove(t, "instructions", "propose", b); strings.Contains(out, "## The cycle") || strings.Contains(out, "### cycle: ") {
 		t.Errorf("revising a change in no cycle prints a cycle:\n%.3000s", out)
