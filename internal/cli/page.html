@@ -169,11 +169,11 @@ function render() {
 }
 
 function memberRows(ids, cy) {
-  const all = byId(), needs = (cy && cy.needs_human) || {};
+  const all = byId();
   return h('table', {}, h('tr', {}, h('th', { class: 'n' }, 'change'), h('th', {}, 'title'), h('th', {}, 'status'), h('th', {}, 'being built')),
     ids.map(id => { const c = all[id]; return h('tr', {}, h('td', { class: 'n' }, idLink(id)), h('td', {}, c ? c.title : h('span', { class: 'mut' }, 'not on ' + D.target)),
-      h('td', { class: 'n' }, status(c, cy), c ? [questions(c), blocked(c)] : null, id in needs ? [' ', chip('needs a person', 'warn')] : null),
-      h('td', {}, where(id), id in needs ? h('div', { class: 'mut', style: 'font-size:12.5px' }, needs[id]) : null)); }));
+      h('td', { class: 'n' }, status(c, cy), c ? [questions(c), blocked(c)] : null),
+      h('td', {}, where(id))); }));
 }
 function readiness() {
   const s = $('#ready'); s.replaceChildren();

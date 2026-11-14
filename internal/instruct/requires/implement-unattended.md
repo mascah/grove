@@ -16,8 +16,8 @@
 - Where a line below names a task's file as changed on the target,
   mark that task `Status: blocked`, naming the file, and do not build on
   it: the change was not written against the file as it is.
-- Build a cycle whether or not it is marked `unattended`, and whatever its
-  `needs_human` says: only `grove claim` reads them.
+- Build a cycle whether or not it is marked `unattended`: only
+  `grove claim` reads it.
 - If you found something that would apply to future work, your report may
   name one line per change to add to `context`, or under a key of `rules`,
   in `grove.yaml`, with what you found. Do not add it to `grove.yaml`.
