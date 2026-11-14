@@ -3,12 +3,11 @@
 ## Purpose
 
 A cycle lists approved changes to build together: `/grove-plan` writes it,
-asking which need a person, and `grove claim <cycle-id>` claims it for the agent its caller starts, as
+and `grove claim <cycle-id>` claims it for the agent its caller starts, as
 does a `grove claim` given no cycle once it holds `unattended: true`. A cycle is
 a file `<root>/cycles/<id>-<slug>.yaml`, and its members are the changes
 its `changes` lists. A cycle is done when the target holds every member
-archived, finished or dropped. A member "needs a person" when the cycle's
-`needs_human` names it. A cycle "depends on" each cycle its optional
+archived, finished or dropped. A cycle "depends on" each cycle its optional
 `depends_on` names, and "waits on" each of those the target does not hold
 done. A cycle is stale when the folder of a member not yet archived, or a
 file one of its tasks names, differs on the target from the same path at
@@ -32,10 +31,11 @@ and the mark, count is the merge into the target (`CONSTITUTION.md` rule
 ### Requirement: Plan a cycle
 
 When the owner runs `/grove-plan <description>`, the system shall print
-instructions for writing a new cycle file holding a `title`, an optional
-one-line `goal`, the approved changes the owner agrees to as `changes`, the
-time Grove gives the plan as `created`, and the target commit the plan read
-as `planned`, editing no change's files except, for each member `grove
+instructions for writing a new cycle file holding a `title` the agent
+writes from its members without asking for one, an optional one-line
+`goal`, the approved changes the owner agrees to as `changes`, the time
+Grove gives the plan as `created`, and the target commit the plan read as
+`planned`, editing no change's files except, for each member `grove
 check` reports stale on a requirement or for a named file changed since
 its base, telling the owner that this edits approved work and bringing
 that member up to date on the same branch as the propose instructions for
@@ -49,6 +49,13 @@ it say, before writing the cycle file.
 - THEN a new cycle file lists A and B under `changes`, `created` is the
   time Grove gave the plan, `planned` is the target's commit, and A's and
   B's files are unchanged
+
+#### Scenario: The agent titles the cycle
+
+- GIVEN the target approves changes A and B
+- WHEN the owner runs `/grove-plan 0.4 release` and agrees to A and B
+- THEN the agent writes the cycle's `title` itself and asks the owner
+  nothing about it
 
 #### Scenario: A draft change named
 
@@ -101,27 +108,6 @@ instructions for revising that cycle file as the owner asks and setting
 - THEN `planned` is the target's commit, K is no longer stale, and B's
   files are unchanged
 
-### Requirement: Ask about work that needs a person
-
-While planning, when a member's proposal, change specs or tasks call for
-something an unattended session may not be able to do, the plan
-instructions shall have the agent tell the owner what and ask whether the
-change needs a person, and record it under `needs_human` with the owner's
-reason only when the owner says it does.
-
-#### Scenario: A task needs a human eye
-
-- GIVEN member C has a task whose acceptance is judging how a new screen
-  looks
-- WHEN the agent asks and the owner says C needs them
-- THEN `needs_human` names C with the owner's reason
-
-#### Scenario: The owner says the runner can do it
-
-- GIVEN member B has a task that calls a service needing a login
-- WHEN the agent asks and the owner says the runner has that login
-- THEN `needs_human` does not name B
-
 ### Requirement: Ask which cycles a new cycle follows
 
 While planning a new cycle, when the project index lists cycles not yet
@@ -159,24 +145,13 @@ no cycle, such as a timer's; and, for each obstacle, what removes it.
 
 #### Scenario: Nothing in the way
 
-- GIVEN members A and B, neither of which the owner said needs a person,
-  and neither waits on a change outside the cycle
+- GIVEN members A and B, neither of which waits on a change outside the
+  cycle
 - WHEN the agent finishes the plan
 - THEN it names `/grove-implement <cycle-id>` first, says
   `grove claim <cycle-id>` would claim the cycle, and says a `grove claim`
   given no cycle would claim it once `unattended: true` is merged in, and
   how that mark is added
-
-#### Scenario: A member needs a person
-
-- GIVEN the owner said member C needs a person, for judging how a new
-  screen looks
-- WHEN the agent finishes the plan
-- THEN it names `/grove-implement <cycle-id>`, says `grove claim` would
-  refuse the cycle, given or marked, and that revising C with
-  `/grove-propose C` so that its acceptance can be checked without a
-  person, which re-plans the cycle on the same branch, and merging that
-  removes it
 
 #### Scenario: A member waits on a change outside the cycle
 
@@ -199,8 +174,7 @@ no cycle, such as a timer's; and, for each obstacle, what removes it.
 - GIVEN member B has a task that calls a service needing a login, and the
   owner said the runner has it
 - WHEN the agent finishes the plan
-- THEN `needs_human` does not name B, and the verdict names the login the
-  runner's checkout must have
+- THEN the verdict names the login the runner's checkout must have
 
 ### Requirement: Mark a cycle unattended
 
@@ -246,15 +220,7 @@ build it as it would with no `depends_on`.
 ### Requirement: Report a cycle that cannot run unattended
 
 When the owner runs `grove check`, the system shall report a cycle file
-that holds `unattended: true` while `needs_human` names a member, and a
-cycle file that holds `unattended: true` while the cycle is stale, each
-naming what to do.
-
-#### Scenario: Marked with a change that needs a person
-
-- GIVEN cycle K holds `unattended: true` and `needs_human` names C
-- WHEN the owner runs `grove check`
-- THEN it reports K's `unattended` line, saying C needs a person
+that holds `unattended: true` while the cycle is stale, naming what to do.
 
 #### Scenario: Marked and stale
 
@@ -287,6 +253,13 @@ depends on it in turn, directly or through other cycles.
 - GIVEN cycles K and L, neither done, both list change A
 - WHEN the owner runs `grove check`
 - THEN it reports the later of the two, naming A and the other cycle
+
+#### Scenario: A needs_human left over
+
+- GIVEN cycle K's file still holds `needs_human` naming member C
+- WHEN the owner runs `grove check`
+- THEN it reports K's `needs_human` line as an unknown field, listing the
+  fields a cycle file takes
 
 #### Scenario: A dependency on no cycle
 
@@ -456,3 +429,4 @@ None.
 - [261105-gmpa4](../../changes/archive/261105-gmpa4-plan-brings-a-stale-member-up-to-date/) Plan brings a stale member up to date
 - [261105-3qdz2](../../changes/archive/261105-3qdz2-misnamed-cycle-and-shallow-clone-reported/) A misnamed cycle and a shallow clone are reported plainly
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
+- [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human

@@ -10,7 +10,7 @@ checkout" is the Git checkout `grove claim` is run in. "The fetched target" is t
 as just fetched from `origin`, or, in a checkout with no remote named
 `origin`, the local target branch; in both, with the `grove.yaml` it
 holds. "A buildable cycle" is a cycle on the fetched target that is not
-done, is not stale, has no member `needs_human` names, has no member that
+done, is not stale, has no member that
 waits on a change neither in the cycle nor archived as finished, and waits
 on no cycle, that is, the fetched target holds done every cycle its
 `depends_on` names (`grove/specs/cycles/spec.md`); "an eligible cycle" is
@@ -121,17 +121,16 @@ Git.
 If the operator gives `grove claim` a cycle ID that is not a buildable
 cycle on the fetched target, then the system shall record nothing, create
 no branch, print nothing on standard output, exit non-zero and say in one
-sentence why: there is no such cycle, it is done, a member is under
-`needs_human`, it waits on a cycle its `depends_on` names that is not
-done, its plan is stale, or a member waits on a change neither in the
-cycle nor archived as finished.
+sentence why: there is no such cycle, it is done, it waits on a cycle its
+`depends_on` names that is not done, its plan is stale, or a member waits
+on a change neither in the cycle nor archived as finished.
 
-#### Scenario: A member needs a person
+#### Scenario: A needs_human left over
 
-- GIVEN `origin`'s target holds cycle K whose `needs_human` names member C
+- GIVEN `origin`'s target holds cycle K, buildable, whose file still holds
+  `needs_human` naming member C
 - WHEN the operator runs `grove claim K`
-- THEN nothing is recorded, no branch is created, and Grove says C needs a
-  person
+- THEN an attempt is recorded for K, and K's ID is printed
 
 #### Scenario: A stale plan
 
@@ -366,3 +365,4 @@ None.
 - [261023-bgtcb](../../changes/archive/261023-bgtcb-revising-a-change-re-plans-its-cycle/) Revising a change re-plans its cycle
 - [261023-2ej3w](../../changes/archive/261023-2ej3w-cycles-depend-on-cycles/) A cycle can depend on cycles
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
+- [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human

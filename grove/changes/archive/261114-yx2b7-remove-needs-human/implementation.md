@@ -86,3 +86,9 @@ walkthrough's planning steps were not run by hand.
 - implement "A member left out": existing test of a member waiting outside its cycle, passed.
 
 ## Reconciliation
+
+- cycles: applied to `grove/specs/cycles/spec.md`, with the Purpose edit the change spec names
+- runs: applied to `grove/specs/runs/spec.md`, with the Purpose edit the change spec names
+- serve: applied to `grove/specs/serve/spec.md`
+- propose: applied to `grove/specs/propose/spec.md`
+- implement: applied to `grove/specs/implement/spec.md`
