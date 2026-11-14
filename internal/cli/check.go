@@ -174,8 +174,9 @@ func stalePlans(p project, c *doc.Collection) error {
 	return nil
 }
 
-// movedSinceBase reports each task of a change in c, in no cycle that is
-// not done, whose named file differs on the target from the change's base.
+// movedSinceBase reports once each change in c, in no cycle that is not
+// done, naming each file its tasks name that differs on the target from the
+// change's base.
 // A member of such a cycle is its plan's to report instead (stalePlans).
 func movedSinceBase(p project, c *doc.Collection) error {
 	commit := ""
@@ -193,11 +194,13 @@ func movedSinceBase(p project, c *doc.Collection) error {
 		if err != nil { // stale reports a base that is no commit
 			continue
 		}
+		var files []string
 		for _, t := range tasks {
-			for _, f := range t.Files {
-				ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: ch.Dir + "/tasks.md",
-					Message: fmt.Sprintf("%s's %s changed on %s since base %s; revise the change with propose, which also re-bases it after a dependency lands", t.ID, f, p.Target, ch.Meta.Base[:min(7, len(ch.Meta.Base))])})
-			}
+			files = append(files, t.Files...)
+		}
+		if slices.Sort(files); len(files) > 0 {
+			ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: ch.Dir + "/tasks.md",
+				Message: fmt.Sprintf("%s changed on %s since base %s; revise the change with propose, which also re-bases it after a dependency lands", strings.Join(slices.Compact(files), " and "), p.Target, ch.Meta.Base[:min(7, len(ch.Meta.Base))])})
 		}
 	}
 	return nil

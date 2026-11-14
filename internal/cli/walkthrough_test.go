@@ -1434,7 +1434,7 @@ func TestMovedFiles(t *testing.T) {
 	edit("ledger/report.py", "A change under ledger/")
 	rel := "grove/changes/" + filepath.Base(folder) + "/tasks.md"
 	moved := "; revise the change with propose, which also re-bases it after a dependency lands\n"
-	checks(rel + ": T-01's ledger/report.py changed on main since base " + base[:7] + moved + rel + ": T-01's tests/test_cli.py changed on main since base " + base[:7] + moved)
+	checks(rel + ": ledger/report.py and tests/test_cli.py changed on main since base " + base[:7] + moved)
 	for _, args := range [][]string{{cid}, {cid, "--unattended"}} {
 		if out := grove(t, append([]string{"instructions", "implement"}, args...)...); !strings.Contains(out, "\n- Changed on main since base "+base[:7]+": T-01's `ledger/report.py`, T-01's `tests/test_cli.py`.\n") {
 			t.Errorf("implement %v does not name the moved file:\n%.3000s", args, out)
@@ -1465,12 +1465,13 @@ func TestMovedFiles(t *testing.T) {
 		t.Errorf("grove claim would claim a cycle whose member's file moved: %v", err)
 	}
 
-	// A comma line, wrapped, still reads; a Files: line Grove cannot read.
+	// A comma line, wrapped, still reads, and a file two tasks name is
+	// named once; a Files: line Grove cannot read.
 	files := "Files:\n- `ledger/`\n- `tests/test_cli.py`"
-	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, files, "Files: `ledger/cli.py`,\n`tests/test_cli.py`", 1)), 0o644)
+	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, files, "Files: `ledger/cli.py`,\n`tests/test_cli.py`", 1)+"\n## T-02 — Test it\n\nFiles: `tests/test_cli.py`\n"), 0o644)
 	os.Remove(filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"))
 	since := " changed on main since base " + base[:7] + moved
-	checks(rel + ": T-01's ledger/cli.py" + since + rel + ": T-01's tests/test_cli.py" + since)
+	checks(rel + ": ledger/cli.py and tests/test_cli.py" + since)
 	for _, bad := range []string{"Files: ledger/cli.py", "Files: `../ledger/cli.py`", "Files:\n- `ledger/cli.py`, `tests/test_cli.py`"} {
 		os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, files, bad, 1)), 0o644)
 		checks(rel + ":5: T-01's Files: line should list repo-relative paths in backticks, one per bullet or separated by commas, and a folder ends in /\n")

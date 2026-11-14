@@ -222,9 +222,10 @@ by hand: that hides the report without bringing the change up to date.
 
 The code can move too. Each task names the files it touches on its
 `Files:` line. `grove check` reports a named file that changed on your
-main branch since the change's `base`:
+main branch since the change's `base`, once for the change, naming each
+such file once:
 
-> grove/changes/261019-s5v3m-show-what-was-saved/tasks.md: T-01's ledger/cli.py changed on main since base 4f1c2a9; revise the change with propose, which also re-bases it after a dependency lands
+> grove/changes/261019-s5v3m-show-what-was-saved/tasks.md: ledger/cli.py changed on main since base 4f1c2a9; revise the change with propose, which also re-bases it after a dependency lands
 
 Only main counts. A branch building the change edits that file, and is
 not reported for it. `/grove-implement 261019-s5v3m` names the task and

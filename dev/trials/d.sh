@@ -90,7 +90,7 @@ EOF
   commit "List report categories by amount, largest first"
 }
 
-check_ok="T-01's ledger/report.py changed on main since base"
+check_ok="tasks.md: ledger/report.py changed on main since base"
 runs=(
   "budgets-impl => /grove-implement {id}"
 )
