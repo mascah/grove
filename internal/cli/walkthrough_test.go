@@ -461,7 +461,7 @@ func TestImplementInstructions(t *testing.T) {
 	}
 	stderr.Reset()
 	draft := grove(t, "instructions", "implement", cid)
-	for _, s := range []string{"You are implementing drafted change " + cid + ", \"Allow editing older records\", as this working tree holds it.", "as this working tree holds it, and merging\n  this branch approves it with its code.", "\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`\n"} {
+	for _, s := range []string{"You are implementing drafted change " + cid + ", \"Allow editing older records\", as this working tree holds it.", "Merging this branch approves a draft, or a revision\n  made on it, with its code.", "\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`\n"} {
 		if !strings.Contains(draft, s) {
 			t.Errorf("draft instructions lack %q:\n%.3000s", s, draft)
 		}
@@ -510,7 +510,7 @@ func TestImplementInstructions(t *testing.T) {
 	tasks := filepath.Join(dir, "grove/changes", cid+"-allow-editing-older-records/tasks.md")
 	os.WriteFile(tasks, []byte(read(t, tasks)+"\nResult: edited.\n"), 0o644)
 	main := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
-	has("implement after an edit", grove(t, "instructions", "implement", cid), []string{"\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`: differs from main; `git show " + main + ":grove/changes/" + cid + "-allow-editing-older-records/tasks.md` prints the approved text\n", listed, "was revised on this\n  branch: build the revision."}, nil)
+	has("implement after an edit", grove(t, "instructions", "implement", cid), []string{"\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`: differs from main; `git show " + main + ":grove/changes/" + cid + "-allow-editing-older-records/tasks.md` prints the approved text\n", listed, "target was revised on this branch: build the revision."}, nil)
 	git(t, dir, "checkout", "-q", "--", ".")
 
 	// A member of a cycle, not marked, gets its plan.

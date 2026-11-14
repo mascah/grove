@@ -1,8 +1,8 @@
 - The change below is approved as the target branch holds it or, where the
-  line above calls it a draft, as this working tree holds it, and merging
-  this branch approves it with its code. Build what it says, nothing more.
-  A document it names as differing from the target was revised on this
-  branch: build the revision.
+  line above calls it a draft, as this working tree holds it. Build what it
+  says, nothing more. Merging this branch approves a draft, or a revision
+  made on it, with its code. A document it names as differing from the
+  target was revised on this branch: build the revision.
 - Work in this working tree on a branch other than the target, creating one
   if needed. Ask no one and wait for no one: end with the branch ready for
   review, whatever is left.
