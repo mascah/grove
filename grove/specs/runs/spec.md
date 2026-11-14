@@ -66,8 +66,8 @@ Git.
 
 - GIVEN eligible cycle K
 - WHEN the operator runs
-  `K=$(grove claim) && claude -p "/grove-implement $K --unattended"`
-- THEN the session starts on `/grove-implement <K's ID> --unattended` in
+  `K=$(grove claim) && claude -p "/grove-implement $K"`
+- THEN the session starts on `/grove-implement <K's ID>` in
   the checkout, on the attempt's branch
 
 #### Scenario: Two marked cycles
@@ -191,7 +191,7 @@ output, say there is nothing to claim, and exit non-zero.
 
 - GIVEN every change on `origin`'s target is archived
 - WHEN the operator runs
-  `K=$(grove claim) && claude -p "/grove-implement $K --unattended"`
+  `K=$(grove claim) && claude -p "/grove-implement $K"`
 - THEN `claude` is not started, and the shell's status is non-zero
 
 ### Requirement: Refuse an unclean checkout
@@ -366,3 +366,4 @@ None.
 - [261023-2ej3w](../../changes/archive/261023-2ej3w-cycles-depend-on-cycles/) A cycle can depend on cycles
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
 - [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human
+- [261114-zpgx9](../../changes/archive/261114-zpgx9-implement-ends-at-a-branch-ready-for-review/) Implement ends at a branch ready for review

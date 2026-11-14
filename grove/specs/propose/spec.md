@@ -152,8 +152,8 @@ make is recorded as an open question naming the task it blocks.
 - GIVEN the round lists where the check goes
 - WHEN the owner says to leave that one open
 - THEN the proposal lists it under open questions, naming the task it
-  decides, and `/grove-implement --unattended` leaves that task blocked
-  while `/grove-implement` asks
+  decides, and `/grove-implement` builds its best answer to it with a
+  `Check:` line, or blocks the task where a wrong answer would be costly
 
 #### Scenario: Nothing to assume
 
@@ -519,3 +519,4 @@ None.
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
 - [261114-40gd5](../../changes/archive/261114-40gd5-check-names-each-moved-file-once/) Check names each moved file once per change
 - [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human
+- [261114-zpgx9](../../changes/archive/261114-zpgx9-implement-ends-at-a-branch-ready-for-review/) Implement ends at a branch ready for review
