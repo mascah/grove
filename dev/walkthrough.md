@@ -92,7 +92,7 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
    the template of `implementation.md` but of no other document. The
    open question blocks no task, so the session asks nothing, works T-01
    with a test, editing no file but the two T-01 names without asking me,
-   stops nowhere, there being no checkpoint, and writes `implementation.md` with
+   stops nowhere, there being no choice left open, and writes `implementation.md` with
    T-01's status and evidence. Before finishing it runs the tests, rechecks
    T-01's evidence, and writes `## Scenarios` there, naming each scenario's
    test and "passed", or `unverified` and why; its report names each
@@ -197,8 +197,9 @@ It starts where the main line's step 6 ends: one archived change and the
 
    `grove instructions implement <budgets-id>` names T-01 and
    `ledger/report.py` as changed since base, and a fresh session's
-   `/grove-implement <budgets-id>`, reaching T-01, tells me what changed
-   and asks before building; I stop it there. Name the folder `ledger/`
+   `/grove-implement <budgets-id>`, reaching T-01, reads the diff, builds
+   on the file as it is now without asking, and writes a `Check:` line
+   under T-01 naming the change; discard what it built. Name the folder `ledger/`
    in place of `ledger/report.py`: `grove check` reports
    `ledger/report.py` the same way, and a second task naming
    `ledger/report.py` too leaves it one line naming the file once. Write `Files: ledger/report.py`
@@ -303,8 +304,8 @@ show-saved changes approved. Each step names the section of
    cycle, though it is not marked, and exits non-zero:
    > grove/cycles/\<0.4-cycle>.yaml: planned: \<budgets-id> changed on main since this plan; re-plan it with /grove-plan \<0.4-cycle-id>
 
-   `grove instructions implement <budgets-id>`, and the same with
-   `--unattended`, names the file against the plan, not `base`:
+   `grove instructions implement <budgets-id>` names the file against the
+   plan, not `base`:
    > \- Changed on main since cycle \<0.4-cycle-id>'s plan \<sha7>: T-01's `ledger/report.py`.
 
    `git switch -c replan-0.4`, a fresh session,
@@ -331,8 +332,8 @@ show-saved changes approved. Each step names the section of
    one commit, such as budgets' `base`, as
    > grove/changes/\<budgets>/.grove.yaml: base: \<sha> is not in this shallow clone; fetch its full history, such as with git fetch --unshallow
 
-   and `grove instructions implement <budgets-id>`, the same with
-   `--unattended`, `grove instructions implement <0.4-cycle-id>` and
+   and `grove instructions implement <budgets-id>`,
+   `grove instructions implement <0.4-cycle-id>` and
    `grove claim <0.4-cycle-id>` each print no instructions and exit
    non-zero with check's line for the cycle, `claim` recording nothing:
    > grove: grove/cycles/\<0.4-cycle>.yaml: planned: \<sha> is not in this shallow clone; fetch its full history, such as with git fetch --unshallow
@@ -368,10 +369,10 @@ show-saved changes approved. Each step names the section of
 
    Re-plan it as step 5 does.
 
-8. **Building a cycle unattended** (coordinating, "Building a cycle
-   unattended"; planning, "Re-plan a cycle"). First, one change at a
+8. **Building a cycle** (coordinating, "Building a cycle"; planning,
+   "Re-plan a cycle"). First, one change at a
    time: from main, `git switch -c build-delete`, a fresh session,
-   `/grove-implement <delete-id> --unattended` builds and archives delete
+   `/grove-implement <delete-id>` builds and archives delete
    alone. On the same branch, add a comment to `ledger/report.py`, which
    budgets' T-01 names, commit, and squash-merge the branch into main:
    `grove check` on main is clean, since that commit archives a change of
@@ -379,20 +380,17 @@ show-saved changes approved. Each step names the section of
    `build-delete`, and go on.
 
    From main, `git switch -c build-0.4`, a fresh session,
-   `/grove-implement <0.4-cycle-id> --unattended`. Its instructions list
+   `/grove-implement <0.4-cycle-id>`. Its instructions list
    delete, then budgets `after <delete-id>`, each to be built in a fresh
    context that neither archives nor commits, by
-   `grove instructions implement <change-id> --unattended`. The session starts one subagent on
+   `grove instructions implement <change-id>`. The session starts one subagent on
    delete, whose `## The cycle` lists both and marks delete `this change`;
    when it returns, the session archives and commits delete, and only then
    starts one on budgets, whose list marks delete
    `archived in this working tree`; it builds budgets and asks nothing. The session archives and commits budgets.
-   `grove instructions implement <0.4-cycle-id> --unattended` on the branch
+   `grove instructions implement <0.4-cycle-id>` on the branch
    then lists nothing to build. One merge;
-   `grove changes` lists neither. `/grove-implement <0.4-cycle-id>` on
-   another branch instead builds the two with me: each subagent still asks
-   no one, and the session puts each returned checkpoint to me and builds
-   that change again with my answer. `git branch -D delete-impl`.
+   `grove changes` lists neither. `git branch -D delete-impl`.
 
 ## Running unattended
 
@@ -430,9 +428,8 @@ hosts. The sessions are Claude Code's.
    grove/runs` prints nothing.
 
 3. **Composed with a harness** ("Claim a cycle"). In `~/tmp/ledger-run`,
-   on the attempt's branch, `timeout 2h claude -p "/grove-implement $K
-   --unattended"`. The session runs `grove instructions implement
-   <change-id> --unattended` once for each change, the unknown-ID one
+   on the attempt's branch, `timeout 2h claude -p "/grove-implement $K"`.
+   The session runs `grove instructions implement <change-id>` once for each change, the unknown-ID one
    first, builds and archives both, commits each task with its ID and
    pushes the branch; with no GitHub behind `origin`, `gh pr create`
    fails and the session says so.
@@ -494,8 +491,8 @@ hosts. The sessions are Claude Code's.
    `grove claim` says the project is paused. Archive the change on the
    attempt's branch as the session would, commit, and merge
    `grove/<attempt>` into `main`: `grove claim` says there is nothing to
-   claim, and `K=$(grove claim) && claude -p "/grove-implement $K
-   --unattended"` starts no session and exits 1.
+   claim, and `K=$(grove claim) && claude -p "/grove-implement $K"`
+   starts no session and exits 1.
 
 ## Watching the project
 
@@ -625,13 +622,13 @@ the browser's console shows no error.
   instructions propose` once for each and writes both on `delete`, the
   delete change naming the unknown-ID change in `depends_on`. `grove check`
   is clean.
-- **Delegated, with me and unattended** (§5; coordinating, "Building a
-  cycle unattended"). Approve a change whose T-01 names `ledger/records.py`
+- **Delegated, with me and headless** (§5; coordinating, "Building a
+  cycle"). Approve a change whose T-01 names `ledger/records.py`
   and `tests/test_cli.py` on its `Files:` line and `tests/test_records.py`
   on a `Delegated:` line right after it. `/grove-implement <change-id>`
   creates `tests/test_records.py` for `find`'s own tests without asking.
   On a fresh fixture with the same change in a cycle of one,
-  `K=$(grove claim <cycle-id>) && claude -p "/grove-implement $K --unattended"`
+  `K=$(grove claim <cycle-id>) && claude -p "/grove-implement $K"`
   creates `tests/test_records.py` the same way, and
   `implementation.md` has no `Also changed:` line for it.
 - **Planned against actual** (§6; reference, "Terminal commands"). Approve
@@ -644,8 +641,8 @@ the browser's console shows no error.
   `also changed <change-id>:T-01` with the reason, and the other two as `planned <change-id>:T-01`, and
   exits 0; after `grove archive <change-id>` and a commit, the same. On a
   branch from main holding no change, it lists no files against a plan.
-- **A file no task names, with me** (§5; coordinating, "Building a cycle
-  unattended"). Approve a change whose T-01 changes what `ledger delete`
+- **A file no task names, with me** (§5; coordinating, "Building a
+  cycle"). Approve a change whose T-01 changes what `ledger delete`
   prints and names only `ledger/cli.py` and `tests/test_cli.py`. On a
   branch, a fresh `claude`, `/grove-implement <change-id>`: building T-01,
   the session finds the README's usage example now false and, without
@@ -656,18 +653,15 @@ the browser's console shows no error.
   for a second task that exports records: the session runs
   `grove instructions propose <change-id>` and adds T-02 with its
   `Files:` lines that way.
-- **A checkpoint, then its answer** (§5; coordinating, "Building a cycle
-  unattended"). Approve a change whose T-01 adds budgets to `report` and
+- **A choice for the reviewer** (§5; coordinating, "Building a
+  cycle"). Approve a change whose T-01 adds budgets to `report` and
   asks that an overspent line "reads clearly", and whose T-02 adds
   `ledger list --json`, each with a test. On a branch, a fresh `claude`,
-  `/grove-implement <change-id> --unattended`: T-02 is `Status: done`,
-  T-01 is built and `Status: to check` with a `Check:` line saying what
-  to read and why, the change is not archived, and the report lists T-01's
-  checkpoint first. Commit. A fresh `claude` on the same branch,
-  `/grove-implement <change-id>`: the session puts T-01's checkpoint to
-  me before building anything; on "reads fine" it writes
-  `Answer: "reads fine"` under T-01, marks it `Status: done` and archives
-  the change.
+  `/grove-implement <change-id>`: the session runs `python3 -m ledger
+  report` and reads the line, asks nothing, T-01 and T-02 are
+  `Status: done`, T-01 with a `Check:` line saying how the line reads and
+  why, the change is archived, and the report lists T-01's `Check:` line
+  first.
 - **Revise a draft** (§3). `/grove-propose <change-id>` in a new conversation
   is given the paths of that change's files, none of their text, reads
   each one, and edits them.
@@ -684,28 +678,25 @@ the browser's console shows no error.
   asked whether it should exit 2 like other errors, defer it. The proposal
   names T-01 as blocked by that question. Merge it, plan it as a cycle of
   one with `/grove-plan <change-id>` and merge that, then, on another
-  branch, build it headless: `claude -p "/grove-implement <cycle-id> --unattended"`. It builds
-  nothing, `implementation.md` says `Status: blocked` under T-01 with the
-  question, and its last message names the question. `grove archive
-  <change-id>` refuses.
-- **Implement asks, and revises with the owner** (§5). Continuing, on
-  another branch, a fresh `claude`, `/grove-implement <change-id>`. Before
-  building T-01 the session asks whether a missing record should exit 2. I
-  answer yes; it says it would edit the change spec's requirement and its
-  scenario, and the open question in the proposal, to say exit 2, and
-  waits. I agree: it runs `grove instructions propose <change-id>`,
-  edits them as that says, runs `grove check` until
+  branch, build it headless: `claude -p "/grove-implement <cycle-id>"`.
+  It builds T-01 with its best answer and a `Check:` line naming it, asks
+  nothing, and archives the change; an exit status is not costly to
+  change.
+- **An answer revises the change** (§5). Continuing, on another branch
+  from main, a fresh `claude`, `/grove-implement <change-id>` with "a
+  missing record exits 2" beside it. The session runs
+  `grove instructions propose <change-id>`, edits the change spec's
+  requirement and scenario, and the open question in the proposal, to
+  say exit 2, asking no one, runs `grove check` until
   > No problems in grove/.
 
   builds T-01 to exit 2 with a test, and archives the change. Commit, then
-  `grove review` shows the edited change spec beside the code. Had I
-  declined, the change's files would stay as they are. Had I said to leave
-  it, T-01 would be `Status: blocked` with the question.
+  `grove review` shows the edited change spec beside the code.
 - **A line for next time** (§5; reference, "grove.yaml"). On a new branch,
   a fresh `claude`, `/grove-implement <change-id>`. While it builds, I
   correct it twice, each in a way that would apply to future work, such as
-  "Name each test after the requirement it checks". When it finishes, it
-  suggests one line for `grove.yaml`, not two, quoting a correction. I
+  "Name each test after the requirement it checks". When it finishes, its
+  report names one line for `grove.yaml`, not two, quoting a correction. I
   agree: `grove.yaml` on the branch holds it under `rules: skills:
   implement:`, no task's `Files:` line names `grove.yaml`, and `grove
   check` prints "No problems in grove/." Had I declined, `grove.yaml`
@@ -721,9 +712,7 @@ the browser's console shows no error.
   > Merging rename into main approves change \<change-id> with its code.
 
   Merge `rename` once: `grove changes` does not list the change, and
-  `grove specs` lists `record-editing`. Before that merge,
-  `grove instructions implement <change-id> --unattended` on `rename` said
-  > grove: main holds no approved change \<change-id>
+  `grove specs` lists `record-editing`.
 - **A title that drifted** (reference, "Files"). Change `title` in a
   change's `.grove.yaml` and run `grove check`:
   > grove/changes/<change-id>-<slug>/proposal.md:1: the first heading should be "# <new title>", the title in .grove.yaml
@@ -832,14 +821,14 @@ the browser's console shows no error.
   > grove/changes/\<delete-id>-\<slug>/.grove.yaml:\<line>: depends_on: \<other-id> waits on this change in turn, so neither can be applied
 
   `grove changes` still works. Discard the edits.
-- **A change left out of a cycle** (coordinating, "Building a cycle
-  unattended"). With an approved change whose `depends_on` names
-  `260101-zzzzz` in a cycle, `grove instructions implement <cycle-id>
-  --unattended` ends its list with
+- **A change left out of a cycle** (coordinating, "Building a cycle").
+  With an approved change whose `depends_on` names
+  `260101-zzzzz` in a cycle, `grove instructions implement <cycle-id>`
+  ends its list with
   > Leave out \<id>, "\<title>": it waits on 260101-zzzzz, which is neither being built nor archived as finished. Grove's `check` says why.
-- **Implement a cycle unattended, headless** (coordinating, "Building a
-  cycle unattended"). From main with a cycle of two changes planned,
-  `claude -p "/grove-implement <cycle-id> --unattended"` with
+- **Implement a cycle headless** (coordinating, "Building a cycle").
+  From main with a cycle of two changes planned,
+  `claude -p "/grove-implement <cycle-id>"` with
   `implement: [Commit after each task, naming its task ID.]` under
   `rules: skills:` in `grove.yaml`. It creates a branch, builds and
   archives both, commits, asks nothing, and its last message says which
@@ -847,15 +836,16 @@ the browser's console shows no error.
   `context` or `rules` is in that message.
 - **Commit as you go** (reference, `rules`). With
   `implement: [Commit after each task, naming its task ID.]` under
-  `rules: skills:` in `grove.yaml`, `/grove-implement <cycle-id>
-  --unattended` commits T-01 with its ID in the message, and so does
-  `/grove-implement <change-id>` with me.
-- **One change, unattended** (coordinating, "Building a cycle
-  unattended"). Approve a change in no cycle whose proposal has an open
-  question naming T-02, and from main, `claude -p "/grove-implement
-  <change-id> --unattended"`. It creates a branch, builds T-01, marks T-02
-  `Status: blocked` with the question, asks nothing, leaves the proposal,
-  specs and tasks as they were, and does not archive.
+  `rules: skills:` in `grove.yaml`, `/grove-implement <cycle-id>`
+  commits T-01 with its ID in the message, and so does
+  `/grove-implement <change-id>`.
+- **A costly question, headless** (coordinating, "Building a cycle").
+  Approve a change in no cycle whose proposal has an open question naming
+  T-02, deciding the format of `records.json`, and from main,
+  `claude -p "/grove-implement <change-id>"`. It creates a branch, builds
+  T-01, marks T-02 `Status: blocked` with the question on a `Check:` line,
+  asks nothing, does not archive, and its last message names the question
+  first.
 - **Upgrading from apply** (reference, "grove.yaml", "Harnesses"). In a
   project set up by a Grove that still had apply, whose `grove.yaml` keeps
   its rules under `rules.skills.apply`, `grove check` reports
@@ -970,10 +960,8 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
   `implementation.md` is, and neither checks that the change is approved.
 - Every skill commits only when the owner or its `rules` ask; otherwise
   the owner commits after archiving (getting started §6).
-- A blocked task's question is answered by revising the change with
-  propose and merging it, not by the owner telling the unattended session.
-- Implementing unattended leaves files no task names, such as the README or a changelog,
-  as they are; propose makes such updates tasks when the owner wants them.
+- A blocked task's question is answered in the words that start a later
+  session on the branch, or by an `Answer:` line under it.
 - `changes` lists approved changes that are not archived; drafts on the
   current branch are shown by `review`, not by `changes`.
 - IDs use the UTC date.
@@ -1009,8 +997,7 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
   that the working tree has not archived: each after its dependencies,
   otherwise by `created`. It prints the list, the loop and the cycle file;
   each change's own instructions come from `instructions implement
-  <change-id>`, with `--unattended` when the cycle's had it, run by the
-  session, with the cycle's members in build order and that change's place
+  <change-id>`, run by the session, with the cycle's members in build order and that change's place
   among them. A member of a cycle the target holds that is not done gets
   that list whichever way it is run.
 - Implement ends by running the archive instructions; `/grove-archive` stays

@@ -322,7 +322,7 @@ func TestPropose(t *testing.T) {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
 	for _, s := range []string{"say so and ask\n  whether to split it", "`depends_on`", "Order it by consequence: first what changes behavior, scope\n  or compatibility or loses data", "as\n  recommended defaults on one line, not a list, that a single \"yes\"\n  accepts",
-		"Write a task's `Delegated:` line", "only where the\n  owner agreed to it in the round", "A task may have a `Delegated:` line, right after `Files:`", "Implementing honors it,\n  with the owner and unattended.", "Delegated: test layout and private helpers"} {
+		"Write a task's `Delegated:` line", "only where the\n  owner agreed to it in the round", "A task may have a `Delegated:` line, right after `Files:`", "Implementing honors it.", "Delegated: test layout and private helpers"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("propose instructions lack %q", s)
 		}
@@ -454,14 +454,14 @@ func TestImplementInstructions(t *testing.T) {
 	cid, _ := propose(t, dir, "older-edits", "Allow editing older records", "")
 	commitAll(t, dir, "Propose")
 
-	// A draft: built with the owner on its branch, refused unattended or
-	// while it waits.
+	// A draft: built on its branch, refused while it waits; the flag is gone.
 	var stdout, stderr strings.Builder
-	if code := run([]string{"instructions", "implement", cid, "--unattended"}, &stdout, &stderr); code != 1 || stderr.String() != "grove: main holds no approved change "+cid+"\n" {
-		t.Errorf("unattended before the merge: status %d, %q", code, stderr.String())
+	if code := run([]string{"instructions", "implement", cid, "--unattended"}, &stdout, &stderr); code != 2 || !strings.HasPrefix(stderr.String(), "usage: grove") {
+		t.Errorf("--unattended: status %d, %q", code, stderr.String())
 	}
+	stderr.Reset()
 	draft := grove(t, "instructions", "implement", cid)
-	for _, s := range []string{"You are implementing drafted change " + cid + ", \"Allow editing older records\", as this working tree holds it, with the owner", "Merging this branch into the\n  target approves it with its code, so edit its proposal, change specs and\n  tasks only with the owner's agreement", "\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`\n"} {
+	for _, s := range []string{"You are implementing drafted change " + cid + ", \"Allow editing older records\", as this working tree holds it.", "Merging this branch approves a draft, or a revision\n  made on it, with its code.", "\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`\n"} {
 		if !strings.Contains(draft, s) {
 			t.Errorf("draft instructions lack %q:\n%.3000s", s, draft)
 		}
@@ -481,16 +481,14 @@ func TestImplementInstructions(t *testing.T) {
 		t.Errorf("instructions apply: status %d, %q", code, stderr.String())
 	}
 
-	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario. When every task is done", "Commit only when the owner or the project's\nrules ask.",
+	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario, then what was done", "Commit only when the owner or the project's\nrules ask.",
 		"The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n"}
-	// Both modes edit a file a task needs or makes false, and say why.
-	shared = append(shared, "changed to be built as the change says, or makes", "`` Also changed: `<path>` — <why> `` under that task")
-	// Both modes build every task but a checkpoint's dependents, and take answers.
-	shared = append(shared, "A checkpoint is a task whose acceptance no check you can run shows", "and mark it `Status: to check`", "build nothing of it and mark it `Status: blocked`", "on a checkpoint unbuilt, naming the checkpoint under it", "`Answer: \"<their words>\"`", "Finish: report the checkpoints first")
-	gone := []string{"with their agreement edit it", "stays as it is", "ignore\n  `Delegated:` lines", "write no\n  `Also changed:` line", "tell the owner how to try it", "an open question in the change decides"}
-	owner := []string{"stop it at once, ask the owner and wait", "without asking and without blocking the task", "by running Grove's\n  `instructions propose <change-id>` and following it, never editing a\n  `Files:` line or `.grove.yaml` by hand", "brought the file, recommend propose, which\n  re-bases the change", "Do not stop between tasks.", "stop once: put each checkpoint to the owner",
-		"Make the choices and change the paths a task's `Delegated:` line names\n  without asking the owner", "stop that task and build nothing more of it", "in `grove.yaml`, from one correction, quoting\n  it"}
-	alone := []string{"ask no one and wait for no one's answer", "checkpoint for a later session and finish", "naming the revision the change needs", "Make the choices and change the paths a task's `Delegated:` line names.\n", "mark that task `Status: blocked`, naming the file", "marked `unattended`: only\n  `grove claim` reads it", "Do not add it to `grove.yaml`."}
+	// One set of instructions: ask no one, record each choice, build on a
+	// moved file, revise the change on the branch, block only what is costly.
+	want := []string{"Ask no one and wait for no one: end with the branch ready for\n  review", "changed to be built as the change says, or makes", "`` Also changed: `<path>` — <why> `` under that task",
+		"run the project's app or\n  command and look", "build your best choice, mark the task\n  done once its evidence holds, and write under it `Check:`", "build on the file as it is now, never as it\n  was",
+		"revise it on this\n  branch by running Grove's `instructions propose <change-id>`", "Only where a wrong choice would cost data", "`Answer: \"<their words>\"`", "Finish: report for the reviewer first every `Check:` line"}
+	gone := []string{"to check", "checkpoint", "with the owner, in their own working tree", "--unattended", "stop it at once", "Do not stop between tasks", "only with the owner's agreement", "ask the owner and wait"}
 	has := func(what, out string, want, not []string) {
 		t.Helper()
 		for _, s := range want {
@@ -506,33 +504,29 @@ func TestImplementInstructions(t *testing.T) {
 	}
 	out := grove(t, "instructions", "implement", cid)
 	listed := "\n- `grove/changes/" + cid + "-allow-editing-older-records/specs/record-editing/spec.md`\n"
-	has("implement instructions", out, append(append([]string{"You are implementing approved change " + cid + ", \"Allow editing older records\", as main@", "with the owner, in their own working tree.", "### implementation: ", listed}, shared...), owner...),
-		append(append(alone, gone...), "### Requirement: Edit older records", ": differs from main", "### proposal: ", "### change-spec: ", "### tasks: ", "/.grove.yaml\">"))
+	has("implement instructions", out, slices.Concat([]string{"You are implementing approved change " + cid + ", \"Allow editing older records\", as main@", "holds it, in this working tree.", "### implementation: ", listed, "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n"}, shared, want),
+		append(gone, "### Requirement: Edit older records", ": differs from main", "### proposal: ", "### change-spec: ", "### tasks: ", "/.grove.yaml\">", "grove run"))
 	// A document edited on the branch is named, with the approved text.
 	tasks := filepath.Join(dir, "grove/changes", cid+"-allow-editing-older-records/tasks.md")
 	os.WriteFile(tasks, []byte(read(t, tasks)+"\nResult: edited.\n"), 0o644)
 	main := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
-	has("implement after an edit", grove(t, "instructions", "implement", cid, "--unattended"), []string{"\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`: differs from main; `git show " + main + ":grove/changes/" + cid + "-allow-editing-older-records/tasks.md` prints the approved text\n", listed}, nil)
+	has("implement after an edit", grove(t, "instructions", "implement", cid), []string{"\n- `grove/changes/" + cid + "-allow-editing-older-records/tasks.md`: differs from main; `git show " + main + ":grove/changes/" + cid + "-allow-editing-older-records/tasks.md` prints the approved text\n", listed, "target was revised on this branch: build the revision."}, nil)
 	git(t, dir, "checkout", "-q", "--", ".")
-	out = grove(t, "instructions", "implement", cid, "--unattended")
-	has("unattended instructions", out, append(append([]string{"asking no one, in your own working tree.", "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n"}, shared...), alone...), slices.Concat(owner, gone, []string{"grove run"}))
 
 	// A member of a cycle, not marked, gets its plan.
 	planCycle(t, dir, k, "2026-10-22T09:00:00Z", false, cid)
 	cycle := read(t, filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"))
-	for _, args := range [][]string{{cid}, {cid, "--unattended"}} {
+	for _, args := range [][]string{{cid}} {
 		out := grove(t, append([]string{"instructions", "implement"}, args...)...)
 		has(strings.Join(args, " "), out, []string{", change 1 of 1 in cycle " + k + ".", "## The cycle\n\nCycle " + k + ", \"Cycle " + k + "\", in build order:\n\n1. " + cid + " \"Allow editing older records\" — this change\n", "<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n" + cycle}, nil)
 	}
-	// Both modes build each member in a fresh context, unattended, and only
-	// the session archives and commits.
-	contexts := []string{"in a fresh context of your own, such as a\n  subagent", "`instructions implement <change-id> --unattended` and follow what it\n  prints, but neither archive nor commit",
-		"Start at once every change whose `after` changes are\n  archived and whose tasks' `Files:`", "Only you archive and commit, one returned change at a time", "run the\n  project's tests once both have returned",
-		"build the other again on its own", "put the checkpoints each returned change holds to the\n  owner at once", "Unattended, leave checkpoints\n  for your report", "Where you cannot start a fresh context, build each change yourself"}
+	// Each member is built in a fresh context, and only the session
+	// archives and commits.
+	contexts := []string{"in a fresh context of your own, such as a\n  subagent", "`instructions implement <change-id>`\n  and follow what it prints, but neither archive nor commit",
+		"Start at once\n  every change whose `after` changes are archived and whose tasks'\n  `Files:`", "Only you archive and commit, one returned change at a time", "run the\n  project's tests once both have returned",
+		"build the other again on its own", "Where you cannot start a fresh context, build each change yourself", "Ask no one and wait for no one.", "Finish: report for the reviewer first every change's `Check:` lines"}
 	out = grove(t, "instructions", "implement", k)
-	has("cycle instructions", out, append([]string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "with the owner", "run Grove's `instructions implement <change-id>` for each", "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n", shared[3], "Finish: report the checkpoints of every change first"}, contexts...), alone)
-	out = grove(t, "instructions", "implement", k, "--unattended")
-	has("unattended cycle instructions", out, append(append([]string{"asking no one", "run Grove's `instructions implement <change-id> --unattended` for each", "\n1. " + cid + " \"Allow editing older records\"\n", shared[3], "Finish: report the checkpoints of every change first"}, contexts...), alone...), owner)
+	has("cycle instructions", out, append([]string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "holds it, in this working tree.", "run Grove's `instructions implement <change-id>` for each", "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n", shared[3]}, contexts...), gone)
 }
 
 func TestDropChange(t *testing.T) {
@@ -850,20 +844,20 @@ func TestCoordinating(t *testing.T) {
 		t.Errorf("explore's index does not say what delete waits on:\n%s", out)
 	}
 
-	// Implement refuses an unmet dependency, with the owner or not.
+	// Implement refuses an unmet dependency.
 	k := "261022-k0000"
 	planCycle(t, dir, k, "2026-10-22T09:00:00Z", false, del, unknown)
 	var stdout, stderr strings.Builder
-	for _, args := range [][]string{{"implement", del, "--unattended"}, {"implement", del}} {
+	for _, args := range [][]string{{"implement", del}} {
 		stderr.Reset()
 		if code := run(append([]string{"instructions"}, args...), &stdout, &stderr); code != 1 || stderr.String() != "grove: "+del+" waits on "+unknown+", which this working tree has not archived as finished\n" {
 			t.Errorf("%v before its dependency is archived: status %d, %q", args, code, stderr.String())
 		}
 	}
 
-	// Implementing a cycle unattended lists its changes in dependency order,
+	// Implementing a cycle lists its changes in dependency order,
 	// each after the members it depends on.
-	out = grove(t, "instructions", "implement", k, "--unattended")
+	out = grove(t, "instructions", "implement", k)
 	for _, s := range []string{"## What Grove requires of implement\n\n- Work in this working tree on a branch other than the target",
 		"## How to implement\n\nThe changes in build order", "\n1. " + unknown + " \"Editing an unknown ID prints an error\"\n2. " + del + " \"Add ledger delete ID\" after " + unknown + "\n"} {
 		if !strings.Contains(out, s) {
@@ -876,11 +870,11 @@ func TestCoordinating(t *testing.T) {
 	os.WriteFile(filepath.Join(unknownDir, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
 	maintain(t, dir, keep+olderEdits)
 	grove(t, "archive", unknown)
-	if out := grove(t, "instructions", "implement", del, "--unattended"); !strings.Contains(out, "You are implementing approved change "+del) || !strings.Contains(out, ", change 2 of 2 in cycle "+k+".") ||
+	if out := grove(t, "instructions", "implement", del); !strings.Contains(out, "You are implementing approved change "+del) || !strings.Contains(out, ", change 2 of 2 in cycle "+k+".") ||
 		!strings.Contains(out, "1. "+unknown+" \"Editing an unknown ID prints an error\" — archived in this working tree\n2. "+del+" \"Add ledger delete ID\" — this change\n") {
 		t.Errorf("implement after its dependency is archived on the branch:\n%s", out)
 	}
-	if out := grove(t, "instructions", "implement", k, "--unattended"); !strings.Contains(out, "\n1. "+del+" \"Add ledger delete ID\"\n\n## Project index") || !strings.Contains(out, "hands one to `grove claim`") || strings.Contains(out, "grove run") {
+	if out := grove(t, "instructions", "implement", k); !strings.Contains(out, "\n1. "+del+" \"Add ledger delete ID\"\n\n## Project index") || !strings.Contains(out, "hands one to `grove claim`") || strings.Contains(out, "grove run") {
 		t.Errorf("cycle after archiving on the branch:\n%s", out)
 	}
 	git(t, dir, "checkout", "-q", "--", ".")
@@ -890,7 +884,7 @@ func TestCoordinating(t *testing.T) {
 	if out := finish(t, dir, "unknown-id-impl", unknown, unknownDir, keep+olderEdits); out != "No problems in grove/.\n" {
 		t.Errorf("check on unknown-id-impl printed %q", out)
 	}
-	grove(t, "instructions", "implement", del, "--unattended")
+	grove(t, "instructions", "implement", del)
 
 	// check reports broken dependencies (Other paths).
 	budgets, _ := propose(t, dir, "budgets", "Monthly budgets in report", "depends_on: ["+del+"]\n")
@@ -993,7 +987,7 @@ func TestCoordinating(t *testing.T) {
 	// neither being built nor finished.
 	imports, _ := approve(t, dir, "imports", "Import a CSV", "depends_on: [260101-zzzzz]\n")
 	planCycle(t, dir, "261022-m0000", "2026-10-22T10:00:00Z", false, imports, budgets, show)
-	if out := grove(t, "instructions", "implement", "261022-m0000", "--unattended"); !strings.Contains(out, "\nLeave out "+imports+", \"Import a CSV\": it waits on 260101-zzzzz, which is neither being built nor archived as finished.") || !strings.Contains(out, " "+budgets+" ") || !strings.Contains(out, " "+show+" ") {
+	if out := grove(t, "instructions", "implement", "261022-m0000"); !strings.Contains(out, "\nLeave out "+imports+", \"Import a CSV\": it waits on 260101-zzzzz, which is neither being built nor archived as finished.") || !strings.Contains(out, " "+budgets+" ") || !strings.Contains(out, " "+show+" ") {
 		t.Errorf("cycle with a change that cannot be built:\n%s", out)
 	}
 }
@@ -1433,7 +1427,7 @@ func TestMovedFiles(t *testing.T) {
 	rel := "grove/changes/" + filepath.Base(folder) + "/tasks.md"
 	moved := "; revise the change with propose, which also re-bases it after a dependency lands\n"
 	checks(rel + ": ledger/report.py and tests/test_cli.py changed on main since base " + base[:7] + moved)
-	for _, args := range [][]string{{cid}, {cid, "--unattended"}} {
+	for _, args := range [][]string{{cid}} {
 		if out := grove(t, append([]string{"instructions", "implement"}, args...)...); !strings.Contains(out, "\n- Changed on main since base "+base[:7]+": T-01's `ledger/report.py`, T-01's `tests/test_cli.py`.\n") {
 			t.Errorf("implement %v does not name the moved file:\n%.3000s", args, out)
 		}
@@ -1447,7 +1441,7 @@ func TestMovedFiles(t *testing.T) {
 	edit("ledger/cli.py", "Yet another change")
 	stale, cycle := "grove/cycles/"+k+"-cycle.yaml: planned: "+cid+" changed on main since this plan", filepath.Join(dir, "grove/cycles", k+"-cycle.yaml")
 	checks(stale + "; re-plan it with /grove-plan " + k + "\n")
-	for _, args := range [][]string{{cid}, {cid, "--unattended"}} {
+	for _, args := range [][]string{{cid}} {
 		if out := grove(t, append([]string{"instructions", "implement"}, args...)...); !strings.Contains(out, "\n- Changed on main since cycle "+k+"'s plan "+plan[:7]+": T-01's `ledger/cli.py`.\n") || strings.Contains(out, "since base") {
 			t.Errorf("implement %v does not name the file moved since the plan, alone:\n%.3000s", args, out)
 		}
@@ -1644,7 +1638,7 @@ func TestShallowClone(t *testing.T) {
 	plan := "grove/cycles/261105-pr0t0-cycle.yaml: planned: " + planned + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow"
 	refuses(bDir[len(dir)+1:]+"/.grove.yaml: base: "+base+" is not in this shallow clone; fetch its full history, such as with git fetch --unshallow", "instructions", "implement", b)
 	refuses(plan, "instructions", "implement", a)
-	refuses(plan, "instructions", "implement", a, "--unattended")
+	refuses(plan, "instructions", "implement", a)
 	refuses(plan, "instructions", "implement", "261105-pr0t0")
 	refuses(plan, "claim", "261105-pr0t0")
 	refuses("nothing to claim on main at "+strings.TrimSpace(git(t, clone, "rev-parse", "--short=7", "HEAD")), "claim")

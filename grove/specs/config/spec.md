@@ -22,11 +22,11 @@ Where `grove.yaml` on the target holds a non-empty `context`, the system
 shall print it, under a "Project context" heading before what Grove
 requires of the skill, in the instructions of every skill.
 
-#### Scenario: Building unattended
+#### Scenario: Building a claimed cycle
 
 - GIVEN the target's `grove.yaml` holds `context: Run python3 -m unittest
   before saying a task is done.`
-- WHEN `grove instructions implement <change-id> --unattended` runs, as
+- WHEN `grove instructions implement <change-id>` runs, as
   the session started on a claimed cycle does for each of its members
 - THEN its output has a "Project context" section with that line, before
   "What Grove requires of implement"
@@ -100,3 +100,4 @@ None.
 - [261023-g0a3h](../../changes/archive/261023-g0a3h-implement-builds-unattended/) Implement builds unattended, and apply goes
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
 - [261109-0arqh](../../changes/archive/261109-0arqh-target-as-origin-holds-it/) The target is what this checkout and origin both hold
+- [261114-zpgx9](../../changes/archive/261114-zpgx9-implement-ends-at-a-branch-ready-for-review/) Implement ends at a branch ready for review

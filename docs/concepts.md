@@ -49,11 +49,10 @@ with no local `main`, such as a pull-request job's, origin's counts; in a
 repository with no `origin`, your main branch does.
 
 A small change can take one merge instead of two. Propose it on a branch,
-then build it there with `/grove-implement <change-id>`, with you in the
-session. Merging that branch approves the change with its code. The same
-merge lands the updated specs and the archived change. Grove sets no size; you
-decide what is small. `--unattended` and `grove claim` take only changes
-your main branch already holds.
+then build it there with `/grove-implement <change-id>`. Merging that
+branch approves the change with its code. The same merge lands the updated
+specs and the archived change. Grove sets no size; you decide what is
+small. `grove claim` takes only cycles your main branch already holds.
 
 Your team already reviews and merges work into the main branch, and Git
 already records who merged what and when. Making the merge the approval
@@ -91,19 +90,17 @@ flowchart LR
    you leave open becomes an open question, never an assumption.
 4. **Review and merge.** You read the change and merge it. Now it is
    approved. A small change can skip this merge: implement it on the same
-   branch with you. Then the one merge after step 6 approves it with its
-   code.
-5. **Implement.** The agent builds the change on a branch with you and
-   records progress. A task only you can judge, or one resting on
-   something the change leaves open, is a checkpoint: the agent builds
-   its guess, or nothing where a wrong guess is costly, and says what to
-   try and why. It builds the rest, then stops once with the checkpoints.
-   With your agreement, it revises the change on that branch, and your
-   merge approves the revision with the code. With `--unattended`, it
-   builds a change, or a cycle of changes in order, without you. Then it
-   asks no one: it leaves the checkpoints in `implementation.md` and
-   finishes, and the change itself is never edited. A later session on
-   the branch, with you or unattended, takes your answers. A cycle is approved changes planned together (see
+   branch. Then the one merge after step 6 approves it with its code.
+5. **Implement.** The agent builds the change, or a cycle of changes in
+   order, on a branch and records progress. It asks no one and waits for
+   no one, and ends with the branch ready for review. Where the change
+   leaves a choice open, or acceptance seems to need a person, it runs the
+   app or command and looks, builds its best choice, and writes a `Check:`
+   line for you under the task. Where the change must change, it revises
+   it on the branch, and your merge approves the revision with the code.
+   Only a choice whose wrong answer would be costly is left blocked, and
+   the rest is still built. A later session on the branch takes your
+   answers. A cycle is approved changes planned together (see
    [Planning cycles](planning.md)).
 6. **Archive.** When every task is done, the agent folds the change's specs
    into the maintained specs and moves the change to
@@ -209,20 +206,19 @@ holds.
   branch and record, a commit on the branch `grove/runs`.
 - **Base:** the commit of the target a change was proposed from, written in
   its `.grove.yaml`.
-- **Blocked:** a task the agent did not build: a checkpoint where a wrong
-  guess would be costly, or a task the change cannot be built as it says.
-  Its `implementation.md` says `Status: blocked` and why.
+- **Blocked:** a task the agent did not build because a wrong choice would
+  cost data, break an interface other tasks build on, or be hard to undo.
+  Its `implementation.md` says `Status: blocked`, with the question on a
+  `Check:` line and, once answered, an `Answer:` line quoting you.
 - **Build order:** the order a cycle's changes are built in: each after the
   changes it waits on, otherwise oldest first.
 - **Capability:** one area of behavior, with one maintained spec.
 - **Change:** a folder proposing future work.
 - **Change schema:** what a kind of change consists of and how each skill
   goes for it; Grove's are `default` and `bugfix`.
-- **Checkpoint:** a task whose acceptance only a person can judge, or that
-  rests on a choice the change leaves open. Its `implementation.md` says
-  `Status: to check` for a guess built, or `Status: blocked`, with a
-  `Check:` line saying what to try or decide and why, and, once answered,
-  an `Answer:` line quoting you. `to check` is not done.
+- **Check line:** a `Check:` line under a task in `implementation.md`: a
+  choice the agent made where the change left one open, what it could not
+  see, or a blocked task's question. The agent's report lists them first.
 - **Context:** instructions in `grove.yaml` given to every skill, so they
   reach agents working through Grove and no other session.
 - **Cycle:** approved changes planned to be built together, in a file under
@@ -248,8 +244,8 @@ holds.
   target since it was planned.
 - **Target:** the branch whose contents count as agreed, usually `main`,
   read at the newest commit your main branch and origin's both hold.
-- **Unattended:** built with no one in the session, asking no one. A cycle
-  marked `unattended: true` is handed to a `grove claim` given no cycle.
+- **Unattended:** a cycle marked `unattended: true`, handed to a
+  `grove claim` given no cycle.
 - **Waits on:** a change waits on each change its `depends_on` names until
   that one is archived as finished; a cycle waits on each cycle its
   `depends_on` names until that one is done.

@@ -13,6 +13,6 @@ consequential decisions and the open questions.
   lists no assumptions.
 - Open questions: say which must be answered before review and which can
   wait. Name the task a question blocks when it decides how that task is
-  built: `/grove-implement --unattended` leaves that task blocked until the
-  proposal answers it, while `/grove-implement` asks the owner.
+  built: `/grove-implement` builds its best answer and records it for the
+  reviewer, or blocks the task where a wrong answer would be costly.
 - Related documents: link each change spec and the tasks.
