@@ -1,0 +1,5 @@
+title: "Implement ends at a branch ready for review"
+created: 2026-11-14T18:59:42Z
+description: Implement asks no one and waits for no one; it records each choice for the reviewer, builds on drift, revises the change on its branch, and --unattended goes.
+schema: default
+base: 999ab56ece34f898e343d649ac368d3bac030443
