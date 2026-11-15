@@ -47,8 +47,43 @@ Check: walkthrough step 8 runs in `~/tmp/ledger-run2`, the operator's clone that
 
 ### T-03 — A skill trial for a draft nobody attends
 
-Status: not started
+Status: in progress
+
+`dev/trials/f.sh` and case (f) in `dev/trials.md` add the sixth case;
+`dev/trials/run.sh` runs it by default. It sets `turns=0`, so no reply
+reaches the session, and its `good` asks the waiting check once of the last
+message. One run per harness, one judging (`RUNS=1 JUDGINGS=1 just trials
+f`): Codex passed; Claude Code failed two checks, its open question on the
+schema naming "the whole change" rather than a task, and its question on
+dependencies giving no recommended answer. Both judged counts were zero
+but words read (Claude Code 571 in an earlier run, Codex 96).
+
+Check: the full `just trials` table, which the acceptance puts in the pull request, was not run: the owner stopped it, saying "I dom't want to burn all my usage on these trials right now". The task stays in progress until it runs.
+Check: case (f) makes no reply even when the waiting check says the agent waits. A first run let the runner answer "Yes, go with what you recommend.", and the agent turned its open questions into decisions; no one is in an unattended session to answer.
+Check: both agents marked every open question "must be answered before review", taking the line meant for what the check of the change would ask as meant for all of them. The instruction text has 8 words of budget left in this change; rewording is left to review.
+Also changed: `CLAUDE.md` — its layout table said the trials have five cases.
 
 ## Scenarios
+
+- propose "A request from a tracker issue": `dev/trials/f.sh` case (f), one run per harness: both asked nothing, wrote one change on `unknown-id` that `grove check` passes, and named files, task IDs and open questions; Codex passed `good`, Claude Code failed two open-question checks (see T-03)
+- propose "The flag inside the quotes": `internal/cli/walkthrough_test.go` TestPropose, passed
+- propose "A schema the caller names": `internal/cli/walkthrough_test.go` TestPropose, passed
+- propose "Without the flag": `internal/cli/walkthrough_test.go` TestPropose, passed; the output is also byte for byte main@df86b0b's, compared by hand
+- propose "The request settles one decision": case (f), one run per harness: both Decisions quote the request for the exit status and an open question asks where the check goes; Claude Code recommended `find` raising `ValueError`, Codex recommended the check in `ledger/cli.py`, so the scenario's recommendation held in one of two runs
+- propose "The request settles nothing more": unverified; no run used "Add ledger delete ID" unattended, and TestPropose checks only that the instructions say so
+- propose "A request to look into something": a headless Claude Code run of `/grove-propose --unattended Look into the report command` on the fixture wrote no change folder and said the request names no outcome and what would; passed, and no test covers it
+- propose "Two parts": unverified; not run, and TestPropose checks only the instruction text
+- propose "An open change touches the same code": unverified; not run, and TestPropose checks only the instruction text
+- propose "A change's ID": `internal/cli/walkthrough_test.go` TestPropose, passed
+- propose "No request": `internal/cli/walkthrough_test.go` TestPropose, passed
+- propose "A requirement no task covers": `internal/cli/walkthrough_test.go` TestPropose checks the instruction text, passed; the agent's behavior is unchanged by this change and not run
+- propose "Scope and a task disagree": `internal/cli/walkthrough_test.go` TestPropose checks the instruction text, passed; not run
+- propose "Scope and a task disagree with no one to ask": TestPropose checks the instruction text, passed; the agent's behavior is unverified, since no run had such a contradiction
+- propose "A new change on its branch": `internal/cli/walkthrough_test.go` TestPropose, passed
+- propose "Revising an approved change": `internal/cli/walkthrough_test.go` TestPropose, passed
+- propose "A draft nobody attended": TestPropose checks no `/grove-implement` offer, passed; in case (f) Claude Code's last message said merging approves the change and named no `/grove-implement`
+- schemas "Proposing a bug fix": `internal/cli/walkthrough_test.go` TestSchemas, passed
+- schemas "Exploring a bug": `internal/cli/walkthrough_test.go` TestSchemas, passed
+- schemas "A bug reported with no one in the session": unverified as written, since no run used "Editing a missing record crashes"; in case (f), whose request describes wrong behavior too, both runs kept `schema: default` and asked about `bugfix` as an open question
 
 ## Reconciliation
