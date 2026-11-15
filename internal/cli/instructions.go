@@ -46,7 +46,11 @@ func instructionsPrototype(stdout io.Writer, question string) error {
 // change schema schema, or grove.yaml's when it is empty, when arg is empty
 // or a description, or for revising the drafted change whose ID arg is,
 // with the cycle not done in this working tree that lists it, to re-plan.
-func instructionsPropose(stdout io.Writer, schema, arg string) error {
+// Unattended, arg must be a description: the request.
+func instructionsPropose(stdout io.Writer, schema, arg string, unattended bool) error {
+	if unattended && (arg == "" || doc.ValidID(arg)) {
+		return errors.New("an unattended propose writes a new change from a request")
+	}
 	p, err := openProject()
 	if err != nil {
 		return err
@@ -57,7 +61,7 @@ func instructionsPropose(stdout io.Writer, schema, arg string) error {
 	}
 	if !doc.ValidID(arg) {
 		now := time.Now()
-		return show(stdout)(instruct.Propose(ip, cmp.Or(schema, p.Schema), doc.NewID(now), now.UTC().Format(time.RFC3339), arg))
+		return show(stdout)(instruct.Propose(ip, cmp.Or(schema, p.Schema), doc.NewID(now), now.UTC().Format(time.RFC3339), arg, unattended))
 	}
 	if schema != "" {
 		return errors.New("a change keeps its schema; to change it, edit schema in the change's .grove.yaml")

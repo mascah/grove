@@ -331,6 +331,31 @@ func TestPropose(t *testing.T) {
 		!strings.Contains(out, "For a change it lists as approved, the next\n  step is merging the revision") {
 		t.Errorf("propose's finish does not offer one merge or two:\n%.3000s", out)
 	}
+	// With no one in the session, as its own argument or as a skill passes it.
+	id := regexp.MustCompile(`[0-9]{6}-[0-9a-z]{5}`)
+	alone := grove(t, "instructions", "propose", "--unattended", "x")
+	if quoted := grove(t, "instructions", "propose", "--unattended x"); id.ReplaceAllString(quoted, "") != id.ReplaceAllString(alone, "") || !strings.Contains(alone, "## Owner's description\n\nx\n") {
+		t.Errorf("the flag inside the quotes prints other instructions:\n%s", quoted)
+	}
+	for _, s := range []string{"from the request below, with no one in the session", "Ask and wait for no one. Work on a branch other than the target.", "write no document; say that it names none",
+		"Write one change, in the schema these instructions follow, with no\n  `depends_on` the request does not name", "an\n  open change that may need to land first", "`bugfix` for wrong behavior, is an open question where there is one", "only such a question says it must be answered before review",
+		"Decisions quote only what the request says", "Write each decision of the round as an open question", "What the check of the change would ask is an open question too", "Offer\n  no `/grove-implement` on this branch"} {
+		if !strings.Contains(alone, s) {
+			t.Errorf("unattended propose instructions lack %q", s)
+		}
+	}
+	if bug := grove(t, "instructions", "propose", "--unattended", "--schema", "bugfix", "x"); !strings.Contains(bug, "**Propose a bug fix") || !strings.Contains(bug, "Ask and wait for no one.") {
+		t.Errorf("unattended bugfix propose:\n%.3000s", bug)
+	}
+	if strings.Contains(out, "Ask and wait for no one.") {
+		t.Error("propose without the flag asks no one")
+	}
+	for _, args := range [][]string{{"--unattended"}, {"--unattended", cid}, {"--unattended " + cid}} {
+		var stdout, stderr strings.Builder
+		if code := run(append([]string{"instructions", "propose"}, args...), &stdout, &stderr); code != 1 || stdout.Len() > 0 || stderr.String() != "grove: an unattended propose writes a new change from a request\n" {
+			t.Errorf("unattended propose %q: status %d, %q", args, code, stderr.String())
+		}
+	}
 	// A title holding ": ", filled into the printed template, is valid YAML.
 	m := regexp.MustCompile("(?s)`grove/changes/([0-9]{6}-[0-9a-z]{5})-<slug>/proposal.md`.*/.grove.yaml\">\n(.*?)</file>").FindStringSubmatch(out)
 	if m == nil {

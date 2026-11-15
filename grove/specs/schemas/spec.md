@@ -140,7 +140,9 @@ When the agent runs `grove instructions explore`, or `grove instructions
 propose` for a new change with a schema other than `bugfix`, the system
 shall print instructions to suggest `bugfix` when the owner describes
 behavior that is wrong, and, once the owner confirms, to run `grove
-instructions propose --schema bugfix` and follow what it prints.
+instructions propose --schema bugfix` and follow what it prints; with
+`--unattended`, the instructions shall instead have the agent keep the
+schema they follow and name `bugfix` as an open question.
 
 #### Scenario: Proposing a bug fix
 
@@ -158,6 +160,14 @@ instructions propose --schema bugfix` and follow what it prints.
   schemas" and say to suggest `bugfix` for behavior that is wrong, adding
   `--schema bugfix` to `instructions propose` once the owner confirms
 
+#### Scenario: A bug reported with no one in the session
+
+- GIVEN the same fixture
+- WHEN the agent runs `grove instructions propose --unattended "Editing a
+  missing record crashes"` and writes the change
+- THEN the change's schema is `default`, and an open question says
+  `bugfix` fits behavior that is wrong
+
 ## Known discrepancies
 
 None recorded.
@@ -169,3 +179,4 @@ None.
 ## History
 
 - [261023-vqsrt](../../changes/archive/261023-vqsrt-built-in-bugfix-schema/) A built-in bugfix schema
+- [261115-z5kj4](../../changes/archive/261115-z5kj4-propose-drafts-with-no-one-in-the-session/) Propose drafts a change with no one in the session

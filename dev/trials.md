@@ -1,6 +1,6 @@
 # Skill trials
 
-Five cases on the ledger fixture (`dev/fixture.md`) that count how Grove's
+Six cases on the ledger fixture (`dev/fixture.md`) that count how Grove's
 skills behave, not only what they produce. `dev/walkthrough.md` says what a
 step should write; a trial counts what a run costs the owner. A script
 runs each case in Claude Code and in Codex, answering the agent as the
@@ -196,6 +196,34 @@ Checked by `good`: `python3 -m unittest` was run in the session,
 in `implementation.md` has `Status: done`, the README's "Usage" shows
 `ledger delete` and its "Planned for 0.4" no longer does, and `python3 -m
 unittest` passes.
+
+### (f) A draft nobody attends
+
+Setup: none beyond the common setup.
+
+Runs, on branch `unknown-id`, which the script makes since Codex's sandbox
+cannot:
+`/grove-propose --unattended Editing an unknown ID prints an error and exits 2`.
+
+Owner's answers: none, and the script sends no reply, whatever the
+waiting check says: no one is in the session.
+
+Owner's choices: where the check for an unknown ID goes, `find` in
+`ledger/records.py` raising `ValueError` or `ledger/cli.py` checking the
+ID, and whether the change follows `bugfix`. A good run takes neither
+alone: each is an open question with its recommended answer.
+
+A good run ends its first turn without waiting, writes one change on the
+branch, quotes only the request in Decisions, and writes each decision it
+would have asked as an open question with a recommended answer and the
+task it decides.
+
+Checked by `good`: the waiting check says the agent's last message does
+not wait, `main` holds no change and
+`unknown-id` one, which `grove check` passes, its proposal's Decisions
+name the exit status, and each item under its Open questions recommends an
+answer and names a `T-NN` task, itself or in the section's opening lines,
+one of them saying where the check goes.
 
 ## Results
 

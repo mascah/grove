@@ -288,3 +288,44 @@ and their branches stay as they are.
 
 Different projects, each with its own `grove/runs`, are claimed
 independently.
+
+## Draft a change with no one in the session
+
+An agent nobody watches can write a proposal too, from a request such as
+a tracker issue, a review finding or a problem `grove check` reports.
+Grove reads no tracker: whoever starts the session passes the request in.
+
+```sh
+timeout 30m claude -p '/grove-propose --unattended "Editing an unknown ID prints an error and exits 2"'
+```
+
+The agent creates a branch, writes one change from the request and asks
+nothing. What it would have asked you in the round is in the proposal's
+open questions, each with the answer it recommends and the task it
+decides; its Decisions quote only the request. A split, an open change
+that may need to land first or the `bugfix` schema is an open question
+too: it never decides one alone. It offers no `/grove-implement` on the
+branch, so the draft is approved only when you merge it, never with its
+code. An open question you merge unanswered is built as
+`/grove-implement` builds any choice left open: its best answer, with a
+`Check:` line for the reviewer, or a blocked task where a wrong answer
+would be costly.
+
+To have it commit and push the draft, add under `rules` in `grove.yaml`:
+
+```yaml
+rules:
+  skills:
+    propose:
+      - With no one in the session, commit the change folder once grove check passes, push the branch to origin and open a pull request with gh pr create.
+```
+
+Lines under `propose` are also given when you propose with the agent
+yourself, so this one names the session it is for.
+
+A request that says no outcome, such as "Look into the report command",
+gets no change: the agent writes nothing and its last message says what
+the request lacks. The session cannot revise a draft from your review;
+run `/grove-propose <change-id>` yourself for that. The
+[propose spec](https://github.com/mascah/grove/blob/main/grove/specs/propose/spec.md)
+has the exact rules.
