@@ -1,0 +1,5 @@
+title: "Propose drafts a change with no one in the session"
+created: 2026-11-15T01:11:15Z
+description: "`/grove-propose --unattended` writes a draft from a request, asking no one, with its round as open questions"
+schema: default
+base: efdb8af1c4a72fa967f4453133a5862dd76ce51a
