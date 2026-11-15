@@ -31,7 +31,19 @@ Also changed: `.agents/skills/grove-propose/SKILL.md` — the same, for codex.
 
 ### T-02 — Docs, reference and walkthrough show the mode
 
-Status: not started
+Status: done
+
+`docs/running.md` has "Draft a change with no one in the session": the
+`claude -p '/grove-propose --unattended "…"'` line, a
+`rules.skills.propose` line that commits, pushes and opens a pull request,
+and what a request with no outcome leaves. `docs/reference.md` has a row
+for `grove instructions propose --unattended`. `dev/walkthrough.md`
+"Running unattended" step 8 drafts "Editing an unknown ID prints an error
+and exits 2" and says what Decisions and the open questions hold. The
+Purpose of `grove/specs/propose/spec.md` names the mode.
+
+Check: the docs' `rules.skills.propose` line says "With no one in the session, …" because lines under a skill are also given to attended sessions; one line keeps commit, push and pull request together, as the implement rules on the same page do.
+Check: walkthrough step 8 runs in `~/tmp/ledger-run2`, the operator's clone that already holds `.claude/settings.local.json`, not in `~/tmp/ledger`, so the headless session has its permissions; it was not run by hand in this session, and T-03's case (f) runs the same request headless.
 
 ### T-03 — A skill trial for a draft nobody attends
 

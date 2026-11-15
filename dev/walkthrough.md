@@ -494,6 +494,29 @@ hosts. The sessions are Claude Code's.
    claim, and `K=$(grove claim) && claude -p "/grove-implement $K"`
    starts no session and exits 1.
 
+8. **Draft a change with no one in the session** ("Draft a change with no
+   one in the session"). In `~/tmp/ledger`, on `main`, add the page's
+   `rules.skills.propose` line to `grove.yaml`, commit and push. In
+   `~/tmp/ledger-run2`, `git switch main && git pull`, then
+   `timeout 30m claude -p '/grove-propose --unattended "Editing an unknown
+   ID prints an error and exits 2"'` asks nothing and ends on a new branch
+   holding one change, which `grove check` passes, committed and pushed;
+   with no GitHub behind `origin`, `gh pr create` fails and the session
+   says so. The proposal's
+   Decisions quote the request for the exit status and nothing more; its
+   open questions recommend where the check goes, `find` in
+   `ledger/records.py` raising `ValueError` or `ledger/cli.py` checking
+   the ID, each naming a task, and one names `bugfix`. The last message
+   names the files, the qualified task IDs and the open questions, says
+   merging the branch approves the change, and names no
+   `/grove-implement`. `grove instructions propose --unattended` alone
+   says
+   > grove: an unattended propose writes a new change from a request
+
+   and `echo $?` prints 1. `/grove-propose --unattended "Look into the
+   report command"` writes no change folder and says the request names
+   no outcome.
+
 ## Watching the project
 
 Each step names the section of [Watching the project](../docs/watching.md)

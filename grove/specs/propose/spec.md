@@ -5,7 +5,8 @@
 `/grove-propose` turns a chosen direction into a change the owner can
 review, asking one round of every decision it would otherwise assume, then
 writing a proposal, change specs and tasks that name their files and
-interfaces. This covers how it settles what those documents say, what they
+interfaces; with `--unattended` it drafts a change from a request with no
+one in the session, writing that round as open questions. This covers how it settles what those documents say, what they
 must say, and what `grove check` reports on them, such as a named file
 that moved since the change's base. A task's named files are the
 repo-relative paths on its `Files:` line.
