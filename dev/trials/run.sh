@@ -3,7 +3,7 @@
 # case, or those named, in Claude Code and in Codex, on a fresh fixture,
 # with this checkout's build of grove. Prints the results table.
 #
-#   dev/trials/run.sh [a b c d e]
+#   dev/trials/run.sh [a b c d e f]
 #
 # HARNESSES (default "claude codex") picks the harnesses, RUNS (default 3)
 # the runs of each case and harness, JUDGINGS (default 3) the judgings of
@@ -20,7 +20,7 @@ runs_each=${RUNS:-3}
 judgings=${JUDGINGS:-3}
 harnesses=${HARNESSES:-claude codex}
 cases=("$@")
-[ ${#cases[@]} -gt 0 ] || cases=(a b c d e)
+[ ${#cases[@]} -gt 0 ] || cases=(a b c d e f)
 fallback="Yes, go with what you recommend."
 # Changing the agent under test never changes the grader: the judge and the
 # waiting check are fixed here. Every model runs at medium effort.
