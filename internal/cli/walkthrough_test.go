@@ -338,7 +338,7 @@ func TestPropose(t *testing.T) {
 		t.Errorf("the flag inside the quotes prints other instructions:\n%s", quoted)
 	}
 	for _, s := range []string{"from the request below, with no one in the session", "Ask and wait for no one. Work on a branch other than the target.", "write no document; say that it names none",
-		"Write one change, in the schema these instructions follow, with no\n  `depends_on` the request does not name", "an\n  open change that may need to land first", "`bugfix` for wrong behavior, is an open question",
+		"Write one change, in the schema these instructions follow, with no\n  `depends_on` the request does not name", "an\n  open change that may need to land first", "`bugfix` for wrong behavior, is an open question where there is one", "only such a question says it must be answered before review",
 		"Decisions quote only what the request says", "Write each decision of the round as an open question", "What the check of the change would ask is an open question too", "Offer\n  no `/grove-implement` on this branch"} {
 		if !strings.Contains(alone, s) {
 			t.Errorf("unattended propose instructions lack %q", s)

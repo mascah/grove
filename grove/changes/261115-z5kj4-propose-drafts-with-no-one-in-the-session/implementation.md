@@ -18,12 +18,13 @@ the session. Without the flag the output is byte for byte what main@df86b0b
 printed for `grove instructions propose "x"` on the ledger fixture (IDs and
 times masked). A change's ID or no request prints "grove: an unattended
 propose writes a new change from a request" and exits 1. `just check`
-passes at 7,946 instruction words; `TestPropose` in
+passes at 7,953 instruction words; `TestPropose` in
 `internal/cli/walkthrough_test.go` checks each acceptance line.
 
 Check: open question 1 built as recommended: a change's ID, or no request, gets one sentence and exit 1, Grove's status for every command error.
 Check: open question 2 built as recommended: one file, `internal/instruct/requires/propose-unattended.md`, appended to what Grove requires of propose and saying which of its lines and the guide's steps it replaces.
 Check: the request is printed under the existing "## Owner's description" heading, and the unattended text says "The description below is the request"; a heading of its own would cost Go and words for no behavior.
+Check: after case (f)'s runs, the owner asked for two rewordings: only a question from the check of the change says it must be answered before review, since both agents put that on every open question; and a split, a change to land first or another schema is an open question only "where there is one", since Claude Code wrote a dependencies question with nothing to recommend. Case (f)'s results were taken before them.
 Check: "prints what it printed at efdb8af" was compared by hand against a build of main; the test asserts only that the flag-less instructions lack the unattended text and keep their existing lines.
 
 Also changed: `.claude/skills/grove-propose/SKILL.md` — `grove init` rewrote it from the new propose description in `skills.yaml`.
@@ -47,7 +48,7 @@ Check: walkthrough step 8 runs in `~/tmp/ledger-run2`, the operator's clone that
 
 ### T-03 — A skill trial for a draft nobody attends
 
-Status: in progress
+Status: done
 
 `dev/trials/f.sh` and case (f) in `dev/trials.md` add the sixth case;
 `dev/trials/run.sh` runs it by default. It sets `turns=0`, so no reply
@@ -58,7 +59,8 @@ schema naming "the whole change" rather than a task, and its question on
 dependencies giving no recommended answer. Both judged counts were zero
 but words read (Claude Code 571 in an earlier run, Codex 96).
 
-Check: the full `just trials` table, which the acceptance puts in the pull request, was not run: the owner stopped it, saying "I dom't want to burn all my usage on these trials right now". The task stays in progress until it runs.
+Check: the full `just trials` table, which the acceptance puts in the pull request, was not run: the owner stopped it, saying "I dom't want to burn all my usage on these trials right now". The owner then said to archive on the results already taken.
+Answer: "just archive and open the PR, we can use the existing results"
 Check: case (f) makes no reply even when the waiting check says the agent waits. A first run let the runner answer "Yes, go with what you recommend.", and the agent turned its open questions into decisions; no one is in an unattended session to answer.
 Check: both agents marked every open question "must be answered before review", taking the line meant for what the check of the change would ask as meant for all of them. The instruction text has 8 words of budget left in this change; rewording is left to review.
 Also changed: `CLAUDE.md` — its layout table said the trials have five cases.
@@ -87,3 +89,6 @@ Also changed: `CLAUDE.md` — its layout table said the trials have five cases.
 - schemas "A bug reported with no one in the session": unverified as written, since no run used "Editing a missing record crashes"; in case (f), whose request describes wrong behavior too, both runs kept `schema: default` and asked about `bugfix` as an open question
 
 ## Reconciliation
+
+- propose: applied to grove/specs/propose/spec.md
+- schemas: applied to grove/specs/schemas/spec.md
