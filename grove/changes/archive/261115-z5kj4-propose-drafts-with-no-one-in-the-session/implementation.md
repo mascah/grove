@@ -62,7 +62,7 @@ but words read (Claude Code 571 in an earlier run, Codex 96).
 Check: the full `just trials` run at 413e0fe, three runs per case and harness, is in the pull request. Case (f): Codex 3/3 good runs; Claude Code 0/3, each run failing two open-question checks: the schema question names no task, since it decides the whole change, and one question (routine defaults, other open changes) names no task or recommends nothing. Claude Code's unneeded questions were 1 per run, each an open question the repository already answers.
 Check: case (e) failed every run in both harnesses on a defect of its own: its `good` reads `implementation.md` at the change's folder, which `/grove-implement` moves to the archive when every task is done, as case (c)'s `good` already allows. This change does not touch `dev/trials/e.sh`.
 Check: case (f) makes no reply even when the waiting check says the agent waits. A first run let the runner answer "Yes, go with what you recommend.", and the agent turned its open questions into decisions; no one is in an unattended session to answer.
-Check: both agents marked every open question "must be answered before review", taking the line meant for what the check of the change would ask as meant for all of them. The instruction text has 8 words of budget left in this change; rewording is left to review.
+Check: both agents marked every open question "must be answered before review", taking the line meant for what the check of the change would ask as meant for all of them. T-01 reworded the line so only such a question says so.
 Also changed: `CLAUDE.md` — its layout table said the trials have five cases.
 
 ## Scenarios
