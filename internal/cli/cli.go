@@ -21,6 +21,9 @@ With no command, open the reader on the maintained specs and approved changes.
                              throwaway experiment
   instructions propose [--schema <name>] ["<description>"]
                              print the instructions for proposing a new change
+  instructions propose --unattended [--schema <name>] "<request>"
+                             print the instructions for drafting a new change from a
+                             request, asking no one
   instructions propose <change-id>
                              print the instructions for revising a drafted change
   instructions plan ["<description>" | <change-id>]
@@ -61,12 +64,25 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = instructionsExplore(stdout)
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "prototype":
 		err = instructionsPrototype(stdout, args[2])
-	case len(args) == 2 && args[0] == "instructions" && args[1] == "propose":
-		err = instructionsPropose(stdout, "", "")
-	case len(args) == 3 && args[0] == "instructions" && args[1] == "propose":
-		err = instructionsPropose(stdout, "", args[2])
-	case len(args) >= 4 && len(args) <= 5 && args[0] == "instructions" && args[1] == "propose" && args[2] == "--schema":
-		err = instructionsPropose(stdout, args[3], strings.Join(args[4:], ""))
+	case len(args) >= 2 && args[0] == "instructions" && args[1] == "propose":
+		rest, schema := args[2:], ""
+		unattended := len(rest) > 0 && rest[0] == "--unattended"
+		if unattended {
+			rest = rest[1:]
+		}
+		if len(rest) >= 2 && rest[0] == "--schema" {
+			schema, rest = rest[1], rest[2:]
+		}
+		if len(rest) > 1 {
+			fmt.Fprint(stderr, usage)
+			return 2
+		}
+		arg := strings.Join(rest, "")
+		// A skill passes what the user typed as one quoted argument.
+		if first, request, _ := strings.Cut(arg, " "); first == "--unattended" && !unattended {
+			unattended, arg = true, strings.TrimSpace(request)
+		}
+		err = instructionsPropose(stdout, schema, arg, unattended)
 	case len(args) == 2 && args[0] == "instructions" && args[1] == "plan":
 		err = instructionsPlan(stdout, "")
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "plan":

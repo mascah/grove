@@ -37,7 +37,7 @@ func embedded(name string) string {
 // Skill is one of Grove's skills: the description of the skill init writes
 // for it, and what that skill passes to `instructions <skill>`. What Grove
 // requires of it is requires/<name>.md, the same in every change schema;
-// implement's adds one mode's part.
+// implement's adds one mode's part, and propose's unattended one.
 type Skill struct{ Name, Description, Args string }
 
 // Skills returns Grove's skills, in order.
@@ -475,15 +475,23 @@ func Prototype(p Project, question string) (Instructions, error) {
 
 // Propose returns the instructions for writing new change id in change
 // schema s, created at created, from the conversation or from description
-// when it is not empty.
-func Propose(p Project, s, id, created, description string) (Instructions, error) {
-	from := "this conversation"
+// when it is not empty, or, when unattended, from description with no one
+// in the session.
+func Propose(p Project, s, id, created, description string, unattended bool) (Instructions, error) {
+	from, where := "this conversation", "in the owner's own working tree"
 	if description != "" {
 		from = "the owner's description below"
 	}
-	in, err := build(p, s, "propose", fmt.Sprintf("You are proposing new change %s%s, from %s, in the owner's own working tree.", id, with(s), from),
+	if unattended {
+		from, where = "the request below", "with no one in the session, in this working tree"
+	}
+	in, err := build(p, s, "propose", fmt.Sprintf("You are proposing new change %s%s, from %s, %s.", id, with(s), from, where),
 		strings.NewReplacer("<change>", id+"-<slug>", "{{change}}", id, "{{created}}", created, "{{schema}}", s, "{{base}}", short(p.Commit), "{{commit}}", p.Commit), nil)
 	in.Description, in.Schemas = description, p.choices()
+	if unattended {
+		// Grove's own text, not a schema's, so a project's propose guide cannot replace it (rule 10).
+		in.Requires += "\n" + embedded("requires/propose-unattended.md")
+	}
 	return in, err
 }
 
