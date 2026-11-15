@@ -24,7 +24,7 @@ passes at 7,953 instruction words; `TestPropose` in
 Check: open question 1 built as recommended: a change's ID, or no request, gets one sentence and exit 1, Grove's status for every command error.
 Check: open question 2 built as recommended: one file, `internal/instruct/requires/propose-unattended.md`, appended to what Grove requires of propose and saying which of its lines and the guide's steps it replaces.
 Check: the request is printed under the existing "## Owner's description" heading, and the unattended text says "The description below is the request"; a heading of its own would cost Go and words for no behavior.
-Check: after case (f)'s runs, the owner asked for two rewordings: only a question from the check of the change says it must be answered before review, since both agents put that on every open question; and a split, a change to land first or another schema is an open question only "where there is one", since Claude Code wrote a dependencies question with nothing to recommend. Case (f)'s results were taken before them.
+Check: after case (f)'s runs, the owner asked for two rewordings: only a question from the check of the change says it must be answered before review, since both agents put that on every open question; and a split, a change to land first or another schema is an open question only "where there is one", since Claude Code wrote a dependencies question with nothing to recommend. The full trial run at 413e0fe includes them.
 Check: "prints what it printed at efdb8af" was compared by hand against a build of main; the test asserts only that the flag-less instructions lack the unattended text and keep their existing lines.
 
 Also changed: `.claude/skills/grove-propose/SKILL.md` — `grove init` rewrote it from the new propose description in `skills.yaml`.
@@ -59,8 +59,8 @@ schema naming "the whole change" rather than a task, and its question on
 dependencies giving no recommended answer. Both judged counts were zero
 but words read (Claude Code 571 in an earlier run, Codex 96).
 
-Check: the full `just trials` table, which the acceptance puts in the pull request, was not run: the owner stopped it, saying "I dom't want to burn all my usage on these trials right now". The owner then said to archive on the results already taken.
-Answer: "just archive and open the PR, we can use the existing results"
+Check: the full `just trials` run at 413e0fe, three runs per case and harness, is in the pull request. Case (f): Codex 3/3 good runs; Claude Code 0/3, each run failing two open-question checks: the schema question names no task, since it decides the whole change, and one question (routine defaults, other open changes) names no task or recommends nothing. Claude Code's unneeded questions were 1 per run, each an open question the repository already answers.
+Check: case (e) failed every run in both harnesses on a defect of its own: its `good` reads `implementation.md` at the change's folder, which `/grove-implement` moves to the archive when every task is done, as case (c)'s `good` already allows. This change does not touch `dev/trials/e.sh`.
 Check: case (f) makes no reply even when the waiting check says the agent waits. A first run let the runner answer "Yes, go with what you recommend.", and the agent turned its open questions into decisions; no one is in an unattended session to answer.
 Check: both agents marked every open question "must be answered before review", taking the line meant for what the check of the change would ask as meant for all of them. The instruction text has 8 words of budget left in this change; rewording is left to review.
 Also changed: `CLAUDE.md` — its layout table said the trials have five cases.
