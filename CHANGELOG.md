@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/mascah/grove/compare/v0.10.0...v0.11.0) (2026-11-15)
+
+
+### Features
+
+* **instruct:** propose --unattended drafts a change asking no one ([#165](https://github.com/mascah/grove/issues/165)) ([0083bba](https://github.com/mascah/grove/commit/0083bba039c300adad5876b7988cf3a7a24271c2))
+
 ## [0.10.0](https://github.com/mascah/grove/compare/v0.9.0...v0.10.0) (2026-11-14)
 
 
