@@ -32,7 +32,8 @@ Skills run these; you do not need to:
 | `grove instructions plan <change-id>` | Write a new cycle whose only change is that approved change. |
 | `grove instructions plan <cycle-id>` | Revise the cycle as the working tree holds it, setting `planned` to the target's commit. |
 | `grove instructions implement <change-id>` | Build a change asking no one: build the best choice where it leaves one open, with a `Check:` line for the reviewer, block only a costly choice, revise the change on the branch where needed; record progress, and archive it when every task is done. The change may be approved, or a draft this working tree holds. Refuses a change that waits on one not archived as finished ([implement spec](https://github.com/mascah/grove/blob/main/grove/specs/implement/spec.md)). |
-| `grove instructions implement <cycle-id>` | Build each change of the cycle this working tree has not archived, in build order, marked `unattended` or not, each in a fresh context by `grove instructions implement <change-id>` where the harness has subagents, starting at once those that wait on nothing and share no file, else one at a time; the session archives and commits each and reports every `Check:` line first (see [Coordinating changes](coordinating.md), "Building a cycle"). |
+| `grove instructions implement --runner <change-id>` or `<cycle-id>` | The same, for a caller that delivers the work itself, such as a runner that reviews the branch before opening the pull request: the `rules.delivery.implement` lines are left out, and the session is told to push nothing, open no pull request and create no branch or worktree ([implement spec](https://github.com/mascah/grove/blob/main/grove/specs/implement/spec.md), "Delivery rules and a caller that delivers"). |
+| `grove instructions implement <cycle-id>` | Build each change of the cycle this working tree has not archived, in build order, marked `unattended` or not, each in a fresh context by `grove instructions implement --runner <change-id>` where the harness has subagents, starting at once those that wait on nothing and share no file, else one at a time; the session archives and commits each and reports every `Check:` line first (see [Coordinating changes](coordinating.md), "Building a cycle"). |
 | `grove instructions archive <change-id>` | Fold the change's specs into the maintained specs word for word, adding the change's line to each one's History, then run `grove archive`, fixing the specs and running it again if it refuses ([requirements spec](https://github.com/mascah/grove/blob/main/grove/specs/requirements/spec.md)). |
 
 The instructions of `implement`, `archive` and `propose <change-id>` name
@@ -122,6 +123,9 @@ rules:
   skills:
     implement:
       - Commit after each task, naming its task ID.
+  delivery:
+    implement:
+      - Push the branch and open a pull request with gh pr create.
 ```
 
 | Field | Default | Meaning |
@@ -131,7 +135,7 @@ rules:
 | `agents` | `claude` and `codex`, as `skills` | Each harness `init` writes Grove's skills for, and whether as `skills` or `commands` (see "Harnesses"). The first `init` chooses them. |
 | `schema` | `default` | The change schema a new change has unless the owner names another while proposing. See "Change schemas". |
 | `context` | empty | Instructions given to every skill, so they reach agents working through Grove and no other session; project facts every session needs stay in `CLAUDE.md` or `AGENTS.md`. |
-| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `prototype`, `propose`, `plan`, `implement`, `archive` |
+| `rules` | none | Extra lines for Grove's instructions. Under `documents`, for one kind of document, given when that document is written: `proposal`, `change-spec`, `tasks`, `implementation`, `spec`, and those of the project's own schemas. Under `skills`, for one skill, given with its instructions: `explore`, `prototype`, `propose`, `plan`, `implement`, `archive`. Under `delivery`, by the same skills, how the work leaves the working tree, such as pushing and opening a pull request; given after the skill's rules, and left out by `instructions implement --runner` |
 
 `grove check` reports a field or a `rules` key that Grove does not know.
 Other commands ignore it. A `rules.skills.apply` key is from before apply
@@ -148,7 +152,9 @@ only if you agree in the session. The
 [config spec](https://github.com/mascah/grove/blob/main/grove/specs/config/spec.md) has the exact rules for `context`.
 
 Grove's skills commit nothing unless you ask in the conversation or a rule
-asks, as `implement` does above.
+asks, as `implement` does above. Keep how the work is delivered under
+`delivery` rather than `skills`: a session that should only commit, such
+as one a runner starts, then never sees it.
 
 ## Change schemas
 

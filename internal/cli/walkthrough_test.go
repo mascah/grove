@@ -163,14 +163,15 @@ func TestCheck(t *testing.T) {
 		t.Errorf("check printed %q", got)
 	}
 	config := read(t, filepath.Join(dir, "grove.yaml"))
-	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(config, "rules: {}", "rules:\n  derp: [x]\n  documents:\n    propsal: [x]\n  skills:\n    apply: [x]\nrule: {}", 1)), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(config, "rules: {}", "rules:\n  derp: [x]\n  documents:\n    propsal: [x]\n  skills:\n    apply: [x]\n  delivery:\n    implement: [x]\n    apply: [x]\nrule: {}", 1)), 0o644)
 	var stdout, stderr strings.Builder
 	code := run([]string{"check"}, &stdout, &stderr)
-	want := "grove.yaml:30: unknown rules key \"derp\"; rules takes documents and skills\n" +
+	want := "grove.yaml:30: unknown rules key \"derp\"; rules takes documents, skills and delivery\n" +
 		"grove.yaml:32: unknown rules.documents key \"propsal\"; kinds are proposal, change-spec, tasks, implementation, spec\n" +
 		"grove.yaml:34: unknown rules.skills key \"apply\"; its lines go under rules.skills.implement\n" +
-		"grove.yaml:35: unknown field \"rule\"; grove.yaml takes root, target, agents, schema, context and rules\n"
-	if code != 1 || stdout.String() != want || stderr.String() != "grove: 4 problems found\n" {
+		"grove.yaml:37: unknown rules.delivery key \"apply\"; skills are explore, prototype, propose, plan, implement, archive\n" +
+		"grove.yaml:38: unknown field \"rule\"; grove.yaml takes root, target, agents, schema, context and rules\n"
+	if code != 1 || stdout.String() != want || stderr.String() != "grove: 5 problems found\n" {
 		t.Errorf("check of grove.yaml: status %d\n%s%s", code, stdout.String(), stderr.String())
 	}
 	grove(t, "changes")
@@ -474,7 +475,7 @@ func TestImplementInstructions(t *testing.T) {
 		t.Error("the skill does not run instructions implement")
 	}
 	yaml := strings.Replace(read(t, filepath.Join(dir, "grove.yaml")), `context: ""`, "context: Run python3 -m unittest before saying a task is done.", 1)
-	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "rules: {}", "rules:\n  skills:\n    implement:\n      - Commit after each task, naming its task ID.", 1)), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove.yaml"), []byte(strings.Replace(yaml, "rules: {}", "rules:\n  skills:\n    implement:\n      - Commit after each task, naming its task ID.\n  delivery:\n    implement:\n      - Push the branch and open a pull request with gh pr create.", 1)), 0o644)
 	commitAll(t, dir, "Set up Grove")
 	cid, _ := propose(t, dir, "older-edits", "Allow editing older records", "")
 	commitAll(t, dir, "Propose")
@@ -508,6 +509,10 @@ func TestImplementInstructions(t *testing.T) {
 
 	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario, then what was done", "Commit only when the owner or the project's\nrules ask.",
 		"The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n"}
+	// The delivery rules print for a session the owner starts, and give way
+	// to Grove's paragraph for a caller that delivers the work itself.
+	delivery := "The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n\nHow the project wants this work delivered:\n\n- Push the branch and open a pull request with gh pr create.\n"
+	runner := "- Deliver nothing: whoever started this session delivers the work."
 	// One set of instructions: ask no one, record each choice, build on a
 	// moved file, revise the change on the branch, block only what is costly.
 	want := []string{"Ask no one and wait for no one: end with the branch ready for\n  review", "changed to be built as the change says, or makes", "`` Also changed: `<path>` — <why> `` under that task",
@@ -528,6 +533,14 @@ func TestImplementInstructions(t *testing.T) {
 		}
 	}
 	out := grove(t, "instructions", "implement", cid)
+	has("implement instructions with delivery rules", out, []string{delivery}, []string{runner})
+	has("implement --runner", grove(t, "instructions", "implement", "--runner", cid), []string{shared[4], runner}, []string{"gh pr create", "commit here"})
+	for _, args := range [][]string{{"plan", "--runner"}, {"implement", "--runner"}, {"implement", "--runner", "--runner"}} {
+		stderr.Reset()
+		if code := run(append([]string{"instructions"}, args...), &stdout, &stderr); code != 2 || !strings.HasPrefix(stderr.String(), "usage: grove") {
+			t.Errorf("instructions %q: status %d, %q", args, code, stderr.String())
+		}
+	}
 	listed := "\n- `grove/changes/" + cid + "-allow-editing-older-records/specs/record-editing/spec.md`\n"
 	has("implement instructions", out, slices.Concat([]string{"You are implementing approved change " + cid + ", \"Allow editing older records\", as main@", "holds it, in this working tree.", "### implementation: ", listed, "## Project context\n\nRun python3 -m unittest before saying a task is done.\n\n## What Grove requires of implement\n"}, shared, want),
 		append(gone, "### Requirement: Edit older records", ": differs from main", "### proposal: ", "### change-spec: ", "### tasks: ", "/.grove.yaml\">", "grove run"))
@@ -547,11 +560,11 @@ func TestImplementInstructions(t *testing.T) {
 	}
 	// Each member is built in a fresh context, and only the session
 	// archives and commits.
-	contexts := []string{"in a fresh context of your own, such as a\n  subagent", "`instructions implement <change-id>`\n  and follow what it prints, but neither archive nor commit",
+	contexts := []string{"in a fresh context of your own, such as a\n  subagent", "`instructions implement --runner\n  <change-id>` and follow what it prints, but neither archive nor commit",
 		"Start at once\n  every change whose `after` changes are archived and whose tasks'\n  `Files:`", "Only you archive and commit, one returned change at a time", "run the\n  project's tests once both have returned",
 		"build the other again on its own", "Where you cannot start a fresh context, build each change yourself", "Ask no one and wait for no one.", "Finish: report for the reviewer first every change's `Check:` lines"}
 	out = grove(t, "instructions", "implement", k)
-	has("cycle instructions", out, append([]string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "holds it, in this working tree.", "run Grove's `instructions implement <change-id>` for each", "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n", shared[3]}, contexts...), gone)
+	has("cycle instructions", out, append([]string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "holds it, in this working tree.", "run Grove's `instructions implement --runner <change-id>` for each", delivery, "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n", shared[3]}, contexts...), gone)
 }
 
 func TestDropChange(t *testing.T) {

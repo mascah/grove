@@ -1,8 +1,9 @@
 - Work in this working tree on a branch other than the target; create one if
   you are on the target. Ask no one and wait for no one.
 - Build each change below in a fresh context of your own, such as a
-  subagent, telling it to run Grove's `instructions implement <change-id>`
-  and follow what it prints, but neither archive nor commit, and to report
+  subagent, telling it to run Grove's `instructions implement --runner
+  <change-id>` and follow what it prints, but neither archive nor commit,
+  and to report
   each task's status, its `Check:` lines and blocked tasks. Start at once
   every change whose `after` changes are archived and whose tasks'
   `Files:`, read from its `tasks.md`, name no file that a change being

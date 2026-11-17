@@ -400,7 +400,7 @@ func requirement(fsys fs.FS, file, name string) (string, bool) {
 var configFields = []string{"root", "target", "agents", "schema", "context", "rules"}
 
 // unknownConfig returns a problem for each field and rules key of grove.yaml,
-// rules being keyed by documents and skills, then by kind and by skill,
+// rules being keyed by documents, skills and delivery, then by kind and by skill,
 // that Grove does not know, and a schema that is not one. Other commands
 // ignore the unknown fields and keys (D-58).
 func unknownConfig(top string, ip instruct.Project) ([]string, error) {
@@ -438,9 +438,9 @@ func unknownConfig(top string, ip instruct.Project) ([]string, error) {
 			switch section.Value {
 			case "documents":
 				valid, noun = kinds, "kinds"
-			case "skills":
+			case "skills", "delivery":
 			default:
-				out = append(out, fmt.Sprintf("grove.yaml:%d: unknown rules key %q; rules takes documents and skills", section.Line, section.Value))
+				out = append(out, fmt.Sprintf("grove.yaml:%d: unknown rules key %q; rules takes documents, skills and delivery", section.Line, section.Value))
 				continue
 			}
 			for n := 0; n+1 < len(names.Content); n += 2 {
