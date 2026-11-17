@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/mascah/grove/compare/v0.11.0...v0.12.0) (2026-11-17)
+
+
+### Features
+
+* **instruct:** delivery rules a runner can switch off ([#168](https://github.com/mascah/grove/issues/168)) ([a7eecb6](https://github.com/mascah/grove/commit/a7eecb66ae81883094d80f79225db60c71e074a9))
+
 ## [0.11.0](https://github.com/mascah/grove/compare/v0.10.0...v0.11.0) (2026-11-15)
 
 
