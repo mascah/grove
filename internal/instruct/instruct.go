@@ -207,10 +207,13 @@ type Project struct {
 
 // Rules are grove.yaml's extra lines: for a kind of document, given when it
 // is written, and for a skill, given with its guide. They are apart because
-// the two are named alike, such as proposal and propose.
+// the two are named alike, such as proposal and propose. Delivery, also by
+// skill, says how the work leaves the working tree; a caller that delivers
+// it itself has it left out.
 type Rules struct {
 	Documents map[string][]string
 	Skills    map[string][]string
+	Delivery  map[string][]string
 }
 
 // Instructions is everything one skill's instructions say, built before
@@ -228,6 +231,7 @@ type Instructions struct {
 	Change      []Listed   // the documents of the change being worked on, by path
 	Cycle       []File     // the cycle being revised or built, in full
 	Plan        string     // the cycle's members in build order, for one of them
+	Runner      bool       // the caller delivers the work, so the delivery rules are left out
 }
 
 // Document is one kind of document to write, with its paths and templates
@@ -549,7 +553,7 @@ func Revise(p Project, c *doc.Change, cy *doc.Cycle, content string) (Instructio
 // target holds; differs are the files of c whose working-tree copy is not
 // the target's. A change the target does not hold is a draft, read from
 // the working tree (rule 4).
-func Implement(p Project, c *doc.Change, differs []string) (Instructions, error) {
+func Implement(p Project, c *doc.Change, differs []string, runner bool) (Instructions, error) {
 	task := fmt.Sprintf("You are implementing approved change %s, %q%s, as %s@%s holds it, in this working tree.",
 		c.ID, c.Meta.Title, with(c.Meta.Schema), p.Target, short(p.Commit))
 	if p.Agreed.Change(c.ID) == nil {
@@ -559,15 +563,25 @@ func Implement(p Project, c *doc.Change, differs []string) (Instructions, error)
 	for i, name := range c.Files {
 		in.Change[i].Differs = slices.Contains(differs, name)
 	}
+	in.runner(runner)
 	return in, err
+}
+
+// runner marks in as built for a caller that delivers the work itself.
+func (in *Instructions) runner(on bool) {
+	if in.Runner = on; on {
+		in.Requires += "\n" + embedded("requires/implement-runner.md")
+	}
 }
 
 // Cycle returns the instructions for implementing cycle cy, whose file
 // holds content: the members ordered, each after the members it depends
 // on, and what each member in waiting waits on.
-func Cycle(p Project, cy *doc.Cycle, content string, ordered, waiting []*doc.Change) (Instructions, error) {
+// A member is always built by --runner: the session building the cycle
+// delivers it.
+func Cycle(p Project, cy *doc.Cycle, content string, ordered, waiting []*doc.Change, runner bool) (Instructions, error) {
 	var b strings.Builder
-	b.WriteString("The changes in build order, each `after` the changes below it depends on. Building them yourself, run Grove's `instructions implement <change-id>` for each and follow what it prints to the end; then the next.\n\n")
+	b.WriteString("The changes in build order, each `after` the changes below it depends on. Building them yourself, run Grove's `instructions implement --runner <change-id>` for each and follow what it prints to the end; then the next.\n\n")
 	for i, c := range ordered {
 		after := slices.DeleteFunc(slices.Clone(c.Meta.DependsOn), func(id string) bool {
 			return !slices.ContainsFunc(ordered, func(o *doc.Change) bool { return o.ID == id })
@@ -585,8 +599,10 @@ func Cycle(p Project, cy *doc.Cycle, content string, ordered, waiting []*doc.Cha
 		fmt.Fprintf(&b, "\nLeave out %s, %q: it waits on %s, which is neither being built nor archived as finished. Grove's `check` says why.\n", c.ID, c.Meta.Title, strings.Join(c.WaitsOn, " and "))
 	}
 	task := fmt.Sprintf("You are implementing cycle %s, %q, as %s@%s holds it, in this working tree.", cy.ID, cy.Meta.Title, p.Target, short(p.Commit))
-	return Instructions{Project: p, Skill: "implement", Task: task, Requires: embedded("requires/implement-cycle.md"),
-		Guide: b.String(), Cycle: []File{{p.Root + "/" + cy.Path, content}}}, nil
+	in := Instructions{Project: p, Skill: "implement", Task: task, Requires: embedded("requires/implement-cycle.md"),
+		Guide: b.String(), Cycle: []File{{p.Root + "/" + cy.Path, content}}}
+	in.runner(runner)
+	return in, nil
 }
 
 // InCycle adds to in, the instructions for member current of cycle cy, the
@@ -631,7 +647,10 @@ func (in Instructions) Markdown() string {
 	}
 	fmt.Fprintf(&b, "## What Grove requires of %s\n\n%s\n", in.Skill, in.Requires)
 	fmt.Fprintf(&b, "## How to %s\n\n%s\n", in.Skill, in.Guide)
-	rules(&b, "skill", in.Rules.Skills[in.Skill])
+	rules(&b, "The project's own rules for this skill:", in.Rules.Skills[in.Skill])
+	if !in.Runner {
+		rules(&b, "How the project wants this work delivered:", in.Rules.Delivery[in.Skill])
+	}
 	if len(in.Schemas) > 0 {
 		fmt.Fprintf(&b, "## Change schemas\n\nThe project's change schemas; these instructions follow `%s`.\n\n", in.Follows.Name)
 		for _, s := range in.Schemas {
@@ -647,7 +666,7 @@ func (in Instructions) Markdown() string {
 	}
 	for _, d := range in.Documents {
 		fmt.Fprintf(&b, "### %s: `%s`\n\n%s\n", d.Kind, d.Path, d.Guide)
-		rules(&b, "document", d.Rules)
+		rules(&b, "The project's own rules for this document:", d.Rules)
 		if d.Metadata != "" {
 			include(&b, d.Metadata, d.MetadataTemplate)
 		}
@@ -758,11 +777,11 @@ func entry(b *strings.Builder, path string, d *doc.Document, more ...string) {
 	}
 }
 
-func rules(b *strings.Builder, of string, rs []string) {
+func rules(b *strings.Builder, intro string, rs []string) {
 	if len(rs) == 0 {
 		return
 	}
-	fmt.Fprintf(b, "The project's own rules for this %s:\n\n", of)
+	fmt.Fprintf(b, "%s\n\n", intro)
 	for _, r := range rs {
 		fmt.Fprintf(b, "- %s\n", r)
 	}

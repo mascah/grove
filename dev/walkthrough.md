@@ -383,7 +383,7 @@ show-saved changes approved. Each step names the section of
    `/grove-implement <0.4-cycle-id>`. Its instructions list
    delete, then budgets `after <delete-id>`, each to be built in a fresh
    context that neither archives nor commits, by
-   `grove instructions implement <change-id>`. The session starts one subagent on
+   `grove instructions implement --runner <change-id>`. The session starts one subagent on
    delete, whose `## The cycle` lists both and marks delete `this change`;
    when it returns, the session archives and commits delete, and only then
    starts one on budgets, whose list marks delete
@@ -401,7 +401,7 @@ hosts. The sessions are Claude Code's.
 
 1. **Set up a checkout** ("Set up a checkout", "Tell the agent to commit and
    open a pull request"). `just fixture ~/tmp/ledger`, `grove init`, add
-   the two `rules.skills.implement` lines from the page to `grove.yaml`,
+   the page's `rules.skills.implement` and `rules.delivery.implement` lines to `grove.yaml`,
    commit. `git init -q --bare ~/tmp/ledger.git`, add it as `origin` and
    push `main`. `git clone` it to `~/tmp/ledger-run` and
    `~/tmp/ledger-run2`, the operator's checkouts, and in each write
@@ -429,7 +429,7 @@ hosts. The sessions are Claude Code's.
 
 3. **Composed with a harness** ("Claim a cycle"). In `~/tmp/ledger-run`,
    on the attempt's branch, `timeout 2h claude -p "/grove-implement $K"`.
-   The session runs `grove instructions implement <change-id>` once for each change, the unknown-ID one
+   The session runs `grove instructions implement --runner <change-id>` once for each change, the unknown-ID one
    first, builds and archives both, commits each task with its ID and
    pushes the branch; with no GitHub behind `origin`, `gh pr create`
    fails and the session says so.
@@ -796,7 +796,7 @@ the browser's console shows no error.
   under `rules`, `propsal: [x]` under `rules: documents:`, and a top-level
   `rule: {}` in `grove.yaml`. `grove check` reports all three and exits
   non-zero:
-  > grove.yaml:<line>: unknown rules key "derp"; rules takes documents and skills
+  > grove.yaml:<line>: unknown rules key "derp"; rules takes documents, skills and delivery
 
   > grove.yaml:<line>: unknown rules.documents key "propsal"; kinds are proposal, change-spec, tasks, implementation, spec
 
@@ -857,6 +857,17 @@ the browser's console shows no error.
   archives both, commits, asks nothing, and its last message says which
   changes were archived. `grove.yaml` is unchanged; a line it suggests for
   `context` or `rules` is in that message.
+- **Delivery left to the caller** (reference, `rules`; running, "Tell
+  the agent to commit and open a pull request"). With the page's
+  `delivery: implement:` line in `grove.yaml` and a cycle of two changes,
+  `grove instructions implement <cycle-id>` prints that line under
+  "How the project wants this work delivered:" and names
+  `instructions implement --runner <change-id>` for each change;
+  `grove instructions implement --runner <cycle-id>` leaves the line out
+  and says "Deliver nothing: whoever started this session delivers the
+  work." `claude -p "/grove-implement --runner <cycle-id>"` on a claimed
+  cycle commits on the attempt's branch, pushes nothing and opens no pull
+  request. `grove instructions plan --runner` prints the usage and exits 2.
 - **Commit as you go** (reference, `rules`). With
   `implement: [Commit after each task, naming its task ID.]` under
   `rules: skills:` in `grove.yaml`, `/grove-implement <cycle-id>`

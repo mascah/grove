@@ -110,9 +110,10 @@ A change that depends on others in the list ends `after` their IDs:
 
 The agent builds each change in a fresh context of its own, such as a
 Claude Code subagent, so no one context carries the whole cycle. Each
-follows `grove instructions implement <change-id>`, which
+follows `grove instructions implement --runner <change-id>`, which
 prints the change's instructions with the cycle's list, naming the
-change's place in it, but neither archives nor commits. The agent starts at once every change
+change's place in it, without the project's delivery rules, but neither
+archives nor commits. The agent starts at once every change
 whose `after` changes are archived and whose tasks' `Files:` share no file
 with a change being built; the others wait their turn. As each returns, the
 agent itself archives and commits it, one at a time. If two changes built

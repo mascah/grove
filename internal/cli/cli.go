@@ -30,9 +30,10 @@ With no command, open the reader on the maintained specs and approved changes.
                              print the instructions for planning a new cycle
   instructions plan <cycle-id>
                              print the instructions for revising a cycle
-  instructions implement <change-id> | <cycle-id>
+  instructions implement [--runner] <change-id> | <cycle-id>
                              print the instructions for implementing an approved change,
-                             or each change of a cycle, asking no one
+                             or each change of a cycle, asking no one; with --runner, for
+                             a caller that delivers the work itself
   instructions archive <change-id>
                              print the instructions for archiving a change
   claim [--retry] [<cycle-id>]
@@ -85,10 +86,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 		err = instructionsPropose(stdout, schema, arg, unattended)
 	case len(args) == 2 && args[0] == "instructions" && args[1] == "plan":
 		err = instructionsPlan(stdout, "")
-	case len(args) == 3 && args[0] == "instructions" && args[1] == "plan":
+	case len(args) == 3 && args[0] == "instructions" && args[1] == "plan" && !strings.HasPrefix(args[2], "--"):
 		err = instructionsPlan(stdout, args[2])
-	case len(args) == 3 && args[0] == "instructions" && args[1] == "implement":
-		err = instructionsImplement(stdout, args[2])
+	case len(args) == 3 && args[0] == "instructions" && args[1] == "implement" && !strings.HasPrefix(args[2], "--"):
+		err = instructionsImplement(stdout, args[2], false)
+	case len(args) == 4 && args[0] == "instructions" && args[1] == "implement" && args[2] == "--runner" && !strings.HasPrefix(args[3], "--"):
+		err = instructionsImplement(stdout, args[3], true)
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "archive":
 		err = instructionsArchive(stdout, args[2])
 	case len(args) > 0 && args[0] == "claim":

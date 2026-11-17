@@ -81,6 +81,8 @@ rules:
   skills:
     implement:
       - Commit after each task, naming its task ID.
+  delivery:
+    implement:
       - When you are done, push the branch to origin and open a pull request with gh pr create, listing the changes archived and each blocked task with its question.
 ```
 
@@ -88,6 +90,13 @@ rules:
 checkout's branch. So the rules count once they are merged. Lines under
 `implement` are also given when you build with the agent yourself, so
 word them to hold for both.
+
+The line under `delivery` is how the work leaves the checkout. When what
+starts the agent delivers the work itself, such as a pipeline that has the
+branch reviewed before it opens the pull request, have it run
+`/grove-implement --runner $K` instead: the `delivery` lines are left out,
+and the session pushes nothing, opens no pull request and leaves its
+commits on the attempt's branch.
 
 ## Claim a cycle
 

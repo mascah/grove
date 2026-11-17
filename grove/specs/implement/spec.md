@@ -90,16 +90,16 @@ archived as finished.
 Where the agent's harness lets it start its own subagents, the cycle's
 implement instructions shall have the session building a cycle build each
 member in a fresh context of its own by
-`grove instructions implement <change-id>`, told to neither archive nor
-commit; start at once every member whose dependencies are archived and
-whose tasks' `Files:` name no file a member being built names; itself
-archive and commit each returned member whose tasks are all done, one at
-a time; where two members built together changed the same file, run the
-project's tests once both returned and, if they fail, rebuild the
-later-started member on its own before archiving it; and list every
-member's `Check:` lines and blocked tasks first in its report; and, where
-the harness has none, the session shall build each member itself, one
-after another.
+`grove instructions implement --runner <change-id>`, told to neither
+archive nor commit; start at once every member whose dependencies are
+archived and whose tasks' `Files:` name no file a member being built
+names; itself archive and commit each returned member whose tasks are all
+done, one at a time; where two members built together changed the same
+file, run the project's tests once both returned and, if they fail,
+rebuild the later-started member on its own before archiving it; and list
+every member's `Check:` lines and blocked tasks first in its report; and,
+where the harness has none, the session shall build each member itself,
+one after another.
 
 #### Scenario: Two members that share nothing
 
@@ -107,9 +107,9 @@ after another.
   A's tasks' `Files:` is in B's
 - WHEN `/grove-implement K` is run in a harness with subagents
 - THEN A and B are built at the same time, each in its own subagent by
-  `grove instructions implement <change-id>`; the session archives and
-  commits each as it returns, one at a time; and C is started once both
-  are archived
+  `grove instructions implement --runner <change-id>`; the session
+  archives and commits each as it returns, one at a time; and C is
+  started once both are archived
 
 #### Scenario: Members that share a file
 
@@ -141,7 +141,8 @@ after another.
 - WHEN `/grove-implement K` is run in a harness that cannot start
   subagents
 - THEN the session builds A and then B itself, each by
-  `grove instructions implement <change-id>`
+  `grove instructions implement --runner <change-id>`, and delivers the
+  cycle as its own instructions say
 
 ### Requirement: Name the change's documents
 
@@ -343,6 +344,66 @@ agrees in the session, naming it in no task's `Files:` line.
 - THEN its report names a `context` line giving that command, and
   `grove.yaml` is unchanged
 
+### Requirement: Delivery rules and a caller that delivers
+
+Where `grove.yaml` holds lines under `rules.delivery.<skill>`, the system
+shall print them in that skill's instructions, after the skill's rules,
+under a heading of their own. When `grove instructions implement` is given
+`--runner` before a change's or a cycle's ID, it shall leave out the lines
+under `rules.delivery.implement` and print, in Grove's own words, that the
+session that started this build delivers it, and that this session
+pushes nothing, opens no pull request, creates no branch or worktree, and
+leaves its work on the current branch in this working tree. It shall
+still print the lines under `rules.skills.implement`, and `grove check`
+shall accept `rules.delivery` with the same skill keys as `rules.skills`.
+
+#### Scenario: A session the owner starts
+
+- GIVEN `rules.delivery.implement` holds "Push the branch and open a pull
+  request with gh pr create."
+- WHEN `grove instructions implement C` runs
+- THEN the instructions print that line under the delivery heading, after
+  the project's rules for the skill
+
+#### Scenario: A caller that delivers
+
+- GIVEN the same `grove.yaml`, whose `rules.skills.implement` also holds
+  "Commit after each task, naming its task ID."
+- WHEN `grove instructions implement --runner C` runs
+- THEN the instructions print the commit line, do not print the push
+  line, and print Grove's paragraph saying this session delivers nothing
+
+#### Scenario: A cycle under a runner
+
+- GIVEN `rules.delivery.implement` holds a push line, and cycle K lists A
+  and B
+- WHEN `grove instructions implement --runner K` runs
+- THEN the instructions do not print the push line, print Grove's
+  paragraph, and name `instructions implement --runner <change-id>` for
+  A and B
+
+#### Scenario: Delivery lines left under the skill's rules
+
+- GIVEN `rules.skills.implement` holds "Push the branch and open a pull
+  request." and `rules.delivery` is absent
+- WHEN `grove instructions implement --runner C` runs
+- THEN the instructions print that line, as before this change, beside
+  Grove's paragraph
+
+#### Scenario: Checking the key
+
+- GIVEN `grove.yaml` holds `rules.delivery.implement` and
+  `rules.delivery.apply`
+- WHEN the owner runs `grove check`
+- THEN it reports `rules.delivery.apply` as an unknown key and nothing for
+  `rules.delivery.implement`
+
+#### Scenario: The flag on a skill without it
+
+- GIVEN any project
+- WHEN `grove instructions plan --runner` runs
+- THEN Grove prints its usage and exits 2
+
 ### Requirement: Review names what the branch approves and builds
 
 When the current branch holds a change the target does not hold, `grove
@@ -477,3 +538,4 @@ None recorded.
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
 - [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human
 - [261114-zpgx9](../../changes/archive/261114-zpgx9-implement-ends-at-a-branch-ready-for-review/) Implement ends at a branch ready for review
+- [261117-w31az](../../changes/archive/261117-w31az-delivery-rules-a-runner-can-switch-off/) Delivery rules a runner can switch off
