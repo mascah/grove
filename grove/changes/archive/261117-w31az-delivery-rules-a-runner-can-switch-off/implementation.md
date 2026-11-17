@@ -39,3 +39,6 @@ Also changed: `docs/coordinating.md` — "Building a cycle" named `grove instruc
 - implement "Two members that share nothing", "Members that share a file", "A choice in a member", "Two members changed the same file", "A harness with no subagents": TestImplementInstructions ("cycle instructions"), which checks that the member command is `instructions implement --runner <change-id>`, passed; the rest of their behavior is unchanged and unverified here
 
 ## Reconciliation
+
+- implement: applied to grove/specs/implement/spec.md
+- runs: Boundaries line amended in grove/specs/runs/spec.md, as the proposal says

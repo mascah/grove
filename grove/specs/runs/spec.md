@@ -26,7 +26,8 @@ Recovering an interrupted attempt, creating checkouts, opening pull
 requests and scheduling are outside it (`CONSTITUTION.md` rules 2 and 11);
 Grove pushes only `grove/runs`. Starting, bounding, stopping and logging
 the agent are the caller's; the agent pushes and opens pull requests only
-as the project's `rules` tell it, and launchd or cron calls `grove claim`.
+as `rules.delivery` tells it, and not at all under `--runner`
+([implement](../implement/spec.md)), and launchd or cron calls `grove claim`.
 
 ## Requirements
 
