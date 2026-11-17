@@ -1,0 +1,5 @@
+title: "Delivery rules a runner can switch off"
+created: 2026-11-17T05:56:16Z
+description: rules.delivery holds how a project's work is delivered, and implement --runner leaves it out for a caller that delivers the work itself
+schema: default
+base: f18de5bd93847ff3dd02f162655eedff02117412
