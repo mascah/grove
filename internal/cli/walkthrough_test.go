@@ -981,9 +981,47 @@ func TestCoordinating(t *testing.T) {
 	commitAll(t, dir, "Propose showing what was saved")
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve showing what was saved", "show-saved")
+	// The index names, under each, the requirement both change; check and
+	// claim take a cycle holding both as they would any other.
+	shares := func(args ...string) bool {
+		out := grove(t, append([]string{"instructions"}, args...)...)
+		under := func(id, title, folder, other string) bool {
+			return strings.Contains(out, "- "+id+" \""+title+"\": `grove/changes/"+filepath.Base(folder)+"/`\n  - capabilities: record-editing\n  - also changed by "+other+": record-editing \"Keep a category\"\n")
+		}
+		a, b := under(recat, "Recategorize older records", recatDir, show), under(show, "Show what was saved", showDir, recat)
+		if a != b || strings.Contains(out, ": record-editing \"Keep a category\"\n") != a {
+			t.Errorf("instructions %v name the pair under one of the two:\n%s", args, out)
+		}
+		return a
+	}
+	if !shares("plan", "0.5 release") || !shares("propose") || !strings.Contains(grove(t, "instructions", "plan", "0.5 release"), "is stale on it once the first is archived. Ask whether both stay") {
+		t.Error("the plan instructions do not name the pair or say what to tell the owner")
+	}
+	before := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
+	planCycle(t, dir, "261022-p0000", "2026-10-22T11:00:00Z", false, recat, show)
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check of a cycle holding the pair printed %q", got)
+	}
+	if got := grove(t, "claim", "261022-p0000"); got != "261022-p0000\n" {
+		t.Errorf("claim of a cycle holding the pair printed %q", got)
+	}
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "reset", "-q", "--hard", before)
+	for _, ref := range strings.Fields(git(t, dir, "for-each-ref", "--format=%(refname:short)", "refs/heads/grove/")) {
+		git(t, dir, "branch", "-q", "-D", ref)
+	}
+	os.WriteFile(filepath.Join(showDir, ".grove.yaml"), []byte("title: Show what was saved\ncreated: 2026-10-14T00:00:00Z\ndepends_on: ["+recat+"]\nbase: "+base+"\n"), 0o644)
+	commitAll(t, dir, "Show-saved depends on recategorize")
+	if shares("plan", "0.5 release") {
+		t.Error("the index names a pair one of which depends on the other")
+	}
+	git(t, dir, "reset", "-q", "--hard", before)
 	want := "grove/changes/" + filepath.Base(showDir) + "/specs/record-editing/spec.md:5: requirement \"Keep a category\" was rewritten since base " + base[:7] + "; revise the change with propose\n"
 	if out := finish(t, dir, "recategorize-impl", recat, recatDir, olderEdits+"### Requirement: Keep a category\n\n"+recatText); out != want {
 		t.Errorf("check while archiving recategorize printed %q", out)
+	}
+	if shares("plan", "0.5 release") {
+		t.Error("the index names a pair one of which is archived")
 	}
 	stdout.Reset()
 	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != want {

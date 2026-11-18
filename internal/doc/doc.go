@@ -73,6 +73,14 @@ type Change struct {
 	Touches       map[string]string `json:"-"`                        // file → the capability it is about, for each file at a schema path with <capability>
 	Dropped       bool              `json:"-"`                        // implementation.md says Status: dropped
 	OpenQuestions string            `json:"open_questions,omitempty"` // its main document's "Open questions" section, or ""
+	Shares        []Share           `json:"-"`                        // for an open change, sorted
+}
+
+// Share is a requirement that another open change, neither depending on
+// the other, also holds an ADDED, MODIFIED or REMOVED block for: whichever
+// is archived second is stale on it.
+type Share struct {
+	Change, Capability, Requirement string
 }
 
 // Task is one T-NN heading of a change's tasks.md, with the status
@@ -167,6 +175,7 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 		}
 	}
 	c.dependencies()
+	c.shares(fsys)
 	cycles, err := fs.Glob(fsys, "cycles/*")
 	if err != nil {
 		return nil, err
@@ -264,6 +273,59 @@ func (c *Collection) members() {
 				in[id] = cy.ID
 			}
 		}
+	}
+}
+
+// shares fills each open change's Shares. A change that depends on the
+// other, directly or through other changes, open or archived, was written
+// on the other's text, so the two are no pair.
+func (c *Collection) shares(fsys fs.FS) {
+	all := map[string]*Change{}
+	for _, ch := range slices.Concat(c.Changes, c.Archived) {
+		all[ch.ID] = ch
+	}
+	after := func(ch *Change, id string) bool {
+		seen := map[string]bool{}
+		var walk func(from *Change) bool
+		walk = func(from *Change) bool {
+			for _, d := range from.Meta.DependsOn {
+				if d == id {
+					return true
+				}
+				if next := all[d]; next != nil && !seen[d] {
+					if seen[d] = true; walk(next) {
+						return true
+					}
+				}
+			}
+			return false
+		}
+		return walk(ch)
+	}
+	blocks := map[[2]string][]*Change{} // capability, requirement → the open changes with a block for it
+	for _, ch := range c.Changes {
+		for file, capability := range ch.Touches {
+			b, _ := fs.ReadFile(fsys, file)
+			for _, r := range Requirements(string(b)) {
+				if k := [2]string{capability, r.Name}; r.Section != "" && !slices.Contains(blocks[k], ch) {
+					blocks[k] = append(blocks[k], ch)
+				}
+			}
+		}
+	}
+	for k, chs := range blocks {
+		for _, a := range chs {
+			for _, b := range chs {
+				if a != b && !after(a, b.ID) && !after(b, a.ID) {
+					a.Shares = append(a.Shares, Share{b.ID, k[0], k[1]})
+				}
+			}
+		}
+	}
+	for _, ch := range c.Changes {
+		slices.SortFunc(ch.Shares, func(x, y Share) int {
+			return cmp.Or(cmp.Compare(x.Change, y.Change), cmp.Compare(x.Capability, y.Capability), cmp.Compare(x.Requirement, y.Requirement))
+		})
 	}
 }
 

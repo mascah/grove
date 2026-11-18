@@ -739,6 +739,9 @@ func (p Project) index(b *strings.Builder) {
 		if len(c.WaitsOn) > 0 {
 			more = append(more, "waits on: "+strings.Join(c.WaitsOn, ", ")+", not archived as finished")
 		}
+		for _, s := range c.Shares {
+			more = append(more, fmt.Sprintf("also changed by %s: %s %q", s.Change, s.Capability, s.Requirement))
+		}
 		entry(b, p.Root+"/"+c.Dir+"/", &c.Document, more...)
 	}
 	if len(p.Agreed.Changes) == 0 {
