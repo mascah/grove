@@ -28,6 +28,8 @@ func TestFront(t *testing.T) {
 		{"---\ntitle: K\n---\n", "---\ntitle: K\n", ""},
 		{"# K\n\ntitle: K\n", "", ""},
 		{"---\ntitle: K\n", "", ""},
+		{"---\r\ntitle: K\r\n---\r\n\n    code\n", "---\r\ntitle: K\r\n", "    code"},
+		{"---\ngoal: |\n  ---\nplanned: abc\n---\n", "---\ngoal: |\n  ---\nplanned: abc\n", ""},
 	} {
 		fields, notes, ok := Front(c.src)
 		if fields != c.fields || notes != c.notes || ok != (c.fields != "") {

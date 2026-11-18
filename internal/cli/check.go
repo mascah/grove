@@ -328,7 +328,9 @@ func sincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]s
 	}
 	follow(cy.Meta.DependsOn)
 	expected := func(files []string) bool {
-		return slices.Contains(files, p.Root+"/"+cy.Path) || slices.ContainsFunc(files, func(f string) bool {
+		// A commit that edited the cycle file before it was converted from
+		// .yaml edited it all the same.
+		return slices.Contains(files, p.Root+"/"+cy.Path) || slices.Contains(files, p.Root+"/"+strings.TrimSuffix(cy.Path, ".md")+".yaml") || slices.ContainsFunc(files, func(f string) bool {
 			return slices.ContainsFunc(archived, func(dir string) bool { return strings.HasPrefix(f, dir) })
 		})
 	}

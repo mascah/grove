@@ -42,6 +42,7 @@ Status: done
 Check: the sentence that a member's documents hold over the notes is printed only for a cycle file that holds notes (open question 1), as the implement change spec's "A cycle with no notes" scenario says; it reads "The notes below the cycle's fields are its plan's advice: where they and a member's documents disagree, the member's documents hold." and is a Go string in `Markdown()`, like the other text Grove writes around a printed file.
 Check: in place of notes the template holds an HTML comment listing the three kinds of note and saying to delete it, leaving nothing below the fields, when there is nothing to say (open question 2); `requires/plan.md` adds that there may be none and that the notes change no member.
 Check: the `.yaml` message names the new file without backticks, "rename it to 261020-m4k8t-0-4-release.md and put its fields between two lines of ---", since no other check message quotes a path in backticks.
+Check: after review, `doc.Front` closes the fields only at a line that is exactly `---`, in either line ending, so an indented `---` inside a YAML block scalar stays a field value; and the notes keep their leading indentation, dropping only blank lines above them, so notes opening with an indented code block render as one; `grove serve` drops the opening line by its length, so a CRLF file shows no `---` among its fields. TestFront and TestServe cover each.
 Check: `doc.Front` is exported so `grove serve` splits a cycle file the same way `Load` does; any `.md` under the root that starts with a line of `---` is shown so, which today is only a cycle file.
 Check: a `.md` cycle file that does not start with its fields is still listed as a cycle with no fields, so its problem shows under it; with no members it counts as done and is claimed by nothing.
 
@@ -74,14 +75,14 @@ Status: done
   `dev/walkthrough.md` except where `docs/reference.md` and planning step 4
   describe one left over.
 
-Check: `bin/grove check` on this branch reports one problem: "grove/cycles/261118-5b98a-cycle-files-in-markdown.md: planned: 261118-emse7 changed on main since this plan, so grove claim skips this cycle". This change's T-02 names the folder `grove/cycles/`, and the two commits on main since that cycle's `planned` (c9ef062, dc8d335) edited the cycle file under its old `.yaml` name, which the staleness rule excuses only as the cycle file's own path, now `.md`. It is reported against main's copy of this change, so it stays until the merge that archives 261118-emse7 reaches main, after which no open member names `grove/cycles/` and the report goes. No code was added for it: a cycle file's old name is a state rule 13 leaves unguarded, and only a member naming `grove/cycles/` meets it.
+Check: after review, staleness counts a commit that edited the cycle file under its old `.yaml` name as editing the cycle file, in `internal/cli/check.go`. Without it, converting a cycle one of whose members names `grove/cycles/` made it stale, as this branch's own cycle 261118-5b98a was (its plan and mark, c9ef062 and dc8d335, edited the `.yaml`), against the cycles scenario "Converted". The earlier note here said rule 13 left this unguarded; the review showed it is a documented step, the conversion, so it is handled and tested by TestConvertedCycle.
 Check: until main holds `.md` cycle files, this branch's `bin/grove` finds no cycle on main: `bin/grove instructions implement 261118-5b98a` says "main holds no approved change 261118-5b98a", and member instructions print no `## The cycle`. The `grove` built from main still reads main's `.yaml` cycle for the cycle's own instructions.
 
 ## Scenarios
 
 - cycles "An open cycle left as YAML": internal/cli/walkthrough_test.go TestCycles ("Leave 0.4 as YAML": check's message and exit 1, `grove changes` with no "in cycle", nothing claimable), passed
 - cycles "A done cycle left as YAML": internal/cli/walkthrough_test.go TestCycles (the done 0.4 cycle renamed to `.yaml` at the end), passed
-- cycles "Converted": internal/cli/walkthrough_test.go TestCycles ("Convert 0.4": check clean, `planned` unchanged, `eligible` claims it), passed
+- cycles "Converted": internal/cli/walkthrough_test.go TestCycles ("Convert 0.4": check clean, `planned` unchanged, `eligible` claims it), passed; TestConvertedCycle (a member naming `grove/cycles/`, the `.yaml` plan and mark commits before the conversion), passed
 - cycles "Two approved changes": internal/cli/walkthrough_test.go TestCycles (plan instructions name `grove/cycles/<id>-<slug>.md` and a template with fields between two lines of `---`), passed; the agent writing the file is unverified, as `just trials` was not run
 - cycles "The agent titles the cycle": internal/cli/walkthrough_test.go TestCycles ("write its title yourself from its members, without asking"), passed; agent behavior unverified
 - cycles "A draft change named": unverified; agent behavior, instruction text unchanged by this change

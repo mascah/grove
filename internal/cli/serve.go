@@ -473,7 +473,7 @@ func (s *server) doc(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if fields, notes, ok := doc.Front(string(b)); ok {
-		fmt.Fprintf(w, "<pre><code>%s</code></pre>\n", html.EscapeString(strings.TrimPrefix(fields, "---\n")))
+		fmt.Fprintf(w, "<pre><code>%s</code></pre>\n", html.EscapeString(fields[strings.IndexByte(fields, '\n')+1:]))
 		b = []byte(notes)
 	}
 	markdown.Convert(b, w)

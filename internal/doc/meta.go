@@ -89,15 +89,23 @@ func (d *Document) parse(file string, src []byte, required, optional []string) m
 
 // Front splits a Markdown file into its fields, the lines up to the second
 // line of ---, the first one kept so that a field's line is the file's, and
-// the trimmed text below them; ok is false when it does not start so.
+// the text below them, from its first line that is not blank so that an
+// indented code block stays one; ok is false when it does not start so. Only
+// a line that is exactly ---, in either line ending, closes the fields, since
+// an indented one may be inside a YAML block scalar.
 func Front(src string) (fields, notes string, ok bool) {
 	lines := strings.SplitAfter(src, "\n")
-	if strings.TrimSpace(lines[0]) != "---" {
+	delimiter := func(l string) bool { return strings.TrimRight(l, "\r\n") == "---" }
+	if !delimiter(lines[0]) {
 		return "", "", false
 	}
 	for i := 1; i < len(lines); i++ {
-		if strings.TrimSpace(lines[i]) == "---" {
-			return strings.Join(lines[:i], ""), strings.TrimSpace(strings.Join(lines[i+1:], "")), true
+		if delimiter(lines[i]) {
+			rest := lines[i+1:]
+			for len(rest) > 0 && strings.TrimSpace(rest[0]) == "" {
+				rest = rest[1:]
+			}
+			return strings.Join(lines[:i], ""), strings.TrimRight(strings.Join(rest, ""), " \t\r\n"), true
 		}
 	}
 	return "", "", false

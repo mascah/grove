@@ -1096,6 +1096,39 @@ func addField(src, field string) string {
 	return src[:i] + field + src[i:]
 }
 
+// TestConvertedCycle: a cycle whose member names the cycles folder stays
+// fresh when converted from YAML, as its plan and mark edited the file under
+// its old name.
+func TestConvertedCycle(t *testing.T) {
+	dir := setUp(t)
+	c, folder := propose(t, dir, "c", "Convert the cycles", "")
+	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte("## T-01 — Convert the cycles\n\nFiles: `grove/cycles/`\n"), 0o644)
+	commitAll(t, dir, "Propose c")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve "+c, "c")
+	fields := "title: Convert\ncreated: 2026-10-22T10:00:00Z\nchanges: [" + c + "]\nplanned: " + strings.TrimSpace(git(t, dir, "rev-parse", "main")) + "\n"
+	yamlFile := filepath.Join(dir, "grove/cycles/261022-k3m9q-convert.yaml")
+	os.MkdirAll(filepath.Dir(yamlFile), 0o755)
+	os.WriteFile(yamlFile, []byte(fields), 0o644)
+	commitAll(t, dir, "Plan")
+	os.WriteFile(yamlFile, []byte(fields+"unattended: true\n"), 0o644)
+	commitAll(t, dir, "Mark")
+	os.Remove(yamlFile)
+	os.WriteFile(strings.TrimSuffix(yamlFile, ".yaml")+".md", []byte("---\n"+fields+"unattended: true\n---\n"), 0o644)
+	commitAll(t, dir, "Convert")
+	p, _ := openProject()
+	ip, err := p.agreed()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check of a converted cycle printed %q", got)
+	}
+	if cy, _ := eligible(p, ip); cy == nil || cy.ID != "261022-k3m9q" {
+		t.Errorf("a converted cycle is not claimable: %v", cy)
+	}
+}
+
 // TestCycles follows the walkthrough's "Planning cycles": plan
 // instructions, a cycle file merged and marked, and check's reports on it.
 func TestCycles(t *testing.T) {
@@ -2117,6 +2150,11 @@ func TestServe(t *testing.T) {
 	}
 	if _, got := get(t, url+"api/doc?path=cycles/"+k+"-cycle.md"); !strings.HasSuffix(got, "unattended: true\n</code></pre>\n") {
 		t.Errorf("/api/doc of a cycle with no notes answered something below its fields:\n%s", got)
+	}
+	// A cycle with CRLF line endings whose notes open with an indented code block.
+	os.WriteFile(filepath.Join(dir, "grove/cycles/261099-zzzzy-crlf.md"), []byte("---\r\ntitle: CRLF\r\n---\r\n\r\n    go test\r\n"), 0o644)
+	if _, got := get(t, url+"api/doc?ref=worktree&path=cycles/261099-zzzzy-crlf.md"); !strings.HasPrefix(got, "<pre><code>title: CRLF\r\n</code></pre>\n<pre><code>go test") {
+		t.Errorf("/api/doc of a CRLF cycle with a code block:\n%q", got)
 	}
 	for _, query := range []string{"path=../grove.yaml", "path=notes.txt", "ref=main&path=cycles/" + k + "-cycle.md"} {
 		if code, _ := get(t, url+"api/doc?"+query); code != 400 {
