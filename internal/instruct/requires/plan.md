@@ -24,6 +24,11 @@
 - Keep `created` as the template has it. Set `planned` to the commit the
   template shows: the target commit you read the members at. Change it
   only so.
+- Below the fields, write notes only where there is something to say, as
+  the template's comment lists; there may be none. They change no member:
+  what would change a member's requirements or tasks is a revision of it.
+  Revising, bring them up to date with the new `planned`: say what holds
+  there, and nothing the target made false.
 - Never write or remove `unattended`. It hands the cycle to a `grove claim`
   given no cycle and is the owner's to set, in a later merge of its own.
 - The plan is made when the owner merges the cycle file into the target

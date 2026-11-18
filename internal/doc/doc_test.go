@@ -17,3 +17,17 @@ func TestOpenQuestions(t *testing.T) {
 		}
 	}
 }
+
+func TestFront(t *testing.T) {
+	for _, c := range []struct{ src, fields, notes string }{
+		{"---\ntitle: K\n---\n\n## Found\n\n- B moved\n", "---\ntitle: K\n", "## Found\n\n- B moved"},
+		{"---\ntitle: K\n---\n", "---\ntitle: K\n", ""},
+		{"# K\n\ntitle: K\n", "", ""},
+		{"---\ntitle: K\n", "", ""},
+	} {
+		fields, notes, ok := Front(c.src)
+		if fields != c.fields || notes != c.notes || ok != (c.fields != "") {
+			t.Errorf("Front(%q) = %q, %q, %v", c.src, fields, notes, ok)
+		}
+	}
+}

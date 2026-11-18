@@ -87,6 +87,22 @@ func (d *Document) parse(file string, src []byte, required, optional []string) m
 	return lines
 }
 
+// Front splits a Markdown file into its fields, the lines up to the second
+// line of ---, the first one kept so that a field's line is the file's, and
+// the trimmed text below them; ok is false when it does not start so.
+func Front(src string) (fields, notes string, ok bool) {
+	lines := strings.SplitAfter(src, "\n")
+	if strings.TrimSpace(lines[0]) != "---" {
+		return "", "", false
+	}
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) == "---" {
+			return strings.Join(lines[:i], ""), strings.TrimSpace(strings.Join(lines[i+1:], "")), true
+		}
+	}
+	return "", "", false
+}
+
 // heading reports file, with missing when there is none, or when its first
 // "# " heading is not d's title. With no title, the missing title is the
 // problem, reported already.

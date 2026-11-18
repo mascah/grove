@@ -3,8 +3,8 @@
 //
 // Under the root are maintained specs (specs/<id>/, found by its spec.md),
 // changes (changes/<id>-<slug>/, archived in changes/archive/, found by its
-// .grove.yaml), and cycles (cycles/<id>-<slug>.yaml). Problems inside a document
-// are Diagnostics, never errors, so one broken document does not hide the
+// .grove.yaml), and cycles (cycles/<id>-<slug>.md, its fields between two lines
+// of --- and notes below). Problems inside a document are Diagnostics, never errors, so one broken document does not hide the
 // others.
 package doc
 
@@ -91,6 +91,7 @@ type Cycle struct {
 	Document
 	Done    bool     // every member is archived, finished or dropped
 	WaitsOn []string // what DependsOn names that is not a cycle done
+	Notes   string   // the text below its fields, trimmed; Grove reads none of it
 }
 
 // Names reports whether file, a path a Files: line names, is path or a
@@ -166,12 +167,19 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 		}
 	}
 	c.dependencies()
-	cycles, err := fs.Glob(fsys, "cycles/*.yaml")
+	cycles, err := fs.Glob(fsys, "cycles/*")
 	if err != nil {
 		return nil, err
 	}
 	for _, name := range cycles {
-		cy := &Cycle{Document: Document{ID: idOf(strings.TrimSuffix(path.Base(name), ".yaml")), Path: name}}
+		base, ext := strings.TrimSuffix(path.Base(name), path.Ext(name)), path.Ext(name)
+		if ext == ".yaml" {
+			c.Diagnostics = append(c.Diagnostics, Diagnostic{Path: name, Message: "a cycle file is Markdown now; rename it to " + base + ".md and put its fields between two lines of ---"})
+		}
+		if ext != ".md" {
+			continue
+		}
+		cy := &Cycle{Document: Document{ID: idOf(base), Path: name}}
 		if cy.ID == "" {
 			cy.report(name, 0, "the file name must start with a cycle ID, such as 261015-k3m9q")
 		}
@@ -179,7 +187,13 @@ func Load(fsys fs.FS, layout Layout) (*Collection, error) {
 		if err != nil {
 			return nil, err
 		}
-		cy.lines = cy.parse(name, b, []string{"title", "created", "changes", "planned"}, []string{"goal", "depends_on", "unattended"})
+		fields, notes, ok := Front(string(b))
+		if !ok {
+			cy.report(name, 0, "a cycle file starts with its fields between two lines of ---")
+		} else {
+			cy.Notes = notes
+			cy.lines = cy.parse(name, []byte(fields), []string{"title", "created", "changes", "planned"}, []string{"goal", "depends_on", "unattended"})
+		}
 		cy.Done = !slices.ContainsFunc(cy.Meta.Changes, func(id string) bool { return !c.InArchive(id) })
 		c.Cycles = append(c.Cycles, cy)
 	}
