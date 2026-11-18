@@ -111,3 +111,7 @@ Check: until main holds `.md` cycle files, this branch's `bin/grove` finds no cy
 - serve "A path outside the root": internal/cli/walkthrough_test.go TestServe, passed
 
 ## Reconciliation
+
+- cycles: applied to grove/specs/cycles/spec.md, with the Purpose sentence on the cycle file as the change spec gives it
+- implement: applied to grove/specs/implement/spec.md
+- serve: applied to grove/specs/serve/spec.md
