@@ -18,7 +18,12 @@ Start from your main branch with the changes approved. **Terminal:**
 The agent lists the approved changes, asks which belong in the cycle, and
 reads each one you agree to. It titles the cycle itself. It tells you
 when a change waits on one outside the cycle that is not archived as
-finished. Whether a change needed a person is settled when you review
+finished. It also tells you when two changes it proposes change the same
+requirement, which the project index names under each. Whichever is
+built second is stale on that requirement once the first is archived, and
+must be revised before it is built, in the middle of the cycle. You choose
+whether both stay in this cycle or one waits for a later one; Grove
+refuses neither. Whether a change needed a person is settled when you review
 its build, not in the plan.
 
 Before it writes the cycle, the agent runs `grove check`. A change you

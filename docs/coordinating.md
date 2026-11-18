@@ -196,6 +196,18 @@ rewriting change in `depends_on`: its author planned against that text.
 Only a rewrite the change did not plan for is reported. The [propose spec](https://github.com/mascah/grove/blob/main/grove/specs/propose/spec.md), "Report a stale requirement",
 has the exact rule.
 
+You hear of such a pair before either is built. Where two approved changes,
+neither depending on the other, each modify, remove or add the same
+requirement of one capability, the project index every skill reads names,
+under each, the other change and the requirement:
+
+> \- also changed by 261019-s5v3m: record-editing "Keep a category"
+
+Propose reads it when it asks what a new change waits on, and plan tells
+you of such a pair before the two share a cycle (see
+[Planning cycles](planning.md)). The [cycles spec](https://github.com/mascah/grove/blob/main/grove/specs/cycles/spec.md), "Name a
+requirement two approved changes both change", has the exact rule.
+
 `grove check` reads your working tree. So the second change is reported on
 the branch that archives the first, before anything is merged. That holds
 whether one session builds them both or not. `/grove-archive` runs `grove

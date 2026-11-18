@@ -172,7 +172,20 @@ It starts where the main line's step 6 ends: one archived change and the
    Commit and merge. Then
    `git switch main && git switch -c show-saved`, a fresh session,
    `/grove-propose Editing a record prints what was saved`, which MODIFIES
-   the same requirement from the same text. Commit and merge. Implement
+   the same requirement from the same text. Commit and merge.
+   `grove instructions plan "0.5 release"` lists, in the project index,
+   under recategorize
+   > \- also changed by \<show-saved>: record-editing "\<name>"
+
+   and under show-saved the same line naming recategorize, and its plan
+   requirements say to tell the owner of such a pair among the members,
+   that the one built second is stale on it once the first is archived,
+   and to ask whether both stay. `grove instructions propose` lists the
+   same lines. Commit a cycle on main listing both: `grove check` is
+   clean and `grove claim <cycle-id>` claims it. Reset main and delete
+   the branches `claim` made. Commit `depends_on: [<recategorize-id>]` in
+   show-saved's `.grove.yaml` on main: the index names neither under the
+   other. Reset main. Implement
    `recategorize` on `recategorize-impl`; the `grove check` its archive runs
    after reconciling the spec reports show-saved, not recategorize, and
    exits non-zero:
@@ -182,7 +195,8 @@ It starts where the main line's step 6 ends: one archived change and the
    it. Commit and merge; `grove check` on main reports the same line. Set
    show-saved's `depends_on` to `[<recategorize-id>]` in the working tree:
    `grove check` is clean, since show-saved then builds on the change that
-   rewrote the requirement. Discard that edit.
+   rewrote the requirement. Discard that edit. The project index on main
+   no longer names the pair, recategorize being archived.
    `git switch -c show-saved-revise`, a fresh session,
    `/grove-propose <show-saved>`, asked to bring it up to date with main.
    The session adds recategorize's scenario to show-saved's MODIFIED text
@@ -1034,7 +1048,9 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
 - The project index lists each approved change's capabilities (the
   `<capability>` folders of its files) and what it waits on, rather than
   dependencies Grove works out as candidates. Propose names the likely ones
-  from it.
+  from it. It also names, under each of two approved changes neither of
+  which depends on the other, each requirement of a capability both have
+  an ADDED, MODIFIED or REMOVED block for, comparing names, not texts.
 - `grove changes` writes `waits on <id>, <id>` after `approved`, and
   nothing for a change whose dependencies are all archived as finished.
 - A change with no dependency leaves `depends_on` out; `depends_on: []` is
