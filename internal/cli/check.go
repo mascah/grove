@@ -327,18 +327,22 @@ func sincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]s
 		}
 	}
 	follow(cy.Meta.DependsOn)
+	// A commit that edited the cycle file under its old .yaml name, before
+	// the commit that made it .md, edited it all the same; one after did not.
+	md, old := p.Root+"/"+cy.Path, p.Root+"/"+strings.TrimSuffix(cy.Path, ".md")+".yaml"
+	_, err = gitx.Run(p.Top, "cat-file", "-e", strings.TrimSpace(planned)+":"+md)
+	converted := err == nil
 	expected := func(files []string) bool {
-		// A commit that edited the cycle file before it was converted from
-		// .yaml edited it all the same.
-		return slices.Contains(files, p.Root+"/"+cy.Path) || slices.Contains(files, p.Root+"/"+strings.TrimSuffix(cy.Path, ".md")+".yaml") || slices.ContainsFunc(files, func(f string) bool {
+		return slices.Contains(files, md) || !converted && slices.Contains(files, old) || slices.ContainsFunc(files, func(f string) bool {
 			return slices.ContainsFunc(archived, func(dir string) bool { return strings.HasPrefix(f, dir) })
 		})
 	}
 	var out []string
-	for _, files := range commits {
+	for _, files := range slices.Backward(commits) { // oldest first
 		if !expected(files) {
 			out = append(out, files...)
 		}
+		converted = converted || slices.Contains(files, md)
 	}
 	return out, nil
 }

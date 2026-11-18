@@ -1002,6 +1002,9 @@ func TestCoordinating(t *testing.T) {
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
 		t.Errorf("check of a cycle holding the pair printed %q", got)
 	}
+	for _, k := range []string{"GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
+		t.Setenv(k, "operator@example.com") // claim commits, and CI has no identity
+	}
 	if got := grove(t, "claim", "261022-p0000"); got != "261022-p0000\n" {
 		t.Errorf("claim of a cycle holding the pair printed %q", got)
 	}
@@ -1126,6 +1129,25 @@ func TestConvertedCycle(t *testing.T) {
 	}
 	if cy, _ := eligible(p, ip); cy == nil || cy.ID != "261022-k3m9q" {
 		t.Errorf("a converted cycle is not claimable: %v", cy)
+	}
+
+	// After the conversion, a commit to the old name is not the plan's: the
+	// obsolete copy restored, then removed with a revision of the member.
+	os.WriteFile(yamlFile, []byte(fields), 0o644)
+	commitAll(t, dir, "Restore the YAML copy")
+	os.Remove(yamlFile)
+	os.WriteFile(filepath.Join(folder, "proposal.md"), []byte(read(t, filepath.Join(folder, "proposal.md"))+"\nRevised.\n"), 0o644)
+	commitAll(t, dir, "Remove the YAML copy and revise c")
+	var stdout, stderr strings.Builder
+	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || !strings.Contains(stdout.String(), "261022-k3m9q-convert.md: planned: ") {
+		t.Errorf("check after a revision with the old name's removal: status %d\n%s%s", code, stdout.String(), stderr.String())
+	}
+	p, _ = openProject()
+	if ip, err = p.agreed(); err != nil {
+		t.Fatal(err)
+	}
+	if cy, _ := eligible(p, ip); cy != nil {
+		t.Errorf("a cycle whose member changed after conversion is claimable: %v", cy.ID)
 	}
 }
 
