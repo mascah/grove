@@ -1,5 +1,7 @@
+---
 title: Specs that last
 created: 2026-10-23T22:00:23Z
 goal: A guide to specs of existing code, specs that list the changes that shaped them, and rules learned while implementing
 changes: [261023-xkehc, 261023-psd1b, 261023-mfgew]
 planned: f110c04bce9b3c07ca94a2d4415b78043c294190
+---

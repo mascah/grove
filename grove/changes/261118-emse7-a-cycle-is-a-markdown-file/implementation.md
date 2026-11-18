@@ -47,7 +47,35 @@ Check: a `.md` cycle file that does not start with its fields is still listed as
 
 ### T-02 — Docs, walkthrough and Grove's own cycle files
 
-Status: not started
+Status: done
+
+- `docs/planning.md` shows a cycle file as plan writes it, fields between
+  two lines of `---` and notes below, says what the notes hold, that only
+  plan writes them, that re-planning brings them up to date, and that a
+  change's documents hold over them; its examples name `.md` files with
+  the file's line numbers, and its malformed list adds a file that does
+  not start with its fields.
+- `docs/reference.md` gives `cycles/<id>-<slug>.md`, the fields between two
+  lines of `---`, the notes below, and one paragraph for a project still
+  holding `.yaml` cycle files: what `grove check` reports and how to
+  convert one.
+- `docs/watching.md`: the pane shows a cycle's fields as text and its notes
+  rendered.
+- `dev/walkthrough.md`: planning step 1 writes a `.md` cycle with notes;
+  step 3 one with none; step 4 notes not checked, a `.yaml` cycle left over
+  and converted back, and a file that does not start with its fields;
+  step 5 re-planning brings the notes up to date; step 8 the implement
+  instructions for a cycle whose file holds notes; the serve pane step;
+  every other step names `.md` cycle files.
+- `grove/cycles/`: all eleven files (the proposal counted ten at f7e0140;
+  261118-5b98a was planned since) renamed to `.md` with a line of `---`
+  above and below their fields, nothing else changed and no notes.
+- `grep` finds no cycle file ending `.yaml` under `docs/` or in
+  `dev/walkthrough.md` except where `docs/reference.md` and planning step 4
+  describe one left over.
+
+Check: `bin/grove check` on this branch reports one problem: "grove/cycles/261118-5b98a-cycle-files-in-markdown.md: planned: 261118-emse7 changed on main since this plan, so grove claim skips this cycle". This change's T-02 names the folder `grove/cycles/`, and the two commits on main since that cycle's `planned` (c9ef062, dc8d335) edited the cycle file under its old `.yaml` name, which the staleness rule excuses only as the cycle file's own path, now `.md`. It is reported against main's copy of this change, so it stays until the merge that archives 261118-emse7 reaches main, after which no open member names `grove/cycles/` and the report goes. No code was added for it: a cycle file's old name is a state rule 13 leaves unguarded, and only a member naming `grove/cycles/` meets it.
+Check: until main holds `.md` cycle files, this branch's `bin/grove` finds no cycle on main: `bin/grove instructions implement 261118-5b98a` says "main holds no approved change 261118-5b98a", and member instructions print no `## The cycle`. The `grove` built from main still reads main's `.yaml` cycle for the cycle's own instructions.
 
 ## Scenarios
 

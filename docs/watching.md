@@ -123,8 +123,9 @@ The maintained specs on the target, with their descriptions.
 
 Clicking a change, cycle or spec opens it in the pane on the right. A
 change shows its proposal and a button for each of its files on the
-target, and for its files new on each branch. Markdown is rendered and a
-cycle's YAML shown as text. A link from one document to another under the
+target, and for its files new on each branch. Markdown is rendered, and a
+`.grove.yaml` shown as text; a cycle shows its fields as text and its
+notes rendered below them. A link from one document to another under the
 root opens in the pane, and a link to a change's folder opens its
 proposal. A refresh keeps the document you are reading as it was loaded,
 and where you scrolled to, in both columns; click it again to read its
