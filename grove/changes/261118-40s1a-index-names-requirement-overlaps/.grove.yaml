@@ -1,0 +1,6 @@
+title: "The project index names requirements two changes both change"
+created: 2026-11-18T02:35:49Z
+description: Where two approved changes change the same requirement, the project index says so under each, and plan tells the owner before they share a cycle.
+schema: default
+depends_on: [261118-emse7]
+base: f7e0140ad4272a9f4e88b32b561a61e9558b1413

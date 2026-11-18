@@ -1,0 +1,5 @@
+title: "A cycle is a Markdown file with plan's notes"
+created: 2026-11-18T02:10:49Z
+description: A cycle file becomes Markdown, its fields as YAML at the top and below them what plan found and what the builder should know; a .yaml left over is reported.
+schema: default
+base: f7e0140ad4272a9f4e88b32b561a61e9558b1413
