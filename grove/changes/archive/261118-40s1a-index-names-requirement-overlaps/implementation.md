@@ -68,7 +68,4 @@ Check: the walkthrough step for the pair sits in Coordinating changes step 4, wh
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- cycles: applied to grove/specs/cycles/spec.md
