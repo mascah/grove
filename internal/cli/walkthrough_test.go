@@ -1101,7 +1101,7 @@ func TestCycles(t *testing.T) {
 	if out := grove(t, "review"); !strings.Contains(out, "  adds     cycle            grove/cycles/"+k+"-0-4-release.md\n") {
 		t.Errorf("review of a cycle:\n%s", out)
 	}
-	if out := grove(t, "instructions", "plan", k); !strings.Contains(out, "You are revising cycle "+k+", \"0.4 release\"") || !strings.Contains(out, "## The cycle\n\n<file path=\"grove/cycles/"+k+"-0-4-release.md\">\n"+plan) {
+	if out := grove(t, "instructions", "plan", k); !strings.Contains(out, "You are revising cycle "+k+", \"0.4 release\"") || !strings.Contains(out, "bring them up to date with the new `planned`") || !strings.Contains(out, "bring\nthe notes up to date") || !strings.Contains(out, "## The cycle\n\n<file path=\"grove/cycles/"+k+"-0-4-release.md\">\n"+plan) {
 		t.Errorf("revise instructions for a cycle:\n%s", out)
 	}
 	git(t, dir, "switch", "-q", "main")
@@ -2076,6 +2076,9 @@ func TestServe(t *testing.T) {
 		if code, got := get(t, url+"api/doc?"+tc.query); code != 200 || !strings.Contains(got, tc.want) || strings.Contains(got, "<script") {
 			t.Errorf("/api/doc?%s answered %d:\n%s", tc.query, code, got)
 		}
+	}
+	if _, got := get(t, url+"api/doc?path=cycles/"+k+"-cycle.md"); !strings.HasSuffix(got, "unattended: true\n</code></pre>\n") {
+		t.Errorf("/api/doc of a cycle with no notes answered something below its fields:\n%s", got)
 	}
 	for _, query := range []string{"path=../grove.yaml", "path=notes.txt", "ref=main&path=cycles/" + k + "-cycle.md"} {
 		if code, _ := get(t, url+"api/doc?"+query); code != 400 {

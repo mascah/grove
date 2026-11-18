@@ -79,4 +79,35 @@ Check: until main holds `.md` cycle files, this branch's `bin/grove` finds no cy
 
 ## Scenarios
 
+- cycles "An open cycle left as YAML": internal/cli/walkthrough_test.go TestCycles ("Leave 0.4 as YAML": check's message and exit 1, `grove changes` with no "in cycle", nothing claimable), passed
+- cycles "A done cycle left as YAML": internal/cli/walkthrough_test.go TestCycles (the done 0.4 cycle renamed to `.yaml` at the end), passed
+- cycles "Converted": internal/cli/walkthrough_test.go TestCycles ("Convert 0.4": check clean, `planned` unchanged, `eligible` claims it), passed
+- cycles "Two approved changes": internal/cli/walkthrough_test.go TestCycles (plan instructions name `grove/cycles/<id>-<slug>.md` and a template with fields between two lines of `---`), passed; the agent writing the file is unverified, as `just trials` was not run
+- cycles "The agent titles the cycle": internal/cli/walkthrough_test.go TestCycles ("write its title yourself from its members, without asking"), passed; agent behavior unverified
+- cycles "A draft change named": unverified; agent behavior, instruction text unchanged by this change
+- cycles "A member stale on its base": internal/cli/walkthrough_test.go TestCycles (the bring-up-to-date text), passed; agent behavior unverified
+- cycles "What the plan found is noted": internal/cli/walkthrough_test.go TestCycles (template comment and notes text printed), passed; whether an agent writes the note is unverified
+- cycles "A change left out is noted": as above, instruction text passed; agent behavior unverified
+- cycles "Nothing to note": internal/cli/walkthrough_test.go TestCycles ("with nothing to say, delete this comment"), passed; agent behavior unverified
+- cycles "Re-plan a stale cycle": internal/cli/walkthrough_test.go TestCycles and TestClaim (re-plan sets `planned`, fresh again), passed
+- cycles "Re-plan after a member's file moved": internal/cli/walkthrough_test.go TestMovedFiles, passed
+- cycles "A note the target made false": internal/cli/walkthrough_test.go TestCycles (new and revise plan instructions say to bring the notes up to date, nothing the target made false), passed; agent behavior unverified
+- cycles "One change in two cycles": internal/cli/walkthrough_test.go TestCycles (`261099-zzzzz-later.md:4`), passed
+- cycles "A needs_human left over": internal/cli/walkthrough_test.go TestCycles (`:6: unknown field "needs_human"`), passed
+- cycles "A dependency on no cycle": internal/cli/walkthrough_test.go TestCycles (`261099-y0000-next.md:6`), passed
+- cycles "Cycles that wait on each other": internal/cli/walkthrough_test.go TestCycles, passed
+- cycles "No fields at the top": internal/cli/walkthrough_test.go TestCycles (`261099-zzzzx-heading.md`), passed; internal/doc/doc_test.go TestFront, passed
+- cycles "The line is the file's": internal/cli/walkthrough_test.go TestCycles (`needs_human` reported on line 6 with `---` on line 1), passed
+- cycles "Notes are not checked": internal/cli/walkthrough_test.go TestCycles (notes holding `needs_human: [C]`, check clean of the cycle), passed
+- cycles "A letter IDs leave out": internal/cli/walkthrough_test.go TestMisnamedCycle (`261105-proto-unknown-id-cycle.md`), passed
+- implement "A note a member contradicts": internal/cli/walkthrough_test.go TestImplementInstructions (cycle and `--runner` member instructions print the file with its notes and the sentence), passed; building B's T-01 in `ledger/report.py` is agent behavior, unverified
+- implement "A cycle with no notes": internal/cli/walkthrough_test.go TestImplementInstructions (no sentence for either), passed
+- serve "A proposal at the target": internal/cli/walkthrough_test.go TestServe, passed
+- serve "A cycle file": internal/cli/walkthrough_test.go TestServe (cycle L: fields in `<pre><code>`, `<h2>Found</h2>` and a list), passed
+- serve "A cycle file with no notes": internal/cli/walkthrough_test.go TestServe (cycle K's answer ends with its fields), passed
+- serve "A change's metadata": internal/cli/walkthrough_test.go TestServe (`.grove.yaml` answered as text), passed
+- serve "A document on a branch": internal/cli/walkthrough_test.go TestServe, passed
+- serve "Raw HTML in a document": internal/cli/walkthrough_test.go TestServe, passed
+- serve "A path outside the root": internal/cli/walkthrough_test.go TestServe, passed
+
 ## Reconciliation
