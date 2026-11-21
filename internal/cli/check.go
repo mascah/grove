@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"maps"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -298,7 +299,7 @@ func sincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]s
 	if err != nil {
 		return nil, err
 	}
-	log, err := gitx.Run(p.Top, "log", "--first-parent", "--diff-merges=first-parent", "--name-only", "--format=%x00", strings.TrimSpace(planned)+".."+commit)
+	log, err := gitx.Run(p.Top, "log", "--first-parent", "--diff-merges=first-parent", "--name-only", "--no-renames", "--format=%x00", strings.TrimSpace(planned)+".."+commit)
 	if err != nil {
 		return nil, err
 	}
@@ -337,10 +338,23 @@ func sincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]s
 			return slices.ContainsFunc(archived, func(dir string) bool { return strings.HasPrefix(f, dir) })
 		})
 	}
+	// A cycle's .yaml and .md both changed in one commit is that cycle
+	// converted to Markdown, not edited, whichever cycle it is.
+	conversion := func(files []string, f string) bool {
+		base, ok := strings.CutSuffix(f, ".yaml")
+		if !ok {
+			base, ok = strings.CutSuffix(f, ".md")
+		}
+		return ok && path.Dir(f) == p.Root+"/cycles" && slices.Contains(files, base+".yaml") && slices.Contains(files, base+".md")
+	}
 	var out []string
 	for _, files := range slices.Backward(commits) { // oldest first
 		if !expected(files) {
-			out = append(out, files...)
+			for _, f := range files {
+				if !conversion(files, f) {
+					out = append(out, f)
+				}
+			}
 		}
 		converted = converted || slices.Contains(files, md)
 	}

@@ -39,6 +39,8 @@ Status: done
   fields, exit 1.
 - `just check`: passed; 8,143 instruction words (at most 8,147).
 
+Also changed: `internal/cli/check.go` — staleness counts a commit that edited the cycle file under its old `.yaml` name, before the commit that made it `.md`, as editing the cycle file, and drops any cycle's `.yaml` and `.md` changed in one commit, so converting cycles leaves a plan whose member names `grove/cycles/` fresh (see the Check under T-02).
+
 Check: the sentence that a member's documents hold over the notes is printed only for a cycle file that holds notes (open question 1), as the implement change spec's "A cycle with no notes" scenario says; it reads "The notes below the cycle's fields are its plan's advice: where they and a member's documents disagree, the member's documents hold." and is a Go string in `Markdown()`, like the other text Grove writes around a printed file.
 Check: in place of notes the template holds an HTML comment listing the three kinds of note and saying to delete it, leaving nothing below the fields, when there is nothing to say (open question 2); `requires/plan.md` adds that there may be none and that the notes change no member.
 Check: the `.yaml` message names the new file without backticks, "rename it to 261020-m4k8t-0-4-release.md and put its fields between two lines of ---", since no other check message quotes a path in backticks.
@@ -75,7 +77,7 @@ Status: done
   `dev/walkthrough.md` except where `docs/reference.md` and planning step 4
   describe one left over.
 
-Check: after review, staleness counts a commit that edited the cycle file under its old `.yaml` name as editing the cycle file, in `internal/cli/check.go`. Without it, converting a cycle one of whose members names `grove/cycles/` made it stale, as this branch's own cycle 261118-5b98a was (its plan and mark, c9ef062 and dc8d335, edited the `.yaml`), against the cycles scenario "Converted". The earlier note here said rule 13 left this unguarded; the review showed it is a documented step, the conversion, so it is handled and tested by TestConvertedCycle.
+Check: after review, staleness counts a commit that edited the cycle file under its old `.yaml` name as editing the cycle file, in `internal/cli/check.go`. Without it, converting a cycle one of whose members names `grove/cycles/` made it stale, as this branch's own cycle 261118-5b98a was (its plan and mark, c9ef062 and dc8d335, edited the `.yaml`), against the cycles scenario "Converted". The earlier note here said rule 13 left this unguarded; the review showed it is a documented step, the conversion, so it is handled and tested by TestConvertedCycle. A later review found the same for converting another cycle in a commit of its own, so `sincePlan` reads the log with `--no-renames` and leaves out any cycle's `.yaml` and `.md` changed together; TestConvertedCycle converts a second cycle first.
 Check: until main holds `.md` cycle files, this branch's `bin/grove` finds no cycle on main: `bin/grove instructions implement 261118-5b98a` says "main holds no approved change 261118-5b98a", and member instructions print no `## The cycle`. The `grove` built from main still reads main's `.yaml` cycle for the cycle's own instructions.
 
 ## Scenarios
