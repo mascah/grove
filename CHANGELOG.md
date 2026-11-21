@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.13.0](https://github.com/mascah/grove/compare/v0.12.0...v0.13.0) (2026-11-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **doc:** cycle files are Markdown. Rename each `grove/cycles/*.yaml` to `.md` and put a line of `---` above and below its fields.
+
+### Features
+
+* **doc:** cycle files are Markdown; the index names shared rules ([#176](https://github.com/mascah/grove/issues/176)) ([7a33629](https://github.com/mascah/grove/commit/7a33629d0fd5c2eec91c816592b0b5c3b36f8e06))
+* **instruct:** plan marks a cycle unattended when the owner asks ([#179](https://github.com/mascah/grove/issues/179)) ([37eb724](https://github.com/mascah/grove/commit/37eb7245b181a4e6ce0cdd60e7be1d9ef727893a))
+
 ## [0.12.0](https://github.com/mascah/grove/compare/v0.11.0...v0.12.0) (2026-11-17)
 
 
