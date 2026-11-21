@@ -177,19 +177,30 @@ cycles the owner names.
 
 When the cycle file is written, the plan instructions shall have the agent
 tell the owner that `/grove-implement <cycle-id>` builds the cycle with
-them, then whether `grove claim <cycle-id>` would claim it, and that
-`unattended: true`, merged on its own, hands it to a `grove claim` given
-no cycle, such as a timer's; and, for each obstacle, what removes it.
+them, then whether `grove claim <cycle-id>` would claim it, then, where
+the cycle file holds `unattended: true`, that merging it hands the cycle
+to a `grove claim` given no cycle, such as a timer's, and otherwise that
+`unattended: true`, merged on its own, does; and, for each obstacle, what
+removes it.
 
 #### Scenario: Nothing in the way
 
 - GIVEN members A and B, neither of which waits on a change outside the
-  cycle
+  cycle, and the owner did not ask for an unattended cycle
 - WHEN the agent finishes the plan
 - THEN it names `/grove-implement <cycle-id>` first, says
   `grove claim <cycle-id>` would claim the cycle, and says a `grove claim`
   given no cycle would claim it once `unattended: true` is merged in, and
   how that mark is added
+
+#### Scenario: Marked as the owner asked
+
+- GIVEN the owner asked for an unattended cycle, and the agent wrote
+  `unattended: true` in the cycle file
+- WHEN the agent finishes the plan
+- THEN it names `/grove-implement <cycle-id>` first, says
+  `grove claim <cycle-id>` would claim the cycle, and says merging the
+  cycle file hands it to a `grove claim` given no cycle
 
 #### Scenario: A member waits on a change outside the cycle
 
@@ -218,13 +229,52 @@ no cycle, such as a timer's; and, for each obstacle, what removes it.
 
 The system shall treat a cycle as handed to `grove claim` only while the
 target's cycle file holds `unattended: true`, and the plan instructions
-shall never write or remove that field.
+shall have the agent write or remove that field only where the owner asks
+for it, in the description or the conversation, never offering it, and
+keep it as it is otherwise.
 
 #### Scenario: Planned but not marked
 
 - GIVEN the target holds cycle K without `unattended`
 - WHEN `grove claim` is invoked
 - THEN K is not claimed
+
+#### Scenario: The owner asks for an unattended cycle
+
+- GIVEN the target approves changes A and B, neither in a cycle
+- WHEN the owner runs `/grove-plan an unattended cycle for A and B`,
+  agrees to A and B, and merges the cycle file
+- THEN the cycle file holds `unattended: true`, and a `grove claim` given
+  no cycle claims it with no other merge
+
+#### Scenario: The owner asks nothing about it
+
+- GIVEN the target approves changes A and B, neither in a cycle
+- WHEN the owner runs `/grove-plan 0.4 release` and agrees to A and B
+- THEN the cycle file has no `unattended`, and the agent does not ask
+  whether to add it
+
+#### Scenario: An obstacle does not stop the mark
+
+- GIVEN the owner asks for an unattended cycle, and member B depends on
+  change D, neither in the cycle nor archived as finished
+- WHEN the agent writes the cycle file
+- THEN the file holds `unattended: true`, and the agent says `grove claim`
+  would not claim the cycle until D is archived as finished
+
+#### Scenario: Re-plan keeps the mark
+
+- GIVEN the target holds cycle K with `unattended: true`, stale because
+  member A was revised
+- WHEN the owner runs `/grove-plan K` and says nothing about the mark
+- THEN the agent sets `planned` and K still holds `unattended: true`
+
+#### Scenario: The owner asks to remove the mark
+
+- GIVEN the target holds cycle K with `unattended: true`
+- WHEN the owner runs `/grove-plan K` and asks that K no longer run
+  unattended
+- THEN K's file holds no `unattended`
 
 ### Requirement: A cycle can depend on cycles
 
@@ -613,3 +663,4 @@ None.
 - [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human
 - [261118-emse7](../../changes/archive/261118-emse7-a-cycle-is-a-markdown-file/) A cycle is a Markdown file with plan's notes
 - [261118-40s1a](../../changes/archive/261118-40s1a-index-names-requirement-overlaps/) The project index names requirements two changes both change
+- [261118-5mqc1](../../changes/archive/261118-5mqc1-plan-marks-unattended-when-asked/) Plan marks a cycle unattended when the owner asks
