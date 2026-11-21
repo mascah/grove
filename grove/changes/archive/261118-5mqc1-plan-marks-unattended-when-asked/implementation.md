@@ -61,4 +61,21 @@ prints were read (`bin/grove instructions plan "0.4 release"`).
 
 ## Scenarios
 
+The plan scenarios are an agent's behavior; the tests check the instructions
+that produce it, and no live `/grove-plan` session was run.
+
+- cycles "Nothing in the way": internal/cli/walkthrough_test.go TestCycles (finish order and "or else say `unattended: true`, added in a merge of its own, does."), passed
+- cycles "Marked as the owner asked": TestCycles (finish's "where the cycle file holds `unattended: true`, say merging it hands the cycle to a `grove claim` given no cycle"), passed
+- cycles "A member waits on a change outside the cycle": unchanged instruction text; TestCycles checks the obstacle lines, passed
+- cycles "The cycle waits on a cycle": TestCycles ("`grove claim` will not claim the cycle until it is"), passed
+- cycles "The runner needs something set up": unverified; agent behavior, instruction text unchanged and not asserted by a test
+- cycles "Planned but not marked": TestClaim (nothing to claim after cycle k is planned unmarked), passed
+- cycles "The owner asks for an unattended cycle": TestCycles (instruction line) and TestClaim (cycle l, marked in the commit that plans it, claimed with no cycle given), passed; the agent writing the file is unverified without a live session
+- cycles "The owner asks nothing about it": TestCycles ("never offer it"), passed; agent behavior unverified
+- cycles "An obstacle does not stop the mark": TestCycles ("even with an obstacle below"), passed
+- cycles "Re-plan keeps the mark": TestCycles ("keep it otherwise"), passed
+- cycles "The owner asks to remove the mark": TestCycles ("remove it only where the owner asks"), passed
+
 ## Reconciliation
+
+- cycles: applied to specs/cycles/spec.md
