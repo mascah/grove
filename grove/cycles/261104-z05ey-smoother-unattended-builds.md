@@ -1,4 +1,6 @@
+---
 title: "Smoother unattended builds"
 created: 2026-11-04T23:13:28Z
 changes: [261030-t2pt7, 261101-mg8hd, 261105-gmpa4, 261105-3qdz2, 261105-va9qn]
 planned: baa9fb3c3b6c708f63c3dc66ab84788ce7af7e5b
+---

@@ -144,6 +144,29 @@ one after another.
   `grove instructions implement --runner <change-id>`, and delivers the
   cycle as its own instructions say
 
+### Requirement: A cycle's notes are advice
+
+Where a cycle file holds notes below its fields, the instructions
+`/grove-implement` prints for that cycle, and for each of its members,
+shall print the notes with the cycle file and say that where the notes
+and a member's documents disagree, the member's documents hold.
+
+#### Scenario: A note a member contradicts
+
+- GIVEN cycle K lists A and B, K's notes say B's T-01 changes
+  `ledger/cli.py`, and B's `tasks.md` names only `ledger/report.py` for
+  T-01
+- WHEN `/grove-implement K` is run
+- THEN K's instructions and B's each print K's file with its notes and say
+  a member's documents hold over them, and B's T-01 is built in
+  `ledger/report.py`
+
+#### Scenario: A cycle with no notes
+
+- GIVEN cycle K's file holds only its fields
+- WHEN `/grove-implement K` is run
+- THEN the instructions print K's file and say nothing about notes
+
 ### Requirement: Name the change's documents
 
 When `grove instructions implement <change-id>` or `grove instructions
@@ -539,3 +562,4 @@ None recorded.
 - [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human
 - [261114-zpgx9](../../changes/archive/261114-zpgx9-implement-ends-at-a-branch-ready-for-review/) Implement ends at a branch ready for review
 - [261117-w31az](../../changes/archive/261117-w31az-delivery-rules-a-runner-can-switch-off/) Delivery rules a runner can switch off
+- [261118-emse7](../../changes/archive/261118-emse7-a-cycle-is-a-markdown-file/) A cycle is a Markdown file with plan's notes

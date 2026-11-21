@@ -235,8 +235,9 @@ subject and each such mark with the change, cycle or spec it names.
 When the page asks for `/api/doc` with a path under the root ending
 `.md` or `.yaml` and a ref that is empty, `worktree` or a full commit, the
 system shall answer with that file at the target, in the working tree or
-at that commit, Markdown rendered to HTML with raw HTML dropped and YAML
-as text, and refuse any other path or ref.
+at that commit, Markdown rendered to HTML with raw HTML dropped, the
+fields a Markdown file starts with between two lines of `---` as text
+above the rest, and YAML as text, and refuse any other path or ref.
 
 #### Scenario: A proposal at the target
 
@@ -246,7 +247,23 @@ as text, and refuse any other path or ref.
 
 #### Scenario: A cycle file
 
-- WHEN the page asks for cycle K's file
+- GIVEN cycle K's file holds its fields and, below them, notes with a
+  heading and a list
+- WHEN the page asks for K's file
+- THEN the answer is HTML holding K's fields as text, each on its own
+  line as the file has them, and below them the notes rendered, the
+  heading as a heading and the list as a list
+
+#### Scenario: A cycle file with no notes
+
+- GIVEN cycle K's file holds only its fields
+- WHEN the page asks for K's file
+- THEN the answer is HTML holding K's fields as text and nothing below
+
+#### Scenario: A change's metadata
+
+- GIVEN the target holds change A
+- WHEN the page asks for A's `.grove.yaml`
 - THEN the answer is the file's text
 
 #### Scenario: A document on a branch
@@ -347,3 +364,4 @@ None.
 - [261108-7grt3](../../changes/archive/261108-7grt3-the-project-as-json/) The project as JSON
 - [261108-cns75](../../changes/archive/261108-cns75-show-what-is-undecided-and-blocked/) Show what is undecided and blocked
 - [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human
+- [261118-emse7](../../changes/archive/261118-emse7-a-cycle-is-a-markdown-file/) A cycle is a Markdown file with plan's notes

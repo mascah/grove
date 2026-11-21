@@ -5,8 +5,9 @@
 A cycle lists approved changes to build together: `/grove-plan` writes it,
 and `grove claim <cycle-id>` claims it for the agent its caller starts, as
 does a `grove claim` given no cycle once it holds `unattended: true`. A cycle is
-a file `<root>/cycles/<id>-<slug>.yaml`, and its members are the changes
-its `changes` lists. A cycle is done when the target holds every member
+a file `<root>/cycles/<id>-<slug>.md`: its fields, as YAML between two lines
+of `---`, and below them the notes its plan wrote. Its members are the
+changes its `changes` lists. A cycle is done when the target holds every member
 archived, finished or dropped. A cycle "depends on" each cycle its optional
 `depends_on` names, and "waits on" each of those the target does not hold
 done. A cycle is stale when the folder of a member not yet archived, or a
@@ -31,24 +32,30 @@ and the mark, count is the merge into the target (`CONSTITUTION.md` rule
 ### Requirement: Plan a cycle
 
 When the owner runs `/grove-plan <description>`, the system shall print
-instructions for writing a new cycle file holding a `title` the agent
-writes from its members without asking for one, an optional one-line
-`goal`, the approved changes the owner agrees to as `changes`, the time
-Grove gives the plan as `created`, and the target commit the plan read as
-`planned`, editing no change's files except, for each member `grove
-check` reports stale on a requirement or for a named file changed since
-its base, telling the owner that this edits approved work and bringing
-that member up to date on the same branch as the propose instructions for
-it say, before writing the cycle file.
+instructions for writing a new cycle file holding, as its fields, a
+`title` the agent writes from its members without asking for one, an
+optional one-line `goal`, the approved changes the owner agrees to as
+`changes`, the time Grove gives the plan as `created`, and the target
+commit the plan read as `planned`; and, below its fields and only where
+there is something to say, notes on what the plan found on the target at
+`planned`, what whoever builds the cycle should know above any one
+change, and why these changes are planned together in this order and what
+was left out, none of them changing a member's requirements or tasks;
+editing no change's files except, for each member `grove check` reports
+stale on a requirement or for a named file changed since its base,
+telling the owner that this edits approved work and bringing that member
+up to date on the same branch as the propose instructions for it say,
+before writing the cycle file.
 
 #### Scenario: Two approved changes
 
 - GIVEN the target approves changes A and B, neither archived, and
   `grove check` reports neither
 - WHEN the owner runs `/grove-plan 0.4 release` and agrees to A and B
-- THEN a new cycle file lists A and B under `changes`, `created` is the
-  time Grove gave the plan, `planned` is the target's commit, and A's and
-  B's files are unchanged
+- THEN a new cycle file, `grove/cycles/<cycle-id>-<slug>.md`, lists A and
+  B under `changes` between two lines of `---`, `created` is the time
+  Grove gave the plan, `planned` is the target's commit, and A's and B's
+  files are unchanged
 
 #### Scenario: The agent titles the cycle
 
@@ -74,6 +81,28 @@ it say, before writing the cycle file.
   `base` to the target's commit and writes the cycle file, all on the same
   branch, without stopping for another session, and `grove check` is clean
 
+#### Scenario: What the plan found is noted
+
+- GIVEN that plan, in which B was brought up to date
+- WHEN the agent writes the cycle file
+- THEN the file's notes, below its fields, say B was brought up to date
+  with `ledger/report.py` as the target has it at `planned`, and what in
+  T-01 moved
+
+#### Scenario: A change left out is noted
+
+- GIVEN the target approves changes A, B and C, and the owner leaves C out
+  because it waits on a login the runner does not have
+- WHEN the agent writes the cycle file
+- THEN its notes say C was left out and why
+
+#### Scenario: Nothing to note
+
+- GIVEN the target approves changes A and B, `grove check` reports
+  neither, and the plan found nothing to say beyond its fields
+- WHEN the agent writes the cycle file
+- THEN the file holds its fields between two lines of `---` and no notes
+
 ### Requirement: Plan one change
 
 When the owner runs `/grove-plan <change-id>` for a change the target
@@ -90,8 +119,9 @@ whose only member is that change.
 ### Requirement: Revise a cycle
 
 When the owner runs `/grove-plan <cycle-id>`, the system shall print
-instructions for revising that cycle file as the owner asks and setting
-`planned` to the target commit the revision read.
+instructions for revising that cycle file as the owner asks, setting
+`planned` to the target commit the revision read, and bringing its notes
+up to date with that commit.
 
 #### Scenario: Re-plan a stale cycle
 
@@ -107,6 +137,14 @@ instructions for revising that cycle file as the owner asks and setting
 - WHEN the owner runs `/grove-plan K` and merges the cycle file
 - THEN `planned` is the target's commit, K is no longer stale, and B's
   files are unchanged
+
+#### Scenario: A note the target made false
+
+- GIVEN cycle K's notes say every file B's T-01 names is as it was at B's
+  base, and K is stale because the target changed one of them
+- WHEN the owner runs `/grove-plan K`
+- THEN the notes say what holds at the new `planned` commit, and no longer
+  what the target made false
 
 ### Requirement: Ask which cycles a new cycle follows
 
@@ -242,11 +280,13 @@ that holds `unattended: true` while the cycle is stale, naming what to do.
 ### Requirement: Report a malformed cycle
 
 When the owner runs `grove check`, the system shall report a cycle file
-with no `title`, no `created`, no `changes` or no `planned`, with an
-unknown field, that lists a change that is no change, open or archived, or
-that lists a change another cycle not yet done also lists; and, for a
-cycle not yet done, a `depends_on` that names no cycle, or a cycle that
-depends on it in turn, directly or through other cycles.
+that does not start with its fields between two lines of `---`, with no
+`title`, no `created`, no `changes` or no `planned`, with an unknown
+field, that lists a change that is no change, open or archived, or that
+lists a change another cycle not yet done also lists; and, for a cycle
+not yet done, a `depends_on` that names no cycle, or a cycle that depends
+on it in turn, directly or through other cycles; each problem in a field
+by that field's line in the file.
 
 #### Scenario: One change in two cycles
 
@@ -275,6 +315,28 @@ depends on it in turn, directly or through other cycles.
 - THEN it reports each one's `depends_on` line, saying the other waits on
   it in turn, so neither can run
 
+#### Scenario: No fields at the top
+
+- GIVEN `grove/cycles/261020-m4k8t-0-4-release.md` starts with a heading
+  and holds no line of `---`
+- WHEN the owner runs `grove check`
+- THEN it reports the file, saying a cycle file starts with its fields
+  between two lines of `---`, and exits non-zero
+
+#### Scenario: The line is the file's
+
+- GIVEN cycle K's file holds `---` on its first line and `needs_human` on
+  its sixth
+- WHEN the owner runs `grove check`
+- THEN the report names line 6
+
+#### Scenario: Notes are not checked
+
+- GIVEN cycle K's file holds valid fields and, below them, notes that
+  contain a line `needs_human: [C]`
+- WHEN the owner runs `grove check`
+- THEN it reports nothing for K
+
 ### Requirement: Report a cycle file named without an ID
 
 When the owner runs `grove check` and a file under `<root>/cycles/` has a
@@ -284,12 +346,46 @@ file, saying its name must start with a cycle ID, and exit non-zero, and
 
 #### Scenario: A letter IDs leave out
 
-- GIVEN `grove/cycles/261105-proto-unknown-id.yaml` lists approved change
+- GIVEN `grove/cycles/261105-proto-unknown-id.md` lists approved change
   C, and `o` is a letter cycle IDs leave out
 - WHEN the owner runs `grove check` and `grove changes`
 - THEN `grove check` reports the file, saying the file name must start
   with a cycle ID, and exits non-zero, and `grove changes` shows C with
   no "in cycle"
+
+### Requirement: Report a cycle file left as YAML
+
+When the owner runs `grove check` and `<root>/cycles/` holds a file whose
+name ends `.yaml`, the system shall report that file, saying a cycle file
+is Markdown now and to rename it to `.md` with its fields between two
+lines of `---`, and exit non-zero, and shall read no cycle from it.
+
+#### Scenario: An open cycle left as YAML
+
+- GIVEN `grove/cycles/261020-m4k8t-0-4-release.yaml` lists approved change
+  A and holds `unattended: true`
+- WHEN the owner runs `grove check`, `grove changes` and `grove claim`
+- THEN `grove check` reports the file, saying a cycle file is Markdown now
+  and to rename it to `261020-m4k8t-0-4-release.md` and put its fields
+  between two lines of `---`, and exits non-zero; `grove changes` shows A
+  with no "in cycle"; and `grove claim` claims no cycle
+
+#### Scenario: A done cycle left as YAML
+
+- GIVEN `grove/cycles/261019-k3m9q-0-3-release.yaml` lists only changes
+  the target holds archived
+- WHEN the owner runs `grove check`
+- THEN it reports that file the same way
+
+#### Scenario: Converted
+
+- GIVEN that open cycle's file renamed to
+  `grove/cycles/261020-m4k8t-0-4-release.md`, a line of `---` added above
+  its fields and another below, and nothing else changed
+- WHEN the commit holding it is on the target and the owner runs
+  `grove check` and `grove claim`
+- THEN `grove check` reports nothing for the cycle, `planned` is what it
+  was, and `grove claim` claims it
 
 ### Requirement: Show cycles
 
@@ -318,6 +414,91 @@ file as a cycle.
 - GIVEN cycle K, not done, whose `depends_on` names cycle L
 - WHEN the owner runs `grove instructions plan "0.5 release"`
 - THEN the project index lists, under K, `follows L`
+
+### Requirement: Name a requirement two approved changes both change
+
+When Grove prints a skill's instructions and two approved changes, neither
+archived, each hold in their change specs an ADDED, MODIFIED or REMOVED
+block for the same requirement of the same capability, and neither
+depends on the other, directly or through other changes, the project
+index shall name, under each of the two, the other change, the capability
+and the requirement.
+
+#### Scenario: Two changes modify one requirement
+
+- GIVEN the target approves changes A and B, each with a change spec for
+  `record-editing` that holds a MODIFIED block for "Keep a category", and
+  neither names the other in `depends_on`
+- WHEN the owner runs `grove instructions plan "0.5 release"`
+- THEN the project index names, under A, change B, `record-editing` and
+  "Keep a category", and under B, change A with the same
+
+#### Scenario: One removes what the other modifies
+
+- GIVEN A's change spec for `record-editing` holds a REMOVED block for
+  "Keep a category" and B's a MODIFIED block for it
+- WHEN the owner runs `grove instructions propose`
+- THEN the project index names each under the other
+
+#### Scenario: One depends on the other
+
+- GIVEN A and B both modify "Keep a category", and B holds
+  `depends_on: [A]`
+- WHEN the owner runs `grove instructions plan "0.5 release"`
+- THEN the project index names neither under the other
+
+#### Scenario: Through another change
+
+- GIVEN A and C both modify "Keep a category", C depends on B, and B
+  depends on A
+- WHEN the owner runs `grove instructions plan "0.5 release"`
+- THEN the project index names neither under the other
+
+#### Scenario: The same name in two capabilities
+
+- GIVEN A modifies "Keep a category" of `record-editing`, and B adds a
+  requirement "Keep a category" to `reports`
+- WHEN the owner runs `grove instructions plan "0.5 release"`
+- THEN the project index names neither under the other
+
+#### Scenario: One of the two is archived
+
+- GIVEN A and B both modified "Keep a category", and the target holds A
+  archived
+- WHEN the owner runs `grove instructions plan "0.5 release"`
+- THEN the project index names no change under B
+
+### Requirement: Plan tells the owner of members that share a requirement
+
+While agreeing a cycle's members with the owner, when the project index
+names a requirement two of them both change, the plan instructions shall
+have the agent tell the owner which two changes and which requirement,
+and that the one built second is stale on it once the first is archived,
+ask whether both stay in this cycle or one goes to a later cycle, and
+list under `changes` only what the owner then agrees to.
+
+#### Scenario: The owner moves one to a later cycle
+
+- GIVEN the project index names "Keep a category" of `record-editing`
+  under A and B
+- WHEN the owner runs `/grove-plan 0.5 release`, the agent proposes A and
+  B, and the owner, told of the pair, keeps A and leaves B for later
+- THEN the new cycle file lists A and not B
+
+#### Scenario: The owner keeps both
+
+- GIVEN that index
+- WHEN the owner, told of the pair, keeps both
+- THEN the new cycle file lists A and B, `grove check` reports nothing for
+  the cycle, and `grove claim <cycle-id>` claims it when nothing else
+  stops it
+
+#### Scenario: No pair among the members
+
+- GIVEN the project index names the pair A and B, and the agent proposes
+  A and C for the cycle
+- WHEN the owner agrees to A and C
+- THEN the agent says nothing about requirements two members share
 
 ### Requirement: Count a member changed with its plan
 
@@ -430,3 +611,5 @@ None.
 - [261105-3qdz2](../../changes/archive/261105-3qdz2-misnamed-cycle-and-shallow-clone-reported/) A misnamed cycle and a shallow clone are reported plainly
 - [261108-jpg8n](../../changes/archive/261108-jpg8n-claim-replaces-run/) grove claim replaces grove run, with attempt records on a branch
 - [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human
+- [261118-emse7](../../changes/archive/261118-emse7-a-cycle-is-a-markdown-file/) A cycle is a Markdown file with plan's notes
+- [261118-40s1a](../../changes/archive/261118-40s1a-index-names-requirement-overlaps/) The project index names requirements two changes both change
