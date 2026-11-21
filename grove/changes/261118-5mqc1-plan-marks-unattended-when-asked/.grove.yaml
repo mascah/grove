@@ -3,4 +3,4 @@ created: 2026-11-18T03:16:38Z
 description: "Asked for an unattended cycle, plan writes `unattended: true` in the cycle file, so one merge plans the cycle and hands it to `grove claim`."
 schema: default
 depends_on: [261118-40s1a]
-base: dc8d335b9fb391e91631f6a03c0810b1eb193517
+base: 7a33629d0fd5c2eec91c816592b0b5c3b36f8e06
