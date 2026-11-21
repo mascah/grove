@@ -478,8 +478,11 @@ hosts. The sessions are Claude Code's.
    > grove: the project is paused after attempt \<attempt>, which \<host> started at \<time> on branch grove/\<attempt>; once you have dealt with it, run grove claim --retry
 
    In `~/tmp/ledger`, approve the budgets change, plan it as a cycle of
-   one with `/grove-plan <budgets-id>`, merge it, mark it `unattended`,
-   merge and push: still paused, from either clone. Merge the attempt's
+   one with `/grove-plan <budgets-id>`, saying in the session that it
+   should run unattended: the cycle file holds `unattended: true`, and the
+   verdict says merging it hands the cycle to a `grove claim` given no
+   cycle. Merge and push, with no separate mark: still paused, from either
+   clone. Merge the attempt's
    branch into `main` and push, as merging its pull request would. Then
    `(cd ~/tmp/ledger-run && grove claim) & (cd ~/tmp/ledger-run2 && grove claim); wait`:
    one prints the budgets cycle's ID; the other says the project is paused

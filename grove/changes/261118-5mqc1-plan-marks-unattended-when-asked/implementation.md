@@ -35,6 +35,30 @@ the change's dc8d335 reading; the cycle's plan brought `base` to 7a33629, and
 the text the acceptance points at was still there, so the edit is on the file
 as main holds it.
 
+### T-02 — Docs and walkthrough
+
+Status: done
+
+`docs/planning.md`, "Plan a cycle": asked for an unattended cycle, the agent
+writes `unattended: true`, even with an obstacle, never offering it, and its
+verdict says merging the file hands the cycle to a `grove claim` given no
+cycle; the verdict paragraph gives both cases. "Mark it unattended": the
+separate merge is for a cycle you did not ask plan to mark; only plan writes
+or removes the line, only when asked, and re-planning keeps it otherwise.
+
+`dev/walkthrough.md`, "Running unattended" step 4: the budgets cycle is
+planned with `/grove-plan <budgets-id>`, saying it should run unattended; the
+file holds `unattended: true` and one merge and push replaces the mark.
+Planning steps 1 and 3 and coordinating's 0.5 cycle, where the owner asks
+nothing, still show no `unattended` and a mark in a merge of its own.
+`TestClaim` follows that step: cycle `l` is committed marked in the commit
+that plans it and claimed by `grove claim` given no cycle.
+
+Check: the docs' example request is "/grove-plan an unattended cycle for
+delete and budgets"; the change names no wording. The walkthrough's
+session step was not run with a real agent here; only the instructions it
+prints were read (`bin/grove instructions plan "0.4 release"`).
+
 ## Scenarios
 
 ## Reconciliation

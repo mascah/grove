@@ -73,8 +73,9 @@ change's documents disagree, the change's documents hold, and
 
 The agent ends with a verdict. It names `/grove-implement <cycle-id>`,
 which builds the cycle with you. It says whether `grove claim <cycle-id>`
-would claim it. It says that `unattended: true`, merged on its own, hands
-the cycle to a `grove claim` given no cycle. And for each obstacle, it says
+would claim it. Where the file holds `unattended: true`, it says merging
+it hands the cycle to a `grove claim` given no cycle; otherwise, that
+`unattended: true`, merged on its own, does. And for each obstacle, it says
 what removes it. For a cycle with nothing in the way:
 
 > Build this cycle with `/grove-implement 261020-m4k8t`, or have `grove claim 261020-m4k8t` claim it for an agent you start. Adding `unattended: true` to its file in a merge of its own hands it to a `grove claim` given no cycle, such as a timer's.
@@ -91,6 +92,18 @@ To send one change on its own, plan a cycle of one from its ID:
 ```
 
 The cycle takes the change's title unless you give another.
+
+Ask for an unattended cycle, in the description or in the chat, and the
+agent writes `unattended: true` in the cycle file's fields:
+
+```text
+/grove-plan an unattended cycle for delete and budgets
+```
+
+It writes the line even where something is in the way, and names the
+obstacle. Its verdict then says that merging the file hands the cycle to a
+`grove claim` given no cycle, so one merge plans and marks it. The agent
+never offers the line: ask for nothing, and the file has none.
 
 ## Follow another cycle
 
@@ -128,15 +141,17 @@ you, as `/grove-implement <change-id>` does.
 
 ## Mark it unattended
 
-Handing a cycle to `grove claim` is a merge of its own. On a branch, add one
-line to the cycle file's fields, above the second `---`:
+Where you did not ask plan for an unattended cycle, handing it to
+`grove claim` is a merge of its own. On a branch, add one line to the cycle
+file's fields, above the second `---`:
 
 ```yaml
 unattended: true
 ```
 
 and merge it. `grove changes` then says `in cycle 261020-m4k8t, unattended`.
-No skill writes or removes the line, and re-planning keeps it.
+Of the skills, only plan writes or removes the line, and only when you ask
+it to; re-planning keeps it otherwise.
 
 `grove check` reports a marked cycle that `grove claim` would skip because
 its plan is stale (see "Re-plan a cycle").
