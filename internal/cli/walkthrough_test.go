@@ -553,10 +553,11 @@ func TestImplementInstructions(t *testing.T) {
 
 	// A member of a cycle, not marked, gets its plan.
 	planCycle(t, dir, k, "2026-10-22T09:00:00Z", false, cid)
-	cycle := read(t, filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"))
-	for _, args := range [][]string{{cid}} {
+	cycleFile := filepath.Join(dir, "grove/cycles", k+"-cycle.md")
+	cycle, advice := read(t, cycleFile), "where they and a member's documents disagree, the member's documents hold"
+	for _, args := range [][]string{{cid}, {"--runner", cid}} {
 		out := grove(t, append([]string{"instructions", "implement"}, args...)...)
-		has(strings.Join(args, " "), out, []string{", change 1 of 1 in cycle " + k + ".", "## The cycle\n\nCycle " + k + ", \"Cycle " + k + "\", in build order:\n\n1. " + cid + " \"Allow editing older records\" — this change\n", "<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n" + cycle}, nil)
+		has(strings.Join(args, " "), out, []string{", change 1 of 1 in cycle " + k + ".", "## The cycle\n\nCycle " + k + ", \"Cycle " + k + "\", in build order:\n\n1. " + cid + " \"Allow editing older records\" — this change\n", "<file path=\"grove/cycles/" + k + "-cycle.md\">\n" + cycle}, []string{advice})
 	}
 	// Each member is built in a fresh context, and only the session
 	// archives and commits.
@@ -564,7 +565,14 @@ func TestImplementInstructions(t *testing.T) {
 		"Start at once\n  every change whose `after` changes are archived and whose tasks'\n  `Files:`", "Only you archive and commit, one returned change at a time", "run the\n  project's tests once both have returned",
 		"build the other again on its own", "Where you cannot start a fresh context, build each change yourself", "Ask no one and wait for no one.", "Finish: report for the reviewer first every change's `Check:` lines"}
 	out = grove(t, "instructions", "implement", k)
-	has("cycle instructions", out, append([]string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "holds it, in this working tree.", "run Grove's `instructions implement --runner <change-id>` for each", delivery, "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.yaml\">\n", shared[3]}, contexts...), gone)
+	has("cycle instructions", out, append([]string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "holds it, in this working tree.", "run Grove's `instructions implement --runner <change-id>` for each", delivery, "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.md\">\n", shared[3]}, contexts...), append(gone, advice))
+	// A cycle whose file holds notes: printed with it, and a member's documents hold over them.
+	noted := cycle + "\n## Found\n\n- T-01 changes `ledger/report.py`.\n"
+	os.WriteFile(cycleFile, []byte(noted), 0o644)
+	commitAll(t, dir, "Note "+k)
+	for _, args := range [][]string{{k}, {"--runner", cid}} {
+		has("implement with notes", grove(t, append([]string{"instructions", "implement"}, args...)...), []string{"<file path=\"grove/cycles/" + k + "-cycle.md\">\n" + noted + "</file>\n\nThe notes below the cycle's fields are its plan's advice: " + advice + ".\n"}, nil)
+	}
 }
 
 func TestDropChange(t *testing.T) {
@@ -973,9 +981,50 @@ func TestCoordinating(t *testing.T) {
 	commitAll(t, dir, "Propose showing what was saved")
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve showing what was saved", "show-saved")
+	// The index names, under each, the requirement both change; check and
+	// claim take a cycle holding both as they would any other.
+	shares := func(args ...string) bool {
+		out := grove(t, append([]string{"instructions"}, args...)...)
+		under := func(id, title, folder, other string) bool {
+			return strings.Contains(out, "- "+id+" \""+title+"\": `grove/changes/"+filepath.Base(folder)+"/`\n  - capabilities: record-editing\n  - also changed by "+other+": record-editing \"Keep a category\"\n")
+		}
+		a, b := under(recat, "Recategorize older records", recatDir, show), under(show, "Show what was saved", showDir, recat)
+		if a != b || strings.Contains(out, ": record-editing \"Keep a category\"\n") != a {
+			t.Errorf("instructions %v name the pair under one of the two:\n%s", args, out)
+		}
+		return a
+	}
+	if !shares("plan", "0.5 release") || !shares("propose") || !strings.Contains(grove(t, "instructions", "plan", "0.5 release"), "is stale on it once the first is archived. Ask whether both stay") {
+		t.Error("the plan instructions do not name the pair or say what to tell the owner")
+	}
+	before := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
+	planCycle(t, dir, "261022-p0000", "2026-10-22T11:00:00Z", false, recat, show)
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check of a cycle holding the pair printed %q", got)
+	}
+	for _, k := range []string{"GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
+		t.Setenv(k, "operator@example.com") // claim commits, and CI has no identity
+	}
+	if got := grove(t, "claim", "261022-p0000"); got != "261022-p0000\n" {
+		t.Errorf("claim of a cycle holding the pair printed %q", got)
+	}
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "reset", "-q", "--hard", before)
+	for _, ref := range strings.Fields(git(t, dir, "for-each-ref", "--format=%(refname:short)", "refs/heads/grove/")) {
+		git(t, dir, "branch", "-q", "-D", ref)
+	}
+	os.WriteFile(filepath.Join(showDir, ".grove.yaml"), []byte("title: Show what was saved\ncreated: 2026-10-14T00:00:00Z\ndepends_on: ["+recat+"]\nbase: "+base+"\n"), 0o644)
+	commitAll(t, dir, "Show-saved depends on recategorize")
+	if shares("plan", "0.5 release") {
+		t.Error("the index names a pair one of which depends on the other")
+	}
+	git(t, dir, "reset", "-q", "--hard", before)
 	want := "grove/changes/" + filepath.Base(showDir) + "/specs/record-editing/spec.md:5: requirement \"Keep a category\" was rewritten since base " + base[:7] + "; revise the change with propose\n"
 	if out := finish(t, dir, "recategorize-impl", recat, recatDir, olderEdits+"### Requirement: Keep a category\n\n"+recatText); out != want {
 		t.Errorf("check while archiving recategorize printed %q", out)
+	}
+	if shares("plan", "0.5 release") {
+		t.Error("the index names a pair one of which is archived")
 	}
 	stdout.Reset()
 	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != want {
@@ -1040,8 +1089,76 @@ func planCycle(t *testing.T, dir, id, created string, mark bool, changes ...stri
 		body += "unattended: true\n"
 	}
 	os.MkdirAll(filepath.Join(dir, "grove/cycles"), 0o755)
-	os.WriteFile(filepath.Join(dir, "grove/cycles", id+"-cycle.yaml"), []byte(body), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove/cycles", id+"-cycle.md"), []byte("---\n"+body+"---\n"), 0o644)
 	commitAll(t, dir, "Plan "+id)
+}
+
+// addField returns cycle file src with field added at the end of its fields.
+func addField(src, field string) string {
+	i := strings.LastIndex(src, "---\n")
+	return src[:i] + field + src[i:]
+}
+
+// TestConvertedCycle: a cycle whose member names the cycles folder stays
+// fresh when converted from YAML, as its plan and mark edited the file under
+// its old name.
+func TestConvertedCycle(t *testing.T) {
+	dir := setUp(t)
+	c, folder := propose(t, dir, "c", "Convert the cycles", "")
+	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte("## T-01 — Convert the cycles\n\nFiles: `grove/cycles/`\n"), 0o644)
+	commitAll(t, dir, "Propose c")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve "+c, "c")
+	d, _ := propose(t, dir, "d", "Another change", "")
+	commitAll(t, dir, "Propose d")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve "+d, "d")
+	fields := "title: Convert\ncreated: 2026-10-22T10:00:00Z\nchanges: [" + c + "]\nplanned: " + strings.TrimSpace(git(t, dir, "rev-parse", "main")) + "\n"
+	yamlFile := filepath.Join(dir, "grove/cycles/261022-k3m9q-convert.yaml")
+	os.MkdirAll(filepath.Dir(yamlFile), 0o755)
+	os.WriteFile(yamlFile, []byte(fields), 0o644)
+	other := filepath.Join(dir, "grove/cycles/261022-k3m9r-other.yaml")
+	os.WriteFile(other, []byte("title: Other\ncreated: 2026-10-22T10:00:00Z\nchanges: ["+d+"]\nplanned: "+strings.TrimSpace(git(t, dir, "rev-parse", "main"))+"\n"), 0o644)
+	commitAll(t, dir, "Plan")
+	os.WriteFile(yamlFile, []byte(fields+"unattended: true\n"), 0o644)
+	commitAll(t, dir, "Mark")
+	// Another cycle converted in a commit of its own is a rename, not an edit.
+	os.WriteFile(strings.TrimSuffix(other, ".yaml")+".md", []byte("---\n"+read(t, other)+"---\n"), 0o644)
+	os.Remove(other)
+	commitAll(t, dir, "Convert other")
+	os.Remove(yamlFile)
+	os.WriteFile(strings.TrimSuffix(yamlFile, ".yaml")+".md", []byte("---\n"+fields+"unattended: true\n---\n"), 0o644)
+	commitAll(t, dir, "Convert")
+	p, _ := openProject()
+	ip, err := p.agreed()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := grove(t, "check"); got != "No problems in grove/.\n" {
+		t.Errorf("check of a converted cycle printed %q", got)
+	}
+	if cy, _ := eligible(p, ip); cy == nil || cy.ID != "261022-k3m9q" {
+		t.Errorf("a converted cycle is not claimable: %v", cy)
+	}
+
+	// After the conversion, a commit to the old name is not the plan's: the
+	// obsolete copy restored, then removed with a revision of the member.
+	os.WriteFile(yamlFile, []byte(fields), 0o644)
+	commitAll(t, dir, "Restore the YAML copy")
+	os.Remove(yamlFile)
+	os.WriteFile(filepath.Join(folder, "proposal.md"), []byte(read(t, filepath.Join(folder, "proposal.md"))+"\nRevised.\n"), 0o644)
+	commitAll(t, dir, "Remove the YAML copy and revise c")
+	var stdout, stderr strings.Builder
+	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || !strings.Contains(stdout.String(), "261022-k3m9q-convert.md: planned: ") {
+		t.Errorf("check after a revision with the old name's removal: status %d\n%s%s", code, stdout.String(), stderr.String())
+	}
+	p, _ = openProject()
+	if ip, err = p.agreed(); err != nil {
+		t.Fatal(err)
+	}
+	if cy, _ := eligible(p, ip); cy != nil {
+		t.Errorf("a cycle whose member changed after conversion is claimable: %v", cy.ID)
+	}
 }
 
 // TestCycles follows the walkthrough's "Planning cycles": plan
@@ -1052,9 +1169,9 @@ func TestCycles(t *testing.T) {
 	b, _ := approve(t, dir, "b", "Add ledger delete ID", "")
 	main := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	out := grove(t, "instructions", "plan", "0.4 release")
-	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.yaml`").FindStringSubmatch(out)
+	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.md`").FindStringSubmatch(out)
 	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
-		"\ntitle: \"<title>\"\ncreated: 20", "\nplanned: " + main + "\n", "## Owner's description\n\n0.4 release\n",
+		"\n---\ntitle: \"<title>\"\ncreated: 20", "\nplanned: " + main + "\n---\n", "with nothing to say, delete this comment", "They change no member", "Revising, bring them up to date with the new `planned`", "## Owner's description\n\n0.4 release\n",
 		"\n# depends_on: [", "ask the owner\n  whether it follows any of them", "write its title yourself from its members, without asking",
 		"A new cycle: before writing its file, run Grove's `check`.", "tell the owner this edits approved work, bring the\n  member up to date on this branch as Grove's\n  `instructions propose <change-id>` says", "`grove claim` will\n    not claim the cycle until it is"} {
 		if m == nil || !strings.Contains(out, s) {
@@ -1074,8 +1191,9 @@ func TestCycles(t *testing.T) {
 
 	// The plan merged, then marked in a merge of its own.
 	k := m[1]
-	cycle := filepath.Join(dir, "grove/cycles", k+"-0-4-release.yaml")
-	plan := "title: 0.4 release\ncreated: 2026-10-22T10:00:00Z\nchanges: [" + a + "]\nplanned: " + main + "\n"
+	cycle := filepath.Join(dir, "grove/cycles", k+"-0-4-release.md")
+	fields := "title: 0.4 release\ncreated: 2026-10-22T10:00:00Z\nchanges: [" + a + "]\nplanned: " + main + "\n"
+	plan := "---\n" + fields + "---\n"
 	git(t, dir, "switch", "-q", "-c", "plan")
 	os.MkdirAll(filepath.Dir(cycle), 0o755)
 	os.WriteFile(cycle, []byte(plan), 0o644)
@@ -1083,10 +1201,10 @@ func TestCycles(t *testing.T) {
 		t.Errorf("check of the plan printed %q", got)
 	}
 	commitAll(t, dir, "Plan 0.4")
-	if out := grove(t, "review"); !strings.Contains(out, "  adds     cycle            grove/cycles/"+k+"-0-4-release.yaml\n") {
+	if out := grove(t, "review"); !strings.Contains(out, "  adds     cycle            grove/cycles/"+k+"-0-4-release.md\n") {
 		t.Errorf("review of a cycle:\n%s", out)
 	}
-	if out := grove(t, "instructions", "plan", k); !strings.Contains(out, "You are revising cycle "+k+", \"0.4 release\"") || !strings.Contains(out, "## The cycle\n\n<file path=\"grove/cycles/"+k+"-0-4-release.yaml\">\n"+plan) {
+	if out := grove(t, "instructions", "plan", k); !strings.Contains(out, "You are revising cycle "+k+", \"0.4 release\"") || !strings.Contains(out, "bring them up to date with the new `planned`") || !strings.Contains(out, "bring\nthe notes up to date") || !strings.Contains(out, "## The cycle\n\n<file path=\"grove/cycles/"+k+"-0-4-release.md\">\n"+plan) {
 		t.Errorf("revise instructions for a cycle:\n%s", out)
 	}
 	git(t, dir, "switch", "-q", "main")
@@ -1094,20 +1212,60 @@ func TestCycles(t *testing.T) {
 	if got := grove(t, "changes"); !strings.Contains(got, a+"  Editing an unknown ID prints an error  approved  in cycle "+k+"\n") || !strings.Contains(got, b+"  Add ledger delete ID  approved\n") {
 		t.Errorf("changes printed %q", got)
 	}
-	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "- "+k+" \"0.4 release\": `grove/cycles/"+k+"-0-4-release.yaml`\n  - changes: "+a+"\n") {
+	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "- "+k+" \"0.4 release\": `grove/cycles/"+k+"-0-4-release.md`\n  - changes: "+a+"\n") {
 		t.Errorf("the project index lacks the cycle:\n%s", out)
 	}
-	os.WriteFile(cycle, []byte(plan+"unattended: true\n"), 0o644)
+	os.WriteFile(cycle, []byte(addField(plan, "unattended: true\n")), 0o644)
 	commitAll(t, dir, "Mark 0.4 unattended")
 	if got := grove(t, "changes"); !strings.Contains(got, "  in cycle "+k+", unattended\n") {
 		t.Errorf("changes of a marked cycle printed %q", got)
 	}
+	claimable := func() string {
+		t.Helper()
+		p, _ := openProject()
+		ip, err := p.agreed()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cy, _ := eligible(p, ip); cy != nil {
+			return cy.ID
+		}
+		return ""
+	}
+	// Left as YAML, the cycle is reported and read by nothing; converted back, it is claimed as before.
+	yamlFile := strings.TrimSuffix(cycle, ".md") + ".yaml"
+	os.Rename(cycle, yamlFile)
+	os.WriteFile(yamlFile, []byte(fields+"unattended: true\n"), 0o644)
+	commitAll(t, dir, "Leave 0.4 as YAML")
+	var stdout, stderr strings.Builder
+	leftover := "grove/cycles/" + k + "-0-4-release.yaml: a cycle file is Markdown now; rename it to " + k + "-0-4-release.md and put its fields between two lines of ---\n"
+	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != leftover {
+		t.Errorf("check of a cycle left as YAML: status %d, %q", code, stdout.String())
+	}
+	if got := grove(t, "changes"); !strings.Contains(got, a+"  Editing an unknown ID prints an error  approved\n") || claimable() != "" {
+		t.Errorf("a cycle left as YAML is read: claimable %q, changes %q", claimable(), got)
+	}
+	os.Remove(yamlFile)
+	os.WriteFile(cycle, []byte(addField(plan, "unattended: true\n")), 0o644)
+	commitAll(t, dir, "Convert 0.4")
+	if got := grove(t, "check"); got != "No problems in grove/.\n" || claimable() != k {
+		t.Errorf("a converted cycle: check %q, claimable %q", got, claimable())
+	}
+	// Notes are not checked; a file that does not start with its fields is reported.
+	os.WriteFile(cycle, []byte(addField(plan, "unattended: true\n")+"\n## Found\n\nneeds_human: [C]\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove/cycles/261099-zzzzx-heading.md"), []byte("# Heading\n\ntitle: Heading\n"), 0o644)
+	stdout.Reset()
+	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != "grove/cycles/261099-zzzzx-heading.md: a cycle file starts with its fields between two lines of ---\n" {
+		t.Errorf("check of notes and of a file without fields: status %d, %q", code, stdout.String())
+	}
+	git(t, dir, "checkout", "-q", "--", ".")
+	git(t, dir, "clean", "-qfd")
 	// Revising a member re-plans its cycle on the same branch; revising a
 	// change in no cycle does not.
-	marked, rel := strings.TrimSpace(git(t, dir, "rev-parse", "main")), "grove/cycles/"+k+"-0-4-release.yaml"
+	marked, rel := strings.TrimSpace(git(t, dir, "rev-parse", "main")), "grove/cycles/"+k+"-0-4-release.md"
 	revise := grove(t, "instructions", "propose", a)
 	for _, s := range []string{", and re-planning cycle " + k + ", \"0.4 release\", which lists it.", "### cycle: `" + rel + "`", "\nplanned: " + marked + "\n",
-		"never write or remove `unattended`", "## The cycle\n\n<file path=\"" + rel + "\">\n" + plan + "unattended: true\n</file>"} {
+		"never write or remove `unattended`", "## The cycle\n\n<file path=\"" + rel + "\">\n---\n" + fields + "unattended: true\n---\n</file>"} {
 		if !strings.Contains(revise, s) {
 			t.Errorf("revising a member lacks %q:\n%.4000s", s, revise)
 		}
@@ -1125,11 +1283,11 @@ func TestCycles(t *testing.T) {
 			t.Errorf("check: status %d\n%s%s\nwant\n%s", code, stdout.String(), stderr.String(), want)
 		}
 	}
-	file := "grove/cycles/" + k + "-0-4-release.yaml"
+	file := "grove/cycles/" + k + "-0-4-release.md"
 
 	// A marked cycle with a needs_human left over: an unknown field.
-	os.WriteFile(cycle, []byte(plan+"needs_human:\n  "+a+": judging the error's wording\nunattended: true\n"), 0o644)
-	checks(file + ":5: unknown field \"needs_human\"; this file takes title, created, changes, planned, goal, depends_on and unattended\n")
+	os.WriteFile(cycle, []byte(addField(plan, "needs_human:\n  "+a+": judging the error's wording\nunattended: true\n")), 0o644)
+	checks(file + ":6: unknown field \"needs_human\"; this file takes title, created, changes, planned, goal, depends_on and unattended\n")
 	git(t, dir, "checkout", "-q", "--", ".")
 
 	// A marked cycle whose member changed on main since its plan.
@@ -1139,25 +1297,25 @@ func TestCycles(t *testing.T) {
 
 	// A malformed cycle, and one change in two cycles not done.
 	os.WriteFile(cycle, []byte(strings.Replace(plan, "planned: "+main, "planned: "+strings.TrimSpace(git(t, dir, "rev-parse", "main")), 1)), 0o644)
-	os.WriteFile(filepath.Join(dir, "grove/cycles/261099-zzzzz-later.yaml"), []byte("title: Later\ncreated: 2026-10-23T09:00:00Z\nchanges: ["+a+", 260101-zzzzz]\nstart: tomorrow\n"), 0o644)
-	os.WriteFile(filepath.Join(dir, "grove/cycles/261099-zzzzy-bare.yaml"), []byte("title: Bare\n"), 0o644)
-	checks("grove/cycles/261099-zzzzy-bare.yaml: created: required field is missing\n" +
-		"grove/cycles/261099-zzzzy-bare.yaml: changes: required field is missing\n" +
-		"grove/cycles/261099-zzzzy-bare.yaml: planned: required field is missing\n" +
-		"grove/cycles/261099-zzzzz-later.yaml:4: unknown field \"start\"; this file takes title, created, changes, planned, goal, depends_on and unattended\n" +
-		"grove/cycles/261099-zzzzz-later.yaml: planned: required field is missing\n" +
-		"grove/cycles/261099-zzzzz-later.yaml:3: changes: " + a + " is also in cycle " + k + ", which is not done\n" +
-		"grove/cycles/261099-zzzzz-later.yaml:3: changes: 260101-zzzzz is no change, open or archived\n")
+	os.WriteFile(filepath.Join(dir, "grove/cycles/261099-zzzzz-later.md"), []byte("---\ntitle: Later\ncreated: 2026-10-23T09:00:00Z\nchanges: ["+a+", 260101-zzzzz]\nstart: tomorrow\n---\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "grove/cycles/261099-zzzzy-bare.md"), []byte("---\ntitle: Bare\n---\n"), 0o644)
+	checks("grove/cycles/261099-zzzzy-bare.md: created: required field is missing\n" +
+		"grove/cycles/261099-zzzzy-bare.md: changes: required field is missing\n" +
+		"grove/cycles/261099-zzzzy-bare.md: planned: required field is missing\n" +
+		"grove/cycles/261099-zzzzz-later.md:5: unknown field \"start\"; this file takes title, created, changes, planned, goal, depends_on and unattended\n" +
+		"grove/cycles/261099-zzzzz-later.md: planned: required field is missing\n" +
+		"grove/cycles/261099-zzzzz-later.md:4: changes: " + a + " is also in cycle " + k + ", which is not done\n" +
+		"grove/cycles/261099-zzzzz-later.md:4: changes: 260101-zzzzz is no change, open or archived\n")
 	git(t, dir, "checkout", "-q", "--", ".")
 	git(t, dir, "clean", "-qfd")
 
 	// A cycle that follows another, one that follows no cycle, and two that
 	// follow each other.
 	y, now := "261099-y0000", strings.TrimSpace(git(t, dir, "rev-parse", "main"))
-	fresh, next := strings.Replace(plan, main, now, 1), filepath.Join(dir, "grove/cycles/261099-y0000-next.yaml")
+	fresh, next := strings.Replace(plan, main, now, 1), filepath.Join(dir, "grove/cycles/261099-y0000-next.md")
 	follow := func(k, y string) {
-		os.WriteFile(next, []byte("title: Next\ncreated: 2026-10-23T09:00:00Z\nchanges: ["+b+"]\nplanned: "+now+"\ndepends_on: ["+y+"]\n"), 0o644)
-		os.WriteFile(cycle, []byte(fresh+k), 0o644)
+		os.WriteFile(next, []byte("---\ntitle: Next\ncreated: 2026-10-23T09:00:00Z\nchanges: ["+b+"]\nplanned: "+now+"\ndepends_on: ["+y+"]\n---\n"), 0o644)
+		os.WriteFile(cycle, []byte(addField(fresh, k)), 0o644)
 	}
 	follow("", k)
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
@@ -1167,19 +1325,22 @@ func TestCycles(t *testing.T) {
 	if got := grove(t, "changes"); !strings.Contains(got, b+"  Add ledger delete ID  approved  in cycle "+y+", waits on cycle "+k+"\n") {
 		t.Errorf("changes of a cycle that waits on a cycle printed %q", got)
 	}
-	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "`grove/cycles/261099-y0000-next.yaml`\n  - changes: "+b+"\n  - follows "+k+"\n") {
+	if out := grove(t, "instructions", "explore"); !strings.Contains(out, "`grove/cycles/261099-y0000-next.md`\n  - changes: "+b+"\n  - follows "+k+"\n") {
 		t.Errorf("the project index does not name the cycle followed:\n%s", out)
 	}
 	follow("", "261099-zzzzz")
-	checks("grove/cycles/261099-y0000-next.yaml:5: depends_on: 261099-zzzzz is no cycle\n")
+	checks("grove/cycles/261099-y0000-next.md:6: depends_on: 261099-zzzzz is no cycle\n")
 	follow("depends_on: ["+y+"]\n", k)
-	checks(file + ":5: depends_on: " + y + " waits on this cycle in turn, so neither can run\n" +
-		"grove/cycles/261099-y0000-next.yaml:5: depends_on: " + k + " waits on this cycle in turn, so neither can run\n")
+	checks(file + ":6: depends_on: " + y + " waits on this cycle in turn, so neither can run\n" +
+		"grove/cycles/261099-y0000-next.md:6: depends_on: " + k + " waits on this cycle in turn, so neither can run\n")
 	git(t, dir, "checkout", "-q", "--", ".")
 	finish(t, dir, "a-impl", a, aDir, olderEdits)
 	if got := grove(t, "changes"); !strings.Contains(got, b+"  Add ledger delete ID  approved  in cycle "+y+"\n") {
 		t.Errorf("changes once the cycle followed is done printed %q", got)
 	}
+	// A done cycle left as YAML is reported the same way.
+	os.Rename(cycle, strings.TrimSuffix(cycle, ".md")+".yaml")
+	checks(leftover + "grove/cycles/261099-y0000-next.md:6: depends_on: " + k + " is no cycle\n")
 }
 
 // TestMain runs the test binary as grove when a test starts it so, to
@@ -1327,8 +1488,8 @@ func TestClaim(t *testing.T) {
 	m, n := "261023-m0000", "261023-n0000"
 	planCycle(t, owner, m, "2026-10-23T09:00:00Z", false, d)
 	planCycle(t, owner, n, "2026-10-23T10:00:00Z", false, e)
-	nFile := filepath.Join(owner, "grove/cycles", n+"-cycle.yaml")
-	os.WriteFile(nFile, []byte(read(t, nFile)+"needs_human:\n  "+e+": judging the export\n"), 0o644)
+	nFile := filepath.Join(owner, "grove/cycles", n+"-cycle.md")
+	os.WriteFile(nFile, []byte(addField(read(t, nFile), "needs_human:\n  "+e+": judging the export\n")), 0o644)
 	commitAll(t, owner, "Export with a needs_human left over")
 	git(t, owner, "push", "-q", "origin", "main")
 	claims(h2, "", `^grove: main at [0-9a-f]{7} holds no cycle 261099-zzzzz\n$`, "--retry", "261099-zzzzz")
@@ -1372,7 +1533,7 @@ func TestReplan(t *testing.T) {
 	b, bDir := approve(t, dir, "b", "Add ledger delete ID", "")
 	k := "261023-k0000"
 	planCycle(t, dir, k, "2026-10-23T09:00:00Z", true, b)
-	stale := "grove/cycles/" + k + "-cycle.yaml: planned: " + b + " changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan " + k + "\n"
+	stale := "grove/cycles/" + k + "-cycle.md: planned: " + b + " changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan " + k + "\n"
 	fresh := func(want bool, how string) {
 		t.Helper()
 		var stdout, stderr strings.Builder
@@ -1393,7 +1554,7 @@ func TestReplan(t *testing.T) {
 		if commits == 2 {
 			commitAll(t, dir, "Revise "+b)
 		}
-		os.WriteFile(filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"), []byte("title: Cycle "+k+"\ncreated: 2026-10-23T09:00:00Z\nchanges: ["+b+"]\nplanned: "+main+"\nunattended: true\n"), 0o644)
+		os.WriteFile(filepath.Join(dir, "grove/cycles", k+"-cycle.md"), []byte("---\ntitle: Cycle "+k+"\ncreated: 2026-10-23T09:00:00Z\nchanges: ["+b+"]\nplanned: "+main+"\nunattended: true\n---\n"), 0o644)
 		commitAll(t, dir, "Re-plan "+k)
 		git(t, dir, "switch", "-q", "main")
 	}
@@ -1416,8 +1577,8 @@ func TestReplan(t *testing.T) {
 	commitAll(t, dir, "Revise "+b)
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Revise", "later")
-	cycle := filepath.Join(dir, "grove/cycles", k+"-cycle.yaml")
-	os.WriteFile(cycle, []byte(read(t, cycle)+"unattended: true\n"), 0o644)
+	cycle := filepath.Join(dir, "grove/cycles", k+"-cycle.md")
+	os.WriteFile(cycle, []byte(addField(read(t, cycle), "unattended: true\n")), 0o644)
 	commitAll(t, dir, "Mark")
 	fresh(false, "marked after a member changed")
 }
@@ -1477,7 +1638,7 @@ func TestMovedFiles(t *testing.T) {
 	planCycle(t, dir, k, "2026-10-23T09:00:00Z", false, cid)
 	checks("No problems in grove/.\n")
 	edit("ledger/cli.py", "Yet another change")
-	stale, cycle := "grove/cycles/"+k+"-cycle.yaml: planned: "+cid+" changed on main since this plan", filepath.Join(dir, "grove/cycles", k+"-cycle.yaml")
+	stale, cycle := "grove/cycles/"+k+"-cycle.md: planned: "+cid+" changed on main since this plan", filepath.Join(dir, "grove/cycles", k+"-cycle.md")
 	checks(stale + "; re-plan it with /grove-plan " + k + "\n")
 	for _, args := range [][]string{{cid}} {
 		if out := grove(t, append([]string{"instructions", "implement"}, args...)...); !strings.Contains(out, "\n- Changed on main since cycle "+k+"'s plan "+plan[:7]+": T-01's `ledger/cli.py`.\n") || strings.Contains(out, "since base") {
@@ -1486,8 +1647,8 @@ func TestMovedFiles(t *testing.T) {
 	}
 	planned := read(t, cycle)
 	os.WriteFile(cycle, []byte(regexp.MustCompile(`planned: \w+`).ReplaceAllString(planned, "planned: 0000000")), 0o644)
-	checks("grove/cycles/" + k + "-cycle.yaml: planned: 0000000 is not a commit in this repository\n")
-	os.WriteFile(cycle, []byte(planned+"unattended: true\n"), 0o644)
+	checks("grove/cycles/" + k + "-cycle.md: planned: 0000000 is not a commit in this repository\n")
+	os.WriteFile(cycle, []byte(addField(planned, "unattended: true\n")), 0o644)
 	commitAll(t, dir, "Mark")
 	checks(stale + ", so grove claim skips this cycle; re-plan it with /grove-plan " + k + "\n")
 	p, _ := openProject()
@@ -1499,7 +1660,7 @@ func TestMovedFiles(t *testing.T) {
 	// named once; a Files: line Grove cannot read.
 	files := "Files:\n- `ledger/`\n- `tests/test_cli.py`"
 	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, files, "Files: `ledger/cli.py`,\n`tests/test_cli.py`", 1)+"\n## T-02 — Test it\n\nFiles: `tests/test_cli.py`\n"), 0o644)
-	os.Remove(filepath.Join(dir, "grove/cycles", k+"-cycle.yaml"))
+	os.Remove(filepath.Join(dir, "grove/cycles", k+"-cycle.md"))
 	since := " changed on main since base " + base[:7] + moved
 	checks(rel + ": ledger/cli.py and tests/test_cli.py" + since)
 	for _, bad := range []string{"Files: ledger/cli.py", "Files: `../ledger/cli.py`", "Files:\n- `ledger/cli.py`, `tests/test_cli.py`"} {
@@ -1529,13 +1690,13 @@ func TestFollows(t *testing.T) {
 	planCycle(t, dir, k, "2026-10-23T09:00:00Z", true, b)
 	planCycle(t, dir, n, "2026-10-23T12:00:00Z", false, f)
 	for id, follows := range map[string]string{k: l, l: m} {
-		file := filepath.Join(dir, "grove/cycles", id+"-cycle.yaml")
-		os.WriteFile(file, []byte(read(t, file)+"depends_on: ["+follows+"]\n"), 0o644)
+		file := filepath.Join(dir, "grove/cycles", id+"-cycle.md")
+		os.WriteFile(file, []byte(addField(read(t, file), "depends_on: ["+follows+"]\n")), 0o644)
 	}
 	commitAll(t, dir, "Order the cycles")
 
 	staleOf := func(cycle, change string) string {
-		return "grove/cycles/" + cycle + "-cycle.yaml: planned: " + change + " changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan " + cycle + "\n"
+		return "grove/cycles/" + cycle + "-cycle.md: planned: " + change + " changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan " + cycle + "\n"
 	}
 	clean, stale := "No problems in grove/.\n", staleOf(k, b)
 	state := func(want, selects, how string) {
@@ -1618,7 +1779,7 @@ func TestFollows(t *testing.T) {
 	git(t, dir, "reset", "-q", "--hard", "HEAD~1")
 	land(f, fDir, false)
 	state(stale, "", "an archive of a cycle K does not follow")
-	file := filepath.Join(dir, "grove/cycles", k+"-cycle.yaml")
+	file := filepath.Join(dir, "grove/cycles", k+"-cycle.md")
 	os.WriteFile(file, []byte(regexp.MustCompile(`planned: \w+`).ReplaceAllString(read(t, file), "planned: "+strings.TrimSpace(git(t, dir, "rev-parse", "HEAD")))), 0o644)
 	commitAll(t, dir, "Re-plan "+k)
 	state(clean, k, "re-planned")
@@ -1635,7 +1796,7 @@ func TestMisnamedCycle(t *testing.T) {
 	planCycle(t, dir, "261105-proto-unknown-id", "2026-11-05T09:00:00Z", false, a) // IDs leave out o
 	planCycle(t, dir, "261105-pr0t0", "2026-11-05T10:00:00Z", false, b)
 	var stdout, stderr strings.Builder
-	if code := run([]string{"check"}, &stdout, &stderr); code == 0 || !strings.Contains(stdout.String(), "grove/cycles/261105-proto-unknown-id-cycle.yaml: the file name must start with a cycle ID, such as 261015-k3m9q\n") {
+	if code := run([]string{"check"}, &stdout, &stderr); code == 0 || !strings.Contains(stdout.String(), "grove/cycles/261105-proto-unknown-id-cycle.md: the file name must start with a cycle ID, such as 261015-k3m9q\n") {
 		t.Errorf("check of a misnamed cycle: status %d, %q", code, stdout.String())
 	}
 	out := grove(t, "changes")
@@ -1672,8 +1833,8 @@ func TestShallowClone(t *testing.T) {
 	git(t, dir, "clone", "-q", "--depth", "1", "file://"+dir, clone)
 	t.Chdir(clone)
 	checks("/.grove.yaml: base: " + base + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow\n")
-	checks("grove/cycles/261105-pr0t0-cycle.yaml: planned: " + planned + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow\n")
-	plan := "grove/cycles/261105-pr0t0-cycle.yaml: planned: " + planned + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow"
+	checks("grove/cycles/261105-pr0t0-cycle.md: planned: " + planned + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow\n")
+	plan := "grove/cycles/261105-pr0t0-cycle.md: planned: " + planned + " is not in this shallow clone; fetch its full history, such as with git fetch --unshallow"
 	refuses(bDir[len(dir)+1:]+"/.grove.yaml: base: "+base+" is not in this shallow clone; fetch its full history, such as with git fetch --unshallow", "instructions", "implement", b)
 	refuses(plan, "instructions", "implement", a)
 	refuses(plan, "instructions", "implement", a)
@@ -1816,7 +1977,7 @@ func TestServe(t *testing.T) {
 	maintain(t, dir, olderEdits+"\nEdited again.\n")
 	commitAll(t, dir, "Edit record-editing")
 	planCycle(t, dir, k, "2026-11-02T00:00:00Z", true, a, b)
-	write("grove/cycles/"+l+"-cycle.yaml", "title: Cycle L\ncreated: 2026-11-03T00:00:00Z\nchanges: ["+c+"]\nplanned: "+strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))+"\n")
+	write("grove/cycles/"+l+"-cycle.md", "---\ntitle: Cycle L\ncreated: 2026-11-03T00:00:00Z\nchanges: ["+c+"]\nplanned: "+strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))+"\n---\n\n## Found\n\n- "+c+" was fresh.\n")
 	commitAll(t, dir, "Plan "+l)
 	planCycle(t, dir, m, "2026-11-04T00:00:00Z", true, d)
 	os.WriteFile(filepath.Join(dDir, "proposal.md"), []byte("# Monthly budgets in report\n\nRevised.\n\n## Open questions\n\n<!-- Say which. -->\nNone.\n"), 0o644)
@@ -2007,7 +2168,10 @@ func TestServe(t *testing.T) {
 	draft := strings.TrimSpace(git(t, dir, "rev-parse", "draft-notes"))
 	for _, tc := range []struct{ query, want string }{
 		{"path=changes/" + filepath.Base(dDir) + "/proposal.md", "<h1>Monthly budgets in report</h1>"},
-		{"path=cycles/" + k + "-cycle.yaml", "unattended: true\n"},
+		{"path=cycles/" + k + "-cycle.md", "<pre><code>title: Cycle " + k + "\ncreated: 2026-11-02T00:00:00Z\n"},
+		{"path=cycles/" + k + "-cycle.md", "unattended: true\n</code></pre>\n"},
+		{"path=cycles/" + l + "-cycle.md", "</code></pre>\n<h2>Found</h2>\n<ul>\n<li>"},
+		{"path=changes/" + filepath.Base(dDir) + "/.grove.yaml", "title: Monthly budgets in report\n"},
 		{"ref=" + tip + "&path=" + bRel + "implementation.md", "<p>Status: blocked</p>"},
 		{"ref=worktree&path=" + cRel + "implementation.md", "<p>Status: in progress</p>"},
 		{"ref=" + draft + "&path=" + gRel + "proposal.md", "<!-- raw HTML omitted -->"},
@@ -2016,7 +2180,15 @@ func TestServe(t *testing.T) {
 			t.Errorf("/api/doc?%s answered %d:\n%s", tc.query, code, got)
 		}
 	}
-	for _, query := range []string{"path=../grove.yaml", "path=notes.txt", "ref=main&path=cycles/" + k + "-cycle.yaml"} {
+	if _, got := get(t, url+"api/doc?path=cycles/"+k+"-cycle.md"); !strings.HasSuffix(got, "unattended: true\n</code></pre>\n") {
+		t.Errorf("/api/doc of a cycle with no notes answered something below its fields:\n%s", got)
+	}
+	// A cycle with CRLF line endings whose notes open with an indented code block.
+	os.WriteFile(filepath.Join(dir, "grove/cycles/261099-zzzzy-crlf.md"), []byte("---\r\ntitle: CRLF\r\n---\r\n\r\n    go test\r\n"), 0o644)
+	if _, got := get(t, url+"api/doc?ref=worktree&path=cycles/261099-zzzzy-crlf.md"); !strings.HasPrefix(got, "<pre><code>title: CRLF\r\n</code></pre>\n<pre><code>go test") {
+		t.Errorf("/api/doc of a CRLF cycle with a code block:\n%q", got)
+	}
+	for _, query := range []string{"path=../grove.yaml", "path=notes.txt", "ref=main&path=cycles/" + k + "-cycle.md"} {
 		if code, _ := get(t, url+"api/doc?"+query); code != 400 {
 			t.Errorf("/api/doc?%s answered %d, want 400", query, code)
 		}

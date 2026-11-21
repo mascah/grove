@@ -1,6 +1,0 @@
-title: "<title>"
-created: {{created}}
-# goal: <one line: what finishing the cycle achieves; optional>
-changes: [<the IDs of the approved changes in the cycle>]
-# depends_on: [<the IDs of the cycles not done it follows, only as the owner names them; optional>]
-planned: {{commit}}

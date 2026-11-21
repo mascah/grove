@@ -324,7 +324,7 @@ grove/
     tasks.md
     implementation.md
   changes/archive/<id>-<slug>/
-  cycles/<id>-<slug>.yaml
+  cycles/<id>-<slug>.md
 ```
 
 A folder under `specs/` is a maintained spec when it holds `spec.md`
@@ -355,7 +355,8 @@ A change's `.grove.yaml` holds:
 
 Propose writes it from Grove's template.
 
-A cycle file's name starts with its ID. It holds:
+A cycle file's name starts with its ID and ends `.md`. It starts with its
+fields, as YAML between two lines of `---`:
 
 - `title`;
 - `created`, when it was created;
@@ -365,6 +366,18 @@ A cycle file's name starts with its ID. It holds:
 - `planned`, the full commit of the target its plan read;
 - optionally `unattended: true`, which hands it to `grove claim` (see
   [Planning cycles](planning.md)).
+
+Below the fields are the notes its plan wrote, free Markdown with no title
+heading, or nothing. Grove reads none of them and prints them with the
+file; a change's own documents hold over them.
+
+A project whose cycle files still end `.yaml` has no cycles until they are
+converted: Grove reads no cycle from a `.yaml` file, and `grove check`
+reports each one, done or not, saying a cycle file is Markdown now and to
+rename it to `<name>.md` and put its fields between two lines of `---`. To
+convert one, rename it to `.md`, add a line of `---` above its fields and
+another below, change nothing else, and merge the commit. Its `planned`
+holds, so the plan stays fresh, and `grove claim` claims it as before.
 
 Grove no longer reads `needs_human`: `grove check` reports it as an
 unknown field. Delete the key and its entries.

@@ -87,6 +87,30 @@ func (d *Document) parse(file string, src []byte, required, optional []string) m
 	return lines
 }
 
+// Front splits a Markdown file into its fields, the lines up to the second
+// line of ---, the first one kept so that a field's line is the file's, and
+// the text below them, from its first line that is not blank so that an
+// indented code block stays one; ok is false when it does not start so. Only
+// a line that is exactly ---, in either line ending, closes the fields, since
+// an indented one may be inside a YAML block scalar.
+func Front(src string) (fields, notes string, ok bool) {
+	lines := strings.SplitAfter(src, "\n")
+	delimiter := func(l string) bool { return strings.TrimRight(l, "\r\n") == "---" }
+	if !delimiter(lines[0]) {
+		return "", "", false
+	}
+	for i := 1; i < len(lines); i++ {
+		if delimiter(lines[i]) {
+			rest := lines[i+1:]
+			for len(rest) > 0 && strings.TrimSpace(rest[0]) == "" {
+				rest = rest[1:]
+			}
+			return strings.Join(lines[:i], ""), strings.TrimRight(strings.Join(rest, ""), " \t\r\n"), true
+		}
+	}
+	return "", "", false
+}
+
 // heading reports file, with missing when there is none, or when its first
 // "# " heading is not d's title. With no title, the missing title is the
 // problem, reported already.

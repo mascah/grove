@@ -19,11 +19,20 @@
 - Tell the owner of each member that waits on a change neither in the
   cycle nor archived as finished: `grove claim` will not claim the
   cycle until it is.
+- When the project index names a requirement two members both change, tell
+  the owner which two and which requirement, and that the one built second
+  is stale on it once the first is archived. Ask whether both stay in this
+  cycle or one goes to a later one, and list only what they agree to.
 - A new cycle: when the project index lists cycles not done, ask the owner
   whether it follows any of them.
 - Keep `created` as the template has it. Set `planned` to the commit the
   template shows: the target commit you read the members at. Change it
   only so.
+- Below the fields, write notes only where there is something to say, as
+  the template's comment lists; there may be none. They change no member:
+  what would change a member's requirements or tasks is a revision of it.
+  Revising, bring them up to date with the new `planned`: say what holds
+  there, and nothing the target made false.
 - Never write or remove `unattended`. It hands the cycle to a `grove claim`
   given no cycle and is the owner's to set, in a later merge of its own.
 - The plan is made when the owner merges the cycle file into the target
