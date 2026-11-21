@@ -1,5 +1,7 @@
+---
 title: "Claim, JSON and the target as origin holds it"
 created: 2026-11-09T02:02:04Z
 goal: Every approved change is built in one unattended run, so the owner's only step is merging what it leaves.
 changes: [261108-jpg8n, 261108-7grt3, 261108-cns75, 261108-xmgxy, 261109-0arqh]
 planned: 4951754b8ece655a05097d907d11bbb0279a79a2
+---

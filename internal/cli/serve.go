@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"io/fs"
 	"net"
@@ -435,7 +436,8 @@ var commitRef = regexp.MustCompile(`^[0-9a-f]{40}$`)
 var markdown = goldmark.New(goldmark.WithExtensions(extension.GFM))
 
 // doc answers one Markdown or YAML file under the root, at the target
-// (ref empty), at a commit or in the working tree, Markdown as HTML.
+// (ref empty), at a commit or in the working tree, Markdown as HTML, the
+// fields a cycle file starts with as text above its notes.
 func (s *server) doc(w http.ResponseWriter, r *http.Request) {
 	ref, name := r.URL.Query().Get("ref"), r.URL.Query().Get("path")
 	if ext := path.Ext(name); !fs.ValidPath(name) || ext != ".md" && ext != ".yaml" || ref != "" && ref != "worktree" && !commitRef.MatchString(ref) {
@@ -470,5 +472,9 @@ func (s *server) doc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if fields, notes, ok := doc.Front(string(b)); ok {
+		fmt.Fprintf(w, "<pre><code>%s</code></pre>\n", html.EscapeString(fields[strings.IndexByte(fields, '\n')+1:]))
+		b = []byte(notes)
+	}
 	markdown.Convert(b, w)
 }

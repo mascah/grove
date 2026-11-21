@@ -1,0 +1,7 @@
+---
+title: "Cycle files in Markdown, and shared requirements named in the index"
+created: 2026-11-18T03:06:22Z
+changes: [261118-emse7, 261118-40s1a]
+planned: fbb8ab0528e641686c4b723f8c21f4cb9c91eb06
+unattended: true
+---

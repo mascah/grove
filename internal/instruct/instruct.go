@@ -231,6 +231,7 @@ type Instructions struct {
 	Change      []Listed   // the documents of the change being worked on, by path
 	Cycle       []File     // the cycle being revised or built, in full
 	Plan        string     // the cycle's members in build order, for one of them
+	Notes       bool       // the cycle file holds notes, which a member's documents hold over
 	Runner      bool       // the caller delivers the work, so the delivery rules are left out
 }
 
@@ -510,7 +511,7 @@ func Plan(p Project, id, created, description string, only *doc.Change) (Instruc
 	case description != "":
 		from = "from the owner's description below"
 	}
-	in, err := plan(p, fmt.Sprintf("You are planning new cycle %s, %s, in the owner's own working tree.", id, from), p.Root+"/cycles/"+id+"-<slug>.yaml", created)
+	in, err := plan(p, fmt.Sprintf("You are planning new cycle %s, %s, in the owner's own working tree.", id, from), p.Root+"/cycles/"+id+"-<slug>.md", created)
 	in.Description = description
 	return in, err
 }
@@ -529,7 +530,7 @@ func Replan(p Project, cy *doc.Cycle, content string) (Instructions, error) {
 func plan(p Project, task, path, created string) (Instructions, error) {
 	in, err := build(p, p.Schema, "plan", task, strings.NewReplacer(), nil)
 	fill := strings.NewReplacer("{{commit}}", p.Commit, "{{created}}", created)
-	in.Documents = append(in.Documents, Document{Kind: "cycle", Path: path, Template: fill.Replace(embedded("metadata/cycle.yaml"))})
+	in.Documents = append(in.Documents, Document{Kind: "cycle", Path: path, Template: fill.Replace(embedded("metadata/cycle.md"))})
 	return in, err
 }
 
@@ -543,7 +544,7 @@ func Revise(p Project, c *doc.Change, cy *doc.Cycle, content string) (Instructio
 	if cy != nil {
 		in.Task = strings.TrimSuffix(in.Task, ".") + fmt.Sprintf(", and re-planning cycle %s, %q, which lists it.", cy.ID, cy.Meta.Title)
 		fill := strings.NewReplacer("{{commit}}", p.Commit, "{{created}}", cy.Meta.Created)
-		in.Documents = append(in.Documents, Document{Kind: "cycle", Path: p.Root + "/" + cy.Path, Template: fill.Replace(embedded("metadata/cycle.yaml"))})
+		in.Documents = append(in.Documents, Document{Kind: "cycle", Path: p.Root + "/" + cy.Path, Template: fill.Replace(embedded("metadata/cycle.md"))})
 		in.Cycle = []File{{p.Root + "/" + cy.Path, content}}
 	}
 	return in, err
@@ -600,7 +601,7 @@ func Cycle(p Project, cy *doc.Cycle, content string, ordered, waiting []*doc.Cha
 	}
 	task := fmt.Sprintf("You are implementing cycle %s, %q, as %s@%s holds it, in this working tree.", cy.ID, cy.Meta.Title, p.Target, short(p.Commit))
 	in := Instructions{Project: p, Skill: "implement", Task: task, Requires: embedded("requires/implement-cycle.md"),
-		Guide: b.String(), Cycle: []File{{p.Root + "/" + cy.Path, content}}}
+		Guide: b.String(), Cycle: []File{{p.Root + "/" + cy.Path, content}}, Notes: cy.Notes != ""}
 	in.runner(runner)
 	return in, nil
 }
@@ -622,6 +623,7 @@ func (in *Instructions) InCycle(cy *doc.Cycle, content string, ordered []*doc.Ch
 	}
 	in.Plan = fmt.Sprintf("Cycle %s, %q, in build order:\n\n%s\nWhen this change is archived, or left with a task blocked, go on with the next as the cycle's instructions say.\n\n", cy.ID, cy.Meta.Title, b.String())
 	in.Cycle = []File{{in.Root + "/" + cy.Path, content}}
+	in.Notes = cy.Notes != ""
 }
 
 // Archive returns the instructions for archiving change c, read from the
@@ -692,6 +694,9 @@ func (in Instructions) Markdown() string {
 	for _, f := range in.Cycle {
 		include(&b, f.Path, f.Content)
 	}
+	if in.Notes {
+		b.WriteString("The notes below the cycle's fields are its plan's advice: where they and a member's documents disagree, the member's documents hold.\n")
+	}
 	return b.String()
 }
 
@@ -733,6 +738,9 @@ func (p Project) index(b *strings.Builder) {
 		}
 		if len(c.WaitsOn) > 0 {
 			more = append(more, "waits on: "+strings.Join(c.WaitsOn, ", ")+", not archived as finished")
+		}
+		for _, s := range c.Shares {
+			more = append(more, fmt.Sprintf("also changed by %s: %s %q", s.Change, s.Capability, s.Requirement))
 		}
 		entry(b, p.Root+"/"+c.Dir+"/", &c.Document, more...)
 	}

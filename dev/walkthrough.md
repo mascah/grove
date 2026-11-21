@@ -172,7 +172,20 @@ It starts where the main line's step 6 ends: one archived change and the
    Commit and merge. Then
    `git switch main && git switch -c show-saved`, a fresh session,
    `/grove-propose Editing a record prints what was saved`, which MODIFIES
-   the same requirement from the same text. Commit and merge. Implement
+   the same requirement from the same text. Commit and merge.
+   `grove instructions plan "0.5 release"` lists, in the project index,
+   under recategorize
+   > \- also changed by \<show-saved>: record-editing "\<name>"
+
+   and under show-saved the same line naming recategorize, and its plan
+   requirements say to tell the owner of such a pair among the members,
+   that the one built second is stale on it once the first is archived,
+   and to ask whether both stay. `grove instructions propose` lists the
+   same lines. Commit a cycle on main listing both: `grove check` is
+   clean and `grove claim <cycle-id>` claims it. Reset main and delete
+   the branches `claim` made. Commit `depends_on: [<recategorize-id>]` in
+   show-saved's `.grove.yaml` on main: the index names neither under the
+   other. Reset main. Implement
    `recategorize` on `recategorize-impl`; the `grove check` its archive runs
    after reconciling the spec reports show-saved, not recategorize, and
    exits non-zero:
@@ -182,7 +195,8 @@ It starts where the main line's step 6 ends: one archived change and the
    it. Commit and merge; `grove check` on main reports the same line. Set
    show-saved's `depends_on` to `[<recategorize-id>]` in the working tree:
    `grove check` is clean, since show-saved then builds on the change that
-   rewrote the requirement. Discard that edit.
+   rewrote the requirement. Discard that edit. The project index on main
+   no longer names the pair, recategorize being archived.
    `git switch -c show-saved-revise`, a fresh session,
    `/grove-propose <show-saved>`, asked to bring it up to date with main.
    The session adds recategorize's scenario to show-saved's MODIFIED text
@@ -235,9 +249,11 @@ show-saved changes approved. Each step names the section of
    date edits approved work, brings T-01 up to date with
    `ledger/report.py` as main has it and sets budgets' `base` to main's
    commit, without sending me to another session. It writes
-   `grove/cycles/<cycle-id>-<slug>.yaml` with both under `changes`,
-   `created:` with the time,
-   `planned:` with main's full commit and no `unattended`. `git status`
+   `grove/cycles/<cycle-id>-<slug>.md`, its fields between two lines of
+   `---`: both under `changes`, `created:` with the time,
+   `planned:` with main's full commit and no `unattended`. Below them, its
+   notes say budgets was brought up to date with `ledger/report.py` as
+   main has it at `planned`, and what in T-01 moved. `git status`
    shows budgets' files beside that file, and no other, and
    `grove check`:
    > No problems in grove/.
@@ -252,7 +268,7 @@ show-saved changes approved. Each step names the section of
    > changes  change           grove/changes/\<budgets>/\<file>
 
    beside
-   > adds     cycle            grove/cycles/\<cycle-id>-\<slug>.yaml
+   > adds     cycle            grove/cycles/\<cycle-id>-\<slug>.md
 
    Merge it. `grove changes` ends the delete and budgets lines with
    `in cycle <cycle-id>`, and the show-saved line with nothing.
@@ -260,7 +276,7 @@ show-saved changes approved. Each step names the section of
 3. **A cycle of one** ("Plan a cycle"). `git switch -c plan-show-saved`, a
    fresh session, `/grove-plan <show-saved>`. It asks nothing, takes the
    change's title for the cycle, and writes a cycle listing only
-   show-saved. It ends by naming
+   show-saved, its fields between two lines of `---` and no notes. It ends by naming
    `/grove-implement <cycle-id>`, then saying `grove claim <cycle-id>` would
    claim the cycle, then that `unattended: true`, added to its file in a
    merge of its own, hands it to a `grove claim` given no cycle. Commit and
@@ -270,21 +286,38 @@ show-saved changes approved. Each step names the section of
    `unattended: true` to the show-saved cycle, `grove check` is clean;
    commit and merge. `grove changes` ends the show-saved line with
    `in cycle <cycle-id>, unattended`. Add `needs_human:` with
-   `<budgets-id>: judging the wording` under it to the 0.4 cycle, as a
+   `<budgets-id>: judging the wording` under it to the 0.4 cycle's fields, as a
    cycle written before Grove dropped the field holds: `grove check`
    reports it and exits non-zero:
-   > grove/cycles/\<0.4-cycle>.yaml:\<line>: unknown field "needs_human"; this file takes title, created, changes, planned, goal, depends_on and unattended
+   > grove/cycles/\<0.4-cycle>.md:\<line>: unknown field "needs_human"; this file takes title, created, changes, planned, goal, depends_on and unattended
+
+   where the line is the file's, counting the first `---`. Discard the
+   edit. Add `needs_human: [<budgets-id>]` to the 0.4 cycle's notes,
+   below its fields: `grove check` is clean. Discard the edit.
+
+   Then, as a cycle written before Grove read Markdown, rename the
+   show-saved cycle's file to end `.yaml` and delete its two lines of
+   `---`. `grove check` exits non-zero, reporting
+   > grove/cycles/\<show-saved-cycle>.yaml: a cycle file is Markdown now; rename it to \<show-saved-cycle>.md and put its fields between two lines of ---
+
+   commit it, and `grove changes` shows show-saved with no `in cycle`.
+   Rename it back to `.md`, put the two lines back, commit:
+   `grove check` is clean, its `planned` is as it was, and `grove changes`
+   ends the show-saved line with `in cycle <cycle-id>, unattended` again.
+   Then replace the 0.4 cycle's first line of `---` with `# 0.4`:
+   `grove check` exits non-zero, reporting
+   > grove/cycles/\<0.4-cycle>.md: a cycle file starts with its fields between two lines of ---
 
    Discard the edit.
 
 5. **A stale plan** ("Re-plan a cycle"). On a branch,
    add a sentence to show-saved's proposal, commit and merge. On main,
    `grove check`:
-   > grove/cycles/\<show-saved-cycle>.yaml: planned: \<show-saved> changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan \<show-saved-cycle-id>
+   > grove/cycles/\<show-saved-cycle>.md: planned: \<show-saved> changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan \<show-saved-cycle-id>
 
    `git switch -c replan`, a fresh session, `/grove-plan <show-saved-cycle-id>`.
    It reads show-saved as main holds it, asks nothing new, keeps
-   `unattended`, and sets `planned` to main's commit. `grove check` is
+   `unattended`, sets `planned` to main's commit, and writes no notes. `grove check` is
    clean. Commit and merge.
 
    Then add a comment to a file show-saved's T-01 names on its `Files:`
@@ -302,7 +335,7 @@ show-saved changes approved. Each step names the section of
    Then, on a branch, add a comment to `ledger/report.py`, which budgets'
    T-01 names; commit and merge. On main, `grove check` reports the 0.4
    cycle, though it is not marked, and exits non-zero:
-   > grove/cycles/\<0.4-cycle>.yaml: planned: \<budgets-id> changed on main since this plan; re-plan it with /grove-plan \<0.4-cycle-id>
+   > grove/cycles/\<0.4-cycle>.md: planned: \<budgets-id> changed on main since this plan; re-plan it with /grove-plan \<0.4-cycle-id>
 
    `grove instructions implement <budgets-id>` names the file against the
    plan, not `base`:
@@ -310,19 +343,21 @@ show-saved changes approved. Each step names the section of
 
    `git switch -c replan-0.4`, a fresh session,
    `/grove-plan <0.4-cycle-id>`. It asks about budgets as before and I say
-   yes again; it writes no `unattended` and sets `planned` to main's
-   commit. `grove check` is clean. Commit and merge.
+   yes again; it writes no `unattended`, sets `planned` to main's
+   commit, and brings the notes up to date: they say what holds of
+   `ledger/report.py` at the new `planned`, and no longer what main made
+   false. `grove check` is clean. Commit and merge.
 
 6. **One change in two cycles** ("Re-plan a cycle"). Copy the 0.4 cycle to
-   `grove/cycles/261099-zzzzz-later.yaml`. `grove check` reports
-   > grove/cycles/261099-zzzzz-later.yaml:\<line>: changes: \<delete-id> is also in cycle \<0.4-cycle-id>, which is not done
+   `grove/cycles/261099-zzzzz-later.md`. `grove check` reports
+   > grove/cycles/261099-zzzzz-later.md:\<line>: changes: \<delete-id> is also in cycle \<0.4-cycle-id>, which is not done
 
    and the same for budgets. Delete the copy.
 
    Then rename the 0.4 cycle's file to
-   `grove/cycles/261105-proto-0-4.yaml`, a name that starts with no ID,
+   `grove/cycles/261105-proto-0-4.md`, a name that starts with no ID,
    since IDs leave out `o`. `grove check` exits non-zero, reporting
-   > grove/cycles/261105-proto-0-4.yaml: the file name must start with a cycle ID, such as 261015-k3m9q
+   > grove/cycles/261105-proto-0-4.md: the file name must start with a cycle ID, such as 261015-k3m9q
 
    and `grove changes` shows delete and budgets with no `in cycle`. Rename
    the file back.
@@ -336,7 +371,7 @@ show-saved changes approved. Each step names the section of
    `grove instructions implement <0.4-cycle-id>` and
    `grove claim <0.4-cycle-id>` each print no instructions and exit
    non-zero with check's line for the cycle, `claim` recording nothing:
-   > grove: grove/cycles/\<0.4-cycle>.yaml: planned: \<sha> is not in this shallow clone; fetch its full history, such as with git fetch --unshallow
+   > grove: grove/cycles/\<0.4-cycle>.md: planned: \<sha> is not in this shallow clone; fetch its full history, such as with git fetch --unshallow
 
    while in `~/tmp/ledger` `grove check` reports neither. Delete
    `~/tmp/ledger-shallow`.
@@ -353,11 +388,11 @@ show-saved changes approved. Each step names the section of
    `in cycle <0.5-cycle-id>, unattended, waits on cycle <show-saved-cycle-id>`.
 
    Set the 0.5 cycle's `depends_on` to `[261099-zzzzz]`: `grove check` reports
-   > grove/cycles/\<0.5-cycle>.yaml:\<line>: depends_on: 261099-zzzzz is no cycle
+   > grove/cycles/\<0.5-cycle>.md:\<line>: depends_on: 261099-zzzzz is no cycle
 
    Put it back, and add `depends_on: [<0.5-cycle-id>]` to the show-saved
    cycle: `grove check` reports each one's `depends_on` line, as
-   > grove/cycles/\<0.5-cycle>.yaml:\<line>: depends_on: \<show-saved-cycle-id> waits on this cycle in turn, so neither can run
+   > grove/cycles/\<0.5-cycle>.md:\<line>: depends_on: \<show-saved-cycle-id> waits on this cycle in turn, so neither can run
 
    Discard both edits. On a branch, a fresh session,
    `/grove-implement <show-saved-cycle-id>` builds and archives show-saved,
@@ -365,7 +400,7 @@ show-saved changes approved. Each step names the section of
    is clean, and `grove changes` ends import's line with
    `in cycle <0.5-cycle-id>, unattended`. Then add a comment to that file,
    commit and merge: `grove check` reports
-   > grove/cycles/\<0.5-cycle>.yaml: planned: \<import> changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan \<0.5-cycle-id>
+   > grove/cycles/\<0.5-cycle>.md: planned: \<import> changed on main since this plan, so grove claim skips this cycle; re-plan it with /grove-plan \<0.5-cycle-id>
 
    Re-plan it as step 5 does.
 
@@ -380,7 +415,11 @@ show-saved changes approved. Each step names the section of
    `build-delete`, and go on.
 
    From main, `git switch -c build-0.4`, a fresh session,
-   `/grove-implement <0.4-cycle-id>`. Its instructions list
+   `/grove-implement <0.4-cycle-id>`. Its instructions,
+   `grove instructions implement <0.4-cycle-id>`, print the cycle file
+   with its notes and say that where the notes and a change's documents
+   disagree, the change's documents hold; so does each change's
+   `## The cycle`. They list
    delete, then budgets `after <delete-id>`, each to be built in a fresh
    context that neither archives nor commits, by
    `grove instructions implement --runner <change-id>`. The session starts one subagent on
@@ -596,7 +635,7 @@ the browser's console shows no error.
 4. **The pane** ("The pane", "Graph", "Specs"). Click B: the pane shows
    its proposal rendered, with a button for each file on `main` and for
    its `implementation.md` on `build-b` and on `origin/teammate`. Click
-   K: its YAML as text. Click G's `proposal.md` in In progress: it shows
+   K: its fields as text, and below them its notes rendered, if any. Click G's `proposal.md` in In progress: it shows
    that branch's version, with no script run. A link to the spec opens it
    in the pane. Scroll the pane and the list, and wait 10 seconds: both
    stay where they were. Uncheck "every 10 s": the read time stops
@@ -1009,7 +1048,9 @@ Agent inference, not the owner's decisions (`CLAUDE.md`).
 - The project index lists each approved change's capabilities (the
   `<capability>` folders of its files) and what it waits on, rather than
   dependencies Grove works out as candidates. Propose names the likely ones
-  from it.
+  from it. It also names, under each of two approved changes neither of
+  which depends on the other, each requirement of a capability both have
+  an ADDED, MODIFIED or REMOVED block for, comparing names, not texts.
 - `grove changes` writes `waits on <id>, <id>` after `approved`, and
   nothing for a change whose dependencies are all archived as finished.
 - A change with no dependency leaves `depends_on` out; `depends_on: []` is

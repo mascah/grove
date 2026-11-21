@@ -18,5 +18,5 @@ cycle. It plans no implementation: no file-by-file plan, no estimates.
 
 ### 3. Write the cycle file
 
-Write it from its template. Revising, change what the owner asks for and
-leave the rest as it is.
+Write it from its template. Revising, change what the owner asks for, bring
+the notes up to date, and leave the rest as it is.

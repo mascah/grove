@@ -1,5 +1,7 @@
+---
 title: Less ceremony
 created: 2026-10-23T22:00:21Z
 goal: Apply folds into implement, small changes take one merge, and propose asks only what matters
 changes: [261023-g0a3h, 261023-6yafg, 261023-vqsrt, 261023-yqfpj, 261023-bgtcb]
 planned: aa245f140938be460365ca643081493968a749bf
+---
