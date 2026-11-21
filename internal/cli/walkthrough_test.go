@@ -1170,7 +1170,7 @@ func TestCycles(t *testing.T) {
 	main := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	out := grove(t, "instructions", "plan", "0.4 release")
 	m := regexp.MustCompile("### cycle: `grove/cycles/([0-9]{6}-[0-9a-z]{5})-<slug>.md`").FindStringSubmatch(out)
-	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "Never write or remove `unattended`", "## How to plan\n",
+	for _, s := range []string{"You are planning new cycle ", "## What Grove requires of plan\n", "only where the owner's description or the conversation asks for\n  an unattended cycle, even with an obstacle below; never offer it", "remove it only where the owner asks, and keep it otherwise", "## How to plan\n",
 		"\n---\ntitle: \"<title>\"\ncreated: 20", "\nplanned: " + main + "\n---\n", "with nothing to say, delete this comment", "They change no member", "Revising, bring them up to date with the new `planned`", "## Owner's description\n\n0.4 release\n",
 		"\n# depends_on: [", "ask the owner\n  whether it follows any of them", "write its title yourself from its members, without asking",
 		"A new cycle: before writing its file, run Grove's `check`.", "tell the owner this edits approved work, bring the\n  member up to date on this branch as Grove's\n  `instructions propose <change-id>` says", "`grove claim` will\n    not claim the cycle until it is"} {
@@ -1178,11 +1178,11 @@ func TestCycles(t *testing.T) {
 			t.Errorf("plan instructions lack %q:\n%s", s, out)
 		}
 	}
-	if strings.Contains(out, "the only thing you write") || strings.Contains(out, "grove run") || strings.Contains(out, "needs_human") || strings.Contains(out, "a person") {
+	if strings.Contains(out, "the only thing you write") || strings.Contains(out, "grove run") || strings.Contains(out, "needs_human") || strings.Contains(out, "a person") || strings.Contains(out, "Never write or remove `unattended`") {
 		t.Errorf("plan instructions still say the cycle file is the only thing written, or name grove run")
 	}
 	// The finish names implement, then claim given the cycle, then the mark.
-	if i, r, u := strings.Index(out, "say `/grove-implement <cycle-id>`"), strings.Index(out, "say whether `grove claim <cycle-id>`"), strings.Index(out, "say `unattended: true`"); i < 0 || i > r || r > u {
+	if i, r, u := strings.Index(out, "say `/grove-implement <cycle-id>`"), strings.Index(out, "say whether `grove claim <cycle-id>`"), strings.Index(out, "where the cycle file holds `unattended: true`, say merging it hands the\n  cycle to a `grove claim` given no cycle"); i < 0 || i > r || r > u || !strings.Contains(out, "or else say\n  `unattended: true`, added in a merge of its own, does.") {
 		t.Errorf("plan's finish is not in order:\n%s", out)
 	}
 	if out := grove(t, "instructions", "plan", a); !strings.Contains(out, "with approved change "+a+", \"Editing an unknown ID prints an error\", as its only member") {

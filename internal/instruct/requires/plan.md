@@ -33,16 +33,19 @@
   what would change a member's requirements or tasks is a revision of it.
   Revising, bring them up to date with the new `planned`: say what holds
   there, and nothing the target made false.
-- Never write or remove `unattended`. It hands the cycle to a `grove claim`
-  given no cycle and is the owner's to set, in a later merge of its own.
+- Write `unattended: true`, which hands the cycle to a `grove claim` given
+  no cycle, only where the owner's description or the conversation asks for
+  an unattended cycle, even with an obstacle below; never offer it.
+  Revising, remove it only where the owner asks, and keep it otherwise.
 - The plan is made when the owner merges the cycle file into the target
   branch; nothing you do makes it.
 - Finish: run Grove's `check` and fix what it reports in the cycle file.
   Tell the owner the members in build order and which wait on what.
   Then, in this order: say `/grove-implement <cycle-id>` builds the cycle
-  with them; say whether `grove claim <cycle-id>` would claim it; and
-  say `unattended: true`, added to the cycle file in a merge of its own,
-  hands it to a `grove claim` given no cycle, such as a timer's. For each
+  with them; say whether `grove claim <cycle-id>` would claim it; and,
+  where the cycle file holds `unattended: true`, say merging it hands the
+  cycle to a `grove claim` given no cycle, such as a timer's, or else say
+  `unattended: true`, added in a merge of its own, does. For each
   obstacle, say what removes it:
   - A member waiting on a change neither in the cycle nor archived as
     finished: `grove claim` will not claim the cycle until that change is
