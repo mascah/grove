@@ -1,5 +1,0 @@
-title: "A change's fields lead its main document"
-created: 2026-11-22T16:39:02Z
-description: "The fields of a change's `.grove.yaml` move between `---` lines at the top of its proposal, as cycles' did, and `.grove.yaml` goes away."
-schema: default
-base: 15816d7096be8e3a4a6934db98da7fe2cadd212a
