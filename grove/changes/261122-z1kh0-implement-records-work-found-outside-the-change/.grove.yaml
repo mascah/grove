@@ -1,0 +1,5 @@
+title: "Implement records work it finds outside the change"
+created: 2026-11-22T16:24:27Z
+description: "Implement writes a `Found:` line for work outside the change that it sees and does not do, lists each in its report, and the tracker guide turns each into an issue."
+schema: default
+base: 15816d7096be8e3a4a6934db98da7fe2cadd212a
