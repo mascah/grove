@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.15.0](https://github.com/mascah/grove/compare/v0.14.0...v0.15.0) (2026-11-22)
+
+
+### Features
+
+* **instruct:** explore recommends and asks less ([#189](https://github.com/mascah/grove/issues/189)) ([89823d7](https://github.com/mascah/grove/commit/89823d76276aad8b17e7999fe2209bbc50bb9f4a))
+* **instruct:** implement records work found outside the change as Found: lines ([#195](https://github.com/mascah/grove/issues/195)) ([946e18d](https://github.com/mascah/grove/commit/946e18de5f4b712b9e743ab28ef706c0e325fc7d))
+
+
+### Bug Fixes
+
+* **instruct:** explore review follow-ups ([#194](https://github.com/mascah/grove/issues/194)) ([89d59ed](https://github.com/mascah/grove/commit/89d59edeaf9ac7d32d17f1a85609799401b4ea95))
+
 ## [0.14.0](https://github.com/mascah/grove/compare/v0.13.0...v0.14.0) (2026-11-22)
 
 
