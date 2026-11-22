@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.14.0](https://github.com/mascah/grove/compare/v0.13.0...v0.14.0) (2026-11-22)
+
+
+### Features
+
+* **cli:** claim a change by name, and more than one piece of work at once ([#185](https://github.com/mascah/grove/issues/185)) ([a4ad6e2](https://github.com/mascah/grove/commit/a4ad6e23949b7d796a1167ec0b6a56b09560832b))
+* **cli:** implement names a requirement rewritten since the change's base ([#183](https://github.com/mascah/grove/issues/183)) ([baea991](https://github.com/mascah/grove/commit/baea991679e1f365cc80258407c14229b66579a6))
+
+
+### Bug Fixes
+
+* **cli:** grove claim and the project value read the target's schemas ([#187](https://github.com/mascah/grove/issues/187)) ([974c8de](https://github.com/mascah/grove/commit/974c8de17acab00ee92542c6eb9bfc94b7eb5f9d))
+
 ## [0.13.0](https://github.com/mascah/grove/compare/v0.12.0...v0.13.0) (2026-11-21)
 
 
