@@ -1019,6 +1019,30 @@ func TestCoordinating(t *testing.T) {
 		t.Error("the index names a pair one of which depends on the other")
 	}
 	git(t, dir, "reset", "-q", "--hard", before)
+	rewrote := func(args ...string) string {
+		out := grove(t, append([]string{"instructions", "implement"}, args...)...)
+		if _, line, ok := strings.Cut(out, "\n- Since base "+base[:7]+", "); ok {
+			return line[:strings.Index(line, "\n")]
+		}
+		return ""
+	}
+	if got := rewrote(show); got != "" {
+		t.Errorf("implement names a requirement as rewritten before anything rewrote it: %q", got)
+	}
+	// A member archived on the cycle's branch rewrites the next one's requirement.
+	planCycle(t, dir, "261022-p0000", "2026-10-22T11:00:00Z", false, recat, show)
+	git(t, dir, "switch", "-q", "-c", "cycle")
+	os.WriteFile(filepath.Join(recatDir, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
+	maintain(t, dir, olderEdits+"### Requirement: Keep a category\n\n"+recatText)
+	grove(t, "archive", recat)
+	if got := rewrote("--runner", show); !strings.HasPrefix(got, "`record-editing`'s \"Keep a category\" was rewritten; before building any task, revise the change with Grove's `instructions propose "+show+"`") {
+		t.Errorf("implement --runner of a cycle member another member rewrote names %q", got)
+	}
+	git(t, dir, "checkout", "-q", "--", ".")
+	git(t, dir, "clean", "-qfd")
+	git(t, dir, "switch", "-q", "main")
+	git(t, dir, "reset", "-q", "--hard", before)
+	git(t, dir, "branch", "-q", "-D", "cycle")
 	want := "grove/changes/" + filepath.Base(showDir) + "/specs/record-editing/spec.md:5: requirement \"Keep a category\" was rewritten since base " + base[:7] + "; revise the change with propose\n"
 	if out := finish(t, dir, "recategorize-impl", recat, recatDir, olderEdits+"### Requirement: Keep a category\n\n"+recatText); out != want {
 		t.Errorf("check while archiving recategorize printed %q", out)
@@ -1030,10 +1054,21 @@ func TestCoordinating(t *testing.T) {
 	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != want {
 		t.Errorf("check of a stale change: status %d\n%s", code, stdout.String())
 	}
+	if got := rewrote(show); !strings.HasPrefix(got, "`record-editing`'s \"Keep a category\" was rewritten; before building any task") || !strings.Contains(got, "write a `Check:` line") {
+		t.Errorf("implement of a stale change names %q", got)
+	}
+	maintain(t, dir, olderEdits)
+	if got := rewrote(show); !strings.HasPrefix(got, "`record-editing`'s \"Keep a category\" was removed;") {
+		t.Errorf("implement of a change whose requirement was removed names %q", got)
+	}
+	git(t, dir, "checkout", "-q", "--", ".")
 	// Had show-saved depended on recategorize, its text would be expected.
 	os.WriteFile(filepath.Join(showDir, ".grove.yaml"), []byte("title: Show what was saved\ncreated: 2026-10-14T00:00:00Z\ndepends_on: ["+recat+"]\nbase: "+base+"\n"), 0o644)
 	if got := grove(t, "check"); got != "No problems in grove/.\n" {
 		t.Errorf("check with depends_on on the rewriting change printed %q", got)
+	}
+	if got := rewrote(show); got != "" {
+		t.Errorf("implement names a requirement rewritten by a change it depends on: %q", got)
 	}
 	git(t, dir, "checkout", "-q", "--", ".")
 	main = strings.TrimSpace(git(t, dir, "rev-parse", "main"))

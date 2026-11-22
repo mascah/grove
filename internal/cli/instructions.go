@@ -177,7 +177,7 @@ func instructionsImplement(stdout io.Writer, id string, runner bool) error {
 // when it is not nil, unless it waits on a change tree has not archived as
 // finished (D-56). They name each task's file that changed on the target
 // since cy's plan or, for a change in no cycle that is not done, since the
-// change's base.
+// change's base, and each requirement check finds rewritten since its base.
 func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *doc.Collection, id string, cy *doc.Cycle, runner bool) error {
 	c, fsys := ip.Agreed.Change(id), fs.FS(nil)
 	if c == nil {
@@ -227,6 +227,17 @@ func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *
 	}
 	if len(named) > 0 {
 		in.Requires += fmt.Sprintf("- Changed on %s since %s: %s.\n", p.Target, since, strings.Join(named, ", "))
+	}
+	if mine := tree.Change(id); err == nil && mine != nil {
+		found, _ := rewritten(p, os.DirFS(filepath.Join(p.Top, p.Root)), tree, mine) // check reports a base that is no commit
+		var reqs []string
+		for _, r := range found {
+			reqs = append(reqs, fmt.Sprintf("`%s`'s %q was %s", mine.Touches[r.file], r.Name, r.how))
+		}
+		if len(reqs) > 0 {
+			in.Requires += fmt.Sprintf("- Since base %s, %s; before building any task, revise the change with Grove's `instructions propose %s` so that each holds what the maintained spec now says together with what this change alters, and write a `Check:` line under a task that builds it, naming it and what was kept from each text.\n",
+				mine.Meta.Base[:min(7, len(mine.Meta.Base))], strings.Join(reqs, " and "), id)
+		}
 	}
 	if err == nil && cy != nil {
 		var b []byte
