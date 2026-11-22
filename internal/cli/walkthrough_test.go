@@ -1708,6 +1708,9 @@ func TestClaimByName(t *testing.T) {
 func TestTargetSchemas(t *testing.T) {
 	owner := setUp(t)
 	remote, h2 := filepath.Join(t.TempDir(), "remote.git"), filepath.Join(t.TempDir(), "h2")
+	for _, k := range []string{"GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
+		t.Setenv(k, "operator@example.com")
+	}
 	git(t, owner, "clone", "-q", "--bare", owner, remote)
 	git(t, owner, "remote", "add", "origin", remote)
 	git(t, owner, "clone", "-q", remote, h2)
