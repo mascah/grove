@@ -47,20 +47,26 @@ Codex, use a second fixture and type `$grove-…` where this says `/grove-…`.
 
    The session reads the code, reproduces
    `error: category 'misc' is not allowed` for `ledger edit 3 --note x`, and
-   asks one question at a time. It notices that the README ("every record")
-   and the CHANGELOG ("new records") disagree, and asks which is intended. I
-   answer that older records keep their category when it is unchanged, and
-   leave open what happens if the category is changed. It suggests no
+   offers two ways forward: keep an older record's category when the edit
+   leaves it unchanged, or let any category through on edit. It recommends
+   the first, with its reason, and I say "yes". It does not ask whether the
+   README ("every record") or the CHANGELOG ("new records") is right, since
+   the answer would not change its recommendation, and it finishes: what it
+   found, my decision, its recommendation, and what is still open, such as
+   what happens if the category is changed. Each message puts its question
+   first and names no ID without saying what it is. It suggests no
    prototype: no open question is one an experiment would answer.
    `git status` shows nothing new: exploring wrote no file.
 
 3. **Propose** (§3). `/grove-propose` in the same conversation. The session
-   states the scope and I confirm it. Before writing, it lists, numbered,
-   each decision it would otherwise assume, such as which file the fix goes
-   in and whether the README changes, each with a recommended answer; I
+   sends one message: the scope, then, numbered, at most five decisions it
+   would otherwise assume, such as which file the fix goes in and whether
+   the README changes, each with a recommended answer and its reason; I
    say "yes". It then creates `grove/changes/261015-k3m9q-allow-editing-older-records/` with
    `.grove.yaml` (its title and created time), `proposal.md` (my decision
-   and my "yes" to the round quoted, no assumptions section, the category
+   and my "yes" to the round quoted, routine choices such as the test's
+   name as an open question with a recommended answer, no assumptions
+   section, the category
    question open and blocking no task, since T-01 leaves the category
    unchanged),
    `specs/record-editing/spec.md` (an ADDED requirement as an EARS sentence
@@ -134,7 +140,7 @@ It starts where the main line's step 6 ends: one archived change and the
 1. **A change that waits** ("A change that waits"). From main,
    `git switch -c unknown-id`, and in a fresh session
    `/grove-propose Editing an unknown ID prints an error`. It finds no other
-   open change, says so, and leaves `depends_on` out. Commit, then
+   open change and leaves `depends_on` out. Commit, then
    `git switch main && git merge --no-ff unknown-id`.
    `git switch -c delete`, and in a fresh session
    `/grove-propose Add ledger delete ID, from the README's planned list`. The
@@ -730,8 +736,9 @@ the browser's console shows no error.
 - **The round in order** (§3). From main, `git switch -c unknown-id`, a
   fresh session, `/grove-propose Editing an unknown ID prints an error`,
   keeping the `default` schema. Its round asks the exit status before
-  whether `find` or `ledger/cli.py` holds the check, and puts the test's
-  name and place on a last line of defaults that one "yes" accepts. Say
+  whether `find` or `ledger/cli.py` holds the check, and does not ask the
+  test's name and place: the proposal lists it as an open question with a
+  recommended answer, naming T-01. Say
   "Yes, and let the implementer lay out tests and add
   `tests/test_records.py` without asking": T-01 gets a `Delegated:` line
   naming them, and its `Files:` line does not name `tests/test_records.py`.

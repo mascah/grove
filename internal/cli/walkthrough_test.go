@@ -268,14 +268,22 @@ func approve(t *testing.T, dir, branch, title, meta string) (changeID, folder st
 func TestExplore(t *testing.T) {
 	setUp(t)
 	out := grove(t, "instructions", "explore")
-	for _, s := range []string{"# Grove instructions: explore", "Interview before you conclude anything",
+	for _, s := range []string{"# Grove instructions: explore", "say which you recommend and why",
+		"only one whose answer would change\n  your recommendation", "your first reply is your findings", "say so in one line",
 		"Maintained specs (agreed behavior):\n- None.", "`instructions prototype \"<question>\"`"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("explore instructions lack %q", s)
 		}
 	}
-	if strings.Contains(out, "## Documents") {
-		t.Error("explore instructions offer a document to fill in")
+	if strings.Contains(out, "## Documents") || strings.Contains(out, "before anything is\nrecommended") {
+		t.Error("explore instructions offer a document to fill in, or hold back a recommendation")
+	}
+	for _, skill := range []string{"explore", "propose"} {
+		out := grove(t, "instructions", skill)
+		if i := strings.Index(out, "put the question first"); i < 0 || i > strings.Index(out, "## What Grove requires of") ||
+			!strings.Contains(out, "what the owner gains and gives up, and say which you recommend") || !strings.Contains(out, "rule number or decision number without saying in words") {
+			t.Errorf("%s instructions do not open with how to ask the owner", skill)
+		}
 	}
 }
 
@@ -319,10 +327,10 @@ func TestPropose(t *testing.T) {
 	req, how := strings.Index(out, "## What Grove requires of propose\n\n- Write the documents below"), strings.Index(out, "## How to propose\n\n**Propose says")
 	if !strings.Contains(out, "## Owner's description\n\nEditing a missing record should print an error\n") || req < 0 || how < req ||
 		!strings.Contains(out, "under `Files:` after `Result:`") || !strings.Contains(out, "\nFiles:\n- [`path/to/file`]\n") || strings.Contains(out, "file-by-file") ||
-		!strings.Contains(out, "before you\n  write any document, ask one round") || !strings.Contains(out, "worded so that \"yes\"\n  accepts it") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 5. Check the change") || strings.Contains(out, "Assumptions to confirm") || strings.Contains(out, "implementing unattended ignores it") {
+		!strings.Contains(out, "before you write any document, send the owner one message,\n  the round, and wait") || !strings.Contains(out, "It asks at most five decisions you\n  would otherwise assume, the most consequential") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 4. Check the change") || strings.Contains(out, "Assumptions to confirm") || strings.Contains(out, "implementing unattended ignores it") || strings.Contains(out, "Leave none out") {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
-	for _, s := range []string{"say so and ask\n  whether to split it", "`depends_on`", "Order it by consequence: first what changes behavior, scope\n  or compatibility or loses data", "as\n  recommended defaults on one line, not a list, that a single \"yes\"\n  accepts",
+	for _, s := range []string{"it\n  says so and offers to split it", "`depends_on`", "worded so that \"yes\" accepts it: first\n  what changes behavior, scope or compatibility or loses data", "Write every\n  other decision you would otherwise assume as an open question with your\n  recommended answer, its reason and the task it decides",
 		"Write a task's `Delegated:` line", "only where the\n  owner agreed to it in the round", "A task may have a `Delegated:` line, right after `Files:`", "Implementing honors it.", "Delegated: test layout and private helpers"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("propose instructions lack %q", s)
@@ -344,6 +352,9 @@ func TestPropose(t *testing.T) {
 		if !strings.Contains(alone, s) {
 			t.Errorf("unattended propose instructions lack %q", s)
 		}
+	}
+	if bug := grove(t, "instructions", "propose", "--schema", "bugfix", "x"); !strings.Contains(bug, "It asks at most five decisions") || strings.Contains(bug, "Leave none out") {
+		t.Error("bugfix propose does not ask at most five decisions")
 	}
 	if bug := grove(t, "instructions", "propose", "--unattended", "--schema", "bugfix", "x"); !strings.Contains(bug, "**Propose a bug fix") || !strings.Contains(bug, "Ask and wait for no one.") {
 		t.Errorf("unattended bugfix propose:\n%.3000s", bug)
@@ -876,7 +887,7 @@ func TestCoordinating(t *testing.T) {
 	// Propose records depends_on and base; lists show what waits.
 	main := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	out := grove(t, "instructions", "propose", "Add ledger delete ID")
-	for _, s := range []string{"ask the owner whether it needs another open change", "\nbase: " + main + "\n",
+	for _, s := range []string{"names it\n  and asks whether it must land first", "\nbase: " + main + "\n",
 		"- " + unknown + " \"Editing an unknown ID prints an error\": `grove/changes/" + unknown + "-editing-an-unknown-id-prints-an-error/`\n  - capabilities: record-editing\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("propose instructions lack %q:\n%s", s, out)

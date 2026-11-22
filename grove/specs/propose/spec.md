@@ -3,11 +3,10 @@
 ## Purpose
 
 `/grove-propose` turns a chosen direction into a change the owner can
-review, asking one round of every decision it would otherwise assume, then
-writing a proposal, change specs and tasks that name their files and
-interfaces; with `--unattended` it drafts a change from a request with no
-one in the session, writing that round as open questions. This covers how it settles what those documents say, what they
-must say, and what `grove check` reports on them, such as a named file
+review, writing a proposal, change specs and tasks that name their files
+and interfaces; with `--unattended` it drafts a change from a request with
+no one in the session, writing its round as open questions. This covers
+how it settles what those documents say, what they must say, and what `grove check` reports on them, such as a named file
 that moved since the change's base. A task's named files are the
 repo-relative paths on its `Files:` line.
 
@@ -111,46 +110,52 @@ the change with propose.
 
 ### Requirement: Ask a round before writing
 
-When the owner has confirmed the scope of a new change, the propose
-instructions shall have the agent list, before writing any document, every
-decision it would otherwise assume, numbered, each with a recommended
-answer worded so that "yes" accepts it, in this order: those that change
-behavior, scope or compatibility or lose data first, then those that fix
-architecture or interfaces costly to reverse, and routine choices inside
-the agreed approach last, as recommended defaults on one line that a
-single "yes" accepts; and wait for the owner. Each answer is recorded as a
-decision in the proposal, quoted, and a decision the owner declines to
-make is recorded as an open question naming the task it blocks.
+When the owner asks for a new change, the propose instructions shall have
+the agent send, before writing any document, one message that states the
+scope, offers a split and asks what must land first where either applies,
+and asks at most five of the decisions it would otherwise assume, the most
+consequential, numbered, each with a recommended answer and its reason
+worded so that "yes" accepts it, those that change behavior, scope or
+compatibility or lose data first, then those that fix architecture or
+interfaces costly to reverse; and wait for the owner. Each answer is
+recorded as a decision in the proposal, quoted; a decision the owner
+declines to make is recorded as an open question naming the task it
+blocks; and every other decision the agent would otherwise assume,
+routine choices among them, is recorded as an open question with its
+recommended answer, its reason and the task it decides.
 
 #### Scenario: The owner accepts the round
 
-- GIVEN the scope is confirmed and the agent would otherwise assume where
-  the check goes and whether the README is updated
-- WHEN it lists both with recommended answers and the owner says "yes"
+- GIVEN the agent would otherwise assume whether an unknown ID exits 1 or
+  2, and where the check goes
+- WHEN it asks both with recommended answers and the owner says "yes"
 - THEN the proposal records each as a decision quoting the owner's "yes"
   and the recommended answer, and no document lists an assumption
 
-#### Scenario: The round is ordered
+#### Scenario: The round is ordered, and routine choices are not asked
 
-- GIVEN the scope of "Editing an unknown ID prints an error" is confirmed,
-  and the agent would otherwise assume the exit status, whether `find` in
+- GIVEN the owner asks for "Editing an unknown ID prints an error", and
+  the agent would otherwise assume the exit status, whether `find` in
   `ledger/records.py` raises `ValueError` or `ledger/cli.py` checks the
   ID, and the test's name and place in `tests/test_cli.py`
-- WHEN it asks the round
-- THEN the exit status comes first, where the check goes second, and the
-  test's name and place last, on one line of recommended defaults, and
-  none is left out
+- WHEN it sends the round
+- THEN the message states the scope, asks the exit status first and where
+  the check goes second, and does not ask the test's name and place; the
+  proposal lists that as an open question with its recommended answer,
+  naming T-01
 
-#### Scenario: One "yes" to the routine line
+#### Scenario: More than five decisions
 
-- GIVEN the round's last line recommends three routine choices
-- WHEN the owner says "yes" to the round
-- THEN the proposal records each of the three as a decision quoting the
-  owner's "yes"
+- GIVEN the agent would otherwise assume seven decisions that change
+  behavior or are costly to reverse
+- WHEN it sends the round
+- THEN it asks the five most consequential, and the proposal lists the
+  other two as open questions, each with its recommended answer, its
+  reason and the task it decides
 
 #### Scenario: The owner declines one
 
-- GIVEN the round lists where the check goes
+- GIVEN the round asks where the check goes
 - WHEN the owner says to leave that one open
 - THEN the proposal lists it under open questions, naming the task it
   decides, and `/grove-implement` builds its best answer to it with a
@@ -160,7 +165,8 @@ make is recorded as an open question naming the task it blocks.
 
 - GIVEN the conversation settled every decision the documents need
 - WHEN the agent reaches the round
-- THEN it says there is nothing to ask and writes the documents
+- THEN its message states the scope and says there is nothing to ask, and
+  it writes the documents once the owner confirms the scope
 
 ### Requirement: Check the change before presenting it
 
@@ -665,3 +671,4 @@ None.
 - [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human
 - [261114-zpgx9](../../changes/archive/261114-zpgx9-implement-ends-at-a-branch-ready-for-review/) Implement ends at a branch ready for review
 - [261115-z5kj4](../../changes/archive/261115-z5kj4-propose-drafts-with-no-one-in-the-session/) Propose drafts a change with no one in the session
+- [261122-m78w6](../../changes/archive/261122-m78w6-explore-recommends-and-asks-less/) Explore recommends and asks less

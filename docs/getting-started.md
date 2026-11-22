@@ -60,9 +60,12 @@ git switch -c rename-projects
 /grove-explore Users want to rename a project after creating it
 ```
 
-The agent reads the code and the project's specs and changes. Then it
-interviews you, one question at a time. It keeps apart what is agreed, what
-is approved and what the code merely does. Exploring writes nothing. When
+The agent reads the code and the project's specs and changes. Beside every
+set of options it says which it recommends and why, and it asks one question
+at a time, only one whose answer would change its recommendation. Ask it to
+look into something and recommend, and it reads first and comes back with
+findings and a recommendation. It keeps apart what is agreed, what is
+approved and what the code merely does. Exploring writes nothing. When
 you want something kept, ask, or go on to propose.
 
 ### Try it first
@@ -108,17 +111,20 @@ The agent writes a change folder, such as
 - `tasks.md`: the work, each task naming the files it touches and saying
   how to check it is done.
 
-Before writing, the agent asks you one round of questions. It lists every
-decision it would otherwise assume, each with a recommended answer, and
-waits for yours. The questions come in order of consequence:
+Before writing, the agent sends you one message and waits. It states the
+scope, and asks at most five decisions it would otherwise assume, each with a
+recommended answer and its reason, in order of consequence:
 
 - first, what changes behavior, scope or compatibility, or could lose data;
-- then, choices that are costly to reverse;
-- last, routine choices, on one line of defaults that one "yes" accepts.
+- then, choices that are costly to reverse.
+
+Every other choice, routine ones such as a test's name among them, goes in
+the proposal as an open question with its recommended answer, for you to
+strike or change when you review the change.
 
 The idea may be too big for one change, or have parts you could agree
-separately. Then the agent offers to write several changes on this branch.
-Each later one names the earlier in `depends_on`.
+separately. Then the same message offers to write several changes on this
+branch. Each later one names the earlier in `depends_on`.
 
 The agent may also recommend letting the implementer make some small
 choices alone, such as test layout or a new test file. If you agree, that

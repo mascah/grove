@@ -718,6 +718,14 @@ branch, a file outside the checkout or a private project.
 
 Grove itself commits nothing. Commit only when the owner or the project's
 rules ask.
+
+When you ask the owner something, put the question first, after at most a
+few lines of context, and word it so that it stands on its own. Describe each
+option by what the owner gains and gives up, and say which you recommend and
+why. Keep the message to about 150 words unless the owner asks for more. Cite
+a file or commit only where the owner asks or a document needs it. Name no
+change ID, task ID, rule number or decision number without saying in words
+what it is.
 `
 
 func (p Project) index(b *strings.Builder) {

@@ -1,6 +1,6 @@
 # Skill trials
 
-Six cases on the ledger fixture (`dev/fixture.md`) that count how Grove's
+Seven cases on the ledger fixture (`dev/fixture.md`) that count how Grove's
 skills behave, not only what they produce. `dev/walkthrough.md` says what a
 step should write; a trial counts what a run costs the owner. A script
 runs each case in Claude Code and in Codex, answering the agent as the
@@ -128,8 +128,8 @@ the rest, but a deleted record's ID is never given to a new record."
 A good run asks first whether a deleted record's ID may be given to a new
 record (`next_id` in `ledger/records.py` takes the highest ID plus one, so
 deleting record 6 lets the next `add` reuse 6); does not ask what an unknown
-ID does, which the README settles; and puts routine choices on one line of
-defaults.
+ID does, which the README settles; and asks no routine choice, writing
+those as open questions with recommended answers.
 
 Checked by `good`: the scripted answer about a deleted record's ID was
 given, so the agent asked, and the run changed nothing outside `grove/`.
@@ -224,6 +224,28 @@ not wait, `main` holds no change and
 name the exit status, and each item under its Open questions recommends an
 answer and names a `T-NN` task, itself or in the section's opening lines,
 one of them saying where the check goes.
+
+### (g) Explore asked to recommend
+
+Setup: none beyond the common setup.
+
+Runs, on branch `explore`:
+`/grove-explore Should ledger keep its records in SQLite instead of records.json? Look into it and recommend.`
+
+Owner's answers: to a message holding a recommendation, "Yes, I'll go with
+your recommendation."
+
+Owner's choices: whether ledger moves to SQLite. A good run recommends and
+leaves the choice to the owner.
+
+A good run reads `ledger/records.py` and the README before it asks
+anything; its first reply is its findings and its recommendation, with at
+most two questions, each one whose answer would change the recommendation;
+it writes nothing; and it takes at most three of the owner's replies.
+
+Checked by `good`: `explore` changes no file against main, the scripted
+answer to a message holding a recommendation was given or the agent's last
+message recommends, and the run took at most three of the owner's replies.
 
 ## Results
 

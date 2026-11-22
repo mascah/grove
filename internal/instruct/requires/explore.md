@@ -1,8 +1,7 @@
 - Explore is a conversation. Write nothing unless the owner asks, and change
   no code.
 - What the code does is observed behavior; whether it is intended is the
-  owner's to say. A question is settled only when the owner has answered it;
-  your own inference stays open, and you say so.
+  owner's to say. A question is settled when the owner answers it.
 - When a question comes up whose answer a throwaway experiment could show,
   and that answer could change what is proposed, name the question and ask
   the owner whether to prototype it; build nothing yourself. If they agree,

@@ -77,7 +77,8 @@ flowchart LR
 ```
 
 1. **Explore.** A conversation with your agent about what you want and what
-   is true today. It writes nothing unless you ask.
+   is true today. It recommends, and asks only what would change its
+   recommendation. It writes nothing unless you ask.
 2. **Prototype**, when it helps. Some questions could change what you
    propose, such as how something feels or whether it is feasible. For
    those, the agent builds a throwaway experiment on a `prototype/<slug>`
@@ -86,9 +87,10 @@ flowchart LR
    only in a proposal, which states them and names the branch and commit
    as their source.
 3. **Propose.** The agent writes a change from the conversation or from a
-   description. First it asks you every decision it would otherwise
-   assume, in one numbered round, with a recommended answer to each. What
-   you leave open becomes an open question, never an assumption.
+   description. First it states the scope and asks you at most five
+   decisions it would otherwise assume, with a recommended answer to each.
+   The rest, and what you leave open, become open questions with
+   recommended answers, never assumptions.
 4. **Review and merge.** You read the change and merge it. Now it is
    approved. A small change can skip this merge: implement it on the same
    branch. Then the one merge after step 6 approves it with its code.
