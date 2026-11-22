@@ -1,0 +1,5 @@
+title: "grove claim and the project value read the target's schemas"
+created: 2026-11-22T06:05:19Z
+description: "`grove claim`, `grove changes --json` and `/api/project` read the change schemas from the target commit whose changes they read, so a checkout that lacks a project schema still sees each change's capabilities and refuses an overlap."
+schema: bugfix
+base: baea991679e1f365cc80258407c14229b66579a6
