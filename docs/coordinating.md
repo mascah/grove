@@ -225,6 +225,21 @@ the commit your main branch and origin's both hold. `grove check` is clean
 again. Merge it, and the revised change is approved. Do not edit `base`
 by hand: that hides the report without bringing the change up to date.
 
+You need not revise it before building it. `/grove-implement 261019-s5v3m`
+names the same requirement in its instructions, as rewritten or removed
+since `base`:
+
+> \- Since base 4f1c2a9, `record-editing`'s "Keep a category" was rewritten; before building any task, revise the change with Grove's `instructions propose 261019-s5v3m` so that each holds what the maintained spec now says together with what this change alters, and write a `Check:` line under a task that builds it, naming it and what was kept from each text.
+
+Before building any task, the agent revises the change on its branch as
+`/grove-propose` would, so the requirement keeps what main's spec now
+says together with what the change alters, and writes a `Check:` line
+saying what it kept from each text. Merging the branch approves the
+revision with the code. The same holds for a member of a cycle whose
+requirement an earlier member rewrote on the cycle's branch. The
+[implement spec](https://github.com/mascah/grove/blob/main/grove/specs/implement/spec.md),
+"A requirement rewritten on the target", has the exact rule.
+
 The code can move too. Each task names the files it touches on its
 `Files:` line. `grove check` reports a named file that changed on your
 main branch since the change's `base`, once for the change, naming each
