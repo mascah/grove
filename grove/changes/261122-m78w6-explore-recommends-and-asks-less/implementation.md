@@ -46,6 +46,37 @@ the skill's own section on line 32. `just check` passed.
 Check: open question 1 (where the asking rules live) built as recommended: in the shared opening, so every skill, implement and archive included, prints it; it applies only when the agent asks the owner something.
 Check: open question 6 (length) built as recommended: "about 150 words unless the owner asks for more", guidance Grove does not count.
 
+### T-03 — Propose asks at most five decisions, in one message
+
+Status: done
+
+`internal/instruct/requires/propose.md`: the separate bullets that asked
+what must land first, offered a split and asked a round of every decision
+("Leave none out") are one bullet: before writing, one message, the round,
+that states the scope, offers a split where the idea is too big, names an
+open change touching the same capabilities or code and asks whether it must
+land first, and asks at most five decisions, the most consequential,
+numbered, each with a recommended answer and its reason worded so "yes"
+accepts it, behavior/scope/compatibility/data first, then architecture or
+interfaces costly to reverse; nothing to ask means saying so and writing
+once the scope is confirmed. A new bullet writes every other decision,
+routine choices on one open question of their own, as an open question with
+its recommended answer, its reason and the task it decides.
+`schemas/default/skills/propose.md`: steps 2 and 3 are one step, "Confirm
+the scope and ask one round, in one message"; routine choices are not asked;
+more than five that matter means offering the split; steps renumbered.
+`TestPropose` checks the new wording and that neither the default nor the
+`bugfix` output says "Leave none out"; `TestCoordinating` checks the new
+land-first wording. `go test ./internal/cli` passes except `TestServe`,
+which fails the same way at the base: a `grove serve` the owner runs
+outside this work holds port 7070.
+
+Also changed: none beyond the task's files.
+
+Check: open questions 3, 4 and 5 built as recommended: five, the most consequential, in the existing order; scope, split, land-first and the round in one message; other choices as open questions with recommended answer, reason and task, routine ones on one open question of their own.
+Check: `internal/instruct/schemas/bugfix/skills/propose.md` is unchanged: its only mention of the round ("Ask, in the round before writing, whether the corrected behavior should become agreed") still holds, and the round's rules come from `requires/propose.md`, which both schemas print.
+Check: "Unattended propose's instructions are unchanged" read as `requires/propose-unattended.md` unchanged (it is): unattended output prints the shared `requires/propose.md` too, so its text shows the new round, which the unattended part still replaces with open questions.
+
 ## Scenarios
 
 ## Reconciliation
