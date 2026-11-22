@@ -32,8 +32,9 @@ command or area, not the whole system.
 /grove-propose Record what `ledger edit` does today, as a change that only records existing behavior, with no code to change
 ```
 
-The agent reads the code and asks you one round of questions. For each
-behavior it finds, decide:
+The agent reads the code and asks you one round of at most five questions;
+the behaviors it does not ask about become open questions with recommended
+answers, which you can change when you review. For each behavior, decide:
 
 - **It is the rule.** The agent writes it as a requirement under ADDED.
   What the code does today goes under "Observed current behavior", with

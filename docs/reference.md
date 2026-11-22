@@ -23,7 +23,7 @@ Skills run these; you do not need to:
 
 | Command | Prints the instructions to |
 | --- | --- |
-| `grove instructions explore` | Interview the user about an idea, with the project's specs and changes listed. |
+| `grove instructions explore` | Explore an idea with the user, recommending and asking only what would change the recommendation, with the project's specs and changes listed. |
 | `grove instructions prototype "<question>"` | Answer the question with a throwaway experiment on a `prototype/<slug>` branch that is never merged, writing no Grove document ([prototype spec](https://github.com/mascah/grove/blob/main/grove/specs/prototype/spec.md)). |
 | `grove instructions propose [--schema <name>] ["<description>"]` | Write a new change from the conversation or the description, after one round of questions, with the project's change schema or the one named; check it, then offer to merge it now or build it on this branch first ([propose spec](https://github.com/mascah/grove/blob/main/grove/specs/propose/spec.md)). |
 | `grove instructions propose --unattended [--schema <name>] "<request>"` | Write a new change from the request with no one in the session, asking nothing, the round written as open questions, ending at a branch ready for review (see [Draft a change with no one in the session](running.md#draft-a-change-with-no-one-in-the-session)). The flag may also be the first word inside the quotes. |
@@ -180,8 +180,8 @@ each skill, `skills/<skill>.md`.
 Some things a schema cannot change:
 
 - Grove's skills, and what Grove requires of each. A skill's instructions
-  give those first, such as propose asking one round of every decision it
-  would otherwise assume before it writes.
+  give those first, such as propose asking at most five decisions in one
+  round before it writes.
 - That a merge approves a change.
 - A change's `.grove.yaml`.
 - How progress is recorded. Each task is a `T-NN` heading in `tasks.md`.

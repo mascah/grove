@@ -71,11 +71,33 @@ land-first wording. `go test ./internal/cli` passes except `TestServe`,
 which fails the same way at the base: a `grove serve` the owner runs
 outside this work holds port 7070.
 
-Also changed: none beyond the task's files.
-
 Check: open questions 3, 4 and 5 built as recommended: five, the most consequential, in the existing order; scope, split, land-first and the round in one message; other choices as open questions with recommended answer, reason and task, routine ones on one open question of their own.
 Check: `internal/instruct/schemas/bugfix/skills/propose.md` is unchanged: its only mention of the round ("Ask, in the round before writing, whether the corrected behavior should become agreed") still holds, and the round's rules come from `requires/propose.md`, which both schemas print.
 Check: "Unattended propose's instructions are unchanged" read as `requires/propose-unattended.md` unchanged (it is): unattended output prints the shared `requires/propose.md` too, so its text shows the new round, which the unattended part still replaces with open questions.
+
+### T-04 — The docs and walkthrough describe the new explore and round
+
+Status: done
+
+`docs/getting-started.md` §2: explore recommends beside every set of
+options, asks one question at a time and only one that would change its
+recommendation, and investigates first when asked to recommend; §3: one
+message with the scope and at most five decisions, every other choice an
+open question with a recommended answer, the split offered in the same
+message. `docs/concepts.md` (the loop's Explore and Propose),
+`docs/reference.md` (the explore row, and "propose asking at most five
+decisions in one round") and `docs/guides/spec-existing-code.md` (at most
+five questions, the rest open questions) no longer say explore interviews
+or that propose asks every decision. `dev/walkthrough.md` main line §2
+(explore recommends keeping an older record's category, I say "yes", it
+does not ask about the README/CHANGELOG wording, finishes), §3 (one message,
+at most five, routine choices as open questions), Coordinating step 1 (no
+"says so" when no open change touches the same code) and "The round in
+order" (the test's name and place not asked, an open question naming T-01).
+`grep -i "one question at a time|every decision|interview|line of defaults"`
+over `docs`, `README.md` and `dev/walkthrough.md` finds nothing.
+
+Check: the walkthrough's explore and propose steps were not run in Claude Code or Codex in this session; they describe what the new instructions say a run does, and `dev/walkthrough.md` is run by hand (CONTRIBUTING.md).
 
 ## Scenarios
 
