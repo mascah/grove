@@ -70,6 +70,7 @@ lines after T-03's scenario checks). One earlier
 `just check` run failed in `internal/cli` without my seeing which test;
 six runs since have passed.
 
+Check: `internal/cli/walkthrough_test.go` changed on main since base 07d319f (change 261122-6ndwb's test); `TestServe` was updated on the file as it is now, with nothing of that diff touched.
 Check: the page was not seen in a browser, since the browser connection was down in this session; `bin/grove serve` on this repository answered `/api/project` with 261122-7vht2 claimable and its verdict, and the page's script was read, not run. The readiness count and the in-flight mark want a look.
 Check: a cycle's verdict when it is claimable but a claim given no piece is paused reads "grove claim <K> would claim it; grove claim given no piece is paused after attempt <attempt> of <cycle or change>", replacing the old "grove claim --retry would claim it; the project is paused after ..."; a cycle in flight now reads "<K> is in flight in attempt ..." where it read "claimed by attempt ...".
 Check: one `just check` failure in `internal/cli` went unseen, and later runs passed; `TestServe` binds the fixed address 127.0.0.1:7070, which another session on this machine may have held, but that is a guess.
@@ -107,6 +108,7 @@ running step 6 and Watching steps 2 and 3 are `TestClaim` and `TestServe`;
 `just check` passed.
 
 Also changed: `README.md` — it said `grove claim` claims a cycle, which this change makes incomplete.
+Check: `docs/coordinating.md` and `dev/walkthrough.md` changed on main since base 07d319f (change 261122-6ndwb added how implement names a requirement rewritten since base); this task built on both as they are now, and that text is untouched. `grove check` reported the three changed files, so the change was re-based on this branch as `instructions propose 261122-7vht2` says: no task needed bringing up to date, and `base` is now baea991.
 Check: the walkthrough's steps were not run by hand on the fixture in Claude Code or Codex; their Grove commands are what the tests above run, and the steps that start a session were not changed.
 Check: running step 6 cannot say in advance whether the export cycle shares a planned file with the budgets change, since a real `/grove-propose` session picks both changes' files and capabilities, so the step gives both outcomes.
 Check: `docs/planning.md` still says to send one change on its own by planning a cycle of one; that remains true, for a timer, and was left as it is.
@@ -196,3 +198,7 @@ Check: `docs/planning.md` still says to send one change on its own by planning a
 - serve "A refresh while reading": unverified; the page was not seen in a browser
 
 ## Reconciliation
+
+- changes: applied to `grove/specs/changes/spec.md`, the Purpose pointing to the runs spec's terms
+- runs: applied to `grove/specs/runs/spec.md`, with the Purpose and Boundaries the change spec gives; "Refuse a given piece that cannot be built" replaces the removed "Refuse a given cycle that cannot be built" in its place
+- serve: applied to `grove/specs/serve/spec.md`, with the Purpose the change spec gives
