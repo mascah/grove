@@ -211,7 +211,7 @@ func (s *server) value() (*value, error) {
 		}
 		v.Runs = append(v.Runs, pageRun{a, strings.TrimSpace(moved)})
 	}
-	last := pausing(recs, c)
+	last := newest(recs, inFlight(recs, c))
 	for _, cy := range c.Cycles {
 		pc := pageCycle{ID: cy.ID, Title: cy.Meta.Title, Goal: cy.Meta.Goal, Created: cy.Meta.Created, Path: cy.Path, Planned: cy.Meta.Planned,
 			DependsOn: cy.Meta.DependsOn, Unattended: cy.Meta.Unattended, Done: cy.Done}

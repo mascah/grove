@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -36,9 +37,10 @@ With no command, open the reader on the maintained specs and approved changes.
                              a caller that delivers the work itself
   instructions archive <change-id>
                              print the instructions for archiving a change
-  claim [--retry] [<cycle-id>]
-                             record an attempt at the cycle given, or else the oldest
-                             marked unattended, on a new branch, and print its ID
+  claim [--retry] [<cycle-id> | <change-id>]
+                             record an attempt at the cycle or change in no cycle given,
+                             or else the oldest cycle marked unattended, on a new branch,
+                             and print its ID
   serve [--addr <host:port>] show the project's state on a local page, at
                              127.0.0.1:7070 unless another loopback address is given
   archive <change-id>        move a change to changes/archive/
@@ -95,14 +97,13 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case len(args) == 3 && args[0] == "instructions" && args[1] == "archive":
 		err = instructionsArchive(stdout, args[2])
 	case len(args) > 0 && args[0] == "claim":
-		f := flag.NewFlagSet("claim", flag.ContinueOnError)
-		f.SetOutput(io.Discard)
-		retry := f.Bool("retry", false, "")
-		if f.Parse(args[1:]) != nil || f.NArg() > 1 {
+		// --retry before or after the ID, as grove claim A --retry reads.
+		rest := slices.DeleteFunc(slices.Clone(args[1:]), func(a string) bool { return a == "--retry" })
+		if len(rest) > 1 || len(rest) == 1 && strings.HasPrefix(rest[0], "-") {
 			fmt.Fprint(stderr, usage)
 			return 2
 		}
-		err = claim(stdout, f.Arg(0), *retry)
+		err = claim(stdout, strings.Join(rest, ""), len(rest) < len(args)-1)
 	case len(args) > 0 && args[0] == "serve":
 		f := flag.NewFlagSet("serve", flag.ContinueOnError)
 		f.SetOutput(io.Discard)

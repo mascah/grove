@@ -1387,6 +1387,29 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// recorded returns how many records remote's grove/runs holds.
+func recorded(t *testing.T, remote string) int {
+	if git(t, remote, "for-each-ref", "refs/heads/grove/runs") == "" {
+		return 0
+	}
+	return strings.Count(git(t, remote, "log", "--format=%H", "grove/runs"), "\n")
+}
+
+// claims runs grove claim in checkout, a clone of remote, wanting standard
+// output out and standard error matching want; refused, it records nothing
+// and creates no branch.
+func claims(t *testing.T, remote, checkout, out, want string, args ...string) {
+	t.Helper()
+	t.Chdir(checkout)
+	branches, n := git(t, checkout, "for-each-ref", "refs/heads"), recorded(t, remote)
+	var stdout, stderr strings.Builder
+	code := run(append([]string{"claim"}, args...), &stdout, &stderr)
+	if stdout.String() != out || !regexp.MustCompile(want).MatchString(stderr.String()) || (code == 0) != (out != "") ||
+		out == "" && (git(t, checkout, "for-each-ref", "refs/heads") != branches || recorded(t, remote) != n) {
+		t.Errorf("grove claim %v in %s: status %d, %q, %q; want %q, %s", args, filepath.Base(checkout), code, stdout.String(), stderr.String(), out, want)
+	}
+}
+
 // TestClaim follows the walkthrough's "Running unattended" with a bare
 // origin and two operators' clones of it, h1 and h2.
 func TestClaim(t *testing.T) {
@@ -1400,37 +1423,18 @@ func TestClaim(t *testing.T) {
 		t.Setenv(k, "operator@example.com")
 	}
 	host, _ := os.Hostname()
-	recorded := func() int {
-		if git(t, remote, "for-each-ref", "refs/heads/grove/runs") == "" {
-			return 0
-		}
-		return strings.Count(git(t, remote, "log", "--format=%H", "grove/runs"), "\n")
-	}
 	latest := func(dir, ref string) (a attempt) {
 		json.Unmarshal([]byte(git(t, dir, "log", "-1", "--format=%B", ref)), &a)
 		return
 	}
-	// claims runs grove claim in checkout, wanting standard output out and
-	// standard error matching want; refused, it records nothing and
-	// creates no branch.
-	claims := func(checkout, out, want string, args ...string) {
-		t.Helper()
-		t.Chdir(checkout)
-		branches, n := git(t, checkout, "for-each-ref", "refs/heads"), recorded()
-		var stdout, stderr strings.Builder
-		code := run(append([]string{"claim"}, args...), &stdout, &stderr)
-		if stdout.String() != out || !regexp.MustCompile(want).MatchString(stderr.String()) || (code == 0) != (out != "") ||
-			out == "" && (git(t, checkout, "for-each-ref", "refs/heads") != branches || recorded() != n) {
-			t.Errorf("grove claim %v in %s: status %d, %q, %q; want %q, %s", args, filepath.Base(checkout), code, stdout.String(), stderr.String(), out, want)
-		}
-	}
-	if code := run([]string{"run"}, io.Discard, io.Discard); code != 2 {
-		t.Errorf("grove run: status %d, want the usage's 2", code)
+	var usage strings.Builder
+	if code := run([]string{"run"}, io.Discard, &usage); code != 2 || !strings.Contains(usage.String(), "claim [--retry] [<cycle-id> | <change-id>]") {
+		t.Errorf("grove run: status %d, want the usage's 2, naming claim's change ID", code)
 	}
 	nothing := func() {
 		t.Helper()
 		git(t, owner, "push", "-q", "origin", "main")
-		claims(h1, "", `^grove: nothing to claim on main at [0-9a-f]{7}\n$`)
+		claims(t, remote, h1, "", `^grove: nothing to claim on main at [0-9a-f]{7}\n$`)
 	}
 	nothing()
 
@@ -1459,17 +1463,17 @@ func TestClaim(t *testing.T) {
 	// --retry, and a push origin refuses.
 	os.WriteFile(filepath.Join(h1, "notes.txt"), []byte("mine\n"), 0o644)
 	commitAll(t, h1, "A note of the operator's")
-	claims(h1, "", `^grove: the local main has commits origin's does not, so it cannot be fast-forwarded\n$`)
+	claims(t, remote, h1, "", `^grove: the local main has commits origin's does not, so it cannot be fast-forwarded\n$`)
 	git(t, h1, "reset", "-q", "--hard", "HEAD~1")
 	os.WriteFile(filepath.Join(h1, "README.md"), []byte("edited\n"), 0o644)
-	claims(h1, "", `^grove: the checkout has uncommitted changes; commit, stash or discard them first\n$`, "--retry")
+	claims(t, remote, h1, "", `^grove: the checkout has uncommitted changes; commit, stash or discard them first\n$`, "--retry")
 	if read(t, filepath.Join(h1, "README.md")) != "edited\n" {
 		t.Error("the interrupted edit is gone")
 	}
 	git(t, h1, "checkout", "-q", "--", ".")
 	hook := filepath.Join(remote, "hooks", "pre-receive")
 	os.WriteFile(hook, []byte("#!/bin/sh\necho not allowed >&2\nexit 1\n"), 0o755)
-	claims(h1, "", `^grove: the record was refused, so nothing is recorded: git push: .*not allowed`)
+	claims(t, remote, h1, "", `^grove: the record was refused, so nothing is recorded: git push: .*not allowed`)
 	if got := git(t, h1, "for-each-ref", "refs/remotes/origin/grove"); got != "" {
 		t.Errorf("a refused push left %q", got)
 	}
@@ -1489,7 +1493,7 @@ func TestClaim(t *testing.T) {
 	}
 	main := strings.TrimSpace(git(t, owner, "rev-parse", "main"))
 	rec := latest(remote, "grove/runs")
-	if read(t, h1Out) != k+"\n" || recorded() != 1 || git(t, remote, "ls-tree", "grove/runs") != "" || rec.Cycle != k || strings.Join(rec.Changes, " ") != a+" "+b ||
+	if read(t, h1Out) != k+"\n" || recorded(t, remote) != 1 || git(t, remote, "ls-tree", "grove/runs") != "" || rec.Cycle != k || strings.Join(rec.Changes, " ") != a+" "+b ||
 		rec.Commit != main || rec.Host != host || rec.Started.IsZero() || strings.TrimSpace(git(t, h1, "branch", "--show-current")) != rec.Branch ||
 		strings.TrimSpace(git(t, h1, "rev-parse", "HEAD", "main")) != main+"\n"+main || git(t, h1, "status", "--porcelain") != "" {
 		t.Errorf("after h1's claim: %s, %+v, %s", read(t, h1Out), rec, git(t, h1, "status"))
@@ -1500,7 +1504,7 @@ func TestClaim(t *testing.T) {
 
 	// Paused, though another cycle is marked, until the cycle is archived:
 	// a finished, b dropped.
-	claims(h1, "", `^grove: the project is paused after attempt `+rec.ID+`, `)
+	claims(t, remote, h1, "", `^grove: the project is paused after attempt `+rec.ID+`, `)
 	t.Chdir(owner)
 	os.WriteFile(filepath.Join(aDir, "implementation.md"), []byte("## T-01\n\nStatus: done\n"), 0o644)
 	os.WriteFile(filepath.Join(bDir, "implementation.md"), []byte("Status: dropped\n"), 0o644)
@@ -1509,13 +1513,13 @@ func TestClaim(t *testing.T) {
 	grove(t, "archive", b)
 	commitAll(t, owner, "Archive the batch")
 	git(t, owner, "push", "-q", "origin", "main")
-	claims(h2, l+"\n", "^$")
-	if last := latest(remote, "grove/runs"); recorded() != 2 || last.Cycle != l || strings.Join(last.Changes, " ") != c || latest(remote, "grove/runs~1").ID != rec.ID {
+	claims(t, remote, h2, l+"\n", "^$")
+	if last := latest(remote, "grove/runs"); recorded(t, remote) != 2 || last.Cycle != l || strings.Join(last.Changes, " ") != c || latest(remote, "grove/runs~1").ID != rec.ID {
 		t.Errorf("the claim after the merge recorded %+v", last)
 	}
 
-	// A cycle given: refused, naming why, when there is no such cycle or the
-	// project is paused; with --retry, claimed though not marked while l is,
+	// A cycle given: refused, naming why, when there is no such cycle or it
+	// overlaps l in flight; with --retry, claimed though not marked while l is,
 	// l's record and branch kept; a needs_human left over refuses nothing.
 	t.Chdir(owner)
 	d, _ := approve(t, owner, "d", "Show saved records", "")
@@ -1527,14 +1531,14 @@ func TestClaim(t *testing.T) {
 	os.WriteFile(nFile, []byte(addField(read(t, nFile), "needs_human:\n  "+e+": judging the export\n")), 0o644)
 	commitAll(t, owner, "Export with a needs_human left over")
 	git(t, owner, "push", "-q", "origin", "main")
-	claims(h2, "", `^grove: main at [0-9a-f]{7} holds no cycle 261099-zzzzz\n$`, "--retry", "261099-zzzzz")
-	claims(h2, "", `^grove: the project is paused after attempt `, m)
+	claims(t, remote, h2, "", `^grove: main at [0-9a-f]{7} holds no cycle or change 261099-zzzzz\n$`, "--retry", "261099-zzzzz")
+	claims(t, remote, h2, "", `^grove: `+m+` shares grove/specs/record-editing/spec.md with `+c+`, in flight in attempt `, m)
 	lBranch := strings.TrimSpace(git(t, h2, "branch", "--show-current"))
-	claims(h2, m+"\n", "^$", "--retry", m)
-	if recorded() != 3 || latest(remote, "grove/runs").Cycle != m || latest(remote, "grove/runs~1").Cycle != l || git(t, h2, "branch", "--list", lBranch) == "" {
+	claims(t, remote, h2, m+"\n", "^$", "--retry", m)
+	if recorded(t, remote) != 3 || latest(remote, "grove/runs").Cycle != m || latest(remote, "grove/runs~1").Cycle != l || git(t, h2, "branch", "--list", lBranch) == "" {
 		t.Errorf("the claim given %s recorded %+v", m, latest(remote, "grove/runs"))
 	}
-	claims(h2, n+"\n", "^$", "--retry", n)
+	claims(t, remote, h2, n+"\n", "^$", "--retry", n)
 
 	// No remote: the local target, commits of its own and all, is the fetched
 	// one, the record goes on the local grove/runs, and merging the attempt's
@@ -1545,11 +1549,11 @@ func TestClaim(t *testing.T) {
 	os.WriteFile(filepath.Join(h1, "notes.txt"), []byte("mine\n"), 0o644)
 	commitAll(t, h1, "A note of the operator's")
 	local := strings.TrimSpace(git(t, h1, "rev-parse", "main"))
-	claims(h1, l+"\n", "^$")
-	if last := latest(h1, "grove/runs"); last.Commit != local || last.Cycle != l || recorded() != 4 {
+	claims(t, remote, h1, l+"\n", "^$")
+	if last := latest(h1, "grove/runs"); last.Commit != local || last.Cycle != l || recorded(t, remote) != 4 {
 		t.Errorf("the claim with no remote recorded %+v, want %s %s", last, l, local)
 	}
-	claims(h1, "", `^grove: the project is paused after attempt `)
+	claims(t, remote, h1, "", `^grove: the project is paused after attempt `)
 	cRel, _ := filepath.Rel(owner, cDir)
 	os.WriteFile(filepath.Join(h1, cRel, "implementation.md"), []byte("Status: dropped\n"), 0o644)
 	grove(t, "archive", c)
@@ -1557,7 +1561,122 @@ func TestClaim(t *testing.T) {
 	branch := strings.TrimSpace(git(t, h1, "branch", "--show-current"))
 	git(t, h1, "switch", "-q", "main")
 	git(t, h1, "merge", "-q", "--no-ff", "-m", "Merge the attempt", branch)
-	claims(h1, "", `^grove: nothing to claim on main at [0-9a-f]{7}\n$`)
+	claims(t, remote, h1, "", `^grove: nothing to claim on main at [0-9a-f]{7}\n$`)
+}
+
+// TestClaimByName follows the walkthrough's "Claiming a change by name":
+// loose changes claimed from two clones of one origin, h1 and h2, some at
+// the same moment, refused for what is in flight or overlaps it, and a
+// claim given nothing paused while any change is in flight.
+func TestClaimByName(t *testing.T) {
+	owner := setUp(t)
+	remote, h1, h2 := filepath.Join(t.TempDir(), "remote.git"), filepath.Join(t.TempDir(), "h1"), filepath.Join(t.TempDir(), "h2")
+	for _, k := range []string{"GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
+		t.Setenv(k, "operator@example.com")
+	}
+	base := strings.TrimSpace(git(t, owner, "rev-parse", "HEAD"))
+	// loose approves a change whose one task names files, keeping its
+	// record-editing change spec only when spec is set.
+	loose := func(name string, spec bool, meta string, files ...string) (string, string) {
+		id, dir := approve(t, owner, name, "Change "+name, meta)
+		if !spec {
+			os.RemoveAll(filepath.Join(dir, "specs"))
+		}
+		os.WriteFile(filepath.Join(dir, "tasks.md"), []byte("## T-01 — Build\n\nFiles: `"+strings.Join(files, "`, `")+"`\n"), 0o644)
+		commitAll(t, owner, "Files of "+name)
+		return id, dir
+	}
+	a, aDir := loose("a", false, "base: "+base+"\n", "ledger/cli.py")
+	os.WriteFile(filepath.Join(aDir, "proposal.md"), []byte("# Change a\n\n## Open questions\n\nShould IDs be six digits?\n"), 0o644)
+	os.WriteFile(filepath.Join(owner, "ledger/cli.py"), []byte("# moved on\n"), 0o644)
+	commitAll(t, owner, "An open question for a, and its file changed since its base")
+	b, _ := loose("b", false, "", "tests/")
+	c, _ := loose("c", false, "", "ledger/cli.py")
+	e, _ := loose("e", false, "", "tests/test_cli.py")
+	f, fDir := loose("f", true, "", "README.md")
+	g, _ := loose("g", true, "", "pyproject.toml")
+	h, _ := loose("h", false, "", "CHANGELOG.md")
+	w, _ := loose("w", false, "depends_on: ["+a+"]\n", "ledger/rules.py")
+	m, _ := loose("m", false, "", "ledger/rules.py")
+	z, zDir := loose("z", false, "", "ledger/report.py")
+	k := "261122-k0000"
+	planCycle(t, owner, k, "2026-11-22T09:00:00Z", false, m)
+	drop := func(dir string) {
+		os.WriteFile(filepath.Join(dir, "implementation.md"), []byte("Status: dropped\n"), 0o644)
+		os.MkdirAll(filepath.Join(owner, "grove/changes/archive"), 0o755)
+		git(t, owner, "mv", dir, filepath.Join(owner, "grove/changes/archive", filepath.Base(dir)))
+		commitAll(t, owner, "Drop "+filepath.Base(dir))
+	}
+	drop(zDir)
+	var out strings.Builder
+	if run([]string{"check"}, &out, io.Discard); !strings.Contains(out.String(), "ledger/cli.py") {
+		t.Errorf("check does not report %s stale against its base:\n%s", a, out.String())
+	}
+	git(t, owner, "clone", "-q", "--bare", owner, remote)
+	git(t, owner, "remote", "add", "origin", remote)
+	git(t, owner, "clone", "-q", remote, h1)
+	git(t, owner, "clone", "-q", remote, h2)
+
+	// race runs grove claim args in h2, h1 claiming other while h2's push is
+	// under way, and returns what h1 printed.
+	bin, _ := os.Executable()
+	race := func(other, out, want string, args ...string) string {
+		t.Helper()
+		h1Out := filepath.Join(t.TempDir(), "h1.out")
+		os.WriteFile(filepath.Join(h2, ".git/hooks/pre-push"), []byte("#!/bin/sh\nunset GIT_DIR\nrm \"$0\"\ncd "+h1+" && GROVE_TEST_MAIN=1 "+bin+" claim "+other+" > "+h1Out+"\n"), 0o755)
+		t.Chdir(h2)
+		var stdout, stderr strings.Builder
+		if code := run(append([]string{"claim"}, args...), &stdout, &stderr); stdout.String() != out || (code == 0) != (out != "") || !regexp.MustCompile(want).MatchString(stderr.String()) {
+			t.Errorf("grove claim %v in h2 at the same moment: status %d, %q, %q", args, code, stdout.String(), stderr.String())
+		}
+		return read(t, h1Out)
+	}
+	at := `in flight in attempt [0-9]{6}-[0-9a-z]{5}`
+	// The same change at once: one records, stale and with an open question;
+	// the other finds it in flight, naming its host, start and branch.
+	host, _ := os.Hostname()
+	if got := race(a, "", `^grove: `+a+` is in flight in attempt [0-9]{6}-[0-9a-z]{5}, which `+regexp.QuoteMeta(host)+` started at \S+ on branch grove/[0-9]{6}-[0-9a-z]{5}\n$`, a); got != a+"\n" {
+		t.Errorf("h1's claim of %s printed %q", a, got)
+	}
+	if rec := git(t, remote, "log", "-1", "--format=%B", "grove/runs"); strings.Contains(rec, `"cycle"`) || !strings.Contains(rec, `"changes": [`+"\n    \""+a+`"`+"\n  ]") {
+		t.Errorf("a loose change's record:\n%s", rec)
+	}
+	// Two that overlap at once: a folder one names.
+	if got := race(b, "", `^grove: `+e+` shares tests/test_cli.py with `+b+`, `+at+`\n$`, e); got != b+"\n" {
+		t.Errorf("h1's claim of %s printed %q", b, got)
+	}
+	// Two that share nothing at once: both record.
+	if got := race(h, f+"\n", "^$", f); got != h+"\n" || recorded(t, remote) != 4 {
+		t.Errorf("h1's claim of %s printed %q, with %d records", h, got, recorded(t, remote))
+	}
+	// A file both name, and one capability.
+	claims(t, remote, h2, "", `^grove: `+c+` shares ledger/cli.py with `+a+`, `+at+`\n$`, c)
+	claims(t, remote, h2, "", `^grove: `+g+` shares grove/specs/record-editing/spec.md with `+f+`, `+at+`\n$`, g)
+	// What cannot be built, with --retry too.
+	claims(t, remote, h2, "", `^grove: `+w+` waits on `+a+`, which is not archived as finished\n$`, w, "--retry")
+	claims(t, remote, h2, "", `^grove: `+m+` is in cycle `+k+`; claim that with grove claim `+k+`\n$`, m)
+	claims(t, remote, h2, "", `^grove: change `+z+` is archived\n$`, z)
+	claims(t, remote, h2, "", `^grove: main at [0-9a-f]{7} holds no cycle or change 261099-zzzzz\n$`, "261099-zzzzz")
+	// Given nothing: paused after the newest in flight, also once a later
+	// record's change is archived.
+	newest := latestAttempt(t, remote, "grove/runs")
+	claims(t, remote, h2, "", `^grove: the project is paused after attempt `+newest.ID+`, `)
+	if newest.Changes[0] != f {
+		t.Errorf("the newest record names %v, want %s", newest.Changes, f)
+	}
+	t.Chdir(owner)
+	drop(fDir)
+	git(t, owner, "push", "-q", "origin", "main")
+	claims(t, remote, h2, "", `^grove: the project is paused after attempt `+latestAttempt(t, remote, "grove/runs~1").ID+`, `)
+	// --retry despite an overlap, after the ID.
+	claims(t, remote, h2, c+"\n", "^$", c, "--retry")
+	claims(t, remote, h2, "", `^grove: `+a+` is in flight`, a)
+}
+
+// latestAttempt returns the record at ref in dir.
+func latestAttempt(t *testing.T, dir, ref string) (a attempt) {
+	json.Unmarshal([]byte(git(t, dir, "log", "-1", "--format=%B", ref)), &a)
+	return
 }
 
 // TestReplan follows the walkthrough's planning step 5 and running step 6:
