@@ -33,7 +33,7 @@ Status: done
 Check: `grove review` prints the branch's diff after its readout, and the diff shows any line added to a file, a `Found:` line included. The test compares the readout above the diff, and `grove changes --json` without the time it was read and the branch tip's hash, date and subject, which a new commit always changes. The `Found:` line itself changes neither.
 Check: `internal/cli/walkthrough_test.go` changed on main after this change was proposed (#189, #194: explore and propose tests). Those edits are to other tests; this task's edits sit beside them on the file as main holds it.
 
-Found: the cycle instructions' finish line (`internal/instruct/requires/implement-cycle.md`) asks each change's subagent to report its status, `Check:` lines and blocked tasks, and the session to report those, but not `Found:` lines; seen reading it beside `implement.md`. The lines still reach each change's `implementation.md` through `instructions implement --runner`.
+Also changed: `internal/instruct/requires/implement-cycle.md` — a cycle is built by `/grove-implement` too, and its report must list `Found:` lines as the requirement says: each change's subagent now reports them, and the finish line lists them after the `Check:` lines and blocked questions; `TestImplementInstructions` checks both (from review).
 
 ### T-02 — Docs, the tracker guide and the walkthrough
 

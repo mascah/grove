@@ -3,8 +3,8 @@
 - Build each change below in a fresh context of your own, such as a
   subagent, telling it to run Grove's `instructions implement --runner
   <change-id>` and follow what it prints, but neither archive nor commit,
-  and to report
-  each task's status, its `Check:` lines and blocked tasks. Start at once
+  and to report each task's status, its `Check:` lines, blocked tasks and
+  `Found:` lines. Start at once
   every change whose `after` changes are archived and whose tasks'
   `Files:`, read from its `tasks.md`, name no file that a change being
   built names; start each other change once that holds.
@@ -19,5 +19,6 @@
   task is done.
 - A change Grove refuses as waiting stays as it is.
 - Finish: report for the reviewer first every change's `Check:` lines and
-  blocked tasks with their questions, then, for each change, whether it
+  blocked tasks with their questions, then every `Found:` line, then, for
+  each change, whether it
   was archived and what is left, and each change left out and why.

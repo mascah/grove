@@ -575,7 +575,8 @@ func TestImplementInstructions(t *testing.T) {
 	// archives and commits.
 	contexts := []string{"in a fresh context of your own, such as a\n  subagent", "`instructions implement --runner\n  <change-id>` and follow what it prints, but neither archive nor commit",
 		"Start at once\n  every change whose `after` changes are archived and whose tasks'\n  `Files:`", "Only you archive and commit, one returned change at a time", "run the\n  project's tests once both have returned",
-		"build the other again on its own", "Where you cannot start a fresh context, build each change yourself", "Ask no one and wait for no one.", "Finish: report for the reviewer first every change's `Check:` lines"}
+		"build the other again on its own", "Where you cannot start a fresh context, build each change yourself", "Ask no one and wait for no one.", "Finish: report for the reviewer first every change's `Check:` lines",
+		"blocked tasks and\n  `Found:` lines", "questions, then every `Found:` line, then, for\n  each change"}
 	out = grove(t, "instructions", "implement", k)
 	has("cycle instructions", out, append([]string{"You are implementing cycle " + k + ", \"Cycle " + k + "\", as main@", "holds it, in this working tree.", "run Grove's `instructions implement --runner <change-id>` for each", delivery, "\n1. " + cid + " \"Allow editing older records\"\n", "## The cycle\n\n<file path=\"grove/cycles/" + k + "-cycle.md\">\n", shared[3]}, contexts...), append(gone, advice))
 	// A cycle whose file holds notes: printed with it, and a member's documents hold over them.
