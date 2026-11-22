@@ -36,7 +36,7 @@ Status: done
 Also changed: `internal/instruct/instruct.go` — the comment on `Project.Schemas` said they were always the working tree's, which is no longer true.
 
 Check: `internal/cli/claim.go` needed no edit. `claim` already read the target through `project.at`, so fixing `at` fixed it.
-Check: `claim.go`, `serve.go` and `walkthrough_test.go` changed on main since base baea991, in a4ad6e2 (claim a change by name). I built on them as they are now. a4ad6e2 added `busy` and the loose-change verdicts in `server.value`, which are the code that missed the overlap, so its diff is the code this fix corrects. Nothing in it conflicts with the fix.
+Check: `claim.go`, `serve.go` and `walkthrough_test.go` changed on main since base baea991, in a4ad6e2 (claim a change by name). I built on them as they are now. a4ad6e2 added `busy` and the loose-change verdicts in `server.value`, which are the code that missed the overlap, so its diff is the code this fix corrects. Nothing in it conflicts with the fix. Before archiving, `grove check` reported these files changed since base. I did not re-base: the diff changes nothing the change says.
 Check: the plain `grove changes` list, without `--json`, still reads the working tree's schemas through `agreed`. It shows no overlap verdicts, and the change scopes only `--json` and `/api/project`.
 
 ## Scenarios
@@ -48,7 +48,4 @@ The change has no change spec. The scenarios of the requirement it restores:
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+None: the change has no change spec, as what is agreed does not change.
