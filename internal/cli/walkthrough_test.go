@@ -1703,6 +1703,42 @@ func TestClaimByName(t *testing.T) {
 	claims(t, remote, h1, k+"\n", "^$", k) // with five pieces in flight
 }
 
+// TestTargetSchemas has a checkout whose working tree predates a project
+// schema on the target find an overlap through that schema (261122-pm1d7).
+func TestTargetSchemas(t *testing.T) {
+	owner := setUp(t)
+	remote, h2 := filepath.Join(t.TempDir(), "remote.git"), filepath.Join(t.TempDir(), "h2")
+	for _, k := range []string{"GIT_AUTHOR_NAME", "GIT_COMMITTER_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
+		t.Setenv(k, "operator@example.com")
+	}
+	git(t, owner, "clone", "-q", "--bare", owner, remote)
+	git(t, owner, "remote", "add", "origin", remote)
+	git(t, owner, "clone", "-q", remote, h2)
+	git(t, h2, "switch", "-q", "-c", "last-attempt")
+	os.MkdirAll(filepath.Join(owner, "grove/schemas/lite"), 0o755)
+	os.WriteFile(filepath.Join(owner, "grove/schemas/lite/schema.yaml"), []byte("description: Lite.\n"), 0o644)
+	commitAll(t, owner, "Add schema lite")
+	var ids []string
+	for _, f := range []string{"ledger/cli.py", "ledger/report.py"} {
+		id, dir := approve(t, owner, f, "Change "+filepath.Base(f), "schema: lite\n")
+		os.WriteFile(filepath.Join(dir, "tasks.md"), []byte("## T-01 — Build\n\nFiles: `"+f+"`\n"), 0o644)
+		commitAll(t, owner, "Files of "+id)
+		ids = append(ids, id)
+	}
+	a, b := ids[0], ids[1]
+	git(t, owner, "push", "-q", "origin", "main")
+	claims(t, remote, owner, a+"\n", "^$", a)
+	git(t, h2, "fetch", "-q", "origin", "main:main", "grove/runs:refs/remotes/origin/grove/runs")
+	shares := b + " shares grove/specs/record-editing/spec.md with " + a + ", in flight in attempt "
+	t.Chdir(h2)
+	var v value
+	json.Unmarshal([]byte(grove(t, "changes", "--json")), &v)
+	if i := slices.IndexFunc(v.Changes, func(ch pageChange) bool { return ch.ID == b }); i < 0 || *v.Changes[i].Claimable || !strings.HasPrefix(v.Changes[i].Verdict, shares) {
+		t.Errorf("%s's verdict in a checkout without schema lite: %+v", b, v.Changes)
+	}
+	claims(t, remote, h2, "", "^grove: "+shares, b)
+}
+
 // latestAttempt returns the record at ref in dir.
 func latestAttempt(t *testing.T, dir, ref string) (a attempt) {
 	json.Unmarshal([]byte(git(t, dir, "log", "-1", "--format=%B", ref)), &a)

@@ -201,7 +201,7 @@ type Project struct {
 	Agreed  *doc.Collection // the documents at Commit
 	Context string          // grove.yaml's context
 	Rules   Rules           // grove.yaml's rules
-	Schemas fs.FS           // <root>/schemas in the working tree, the project's own schema files
+	Schemas fs.FS           // <root>/schemas, the project's own schema files: the target's for claim and the project value, else the working tree's
 	Schema  string          // grove.yaml's schema, for exploring and new changes
 }
 
