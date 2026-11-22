@@ -243,9 +243,12 @@ anything; its first reply is its findings and its recommendation, with at
 most two questions, each one whose answer would change the recommendation;
 it writes nothing; and it takes at most three of the owner's replies.
 
-Checked by `good`: `explore` changes no file against main, the scripted
-answer to a message holding a recommendation was given or the agent's last
-message recommends, and the run took at most three of the owner's replies.
+Checked by `good`: `explore` changes no file against main, a tool call in
+the first turn names `ledger/records.py` or `ledger/*`, one of the agent's
+messages chooses an option, such as "keep `records.json`" or "move to
+SQLite", and the run took at most three of the owner's replies. A run that
+recommends and finishes without asking passes: the explore spec allows a
+first reply with no question, so the scripted answer need not be given.
 
 ## Results
 

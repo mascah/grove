@@ -269,7 +269,7 @@ func TestExplore(t *testing.T) {
 	setUp(t)
 	out := grove(t, "instructions", "explore")
 	for _, s := range []string{"# Grove instructions: explore", "say which you recommend and why",
-		"only one whose answer would change\n  your recommendation", "your first reply is your findings", "say so in one line",
+		"only one\n  whose answer would change your recommendation", "your first reply is your findings", "say so in one line",
 		"Maintained specs (agreed behavior):\n- None.", "`instructions prototype \"<question>\"`"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("explore instructions lack %q", s)
@@ -887,7 +887,7 @@ func TestCoordinating(t *testing.T) {
 	// Propose records depends_on and base; lists show what waits.
 	main := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	out := grove(t, "instructions", "propose", "Add ledger delete ID")
-	for _, s := range []string{"names it\n  and asks whether it must land first", "\nbase: " + main + "\n",
+	for _, s := range []string{"asks whether this one needs any to land\n  first", "\nbase: " + main + "\n",
 		"- " + unknown + " \"Editing an unknown ID prints an error\": `grove/changes/" + unknown + "-editing-an-unknown-id-prints-an-error/`\n  - capabilities: record-editing\n"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("propose instructions lack %q:\n%s", s, out)

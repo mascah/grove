@@ -9,8 +9,9 @@ consequential decisions and the open questions.
   round before writing, that constrain the work or would be costly to
   reverse. Quote the owner and give the reason.
 - What you infer or propose is not a decision, however likely. Ask it in the
-  round; what the owner leaves open goes under open questions. A proposal
-  lists no assumptions.
+  round, or write it as an open question with your recommended answer; what
+  the owner leaves open goes under open questions too. A proposal lists no
+  assumptions.
 - Open questions: say which must be answered before review and which can
   wait. Name the task a question blocks when it decides how that task is
   built: `/grove-implement` builds its best answer and records it for the

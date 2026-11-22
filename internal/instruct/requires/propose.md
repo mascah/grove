@@ -26,9 +26,9 @@
 - A new change: before you write any document, send the owner one message,
   the round, and wait. It states the scope you understand. If the idea is
   too big for one change or has parts the owner could agree separately, it
-  says so and offers to split it. If an open change in the project index,
-  approved or drafted, touches the same capabilities or code, it names it
-  and asks whether it must land first. It asks at most five decisions you
+  says so and offers to split it. If the project index lists other open
+  changes, approved or drafted, it asks whether this one needs any to land
+  first, naming those that touch the same capabilities or code. It asks at most five decisions you
   would otherwise assume, the most consequential, numbered, each with your
   recommended answer and its reason, worded so that "yes" accepts it: first
   what changes behavior, scope or compatibility or loses data, then
