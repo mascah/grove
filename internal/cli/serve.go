@@ -187,6 +187,7 @@ func (s *server) value() (*value, error) {
 	}
 	ip := p.instruct()
 	ip.Commit = commit
+	ip.Schemas, _ = fs.Sub(fsys, "schemas") // the target's, as claim reads them; fails only on an invalid name
 	if ip.Agreed, err = doc.Load(fsys, ip.Layout); err != nil {
 		return nil, err
 	}

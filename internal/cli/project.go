@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -52,22 +53,33 @@ func (p project) instruct() instruct.Project {
 		Schemas: os.DirFS(filepath.Join(p.Top, p.Root, "schemas")), Schema: p.Schema}
 }
 
-// agreed returns the target's commit and the documents it holds.
+// agreed returns the target's commit and the documents it holds, read with
+// the working tree's schemas, so that a schema drafted on a branch works for
+// instructions, check and review.
 func (p project) agreed() (instruct.Project, error) {
 	commit, err := gitx.ResolveBranch(p.Top, p.Target)
 	if err != nil {
 		return p.instruct(), err
 	}
-	return p.at(commit)
+	return p.load(commit, false)
 }
 
-// at returns commit and the documents it holds.
+// at returns commit and the documents it holds, read with the schemas it
+// holds, so that claim and the project value find each change's
+// capabilities whatever the working tree holds.
 func (p project) at(commit string) (instruct.Project, error) {
+	return p.load(commit, true)
+}
+
+func (p project) load(commit string, itsSchemas bool) (instruct.Project, error) {
 	ip := p.instruct()
 	ip.Commit = commit
 	fsys, err := gitx.TreeFS(p.Top, ip.Commit, p.Root)
 	if err != nil {
 		return ip, err
+	}
+	if itsSchemas {
+		ip.Schemas, _ = fs.Sub(fsys, "schemas") // fails only on an invalid name
 	}
 	ip.Agreed, err = doc.Load(fsys, ip.Layout)
 	return ip, err
