@@ -52,10 +52,12 @@ number of `git` processes per call does not grow with the number of changes or r
 records. It may grow by 2 for each branch that holds Grove documents the
 target's history lacks, and by 3 for each cycle that is not done.
 
-What each command prints stays as it is, with one exception. Where a task
-names a folder and a file inside it was renamed since the change's base, the
-moved-file diagnostic names both the old and the new path. Today it names
-only the new path, and only when the user's Git config detects renames.
+What each command prints stays as it is, with one exception. Where a file
+was renamed since the change's base and the change's tasks name both its old
+and its new path, through a folder or one by one, `grove check`'s one
+moved-file problem for the change names both paths, and `grove instructions
+implement` lists each path under the task that names it. Today both name only
+the new path, and only when the user's Git config detects renames.
 
 ## Reproduction
 
@@ -86,8 +88,9 @@ behavior, guarded by the test T-01 adds.
   fake Git the constitution's rule on tests (rule 17) bars.
 - The fix, as reviewed in three rounds by Codex and accepted by the owner
   ("ok"):
-  - Unmerged branches are diffed in one `git diff-tree --stdin --always`,
-    fed the branch tip, then the target, for each branch. diff-tree takes
+  - Unmerged branches are diffed in one `git diff-tree --stdin --always -r
+    --raw --no-abbrev --no-renames -- <root>`, fed the branch tip, then the
+    target, for each branch. diff-tree takes
     the first ID as the commit and the second as its parent, so this diffs
     from the target to the tip. Today's diff starts from the merge-base
     instead. The two give the same files once the existing filter drops
@@ -102,7 +105,9 @@ behavior, guarded by the test T-01 adds.
     distinct base, with no path filter. The existing `naming` matches the
     result to tasks. A base that is no commit is skipped, as today.
     `--no-renames` matches every other diff in this code and causes the one
-    output change named under Expected.
+    output change named under Expected. `moved`, which `grove instructions
+    implement` still runs for its one change, takes `--no-renames` too, so
+    the two commands agree.
   - `--always` makes each request print a header even when its diff is
     empty, so output blocks are matched to requests in input order.
   - Run records' branch dates come from one `git for-each-ref` over

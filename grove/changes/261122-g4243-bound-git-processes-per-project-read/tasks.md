@@ -28,11 +28,17 @@ Acceptance:
 - A walkthrough test, written first and failing at the change's base, puts
   a `git` shim on `PATH` that logs each call and runs the real Git. It
   runs `grove changes --json` once on a fixture project, then again after
-  adding approved changes whose tasks name files and that modify a
-  maintained requirement, run records, and an unmerged branch with no
-  Grove document. Both runs start the same number of `git` processes.
+  adding run records, an unmerged branch with no Grove document, and
+  approved changes, each with its own `base` and a task naming a file, that
+  modify a maintained requirement. Both runs start the same number of `git`
+  processes, and the second run's project value holds a moved-file and a
+  rewritten-requirement problem from those changes.
 - The existing walkthrough tests pass unchanged, except where they cover
-  a rename inside a folder a task names.
+  a rename whose old and new paths a change's tasks both name.
+- Where a file was renamed since base and one task names the old path and
+  another the new one, `grove check`'s moved-file problem for the change
+  names both paths, and `grove instructions implement <change-id>` lists
+  each path under the task that names it.
 - On a change whose base is a short commit ID, `grove check` still reports
   a named file changed since base.
 - `grove check` in a checkout whose target branch does not exist, with no
