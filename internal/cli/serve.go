@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"html"
 	"io"
 	"io/fs"
+	"maps"
 	"net"
 	"net/http"
 	"os"
@@ -93,9 +95,11 @@ type value struct {
 // pageChange is a change as grove changes --json gives it.
 type pageChange struct {
 	*doc.Change
-	Cycle string   `json:"cycle,omitempty"` // the cycle not done that lists it
-	Ready bool     `json:"ready"`           // approved and waiting on nothing
-	Files []string `json:"files"`           // its documents, from the root
+	Cycle     string   `json:"cycle,omitempty"`     // the cycle not done that lists it
+	Ready     bool     `json:"ready"`               // approved and waiting on nothing
+	Claimable *bool    `json:"claimable,omitempty"` // for a loose change, grove claim given its ID would claim it
+	Verdict   string   `json:"verdict,omitempty"`   // for a loose change, what grove claim given its ID would do, or why not
+	Files     []string `json:"files"`               // its documents, from the root
 }
 
 type pageCycle struct {
@@ -111,14 +115,16 @@ type pageCycle struct {
 	Stale      []string `json:"stale,omitempty"` // members changed on the target since the plan
 	Unattended bool     `json:"unattended"`
 	Done       bool     `json:"done"`
-	Runs       bool     `json:"runs"`    // grove claim would claim it
-	Verdict    string   `json:"verdict"` // what grove claim would do with it, or why not
+	Claimable  bool     `json:"claimable"` // grove claim given its ID would claim it
+	Runs       bool     `json:"runs"`      // claimable, and no change is in flight
+	Verdict    string   `json:"verdict"`   // what grove claim given its ID would do with it, or why not
 }
 
 // pageRun is an attempt with its branch's latest commit time, local or on origin.
 type pageRun struct {
 	attempt
-	Moved string `json:"moved,omitempty"`
+	InFlight bool   `json:"in_flight"` // the attempt of a change in flight
+	Moved    string `json:"moved,omitempty"`
 }
 
 // branchRow is a branch, or the working tree, holding work the target lacks.
@@ -186,16 +192,6 @@ func (s *server) value() (*value, error) {
 	}
 	c := ip.Agreed
 	v := &value{Root: p.Root, Target: p.Target, Commit: commit, Read: time.Now(), Specs: c.Specs, Changes: []pageChange{}} // [] for no changes, as scripts iterate it
-	for _, ch := range slices.Concat(c.Changes, c.Archived) {
-		row := *ch // runnable below rewrites WaitsOn of a member waiting outside its cycle
-		pc := pageChange{Change: &row, Ready: ch.State == "approved" && len(ch.WaitsOn) == 0, Files: ch.Files}
-		for _, cy := range c.Cycles {
-			if !cy.Done && slices.Contains(cy.Meta.Changes, ch.ID) {
-				pc.Cycle = cy.ID
-			}
-		}
-		v.Changes = append(v.Changes, pc)
-	}
 	tip := tipOf(p.Top, "refs/remotes/origin/grove/runs")
 	if tip == "" {
 		tip = tipOf(p.Top, runs)
@@ -204,14 +200,35 @@ func (s *server) value() (*value, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, a := range recs {
+	flight := inFlight(recs, c)
+	for i, a := range recs {
 		moved, err := gitx.Run(p.Top, "for-each-ref", "--sort=-committerdate", "--count=1", "--format=%(committerdate:iso-strict)", "refs/heads/"+a.Branch, "refs/remotes/origin/"+a.Branch)
 		if err != nil {
 			return nil, err
 		}
-		v.Runs = append(v.Runs, pageRun{a, strings.TrimSpace(moved)})
+		v.Runs = append(v.Runs, pageRun{a, slices.Contains(slices.Collect(maps.Values(flight)), &recs[i]), strings.TrimSpace(moved)})
 	}
-	last := pausing(recs, c)
+	last := newest(recs, flight)
+	for _, ch := range slices.Concat(c.Changes, c.Archived) {
+		row := *ch // runnable below rewrites WaitsOn of a member waiting outside its cycle
+		pc := pageChange{Change: &row, Ready: ch.State == "approved" && len(ch.WaitsOn) == 0, Files: ch.Files}
+		for _, cy := range c.Cycles {
+			if !cy.Done && slices.Contains(cy.Meta.Changes, ch.ID) {
+				pc.Cycle = cy.ID
+			}
+		}
+		if pc.Cycle == "" && ch.State == "approved" {
+			_, ordered, err := piece(p, ip, ch.ID)
+			if err == nil {
+				err = busy(p, c, ch.ID, ordered, flight)
+			}
+			ok := err == nil
+			if pc.Claimable, pc.Verdict = &ok, "grove claim "+ch.ID+" would claim it"; err != nil {
+				pc.Verdict = err.Error()
+			}
+		}
+		v.Changes = append(v.Changes, pc)
+	}
 	for _, cy := range c.Cycles {
 		pc := pageCycle{ID: cy.ID, Title: cy.Meta.Title, Goal: cy.Meta.Goal, Created: cy.Meta.Created, Path: cy.Path, Planned: cy.Meta.Planned,
 			DependsOn: cy.Meta.DependsOn, Unattended: cy.Meta.Unattended, Done: cy.Done}
@@ -223,19 +240,24 @@ func (s *server) value() (*value, error) {
 		if !cy.Done {
 			pc.Stale, _ = changedSincePlan(p, commit, c, cy) // an error is runnable's to give as the verdict
 		}
-		if _, err := runnable(p, ip, cy); err != nil {
+		ordered, err := runnable(p, ip, cy)
+		if err == nil {
+			err = busy(p, c, cy.ID, ordered, flight)
+		}
+		if err != nil {
 			pc.Verdict = err.Error()
-		} else if last != nil && last.Cycle == cy.ID {
-			pc.Verdict = fmt.Sprintf("claimed by attempt %s, which %s started at %s on branch %s", last.ID, last.Host, last.Started.Format(time.RFC3339), last.Branch)
 		} else {
 			cmd, why := "grove claim", ""
+			if !cy.Meta.Unattended || last != nil {
+				cmd += " " + cy.ID
+			}
 			if !cy.Meta.Unattended {
-				cmd, why = cmd+" "+cy.ID, "; it is not marked unattended"
+				why = "; it is not marked unattended"
 			}
 			if last != nil {
-				cmd, why = cmd+" --retry", why+"; the project is paused after attempt "+last.ID+" of cycle "+last.Cycle
+				why += "; grove claim given no piece is paused after attempt " + last.ID + " of " + cmp.Or(last.Cycle, last.Changes[0])
 			}
-			pc.Runs, pc.Verdict = last == nil, cmd+" would claim it"+why
+			pc.Claimable, pc.Runs, pc.Verdict = true, last == nil, cmd+" would claim it"+why
 		}
 		v.Cycles = append(v.Cycles, pc)
 	}

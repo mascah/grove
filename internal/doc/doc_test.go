@@ -74,3 +74,20 @@ func TestShares(t *testing.T) {
 		}
 	}
 }
+
+func TestOverlap(t *testing.T) {
+	ch := &Change{Tasks: []Task{{Files: []string{"ledger/"}}}, Touches: map[string]string{"c/specs/record-editing/spec.md": "record-editing"}}
+	planned := ch.Planned("grove")
+	for _, c := range []struct {
+		b    []string
+		want string
+	}{
+		{[]string{"ledger/report.py"}, "ledger/report.py"},
+		{[]string{"grove/specs/record-editing/spec.md"}, "grove/specs/record-editing/spec.md"},
+		{[]string{"README.md", "grove/specs/tags/spec.md", "ledgers/x.py"}, ""},
+	} {
+		if got, back := Overlap(planned, c.b), Overlap(c.b, planned); got != c.want || back != c.want {
+			t.Errorf("Overlap(%q, %q) = %q, back %q, want %q", planned, c.b, got, back, c.want)
+		}
+	}
+}

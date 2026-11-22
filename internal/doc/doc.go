@@ -432,6 +432,36 @@ func (ch *Change) Capabilities() []string {
 	return slices.Compact(slices.Sorted(maps.Values(ch.Touches)))
 }
 
+// Planned returns the repo-relative paths ch's tasks name and, for each
+// capability it has a file about, that capability's maintained spec under
+// root, the repo-relative document root.
+func (ch *Change) Planned(root string) []string {
+	var out []string
+	for _, t := range ch.Tasks {
+		out = append(out, t.Files...)
+	}
+	for _, c := range ch.Capabilities() {
+		out = append(out, path.Join(root, "specs", c, "spec.md"))
+	}
+	return out
+}
+
+// Overlap returns a path one of a and b plans that the other plans too or
+// names a folder above, or "" when they share none.
+func Overlap(a, b []string) string {
+	for _, x := range a {
+		for _, y := range b {
+			if Names(y, x) {
+				return x
+			}
+			if Names(x, y) {
+				return y
+			}
+		}
+	}
+	return ""
+}
+
 var (
 	taskHeading = regexp.MustCompile(`^#+ (T-\d+)\b[\s—–:-]*(.*)$`)
 	filesLine   = regexp.MustCompile("^`[^`]+`(\\s*,\\s*`[^`]+`)*$")

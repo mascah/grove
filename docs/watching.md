@@ -1,7 +1,8 @@
 # Watching the project
 
 `grove serve` shows where a project stands on one page in your browser:
-what `grove claim` would do with each cycle and who has claimed one, which
+what `grove claim` would do with each cycle and each change in no cycle,
+and who has claimed one, which
 branches hold work the target does not have yet, the attempts recorded on
 `grove/runs`, how changes
 and cycles depend on each other, what the target's history did to the
@@ -51,18 +52,24 @@ would give it today, the first that applies:
   finished;
 - a member changed on the target since the plan, so the plan is stale and
   needs `/grove-plan <cycle-id>` again;
-- otherwise, when the latest record on `grove/runs` names it, that it is
-  claimed, with the host, the start time and the attempt's branch;
+- otherwise, when one of its members is in flight, that it is, with the
+  attempt, the host, the start time and the attempt's branch;
+- otherwise, when it shares a planned file with a change in flight, that
+  path, the change and its attempt;
 - otherwise `grove claim` would claim it, or `grove claim <cycle-id>`
-  would, when it is not marked `unattended`, adding `--retry` and the
-  attempt while the project is paused after another cycle's.
+  would, when it is not marked `unattended` or a `grove claim` given
+  nothing is paused, naming the newest attempt in flight.
 
 Each card lists the members in the order they would be built, with their
 status, `open questions` when the proposal has any, the tasks the
 target's `implementation.md` marks blocked, and where each is being built, then the members already archived.
-Below the cards are the approved changes in no cycle, each ready or
-waiting, the cycles done, and the problems `grove check` would report on
-the target's documents. The tab counts the cycles not done.
+Below the cards is one card for each approved change in no cycle, with
+the answer `grove claim <change-id>` would give it: the change it waits
+on, that it is in flight, the path it shares with a change in flight, or
+that it would claim it (see [Running unattended](running.md), "Claim a
+change you name"). Then come the cycles done, and the problems `grove
+check` would report on the target's documents. The tab counts the cycles
+not done and the changes in no cycle.
 
 ## In progress
 
@@ -86,7 +93,9 @@ on origin. Newest first.
 
 Below the branches are the attempts recorded on `origin/grove/runs`, or
 on the local `grove/runs` when origin has none, newest first: each
-attempt's cycle, when it started, the host that claimed it, its branch
+attempt's cycle, or its change when it has no cycle, marked `in flight`
+while it is the newest record naming a change the target does not hold
+archived, when it started, the host that claimed it, its branch
 and when that branch, here or on origin, last had a commit, as
 [Running unattended](running.md) describes them. `git fetch` brings in
 the records other checkouts pushed.

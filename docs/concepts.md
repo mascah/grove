@@ -52,7 +52,8 @@ A small change can take one merge instead of two. Propose it on a branch,
 then build it there with `/grove-implement <change-id>`. Merging that
 branch approves the change with its code. The same merge lands the updated
 specs and the archived change. Grove sets no size; you decide what is
-small. `grove claim` takes only cycles your main branch already holds.
+small. `grove claim` takes only cycles and changes your main branch
+already holds.
 
 Your team already reviews and merges work into the main branch, and Git
 already records who merged what and when. Making the merge the approval
@@ -180,8 +181,8 @@ and reads. Skills run in your agent's chat: each one runs
 the agent you already use, in the checkout and branch you already have.
 
 Grove makes no commits of your work and starts no agent. `grove claim`
-records an attempt at a cycle on the branch `grove/runs` and prints the
-cycle's ID; you start the agent that builds it unattended (see
+records an attempt at a cycle, or at a change in no cycle, on the branch
+`grove/runs` and prints its ID; you start the agent that builds it unattended (see
 [Running unattended](running.md)). Running your agent is always yours.
 
 ## IDs
@@ -202,8 +203,9 @@ holds.
   `changes/archive/`.
 - **Archived as finished:** archived with every task done. A change that
   waits on another can be built once that one is archived as finished.
-- **Attempt:** one claim of a cycle by `grove claim`, with its own ID,
-  branch and record, a commit on the branch `grove/runs`.
+- **Attempt:** one claim by `grove claim` of a cycle, or of a change in no
+  cycle, with its own ID, branch and record, a commit on the branch
+  `grove/runs`.
 - **Base:** the commit of the target a change was proposed from, written in
   its `.grove.yaml`.
 - **Blocked:** a task the agent did not build because a wrong choice would
@@ -231,8 +233,14 @@ holds.
 - **Harness:** the program you run your coding agent in. `grove init` writes
   skills for each harness `grove.yaml` lists.
 - **Maintained spec:** agreed behavior of one capability.
-- **Paused:** after an attempt, `grove claim` claims nothing, from any
-  checkout, until the attempt's cycle is archived on the target.
+- **In flight:** a change is in flight while a record on `grove/runs`
+  names it and the target does not hold it archived, as finished or
+  dropped; a cycle is in flight while one of its changes is. A `grove
+  claim` you give a cycle or change refuses it while it is in flight or
+  shares a planned file with a change in flight.
+- **Paused:** while any change is in flight, a `grove claim` given
+  nothing claims nothing, from any checkout. A claim you give a cycle or
+  change is not paused.
 - **Planned:** the commit of the target a cycle's plan read, written in its
   file as `planned`.
 - **Skill:** a chat command Grove installs for your harness.

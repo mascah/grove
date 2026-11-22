@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -23,19 +24,21 @@ const runs = "refs/heads/grove/runs"
 type attempt struct {
 	ID       string    `json:"id"`
 	Started  time.Time `json:"started"`
-	Cycle    string    `json:"cycle"`
-	Changes  []string  `json:"changes"` // the cycle's, in build order
+	Cycle    string    `json:"cycle,omitempty"` // none for a loose change
+	Changes  []string  `json:"changes"`         // the cycle's, in build order, or the loose change
 	Commit   string    `json:"commit"`
 	Host     string    `json:"host"`
 	Checkout string    `json:"checkout"`
 	Branch   string    `json:"branch"`
 }
 
-// claim records an attempt at cycle id, or, when id is empty, at the oldest
-// eligible cycle, unless the latest attempt's changes are still open and
-// retry is not set; then it creates the attempt's branch from the fetched
-// target and prints the cycle's ID.
-func claim(stdout io.Writer, id string, retry bool) error {
+// claim records an attempt at piece id, a cycle or a loose change, unless it
+// is in flight or overlaps a change in flight, or, when id is empty, at the
+// oldest eligible cycle, unless any change is in flight; retry claims despite
+// what is in flight. Then it creates the attempt's branch from the fetched
+// target and prints the piece's ID.
+func claim(stdout io.Writer, given string, retry bool) error {
+	id := given
 	p, err := openProject()
 	if err != nil {
 		return err
@@ -76,24 +79,28 @@ func claim(stdout io.Writer, id string, retry bool) error {
 	if err != nil {
 		return err
 	}
-	if last := pausing(recs, ip.Agreed); last != nil && !retry {
-		return fmt.Errorf("the project is paused after attempt %s, which %s started at %s on branch %s; once you have dealt with it, run grove claim --retry", last.ID, last.Host, last.Started.Format(time.RFC3339), last.Branch)
-	}
-	cy, ordered := eligible(p, ip)
-	if id != "" {
-		if cy = ip.Agreed.Cycle(id); cy == nil {
-			return fmt.Errorf("%s at %s holds no cycle %s", p.Target, commit[:7], id)
+	flight := inFlight(recs, ip.Agreed)
+	var cy *doc.Cycle
+	var ordered []*doc.Change
+	if id == "" {
+		if last := newest(recs, flight); last != nil && !retry {
+			return fmt.Errorf("the project is paused after attempt %s, which %s started at %s on branch %s; once you have dealt with it, run grove claim --retry", last.ID, last.Host, last.Started.Format(time.RFC3339), last.Branch)
 		}
-		if ordered, err = runnable(p, ip, cy); err != nil {
-			return err
+		if cy, ordered = eligible(p, ip); cy == nil {
+			return fmt.Errorf("nothing to claim on %s at %s", p.Target, commit[:7])
 		}
-	}
-	if cy == nil {
-		return fmt.Errorf("nothing to claim on %s at %s", p.Target, commit[:7])
+		id = cy.ID
+	} else if cy, ordered, err = piece(p, ip, id); err != nil {
+		return err
+	} else if err = busy(p, ip.Agreed, id, ordered, flight); err != nil && !retry {
+		return err
 	}
 
 	now := time.Now()
-	a := attempt{ID: doc.NewID(now), Started: now, Cycle: cy.ID, Commit: commit, Checkout: p.Top}
+	a := attempt{ID: doc.NewID(now), Started: now, Commit: commit, Checkout: p.Top}
+	if cy != nil {
+		a.Cycle = cy.ID
+	}
 	if a.Host, err = os.Hostname(); err != nil {
 		return err
 	}
@@ -125,7 +132,7 @@ func claim(stdout io.Writer, id string, retry bool) error {
 	}
 	if err != nil {
 		if _, moved, ferr := fetch(p, origin); ferr == nil && moved != tip {
-			return claim(stdout, id, retry) // another claim recorded first; decide again on its record
+			return claim(stdout, given, retry) // another claim recorded first; decide again on its record
 		}
 		return fmt.Errorf("the record was refused, so nothing is recorded: %w", err)
 	}
@@ -136,7 +143,7 @@ func claim(stdout io.Writer, id string, retry bool) error {
 	if _, err := gitx.Run(p.Top, "update-ref", "refs/heads/"+p.Target, commit, local); err != nil {
 		return err
 	}
-	fmt.Fprintln(stdout, cy.ID)
+	fmt.Fprintln(stdout, id)
 	return nil
 }
 
@@ -163,11 +170,73 @@ func tipOf(dir, ref string) string {
 	return strings.TrimSpace(out)
 }
 
-// pausing returns the latest of recs while a change it names is not
-// archived in c, or else nil.
-func pausing(recs []attempt, c *doc.Collection) *attempt {
-	if len(recs) > 0 && slices.ContainsFunc(recs[0].Changes, func(id string) bool { return !c.InArchive(id) }) {
-		return &recs[0]
+// inFlight returns each change that a record of recs, newest first, names
+// and c does not hold archived, with its attempt, the newest record naming it.
+func inFlight(recs []attempt, c *doc.Collection) map[string]*attempt {
+	flight := map[string]*attempt{}
+	for i := range recs {
+		for _, id := range recs[i].Changes {
+			if _, ok := flight[id]; !ok && !c.InArchive(id) {
+				flight[id] = &recs[i]
+			}
+		}
+	}
+	return flight
+}
+
+// newest returns the newest of recs that is the attempt of a change in
+// flight, or nil.
+func newest(recs []attempt, flight map[string]*attempt) *attempt {
+	for i := range recs {
+		if slices.Contains(slices.Collect(maps.Values(flight)), &recs[i]) {
+			return &recs[i]
+		}
+	}
+	return nil
+}
+
+// piece returns the cycle id names, if it names one, and the changes grove
+// claim given id would record in build order, or why it cannot build them.
+func piece(p project, ip instruct.Project, id string) (*doc.Cycle, []*doc.Change, error) {
+	c := ip.Agreed
+	if cy := c.Cycle(id); cy != nil {
+		ordered, err := runnable(p, ip, cy)
+		return cy, ordered, err
+	}
+	ch := c.Change(id)
+	if ch == nil && c.InArchive(id) {
+		return nil, nil, fmt.Errorf("change %s is archived", id)
+	} else if ch == nil {
+		return nil, nil, fmt.Errorf("%s at %s holds no cycle or change %s", p.Target, ip.Commit[:7], id)
+	}
+	for _, cy := range c.Cycles {
+		if !cy.Done && slices.Contains(cy.Meta.Changes, id) {
+			return nil, nil, fmt.Errorf("%s is in cycle %s; claim that with grove claim %s", id, cy.ID, cy.ID)
+		}
+	}
+	if len(ch.WaitsOn) > 0 {
+		return nil, nil, fmt.Errorf("%s waits on %s, which is not archived as finished", id, strings.Join(ch.WaitsOn, " and "))
+	}
+	return nil, []*doc.Change{ch}, nil
+}
+
+// busy says why grove claim given piece id, whose changes are those, records
+// nothing while flight holds what it holds: a change of the piece is in
+// flight, or plans a path a change in flight plans.
+func busy(p project, c *doc.Collection, id string, changes []*doc.Change, flight map[string]*attempt) error {
+	for _, ch := range changes {
+		if a := flight[ch.ID]; a != nil {
+			return fmt.Errorf("%s is in flight in attempt %s, which %s started at %s on branch %s", id, a.ID, a.Host, a.Started.Format(time.RFC3339), a.Branch)
+		}
+	}
+	for _, f := range slices.Sorted(maps.Keys(flight)) {
+		for _, ch := range changes {
+			if other := c.Change(f); other != nil {
+				if shared := doc.Overlap(ch.Planned(p.Root), other.Planned(p.Root)); shared != "" {
+					return fmt.Errorf("%s shares %s with %s, in flight in attempt %s", id, shared, f, flight[f].ID)
+				}
+			}
+		}
 	}
 	return nil
 }

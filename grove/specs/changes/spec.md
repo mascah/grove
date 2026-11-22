@@ -5,7 +5,8 @@
 `grove changes` lists the approved changes the target holds and prints
 them as data, and `grove archive` moves a finished or dropped change to
 the archive. Owners reading what is approved, scripts reading the JSON,
-and the archive skill rely on it.
+and the archive skill rely on it. "In flight", "a loose change" and
+"overlap" are as the [runs](../runs/spec.md) spec defines them.
 
 ## Boundaries
 
@@ -57,10 +58,13 @@ ones included, each with `id`, `path` (its main document under `root`),
 without being built), `waits_on` (what `depends_on` names that is not
 archived as finished), `tasks`, each task with `id`, `title` and `status`
 (its `Status:` line in `implementation.md`), `cycle` (the cycle not done
-that lists it), `ready` (approved and waiting on nothing) and `files`
-(its documents under `root`), leaving out a field that has no value; and
-`cycles`, `branches`, `runs`, `history` and `problems` as the serve spec
-gives them for `/api/project`.
+that lists it), `ready` (approved and waiting on nothing), for a loose
+change and no other `claimable` (whether `grove claim` given its ID
+would record an attempt now) and `verdict` (one sentence saying that it
+would, or why not, as the serve spec's "Readiness of each change in no
+cycle" gives it), and `files` (its documents under `root`), leaving out
+a field that has no value; and `cycles`, `branches`, `runs`, `history`
+and `problems` as the serve spec gives them for `/api/project`.
 
 #### Scenario: One approved, one archived
 
@@ -92,7 +96,24 @@ gives them for `/api/project`.
   fetched, holds a record naming K from host H
 - WHEN the owner runs `grove changes --json`
 - THEN `cycles` holds K with its members A then B and a verdict that it is
-  claimed, B's `cycle` is K, and `runs` holds the record with H
+  in flight, B's `cycle` is K, B has no `claimable` key, and `runs` holds
+  the record with H and `in_flight` true
+
+#### Scenario: A change in no cycle
+
+- GIVEN the target approves C, which no cycle lists and which waits on
+  nothing, and no change is in flight
+- WHEN the owner runs `grove changes --json`
+- THEN C's `ready` is true, its `claimable` is true and its `verdict`
+  says `grove claim <C's ID>` would claim it
+
+#### Scenario: A change in flight
+
+- GIVEN `origin/grove/runs`, fetched, holds a record naming loose change
+  C from host H, and the target does not hold C archived
+- WHEN the owner runs `grove changes --json`
+- THEN C's `ready` is true, its `claimable` is false and its `verdict`
+  says it is in flight, naming the attempt and H
 
 #### Scenario: A branch with work
 
@@ -197,3 +218,4 @@ None.
 - [261023-338jz](../../changes/archive/261023-338jz-plain-docs-exact-specs/) Plain docs, exact specs
 - [261108-7grt3](../../changes/archive/261108-7grt3-the-project-as-json/) The project as JSON
 - [261108-cns75](../../changes/archive/261108-cns75-show-what-is-undecided-and-blocked/) Show what is undecided and blocked
+- [261122-7vht2](../../changes/archive/261122-7vht2-claim-a-change-by-name/) Claim a change by name, and more than one piece of work at once

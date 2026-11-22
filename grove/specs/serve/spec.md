@@ -3,15 +3,17 @@
 ## Purpose
 
 `grove serve` shows where a project stands on one local page, read from
-the checkout: what `grove claim` would do with each cycle, and who has claimed
-one, the work in progress on branches and in the working tree, the runs
+the checkout: what `grove claim` would do with each cycle and each change
+in no cycle, and who has claimed one, the work in progress on branches and in the working tree, the runs
 recorded on the branch `grove/runs`, the
 dependency graph, the target's history of the record and the maintained
 specs, each document readable beside them. "The target" is the local
 target branch `grove.yaml` names. "A blob the target's history never
 held" is a file's content that no commit on the target's history held
 under the document root, which tells new work from work a squash merge
-already landed.
+already landed. "In flight", "a loose change", "a buildable piece" and
+"overlap" are as the [runs](../runs/spec.md) spec defines them, read here
+from the target the checkout holds and the `grove/runs` it has fetched.
 
 ## Boundaries
 
@@ -59,8 +61,9 @@ branch's documents and answer with the one JSON object `grove changes
 --json` prints (changes spec, "Print the project as data"), holding the
 root, the target, its full commit, the time of the read, the maintained
 specs, every change as `grove changes --json` gives it, each with the
-cycle not done that lists it and whether it is approved and waits on
-nothing, every cycle, the branches with work, the recorded attempts, the
+cycle not done that lists it, whether it is approved and waits on
+nothing and, for a loose change, what `grove claim` given its ID would
+do, every cycle, the branches with work, the recorded attempts, the
 history and the problems `grove check` would report on the target's
 documents, as the requirements below say.
 
@@ -69,7 +72,7 @@ documents, as the requirements below say.
 - GIVEN the target approves change C, listed by no cycle, with
   `depends_on: [A]` and A archived as finished
 - WHEN the page asks for `/api/project`
-- THEN C appears with no cycle and as ready
+- THEN C appears with no cycle, as ready, and with a verdict
 
 #### Scenario: The same value as the command
 
@@ -82,25 +85,27 @@ documents, as the requirements below say.
 
 When the page asks for `/api/project`, the system shall give every cycle
 on the target with its members in build order, the members archived, and
-the verdict `grove claim` would give it: done when every member is
-archived; otherwise the cycle it waits on that is not done; otherwise the
-member that waits on a change neither in the cycle nor archived as
-finished; otherwise the members that changed on the target since its
-plan, making it stale; otherwise, when the latest record on `grove/runs`
-names it, that it is claimed, with the host, the start time and the
-attempt's branch; otherwise that `grove claim` would claim it, saying
-when it is not marked `unattended` and when the project is paused after
-another cycle's attempt.
+the verdict `grove claim` given its ID would give it: done when every
+member is archived; otherwise the cycle it waits on that is not done;
+otherwise the member that waits on a change neither in the cycle nor
+archived as finished; otherwise the members that changed on the target
+since its plan, making it stale; otherwise, when it is in flight, that it
+is, with the attempt, the host, the start time and the attempt's branch;
+otherwise the path it shares with a change in flight, naming that change
+and its attempt; otherwise that `grove claim <cycle-id>` would claim it,
+saying when it is not marked `unattended` and when a `grove claim` given
+no piece is paused after another piece's attempt; with `claimable`, true
+only for the last, and `runs`, true only when it is claimable and no
+change is in flight.
 
 #### Scenario: A marked cycle that is fresh
 
 - GIVEN the target holds cycle K, marked `unattended`, listing approved
   changes A and B, B with `depends_on: [A]`, neither archived, nothing of
-  theirs changed since the plan, and no record on `grove/runs` names a
-  cycle not done
+  theirs changed since the plan, and no change is in flight
 - WHEN the page asks for `/api/project`
-- THEN K's members are A then B and its verdict is that `grove claim`
-  would claim it
+- THEN K's members are A then B, its verdict is that `grove claim` would
+  claim it, and its `claimable` and `runs` are true
 
 #### Scenario: A member waits outside the cycle
 
@@ -116,13 +121,77 @@ another cycle's attempt.
 - WHEN the page asks for `/api/project`
 - THEN M's verdict says it is stale and names D
 
-#### Scenario: A claimed cycle
+#### Scenario: A cycle in flight
 
-- GIVEN the latest record on `grove/runs` names cycle K, from host H, and
-  K's members are not archived on the target
+- GIVEN a record on `grove/runs` names cycle K, from host H, and K's
+  members are not archived on the target
 - WHEN the page asks for `/api/project`
-- THEN K's verdict says it is claimed, naming H, when, and the attempt's
-  branch
+- THEN K's verdict says it is in flight, naming H, when, and the
+  attempt's branch, and its `claimable` and `runs` are false
+
+#### Scenario: Another piece in flight that shares nothing
+
+- GIVEN loose change A is in flight, and cycle K, marked `unattended`
+  and buildable, overlaps A nowhere
+- WHEN the page asks for `/api/project`
+- THEN K's verdict is that `grove claim <K's ID>` would claim it, saying
+  a `grove claim` given no piece is paused after A's attempt; its
+  `claimable` is true and its `runs` is false
+
+#### Scenario: Another piece in flight that shares a file
+
+- GIVEN loose change A is in flight naming `ledger/cli.py`, and buildable
+  cycle K's member C names `ledger/cli.py`
+- WHEN the page asks for `/api/project`
+- THEN K's verdict says it shares `ledger/cli.py` with A, naming A's
+  attempt, and its `claimable` and `runs` are false
+
+### Requirement: Readiness of each change in no cycle
+
+When the page asks for `/api/project`, the system shall give every loose
+change the verdict `grove claim` given its ID would give it: the change
+it waits on that is not archived as finished; otherwise, when it is in
+flight, that it is, with the attempt, the host, the start time and the
+attempt's branch; otherwise the path it shares with a change in flight,
+naming that change and its attempt; otherwise that `grove claim <its ID>`
+would claim it; and `claimable`, true only for the last.
+
+#### Scenario: Nothing in the way
+
+- GIVEN the target approves C, in no cycle, waiting on nothing, and no
+  change is in flight
+- WHEN the page asks for `/api/project`
+- THEN C's verdict is that `grove claim <C's ID>` would claim it, and
+  its `claimable` is true
+
+#### Scenario: A change that waits
+
+- GIVEN loose change B depends on A, which is not archived
+- WHEN the page asks for `/api/project`
+- THEN B's verdict names A as what it waits on, and its `claimable` is
+  false
+
+#### Scenario: A change in flight
+
+- GIVEN a record on `grove/runs` names loose change C, from host H, and
+  the target does not hold C archived
+- WHEN the page asks for `/api/project`
+- THEN C's verdict says it is in flight, naming H, when, and the
+  attempt's branch, and its `claimable` is false
+
+#### Scenario: A change that overlaps one in flight
+
+- GIVEN loose change A is in flight, and loose change B, which waits on
+  nothing, names `ledger/cli.py`, as A does
+- WHEN the page asks for `/api/project`
+- THEN B's verdict says it shares `ledger/cli.py` with A, naming A's
+  attempt, and its `claimable` is false
+
+#### Scenario: A member of a cycle
+
+- GIVEN cycle K, not done, lists approved change A
+- WHEN the page asks for `/api/project`
+- THEN A has no verdict and no `claimable` of its own
 
 ### Requirement: Work in progress by branch
 
@@ -186,9 +255,11 @@ one row that says origin holds it, and sorting the rows newest first.
 
 When the page asks for `/api/project`, the system shall list each attempt
 record on `origin/grove/runs`, or on the local `grove/runs` when the
-checkout has no `origin`, newest first, each with its attempt, cycle,
-start time, host and branch and, where the checkout holds the attempt's
-branch locally or on `origin`, that branch's latest commit time.
+checkout has no `origin`, newest first, each with its attempt, its cycle
+where it has one, its changes, start time, host and branch, `in_flight`,
+whether the record is in flight, and, where the checkout holds the
+attempt's branch locally or on `origin`, that branch's latest commit
+time.
 
 #### Scenario: An attempt from another host
 
@@ -198,6 +269,20 @@ branch locally or on `origin`, that branch's latest commit time.
 - WHEN the page asks for `/api/project`
 - THEN the runs hold that record, with its cycle, branch, start time and
   H, and the branch's latest commit time
+
+#### Scenario: Two attempts, one merged
+
+- GIVEN records name loose changes A and then B, the target holds A
+  archived as finished, and B is not archived
+- WHEN the page asks for `/api/project`
+- THEN the runs hold B's record with `in_flight` true and no `cycle`, and
+  A's with `in_flight` false
+
+#### Scenario: An attempt retried
+
+- GIVEN two records name loose change A, which is not archived
+- WHEN the page asks for `/api/project`
+- THEN the newer record's `in_flight` is true and the older's is false
 
 #### Scenario: No record anywhere
 
@@ -291,10 +376,11 @@ for readiness, in progress, graph, history and specs, carrying counts
 where they help, a pane that shows a document when a change, cycle, spec
 or file is clicked, and a refresh of the value every 10 seconds that a
 checkbox stops; readiness listing each cycle not done with its verdict
-and its members' status and where each is being built; in progress
-listing the branches with work, each change's task progress and new
-files, and the recorded attempts with their hosts; the graph drawing each
-cycle as a band with arrows for `depends_on` between changes and between
+and its members' status and where each is being built, and each loose
+change with its verdict; in progress listing the branches with work,
+each change's task progress and new files, and the recorded attempts
+with their hosts, marking those in flight; the graph drawing each cycle
+as a band with arrows for `depends_on` between changes and between
 cycles; history drawing a timeline of the marks and listing the commits;
 and the pane keeping the loaded document and both columns' scroll
 positions across a refresh.
@@ -306,6 +392,21 @@ positions across a refresh.
 - WHEN the owner opens the URL
 - THEN the readiness tab shows K as a cycle `grove claim` would claim and
   L with the waiting member named, and the tab's count is 2
+
+#### Scenario: A change in no cycle
+
+- GIVEN that fixture, and approved change C in no cycle, waiting on
+  nothing
+- WHEN the owner opens the URL
+- THEN the readiness tab also shows C as a change `grove claim <C's ID>`
+  would claim, and the tab's count is 3
+
+#### Scenario: Attempts in flight
+
+- GIVEN records for loose changes A, archived as finished on the target,
+  and B, not archived
+- WHEN the owner opens the in progress tab
+- THEN B's attempt is marked in flight and A's is not
 
 #### Scenario: A refresh while reading
 
@@ -365,3 +466,4 @@ None.
 - [261108-cns75](../../changes/archive/261108-cns75-show-what-is-undecided-and-blocked/) Show what is undecided and blocked
 - [261114-yx2b7](../../changes/archive/261114-yx2b7-remove-needs-human/) Remove needs_human
 - [261118-emse7](../../changes/archive/261118-emse7-a-cycle-is-a-markdown-file/) A cycle is a Markdown file with plan's notes
+- [261122-7vht2](../../changes/archive/261122-7vht2-claim-a-change-by-name/) Claim a change by name, and more than one piece of work at once

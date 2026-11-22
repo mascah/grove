@@ -3,4 +3,4 @@ created: 2026-11-22T03:01:00Z
 description: "`grove claim <id>` takes a cycle or an approved change in no cycle, and is refused only when what it names is in flight or shares a planned file with something in flight; a claim given nothing keeps the pause."
 schema: default
 depends_on: [261122-6ndwb]
-base: 07d319f73104341844dfd0572a023389562d2075
+base: baea991679e1f365cc80258407c14229b66579a6
