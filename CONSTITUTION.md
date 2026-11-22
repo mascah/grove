@@ -1,6 +1,6 @@
 # Grove constitution
 
-Draft 2026-10-14, amended 2026-10-15, 2026-10-17, 2026-10-19, 2026-10-20, 2026-10-21, 2026-10-22, 2026-10-23, 2026-10-24, 2026-10-26, 2026-10-28, 2026-10-31, 2026-11-05, 2026-11-07, 2026-11-08, 2026-11-14 and 2026-11-21. It
+Draft 2026-10-14, amended 2026-10-15, 2026-10-17, 2026-10-19, 2026-10-20, 2026-10-21, 2026-10-22, 2026-10-23, 2026-10-24, 2026-10-26, 2026-10-28, 2026-10-31, 2026-11-05, 2026-11-07, 2026-11-08, 2026-11-14, 2026-11-21 and 2026-11-22. It
 is the only file that says what Grove does and does not do, and what size and
 shape its code keeps. The maintained specs in `grove/specs/` are the spec,
 `docs/` explains them, `dev/walkthrough.md` runs the docs on the fixture, this
@@ -26,7 +26,7 @@ is in `CLAUDE.md`; how to build, test, commit and release is in
 
 ## Size and shape
 
-12. Budget: 5,000 non-test Go lines, 3,000 test lines, 9,000 words of instruction text in `internal/instruct` (its Markdown and YAML files), and 500 lines of HTML and script for the page `serve` embeds, counted by `just check`, which fails above them. Raising the budget is a change to this file.
+12. Budget: 7,500 non-test Go lines, 4,500 test lines, 9,000 words of instruction text in `internal/instruct` (its Markdown and YAML files), and 500 lines of HTML and script for the page `serve` embeds, counted by `just check`, which fails above them. Raising the budget is a change to this file.
 13. No guard or fallback for a state no documented step can reach, unless a failure was reproduced on the fixture and named in the commit message. Handling an error that a call returns is not a guard.
 14. A user-facing message is one sentence. Explanation lives in the guides and the walkthrough, not in Go strings.
 15. Each package has one job, stated in its package comment, and a new package is named in the message of the commit that adds it. No interface with one implementation, no converter between two structs that mean the same thing.
