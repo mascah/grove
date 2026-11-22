@@ -83,43 +83,62 @@ func diagnose(p project, root fs.FS, c *doc.Collection) ([]string, error) {
 	return out, nil
 }
 
-// stale reports each requirement a change in c modifies or removes that the
-// maintained spec in root gives a text that is neither what it was at the
-// change's base, nor what the change itself or a change it depends on gives
-// it. Reading root rather than the target, it sees a dependency archived on
-// this branch; allowing the change's own text, it stays quiet after archive
-// has reconciled the spec.
+// stale reports, for each change in c, each requirement rewritten returns.
 func stale(p project, root fs.FS, c *doc.Collection) error {
 	for _, ch := range c.Changes {
-		if ch.Meta.Base == "" {
-			continue
-		}
-		base, err := gitx.TreeFS(p.Top, ch.Meta.Base, p.Root)
+		found, err := rewritten(p, root, c, ch)
 		if err != nil {
 			ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: ch.Dir + "/.grove.yaml", Message: missing(p, "base", ch.Meta.Base)})
-			continue
 		}
-		for _, file := range slices.Sorted(maps.Keys(ch.Touches)) {
-			spec := "specs/" + ch.Touches[file] + "/spec.md"
-			b, _ := fs.ReadFile(root, file)
-			for _, r := range doc.Requirements(string(b)) {
-				was, ok := requirement(base, spec, r.Name)
-				if (r.Section != "MODIFIED" && r.Section != "REMOVED") || !ok {
-					continue
-				}
-				now, present := requirement(root, spec, r.Name)
-				fine := present && now == was
-				for _, g := range gives(root, behind(c, ch), ch.Touches[file], r.Name) {
-					fine = fine || g.Section == "REMOVED" && !present || g.Section != "REMOVED" && present && g.Text == now
-				}
-				if !fine {
-					ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: file, Line: r.Line,
-						Message: fmt.Sprintf("requirement %q was %s since base %s; revise the change with propose", r.Name, map[bool]string{true: "rewritten", false: "removed"}[present], ch.Meta.Base[:min(7, len(ch.Meta.Base))])})
-				}
-			}
+		for _, r := range found {
+			ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: r.file, Line: r.Line,
+				Message: fmt.Sprintf("requirement %q was %s since base %s; revise the change with propose", r.Name, r.how, ch.Meta.Base[:min(7, len(ch.Meta.Base))])})
 		}
 	}
 	return nil
+}
+
+// staleRequirement is a requirement of change spec file, rewritten or
+// removed, as how says.
+type staleRequirement struct {
+	doc.Requirement
+	file, how string
+}
+
+// rewritten returns each requirement ch modifies or removes that the
+// maintained spec in root gives a text that is neither what it was at ch's
+// base, nor what ch itself or a change it depends on, in c, gives it.
+// Reading root rather than the target, it sees a dependency archived on
+// this branch; allowing the change's own text, it stays quiet after archive
+// has reconciled the spec.
+func rewritten(p project, root fs.FS, c *doc.Collection, ch *doc.Change) ([]staleRequirement, error) {
+	if ch.Meta.Base == "" {
+		return nil, nil
+	}
+	base, err := gitx.TreeFS(p.Top, ch.Meta.Base, p.Root)
+	if err != nil {
+		return nil, err
+	}
+	var out []staleRequirement
+	for _, file := range slices.Sorted(maps.Keys(ch.Touches)) {
+		spec := "specs/" + ch.Touches[file] + "/spec.md"
+		b, _ := fs.ReadFile(root, file)
+		for _, r := range doc.Requirements(string(b)) {
+			was, ok := requirement(base, spec, r.Name)
+			if (r.Section != "MODIFIED" && r.Section != "REMOVED") || !ok {
+				continue
+			}
+			now, present := requirement(root, spec, r.Name)
+			fine := present && now == was
+			for _, g := range gives(root, behind(c, ch), ch.Touches[file], r.Name) {
+				fine = fine || g.Section == "REMOVED" && !present || g.Section != "REMOVED" && present && g.Text == now
+			}
+			if !fine {
+				out = append(out, staleRequirement{r, file, map[bool]string{true: "rewritten", false: "removed"}[present]})
+			}
+		}
+	}
+	return out, nil
 }
 
 // shapes reports each requirement of a maintained spec or an open change

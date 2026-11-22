@@ -192,7 +192,11 @@ It starts where the main line's step 6 ends: one archived change and the
    > grove/changes/\<show-saved>/specs/record-editing/spec.md:\<line>: requirement "\<name>" was rewritten since base \<sha7>; revise the change with propose
 
    The session archives recategorize anyway, since the report is not about
-   it. Commit and merge; `grove check` on main reports the same line. Set
+   it. Commit and merge; `grove check` on main reports the same line. A
+   fresh session's `/grove-implement <show-saved>` prints instructions
+   naming record-editing's "\<name>" as rewritten since base \<sha7>, and
+   saying to revise the change before building any task and write a
+   `Check:` line; stop the session there. Set
    show-saved's `depends_on` to `[<recategorize-id>]` in the working tree:
    `grove check` is clean, since show-saved then builds on the change that
    rewrote the requirement. Discard that edit. The project index on main
