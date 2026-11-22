@@ -518,7 +518,7 @@ func TestImplementInstructions(t *testing.T) {
 		t.Errorf("instructions apply: status %d, %q", code, stderr.String())
 	}
 
-	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario, then what was done", "Commit only when the owner or the project's\nrules ask.",
+	shared := []string{"## What Grove requires of implement\n\n", "Before you finish, run the project's tests, re-read each done task's", "each unverified scenario, then every `Found:` line,\n  then what was done", "Commit only when the owner or the project's\nrules ask.",
 		"The project's own rules for this skill:\n\n- Commit after each task, naming its task ID.\n"}
 	// The delivery rules print for a session the owner starts, and give way
 	// to Grove's paragraph for a caller that delivers the work itself.
@@ -528,7 +528,8 @@ func TestImplementInstructions(t *testing.T) {
 	// moved file, revise the change on the branch, block only what is costly.
 	want := []string{"Ask no one and wait for no one: end with the branch ready for\n  review", "changed to be built as the change says, or makes", "`` Also changed: `<path>` — <why> `` under that task",
 		"run the project's app or\n  command and look", "build your best choice, mark the task\n  done once its evidence holds, and write under it `Check:`", "build on the file as it is now, never as it\n  was",
-		"revise it on this\n  branch by running Grove's `instructions propose <change-id>`", "Only where a wrong choice would cost data", "`Answer: \"<their words>\"`", "Finish: report for the reviewer first every `Check:` line"}
+		"revise it on this\n  branch by running Grove's `instructions propose <change-id>`", "Only where a wrong choice would cost data", "`Answer: \"<their words>\"`", "Finish: report for the reviewer first every `Check:` line",
+		"change nothing for it and write under the task you were\n  building `Found: <what is wrong or missing, where, and how it was seen>`", "still an `Also changed:` line, and\n  a wrong approach still a revision", "    Found: `ledger edit 999`"}
 	gone := []string{"to check", "checkpoint", "with the owner, in their own working tree", "--unattended", "stop it at once", "Do not stop between tasks", "only with the owner's agreement", "ask the owner and wait"}
 	has := func(what, out string, want, not []string) {
 		t.Helper()
@@ -642,6 +643,21 @@ func TestArchive(t *testing.T) {
 	commitAll(t, dir, "Implement and archive")
 	if out := grove(t, "review"); !strings.Contains(out, "approves no new change.") || !strings.Contains(out, "  adds     archived change  grove/changes/archive/") || !strings.Contains(out, "  adds     maintained spec  grove/specs/record-editing/spec.md") {
 		t.Errorf("review of the implementation branch:\n%.2000s", out)
+	}
+	// Grove reads nothing from a Found: line: review's readout and the
+	// project value differ only by the time read, the branch's tip and the
+	// diff's text.
+	tip := regexp.MustCompile(`"(read|tip|date|subject)": .*`)
+	readout := func() (string, string) {
+		r, _, _ := strings.Cut(grove(t, "review"), "\ndiff --git")
+		return r, tip.ReplaceAllString(grove(t, "changes", "--json"), "")
+	}
+	review, changes := readout()
+	impl := filepath.Join(dir, "grove/changes/archive", cid+"-allow-editing-older-records", "implementation.md")
+	os.WriteFile(impl, []byte(read(t, impl)+"Found: `ledger edit 999` prints a traceback; seen running it.\n"), 0o644)
+	commitAll(t, dir, "Found")
+	if r, c := readout(); r != review || c != changes {
+		t.Errorf("a Found: line changes review or changes --json:\n%s\n%s", r, c)
 	}
 	git(t, dir, "switch", "-q", "main")
 	git(t, dir, "merge", "-q", "--no-ff", "-m", "Implement", "older-edits-impl")

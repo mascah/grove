@@ -9,6 +9,7 @@ a task's status lives here, under a heading with its ID. Grove's `archive`
 reads only the `Status:` lines, so keep them exactly as shown. Under a
 task, `` Also changed: `<path>` — <why> `` records a file the implementing
 agent changed beyond its `Files:` and `Delegated:` lines, and why, one per
-file.
+file, and `Found: <what is wrong or missing, where, and how it was seen>`
+records work outside the change that the agent saw and did not do.
 Before finishing, list under `## Scenarios` each scenario of the change
 specs with the check that shows it and its result, or `unverified` and why.
