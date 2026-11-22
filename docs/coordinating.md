@@ -309,9 +309,30 @@ reads this same object, so the two agree but for the time of the read.
      "title": "Editing an unknown ID prints an error", "created": "2026-10-19T13:40:02Z",
      "schema": "default", "base": "4f1c2a9e0b7d6c5e4f3a2b1c0d9e8f7a6b5c4d3e",
      "state": "archived", "tasks": [{"id": "T-01", "title": "Report an unknown ID", "status": "done"}],
-     "ready": false, "files": ["changes/archive/261019-p4x8d-editing-an-unknown-id/proposal.md"]}
+     "ready": false, "files": ["changes/archive/261019-p4x8d-editing-an-unknown-id/proposal.md"]},
+    {"id": "261019-t6n3b", "path": "changes/261019-t6n3b-monthly-budgets/proposal.md",
+     "title": "Monthly budgets in report", "created": "2026-10-19T15:20:44Z",
+     "schema": "default", "base": "4f1c2a9e0b7d6c5e4f3a2b1c0d9e8f7a6b5c4d3e", "state": "approved",
+     "tasks": [{"id": "T-01", "title": "Budgets in the report"}],
+     "ready": true, "claimable": false,
+     "verdict": "261019-t6n3b shares ledger/cli.py with 261019-r2w7k, in flight in attempt 261021-6jbj1",
+     "files": ["changes/261019-t6n3b-monthly-budgets/.grove.yaml", "changes/261019-t6n3b-monthly-budgets/proposal.md",
+               "changes/261019-t6n3b-monthly-budgets/tasks.md"]}
   ],
-  "cycles": [...], "branches": [...], "runs": [...], "history": [...], "problems": [...]
+  "cycles": [
+    {"id": "261020-m4k8t", "title": "Delete records", "created": "2026-10-20T08:00:00Z",
+     "path": "cycles/261020-m4k8t-delete-records.md", "planned": "8f2d6c1a4b9e0f7d3c5a2b1e6f4d8c0a9b7e5f3d",
+     "changes": ["261019-r2w7k"], "archived": ["261019-p4x8d"], "unattended": true, "done": false,
+     "claimable": false, "runs": false,
+     "verdict": "261020-m4k8t is in flight in attempt 261021-6jbj1, which runner.local started at 2026-10-21T09:12:40-07:00 on branch grove/261021-6jbj1"}
+  ],
+  "runs": [
+    {"id": "261021-6jbj1", "started": "2026-10-21T09:12:40-07:00", "cycle": "261020-m4k8t",
+     "changes": ["261019-r2w7k"], "commit": "8f2d6c1a4b9e0f7d3c5a2b1e6f4d8c0a9b7e5f3d",
+     "host": "runner.local", "checkout": "/Users/you/grove-runs/ledger", "branch": "grove/261021-6jbj1",
+     "in_flight": true}
+  ],
+  "branches": [...], "history": [...], "problems": [...]
 }
 ```
 
@@ -328,16 +349,28 @@ reads this same object, so the two agree but for the time of the read.
   usually reaches your main branch with the archive merge. So an approved
   change's tasks mostly have none.
 - `cycle` is the cycle not done that lists the change, and `ready` says it
-  is approved and waits on nothing; `files` are its documents, under
-  `root`.
+  is approved and waits on nothing, as before; `files` are its documents,
+  under `root`.
+- An approved change in no cycle not done also has `claimable`, whether
+  `grove claim <its ID>` would record an attempt now, and `verdict`, one
+  sentence saying it would or why not: what it waits on, that it is in
+  flight, or the path it shares with a change in flight (see
+  [Running unattended](running.md), "Claim a change you name"). A member
+  of a cycle and an archived change have neither.
 - A field with no value is left out.
 - `cycles`: each cycle, its members in build order, and what `grove
-  claim` would do with it, or why not.
+  claim` given its ID would do with it, or why not, as `verdict`.
+  `claimable` says that claim would record an attempt now. `runs` means
+  what it did: it is true only when the cycle is claimable and no change
+  is in flight, so that a script picking cycles by `runs` still builds
+  one at a time.
 - `branches`: each branch, and the working tree, holding work the main
   branch lacks, with each change's tasks and their status there, and its
   `open_questions` as that branch holds it.
 - `runs`: the attempts recorded on `grove/runs`, newest first, with
-  cycle, host, start time and branch.
+  cycle, where the attempt has one, changes, host, start time and branch,
+  and `in_flight`, true for the newest record naming a change your main
+  branch does not hold archived.
 - `history`: the main branch's commits that did something to the record,
   newest first, with what each did.
 - `problems`: what `grove check` would report on the main branch's

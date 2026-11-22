@@ -513,10 +513,16 @@ hosts. The sessions are Claude Code's.
    was saved` (show-saved), plan it as a cycle of one, merge and push,
    without marking it. Approve `/grove-propose Export the ledger as CSV`
    (export), plan it as a cycle of one, merge and push. In
-   `~/tmp/ledger-run2`, `grove claim <export-cycle-id>` says the project
-   is paused; `grove claim --retry <export-cycle-id>` prints its ID, and
-   `origin`'s `grove/runs` keeps the earlier records under the new one.
-   `grove claim --retry 261099-zzzzz` says `main` holds no such cycle. In
+   `~/tmp/ledger-run2`, `grove claim <export-cycle-id>` is not paused: it
+   prints the export cycle's ID if export's planned files share none with
+   the budgets change in flight, and otherwise says
+   > grove: \<export-cycle-id> shares \<path> with \<budgets-id>, in flight in attempt \<attempt>
+
+   naming a path both plan, such as `grove/specs/record-editing/spec.md`.
+   In that case `grove claim --retry <export-cycle-id>` prints its ID.
+   Either way `origin`'s `grove/runs` keeps the earlier records under the
+   new one. `grove claim --retry 261099-zzzzz` says `main` holds no cycle
+   or change `261099-zzzzz`. In
    `~/tmp/ledger`, approve `/grove-propose Import records from a CSV`
    (import), plan it as a cycle of one that follows the export cycle,
    merge and push. In `~/tmp/ledger-run2`, `grove claim --retry
@@ -563,6 +569,50 @@ hosts. The sessions are Claude Code's.
    report command"` writes no change folder and says the request names
    no outcome.
 
+9. **Claim a change you name** ("Claim a change you name", "Two checkouts
+   at once", "The pause", "Retry"). `just fixture ~/tmp/ledger-names`,
+   `grove init`, commit. Approve, each merged, changes in no cycle whose
+   one task's `Files:` line names: A `ledger/cli.py`; B `tests/`; C
+   `ledger/cli.py`; E `tests/test_cli.py`; F `README.md`; G
+   `pyproject.toml`; H `CHANGELOG.md`; W `ledger/rules.py`, with
+   `depends_on: [A]`; and M `ledger/rules.py`. Only F and G have a change
+   spec, both for record-editing. Give A's proposal an open question and
+   then edit `ledger/cli.py` on `main`: `grove check` reports A for it.
+   Plan M as cycle K, not marked. Add a bare clone as `origin`, push
+   `main`, and clone it to `~/tmp/ledger-names1` and
+   `~/tmp/ledger-names2`.
+
+   In `~/tmp/ledger-names1`, `grove claim <A>` prints A's ID, though A is
+   stale and has an open question, and `git log -1 --format=%B
+   origin/grove/runs` lists A as the only change and has no `cycle`. In
+   `~/tmp/ledger-names2`, `grove claim <A>` says
+   > grove: \<A> is in flight in attempt \<attempt>, which \<host> started at \<time> on branch grove/\<attempt>
+
+   In `~/tmp/ledger-names1`, `grove claim <B>` prints B's ID. Then
+   `(cd ~/tmp/ledger-names1 && grove claim <H>) & (cd ~/tmp/ledger-names2 && grove claim <F>); wait`:
+   both print their IDs, each checkout is on its own attempt's branch,
+   and `origin`'s `grove/runs` lists four records. In
+   `~/tmp/ledger-names2`, each of these records nothing and creates no
+   branch:
+   - `grove claim <E>`:
+     > grove: \<E> shares tests/test_cli.py with \<B>, in flight in attempt \<attempt>
+   - `grove claim <C>` names `ledger/cli.py` and A;
+   - `grove claim <G>` names `grove/specs/record-editing/spec.md` and F;
+   - `grove claim --retry <W>`:
+     > grove: \<W> waits on \<A>, which is not archived as finished
+   - `grove claim <M>`:
+     > grove: \<M> is in cycle \<K>; claim that with grove claim \<K>
+
+   `grove changes --json` gives K `claimable` true and `runs` false, E
+   `claimable` false with a verdict naming `tests/test_cli.py`, M no
+   verdict, and each of the four records `in_flight` true and no `cycle`.
+   `grove claim`, given nothing, says the project is paused, naming the
+   newest record's attempt. In `~/tmp/ledger-names`, drop that record's
+   change, F or H, with `Status: dropped` and `grove archive`, commit and
+   push: `grove claim` still says the project is paused, now naming the
+   attempt before it. `grove claim <C> --retry` prints C's ID, and in
+   `grove changes --json` A's record is still `in_flight`.
+
 ## Watching the project
 
 Each step names the section of [Watching the project](../docs/watching.md)
@@ -596,10 +646,11 @@ the browser's console shows no error.
    `main`, its "Open questions" holding the template's comment and
    "None.". Commit a change to `ledger/records.py` alone, and push `main`.
 
-   Readiness counts 3 and shows K as one `grove claim` would claim, A then
+   Readiness counts 4 and shows K as one `grove claim` would claim, A then
    B, A's status `ready`, `open questions` and `T-02, T-04 blocked`, B's
    `waits on` A and `open questions`; L naming C as waiting on D; M
-   stale, naming D. E is under "Approved, in no cycle", ready; N is under
+   stale, naming D. E has a card under "Approved, in no cycle", ready,
+   saying `grove claim <E>` would claim it; N is under
    "Done". The problems name M's stale plan. History lists, newest first, the commits that archived
    F, planned N, built F (revised F, spec record-editing), revised F and
    approved F, and none for the `ledger/records.py` commit.
@@ -624,8 +675,9 @@ the browser's console shows no error.
    `origin/teammate` "only on origin" with T-01 to check. No row names
    `apply/f`, `grove/runs` or the attempt's branch. The attempts list the
    one from `ledger-watch2` with its cycle, start time, host and branch,
-   and the time of the commit pushed on that branch. Readiness says K is
-   claimed, naming the host, the start time and the branch; B's row there
+   and the time of the commit pushed on that branch, marked in flight.
+   Readiness says K is in flight, naming the attempt, the host, the start
+   time and the branch; B's row there
    still shows no blocked task.
    `grove changes` ("A change that waits") ends A's line
    `in cycle <K>, unattended  open questions  T-02, T-04 blocked`, B's
@@ -633,8 +685,9 @@ the browser's console shows no error.
    blocked task, and D's `in cycle <M>, unattended`.
    `grove changes --json` and `curl -s http://127.0.0.1:7070/api/project`
    print the same object but for `read` and the working tree's `date`,
-   both the time of the read: K's verdict says it is claimed, B's `cycle`
-   is K, `runs` holds the attempt from `ledger-watch2`'s host, and
+   both the time of the read: K's verdict says it is in flight and its
+   `claimable` is false, B's `cycle` is K, `runs` holds the attempt from
+   `ledger-watch2`'s host with `in_flight` true, and
    `branches` has `build-b` with T-01 done. A's `open_questions` is
    "Should IDs be six digits? Blocks T-02.", D has none ("The project as
    data"), and `draft-notes`'s G has "Should notes be dated?".

@@ -1,24 +1,26 @@
 # Running unattended
 
-`grove claim` hands a cycle to an agent that nobody watches. It picks
-the cycle you name, or else one you have marked `unattended`. It records
-the attempt on the branch `grove/runs`, creates the attempt's branch in
-the checkout and prints the cycle's ID. Then you start the agent, in
-any harness, bounded as you like:
+`grove claim` hands a piece of work to an agent that nobody watches: a
+cycle, or an approved change in no cycle. It picks the piece you name,
+or else a cycle you have marked `unattended`. It records the attempt on
+the branch `grove/runs`, creates the attempt's branch in the checkout and
+prints the piece's ID. Then you start the agent, in any harness, bounded
+as you like:
 
 ```sh
 K=$(grove claim) && timeout 2h claude -p "/grove-implement $K"
 ```
 
 Grove starts no process but Git. It does not start, bound, stop or log
-the agent; your shell, `timeout` and the harness do. Then the project is
-paused, from every checkout of it, until the cycle's changes are archived
-on the target, as finished or dropped.
+the agent; your shell, `timeout` and the harness do. The attempt's
+changes are then in flight until they are archived on the target, as
+finished or dropped. While any change is in flight, a `grove claim` given
+nothing claims nothing, from every checkout (see "The pause"); a claim
+that names a piece is refused only for what is in flight or overlaps it
+(see "Claim a change you name").
 
-`grove claim` claims nothing but cycles. An approved change in no cycle
-is yours to build with `/grove-implement`. To
-send one change, plan a cycle of one (see [Planning cycles](planning.md)).
-Grove does not schedule itself: run the line by hand, or from a timer as
+Grove does not choose what is claimed next or how many attempts run at
+once; whoever runs `grove claim` does. Grove does not schedule itself: run the line by hand, or from a timer as
 in [Run on a timer](guides/run-on-a-timer.md). The
 [runs spec](https://github.com/mascah/grove/blob/main/grove/specs/runs/spec.md)
 has the exact rules.
@@ -167,7 +169,8 @@ git log -1 --format=%B origin/grove/runs
 ```
 
 It names the cycle and its changes in build order, the target commit, the
-host and checkout that claimed it, and the attempt's branch. It says an
+host and checkout that claimed it, and the attempt's branch. A record for
+a change in no cycle lists that change alone and has no `cycle`. It says an
 attempt started, not how the session ended nor whether any task is done:
 `implementation.md` and the pull request say that. `grove/runs` never
 shares a commit with your work, the attempt's branch holds only the
@@ -177,11 +180,18 @@ records with the latest commit on each attempt's branch.
 
 ## Two checkouts at once
 
+Each claim needs a checkout of its own: the attempt's branch is created
+in the checkout that claimed it, and the agent works there. To run two
+attempts at once, clone the project twice.
+
 The push to `origin` succeeds only while `origin`'s `grove/runs` is where
 this checkout just read it. If two checkouts, on one host or two, claim
 at the same moment, `origin` takes one record. The other checkout's push
-is refused, so it reads `grove/runs` again, finds the project paused after
-the first one's attempt, says so and creates no branch.
+is refused, so it reads `grove/runs` again and decides again as a fresh
+`grove claim` would. Given nothing, it finds the project paused after the
+first one's attempt. Given a piece, it records its own attempt when the
+two share nothing, and otherwise says the piece is in flight or shares a
+path with the first, and creates no branch.
 
 A push refused for another reason, such as an account that may not push
 to `origin`, records nothing and creates no branch. Grove says so,
@@ -195,11 +205,11 @@ To build a planned cycle once, without marking it, name it:
 K=$(grove claim 261020-m4k8t) && timeout 2h claude -p "/grove-implement $K"
 ```
 
-Grove claims that cycle whether or not it is marked `unattended`. In
-every other way it is an ordinary claim. It refuses while the project is
-paused, unless you add `--retry`, it records the attempt, and the project
-is paused after it. A `grove claim` given no cycle, such as a timer's,
-still claims only marked ones.
+Grove claims that cycle whether or not it is marked `unattended`. The
+pause does not stop it: it is refused only when the cycle is in flight or
+overlaps a change in flight, as "Claim a change you name" says. A
+`grove claim` given nothing, such as a timer's, still claims only marked
+cycles, and is paused while this attempt is in flight.
 
 If the cycle cannot be built, Grove records nothing, creates no branch,
 prints nothing on standard output and exits non-zero. It says why, which
@@ -215,6 +225,59 @@ is one of these:
 Such as:
 
 > grove: cycle 261021-q2w9e waits on cycle 261020-m4k8t, which is not done
+
+## Claim a change you name
+
+An approved change that no cycle lists is claimed by its ID:
+
+```sh
+C=$(grove claim 261019-t6n3b) && timeout 2h claude -p "/grove-implement $C"
+```
+
+Grove records an attempt naming that change alone, creates its branch and
+prints the change's ID. A change stale against its `base`, or with an open
+question, is claimed all the same; the agent reconciles or answers it as
+it builds. If the change cannot be built, Grove records nothing, creates
+no branch, prints nothing on standard output, exits non-zero and says
+why, which is one of these:
+
+- there is no such cycle or change on the target:
+  > grove: main at 243a63d holds no cycle or change 261019-zzzzz
+- it is archived:
+  > grove: change 261019-p4x8d is archived
+- a cycle not done lists it, which you claim instead:
+  > grove: 261019-r2w7k is in cycle 261020-m4k8t; claim that with grove claim 261020-m4k8t
+- it waits on a change not archived as finished on the target; finished
+  on an attempt's branch does not count:
+  > grove: 261019-t6n3b waits on 261019-p4x8d, which is not archived as finished
+
+A claim you name, of a cycle or a change, is not stopped by the pause. It
+is refused only for what is in flight. A change is in flight while a
+record on `grove/runs` names it and the target does not hold it archived;
+a cycle is in flight while one of its changes is. Grove refuses a piece
+that is itself in flight:
+
+> grove: 261019-t6n3b is in flight in attempt 261021-6jbj1, which runner.local started at 2026-10-21T09:12:40-07:00 on branch grove/261021-6jbj1
+
+and a piece that overlaps a change in flight:
+
+> grove: 261019-t6n3b shares ledger/cli.py with 261019-r2w7k, in flight in attempt 261021-6jbj1
+
+A change's planned files are the paths its tasks' `Files:` lines name,
+and the maintained spec of each capability it has a change spec for,
+such as `grove/specs/record-editing/spec.md`; a cycle's are those of its
+changes not archived. Two pieces overlap when a planned file of one is
+a planned file of the other, or lies under a folder the other names. Two
+changes on one capability overlap whatever requirements they touch,
+since each fold adds to that spec's History. Grove reads the planned
+files from the target, never from an attempt's branch, so a file an
+agent adds to its tasks on its branch counts only once merged. The check
+only makes collisions rarer: an agent may touch a file its tasks do not
+name, and merging the pull requests is what settles it.
+
+Pieces that share nothing can be claimed at once, each in a checkout of
+its own (see "Two checkouts at once"). `--retry` claims despite what is in
+flight or overlaps it (see "Retry").
 
 ## Without a remote
 
@@ -241,17 +304,20 @@ request does with `origin`.
 
 ## The pause
 
-After an attempt, the project is paused. While any change of the cycle
-the latest record names is not yet archived on the fetched target, as
-finished or dropped, `grove claim` claims nothing, from this checkout or
-any other clone of the project:
+The pause is for a `grove claim` given nothing. While any change is in
+flight, that is, named by a record on `grove/runs` and not yet archived
+on the fetched target, as finished or dropped, it claims nothing, from
+this checkout or any other clone of the project, and names the newest
+record in flight:
 
 > grove: the project is paused after attempt 261021-6jbj1, which runner.local started at 2026-10-21T09:12:40-07:00 on branch grove/261021-6jbj1; once you have dealt with it, run grove claim --retry
 
-Merging the pull request archives the changes and ends the pause. The
-next `grove claim` selects the next cycle it can build. Other merges, even
-of another marked cycle, do not end the pause. Nothing expires it with
-time: Git cannot tell that a session somewhere has died.
+Merging the pull request archives the changes. Once no change is in
+flight, the pause ends, and the next `grove claim` selects the next cycle
+it can build. Other merges, even of another marked cycle, do not end the
+pause, and an older attempt still in flight keeps it though a newer one's
+change is archived. Nothing expires it with time: Git cannot tell that a
+session somewhere has died. A claim you name is not paused.
 
 A change left blocked by a question stays open, so the project stays
 paused. There are two ways on:
@@ -290,7 +356,11 @@ K=$(grove claim --retry) && timeout 2h claude -p "/grove-implement $K"
 ```
 
 records a new attempt even while the project is paused, as an unpaused
-`grove claim` would. It starts from the fetched target, not from the last
+`grove claim` would. With an ID, before or after `--retry`, it claims
+that piece despite its being in flight or overlapping a change in
+flight; the newest record naming a change is its attempt, so the earlier
+one is no longer in flight. It still refuses a piece that cannot be
+built, such as a change that waits. It starts from the fetched target, not from the last
 attempt's branch. To keep the tasks that branch finished, merge its pull
 request first; otherwise the agent builds them again. The earlier records
 and their branches stay as they are.

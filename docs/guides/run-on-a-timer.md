@@ -16,7 +16,10 @@ K=$(grove claim) && timeout 2h claude -p "/grove-implement $K"
 A cycle you mark `unattended` is then started without anyone watching.
 Each firing either starts one session or starts nothing. It starts nothing
 while the project is paused after an attempt, from this checkout or any
-other, or when no marked cycle can be claimed. Marking a cycle is what
+other, or when no marked cycle can be claimed. The timer's line gives
+`grove claim` nothing, so it behaves as it always has: it claims only
+marked cycles, and waits while any change is in flight, including a
+change or cycle someone claimed by name from another checkout. Marking a cycle is what
 puts work in front of the timer; merging a change alone does not.
 
 ## Before the timer
@@ -73,7 +76,8 @@ project:
   in Terminal shows them; `timeout` comes with Homebrew's `coreutils`.
 - `StartInterval` is in seconds. launchd starts no second copy of a job
   that is still running, so a firing during a session is skipped. A
-  `grove claim` you run by hand meanwhile finds the project paused.
+  `grove claim` given nothing that you run by hand meanwhile finds the
+  project paused.
 - `timeout 2h` stops the session after two hours. Change it in the line,
   such as `timeout 45m`.
 

@@ -1564,7 +1564,7 @@ func TestClaim(t *testing.T) {
 	claims(t, remote, h1, "", `^grove: nothing to claim on main at [0-9a-f]{7}\n$`)
 }
 
-// TestClaimByName follows the walkthrough's "Claiming a change by name":
+// TestClaimByName follows the walkthrough's running step 9, "Claim a change you name":
 // loose changes claimed from two clones of one origin, h1 and h2, some at
 // the same moment, refused for what is in flight or overlaps it, and a
 // claim given nothing paused while any change is in flight.
@@ -1668,6 +1668,7 @@ func TestClaimByName(t *testing.T) {
 	drop(fDir)
 	git(t, owner, "push", "-q", "origin", "main")
 	claims(t, remote, h2, "", `^grove: the project is paused after attempt `+latestAttempt(t, remote, "grove/runs~1").ID+`, `)
+	claims(t, remote, h2, g+"\n", "^$", g) // what it overlapped is archived
 	// --retry despite an overlap, after the ID.
 	claims(t, remote, h2, c+"\n", "^$", c, "--retry")
 	claims(t, remote, h2, "", `^grove: `+a+` is in flight`, a)
@@ -1685,7 +1686,8 @@ func TestClaimByName(t *testing.T) {
 			t.Errorf("change %s in cycle %q has a verdict %q", ch.ID, ch.Cycle, ch.Verdict)
 		}
 	}
-	if !strings.HasPrefix(verdicts[e], "false "+e+" shares tests/test_cli.py with "+b) || !strings.HasPrefix(verdicts[a], "false "+a+" is in flight") || verdicts[g] != "true grove claim "+g+" would claim it" {
+	if !strings.HasPrefix(verdicts[e], "false "+e+" shares tests/test_cli.py with "+b) || !strings.HasPrefix(verdicts[a], "false "+a+" is in flight") ||
+		verdicts[w] != "false "+w+" waits on "+a+", which is not archived as finished" {
 		t.Errorf("verdicts of loose changes: %q", verdicts)
 	}
 	if cy := v.Cycles[0]; !cy.Claimable || cy.Runs || !strings.HasPrefix(cy.Verdict, "grove claim "+k+" would claim it; it is not marked unattended; grove claim given no piece is paused after attempt ") {
@@ -1693,11 +1695,12 @@ func TestClaimByName(t *testing.T) {
 	}
 	seen := map[string]bool{}
 	for _, r := range v.Runs {
-		if r.Cycle != "" || r.InFlight != (r.Changes[0] != f && !seen[r.Changes[0]]) || len(v.Runs) != 6 {
+		if r.Cycle != "" || r.InFlight != (r.Changes[0] != f && !seen[r.Changes[0]]) || len(v.Runs) != 7 {
 			t.Errorf("run %+v of %d", r, len(v.Runs))
 		}
 		seen[r.Changes[0]] = true
 	}
+	claims(t, remote, h1, k+"\n", "^$", k) // with five pieces in flight
 }
 
 // latestAttempt returns the record at ref in dir.
