@@ -1671,6 +1671,33 @@ func TestClaimByName(t *testing.T) {
 	// --retry despite an overlap, after the ID.
 	claims(t, remote, h2, c+"\n", "^$", c, "--retry")
 	claims(t, remote, h2, "", `^grove: `+a+` is in flight`, a)
+	claims(t, remote, h1, a+"\n", "^$", "--retry", a)
+
+	// The project value: K shares nothing in flight, e overlaps b, a is in
+	// flight, m is K's; each change's newest record is in flight but f's.
+	var v value
+	json.Unmarshal([]byte(grove(t, "changes", "--json")), &v)
+	verdicts := map[string]string{}
+	for _, ch := range v.Changes {
+		if ch.Claimable != nil {
+			verdicts[ch.ID] = fmt.Sprint(*ch.Claimable, " ", ch.Verdict)
+		} else if ch.Verdict != "" || ch.ID == m && ch.Cycle != k {
+			t.Errorf("change %s in cycle %q has a verdict %q", ch.ID, ch.Cycle, ch.Verdict)
+		}
+	}
+	if !strings.HasPrefix(verdicts[e], "false "+e+" shares tests/test_cli.py with "+b) || !strings.HasPrefix(verdicts[a], "false "+a+" is in flight") || verdicts[g] != "true grove claim "+g+" would claim it" {
+		t.Errorf("verdicts of loose changes: %q", verdicts)
+	}
+	if cy := v.Cycles[0]; !cy.Claimable || cy.Runs || !strings.HasPrefix(cy.Verdict, "grove claim "+k+" would claim it; it is not marked unattended; grove claim given no piece is paused after attempt ") {
+		t.Errorf("cycle K: %+v", cy)
+	}
+	seen := map[string]bool{}
+	for _, r := range v.Runs {
+		if r.Cycle != "" || r.InFlight != (r.Changes[0] != f && !seen[r.Changes[0]]) || len(v.Runs) != 6 {
+			t.Errorf("run %+v of %d", r, len(v.Runs))
+		}
+		seen[r.Changes[0]] = true
+	}
 }
 
 // latestAttempt returns the record at ref in dir.
@@ -2197,15 +2224,16 @@ func TestServe(t *testing.T) {
 		if q := map[string]string{a: "Should IDs be six digits? Blocks T-02.", b: "Ask before deleting?"}[ch.ID]; ch.OpenQuestions != q {
 			t.Errorf("change %s gives open_questions %q", ch.ID, ch.OpenQuestions)
 		}
-		if ch.ID == e && (ch.Cycle != "" || !ch.Ready) || ch.ID == a && ch.Cycle != k {
-			t.Errorf("change %s in cycle %q, ready %v", ch.ID, ch.Cycle, ch.Ready)
+		if ch.ID == e && (ch.Cycle != "" || !ch.Ready || ch.Claimable == nil || !*ch.Claimable || ch.Verdict != "grove claim "+e+" would claim it") ||
+			(ch.ID == a || ch.ID == f) && (ch.Claimable != nil || ch.Verdict != "") || ch.ID == a && ch.Cycle != k {
+			t.Errorf("change %s in cycle %q, ready %v, verdict %q", ch.ID, ch.Cycle, ch.Ready, ch.Verdict)
 		}
 	}
 	verdicts := map[string]pageCycle{}
 	for _, cy := range v.Cycles {
 		verdicts[cy.ID] = cy
 	}
-	if cy := verdicts[k]; strings.Join(cy.Changes, " ") != a+" "+b || !cy.Runs || cy.Verdict != "grove claim would claim it" || len(v.Runs) != 0 {
+	if cy := verdicts[k]; strings.Join(cy.Changes, " ") != a+" "+b || !cy.Runs || !cy.Claimable || cy.Verdict != "grove claim would claim it" || len(v.Runs) != 0 {
 		t.Errorf("cycle K: %+v", cy)
 	}
 	if cy := verdicts[l]; cy.Runs || !strings.HasPrefix(cy.Verdict, c+" waits on "+d) {
@@ -2218,8 +2246,8 @@ func TestServe(t *testing.T) {
 		t.Errorf("cycle N: %+v", cy)
 	}
 
-	// Attempts another host recorded on origin, none in this checkout: K
-	// claimed, then the project paused after L's.
+	// Attempts another host recorded on origin, none in this checkout: K in
+	// flight, then L's too.
 	record := func(id, cycle, changes, parent string) string {
 		tree := strings.TrimSpace(git(t, dir, "hash-object", "-t", "tree", "-w", "/dev/null"))
 		args := []string{"commit-tree", tree, "-m", `{"id":"` + id + `","started":"2026-11-05T09:00:00Z","cycle":"` + cycle + `","changes":[` + changes + `],"host":"h2.example","branch":"grove/` + id + `"}`}
@@ -2243,14 +2271,14 @@ func TestServe(t *testing.T) {
 	}
 	first := record("261105-r0000", k, `"`+a+`","`+b+`"`, "")
 	cy, recs := claimed()
-	if cy.Runs || cy.Verdict != "claimed by attempt 261105-r0000, which h2.example started at 2026-11-05T09:00:00Z on branch grove/261105-r0000" ||
-		len(recs) != 1 || recs[0].Host != "h2.example" || recs[0].Cycle != k || recs[0].Branch != "grove/261105-r0000" || recs[0].Started.IsZero() || recs[0].Moved <= "2026-11-05" ||
+	if cy.Runs || cy.Claimable || cy.Verdict != k+" is in flight in attempt 261105-r0000, which h2.example started at 2026-11-05T09:00:00Z on branch grove/261105-r0000" ||
+		len(recs) != 1 || !recs[0].InFlight || recs[0].Host != "h2.example" || recs[0].Cycle != k || recs[0].Branch != "grove/261105-r0000" || recs[0].Started.IsZero() || recs[0].Moved <= "2026-11-05" ||
 		git(t, dir, "for-each-ref", "refs/heads/grove") != "" {
 		t.Errorf("cycle K claimed elsewhere: %+v, runs %+v", cy, recs)
 	}
 	git(t, dir, "branch", "grove/runs", first) // a local copy, not a branch of work
 	record("261106-r0000", l, `"`+c+`"`, first)
-	if cy, recs := claimed(); cy.Runs || cy.Verdict != "grove claim --retry would claim it; the project is paused after attempt 261106-r0000 of cycle "+l || len(recs) != 2 || recs[0].ID != "261106-r0000" {
+	if cy, recs := claimed(); cy.Runs || !strings.HasPrefix(cy.Verdict, k+" is in flight in attempt 261105-r0000") || len(recs) != 2 || recs[0].ID != "261106-r0000" || !recs[0].InFlight || !recs[1].InFlight {
 		t.Errorf("cycle K while paused after L: %+v, runs %+v", cy, recs)
 	}
 	// grove changes --json prints the same value, but for the time of the

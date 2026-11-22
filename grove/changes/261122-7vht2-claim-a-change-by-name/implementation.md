@@ -43,7 +43,35 @@ Check: a change that is both a member of a cycle not done and waiting is refused
 
 ### T-02 — The project value and the page
 
-Status: not started
+Status: done
+
+`internal/cli/serve.go`: the records are read before the changes, so each
+loose change gets `claimable` and `verdict` from the same `piece` and
+`busy` that `grove claim` runs; a cycle not done gets `claimable` from
+`runnable` then `busy`, its verdict naming the attempt it is in flight in
+or the path it shares, and `runs` is `claimable` with no change in
+flight; each record gets `in_flight`. `ready` is unchanged.
+`internal/cli/page.html`: the readiness count adds the loose changes, each
+loose change shows as a card with its verdict over its row, a cycle's
+colour follows `claimable`, and the runs table names a loose change's ID
+where it has no cycle and marks a record in flight with a chip.
+
+Checks: `TestServe` (updated: loose change `e` claimable with its
+verdict, member `a` and archived `f` with neither; K in flight in
+attempt 261105-r0000, `claimable` and `runs` false; records `in_flight`;
+`changes --json` equal to `/api/project` but for `read`), and
+`TestClaimByName`'s project value (cycle K, sharing nothing with four
+changes in flight, `claimable` true and `runs` false; `e`'s verdict names
+the shared `tests/test_cli.py`; `a` in flight; `g` claimable; member `m`
+with no verdict; each change's newest record in flight but dropped `f`'s,
+and the older of `a`'s two records not; no record has `cycle`).
+`just check` passed: 4,696 Go, 2,559 test and 411 page lines. One earlier
+`just check` run failed in `internal/cli` without my seeing which test;
+six runs since have passed.
+
+Check: the page was not seen in a browser, since the browser connection was down in this session; `bin/grove serve` on this repository answered `/api/project` with 261122-7vht2 claimable and its verdict, and the page's script was read, not run. The readiness count and the in-flight mark want a look.
+Check: a cycle's verdict when it is claimable but a claim given no piece is paused reads "grove claim <K> would claim it; grove claim given no piece is paused after attempt <attempt> of <cycle or change>", replacing the old "grove claim --retry would claim it; the project is paused after ..."; a cycle in flight now reads "<K> is in flight in attempt ..." where it read "claimed by attempt ...".
+Check: one `just check` failure in `internal/cli` went unseen, and later runs passed; `TestServe` binds the fixed address 127.0.0.1:7070, which another session on this machine may have held, but that is a guess.
 
 ### T-03 — Docs and walkthrough
 

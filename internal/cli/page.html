@@ -138,7 +138,7 @@ const kind = c => c.draft ? 'draft' : 'in progress';
 const wip = id => D.branches.filter(b => b.changes.some(c => c.id === id));
 const taskCls = t => t.status === 'done' ? 'ok' : t.status === 'blocked' ? 'bad' : t.status ? 'warn' : '';
 const taskChip = t => chip(t.id + ' ' + (t.status || 'not started'), taskCls(t));
-const cycleCls = cy => cy.done ? 'mut' : cy.runs ? 'ok' : 'warn';
+const cycleCls = cy => cy.done ? 'mut' : cy.claimable ? 'ok' : 'warn';
 function status(c, cy) {
   if (!c) return chip('missing', 'bad');
   if (c.state !== 'approved') return chip(c.state);
@@ -160,7 +160,7 @@ async function load() {
 function render() {
   $('#proj').replaceChildren(D.root + '/ ', h('span', { class: 'mono mut' }, D.target + ' @ ' + D.commit.slice(0, 7)));
   $('#at').textContent = 'read at ' + new Date(D.read).toLocaleTimeString();
-  $('#n-ready').textContent = D.cycles.filter(c => !c.done).length;
+  $('#n-ready').textContent = D.cycles.filter(c => !c.done).length + D.changes.filter(c => c.verdict).length;
   $('#n-progress').textContent = D.branches.length;
   $('#n-specs').textContent = D.specs.length;
   const m = $('main'), a = $('aside'), ms = m.scrollTop, as = a.scrollTop;
@@ -192,7 +192,8 @@ function readiness() {
   }
   const loose = D.changes.filter(c => c.state === 'approved' && !c.cycle);
   s.append(h('h2', {}, 'Approved, in no cycle'));
-  s.append(loose.length ? h('div', { class: 'card mut' }, memberRows(loose.map(c => c.id))) : h('p', { class: 'empty' }, 'Every approved change is in a cycle.'));
+  if (!loose.length) s.append(h('p', { class: 'empty' }, 'Every approved change is in a cycle.'));
+  for (const c of loose) s.append(h('div', { class: 'card ' + (c.claimable ? 'ok' : 'warn') }, h('div', { class: 'verdict' }, dot(c.claimable ? 'ok' : 'warn'), h('span', {}, c.verdict)), memberRows([c.id])));
   if (done.length) s.append(h('h2', {}, 'Done'), h('div', { class: 'sub' }, done.map(c => h('div', {}, idLink(c.id, 'cycle'), ' ' + c.title + ' · ' + L(c.archived).length + ' changes'))));
   if (D.problems.length) s.append(h('h2', {}, 'Problems grove check reports on ' + D.target), h('ul', {}, D.problems.map(p => h('li', {}, p))));
 }
@@ -221,8 +222,8 @@ function progress() {
   for (const b of D.branches) s.append(branchCard(b));
   s.append(h('h2', {}, 'Attempts recorded on grove/runs'));
   if (!D.runs.length) s.append(h('p', { class: 'empty' }, 'No attempt has been recorded on grove/runs.'));
-  else s.append(h('div', { style: 'overflow-x:auto' }, h('table', {}, h('tr', {}, ['attempt', 'cycle', 'started', 'host', 'branch', 'last commit'].map(x => h('th', {}, x))),
-    D.runs.map(r => h('tr', {}, h('td', { class: 'mono' }, r.id), h('td', {}, idLink(r.cycle, 'cycle')), h('td', { class: 'n' }, new Date(r.started).toLocaleString()), h('td', {}, r.host), h('td', { class: 'mono' }, r.branch), h('td', { class: 'n' }, r.moved ? ago(r.moved) : 'no branch here'))))));
+  else s.append(h('div', { style: 'overflow-x:auto' }, h('table', {}, h('tr', {}, ['attempt', 'cycle or change', 'started', 'host', 'branch', 'last commit'].map(x => h('th', {}, x))),
+    D.runs.map(r => h('tr', {}, h('td', { class: 'mono' }, r.id, r.in_flight ? [' ', chip('in flight', 'info')] : null), h('td', {}, r.cycle ? idLink(r.cycle, 'cycle') : idLink(r.changes[0])), h('td', { class: 'n' }, new Date(r.started).toLocaleString()), h('td', {}, r.host), h('td', { class: 'mono' }, r.branch), h('td', { class: 'n' }, r.moved ? ago(r.moved) : 'no branch here'))))));
 }
 
 const archivedToggle = () => h('label', { style: 'margin-left:auto' }, h('input', { type: 'checkbox', ...(showArchived ? { checked: '' } : {}), onchange: e => { showArchived = e.target.checked; graph(); historyTab(); } }), ' show archived changes and done cycles');
