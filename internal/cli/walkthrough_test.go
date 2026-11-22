@@ -268,14 +268,15 @@ func approve(t *testing.T, dir, branch, title, meta string) (changeID, folder st
 func TestExplore(t *testing.T) {
 	setUp(t)
 	out := grove(t, "instructions", "explore")
-	for _, s := range []string{"# Grove instructions: explore", "Interview before you conclude anything",
+	for _, s := range []string{"# Grove instructions: explore", "say which you recommend and why",
+		"only one whose answer would change\n  your recommendation", "your first reply is your findings", "say so in one line",
 		"Maintained specs (agreed behavior):\n- None.", "`instructions prototype \"<question>\"`"} {
 		if !strings.Contains(out, s) {
 			t.Errorf("explore instructions lack %q", s)
 		}
 	}
-	if strings.Contains(out, "## Documents") {
-		t.Error("explore instructions offer a document to fill in")
+	if strings.Contains(out, "## Documents") || strings.Contains(out, "before anything is\nrecommended") {
+		t.Error("explore instructions offer a document to fill in, or hold back a recommendation")
 	}
 }
 
