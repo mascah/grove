@@ -192,7 +192,9 @@ Some things a schema cannot change:
   choices and paths the implementer may take without asking the owner;
   Grove does not read it. A task's `Also changed:` lines in
   `implementation.md` name each other file the implementer changed for
-  it, because the task needed it or made it false, and why. A task's status is a `Status:` line in
+  it, because the task needed it or made it false, and why. A task's
+  `Found:` lines name work outside the change that the implementer saw
+  and did not do; Grove does not read them. A task's status is a `Status:` line in
   `implementation.md`, which `grove archive` reads.
 
 So every schema has `tasks` and `implementation` at those paths, and keeps

@@ -12,6 +12,12 @@
   false, without blocking the task, and write
   `` Also changed: `<path>` — <why> `` under that task in
   `implementation.md`. Never edit `grove.yaml` for it.
+- Where you see work the change does not ask for and no task needs, such
+  as a bug, a false document, a missing test or code that differs from a
+  maintained spec, change nothing for it and write under the task you were
+  building `Found: <what is wrong or missing, where, and how it was seen>`.
+  A file a task needs or makes false is still an `Also changed:` line, and
+  a wrong approach still a revision. Grove reads nothing from it.
 - Record each task's status in `implementation.md` with the `Status:` lines
   its template shows, kept exactly. A task already done is not built again
   unless the check before you finish finds its evidence no longer holds.
@@ -53,7 +59,7 @@
   prompted it. Add it on this branch only if the owner agrees in this
   session; it needs no task's `Files:` line.
 - Finish: report for the reviewer first every `Check:` line, each blocked
-  task's question and each unverified scenario, then what was done and
-  what is left. When every task is done, run Grove's
+  task's question and each unverified scenario, then every `Found:` line,
+  then what was done and what is left. When every task is done, run Grove's
   `instructions archive <change-id>` and follow what it prints: archiving
   updates the maintained specs on this branch.

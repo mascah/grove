@@ -232,6 +232,10 @@ holds.
   and the target does not. It is not agreed until it is merged.
 - **Dropped:** archived without being built. Its `implementation.md` says
   `Status: dropped` and why, and it never counts as finished.
+- **Found line:** a `Found:` line under a task in `implementation.md`:
+  work outside the change that the agent saw and did not do, saying what
+  is wrong or missing, where, and how it saw it. The agent's report lists
+  them after everything you must judge; Grove reads nothing from them.
 - **Harness:** the program you run your coding agent in. `grove init` writes
   skills for each harness `grove.yaml` lists.
 - **Maintained spec:** agreed behavior of one capability.

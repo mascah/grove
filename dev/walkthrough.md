@@ -782,6 +782,17 @@ the browser's console shows no error.
   for a second task that exports records: the session runs
   `grove instructions propose <change-id>` and adds T-02 with its
   `Files:` lines that way.
+- **Work found outside the change** (§5; reference, "What a schema
+  cannot change"). Approve a change whose T-01 adds `ledger delete ID`
+  and names only `ledger/cli.py` and `tests/test_cli.py`. On a branch, a
+  fresh `claude`, `/grove-implement <change-id>`: building T-01, the
+  session sees `python3 -m ledger edit 999 --note x` print a
+  `StopIteration` traceback, leaves `edit` unchanged
+  (`git diff main -- ledger/records.py` is empty), and writes under T-01
+  a `Found:` line saying so and how it saw it. Its report lists that line
+  after T-01's `Check:` lines and before what was done. On a change where
+  it sees nothing outside, `implementation.md` has no `Found:` line and
+  the report names none.
 - **A choice for the reviewer** (§5; coordinating, "Building a
   cycle"). Approve a change whose T-01 adds budgets to `report` and
   asks that an overspent line "reads clearly", and whose T-02 adds
