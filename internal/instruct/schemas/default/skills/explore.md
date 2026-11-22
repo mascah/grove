@@ -18,8 +18,8 @@ or a narrower prerequisite is a complete result.
 
 - Beside every set of options, say which you recommend and why. The owner's
   answer, a "yes" included, settles the question.
-- Ask at most one question a turn, and only one whose answer would change
-  your recommendation. Once none would, finish.
+- After that first reply, ask at most one question a turn, and only one
+  whose answer would change your recommendation. Once none would, finish.
 - If the owner now wants what an earlier decision in a spec, archived change
   or other document ruled out, say so in one line, saying in words what it
   decided, and follow the owner without asking whether to reverse it.
