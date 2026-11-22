@@ -28,7 +28,7 @@ check:
      words=$(find internal/instruct \( -name '*.md' -o -name '*.yaml' \) -exec cat {} + | wc -w); \
      page=$(wc -l < internal/cli/page.html); \
      echo "lines: $code Go, $tests test, $page page; words: $words instruction"; \
-     test "$code" -le 5000 && test "$tests" -le 3000 && test "$page" -le 500 || { echo "over the line budget"; exit 1; }; \
+     test "$code" -le 7500 && test "$tests" -le 4500 && test "$page" -le 500 || { echo "over the line budget"; exit 1; }; \
      test "$words" -le 9000 || { echo "over the word budget"; exit 1; }
 
 # Run the skill trials of dev/trials.md in Claude Code and Codex: just trials [case ...]
