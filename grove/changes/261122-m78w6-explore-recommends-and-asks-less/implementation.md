@@ -27,6 +27,25 @@ Check: open question 2 (explore's limit) built as recommended: one question a tu
 Check: open question 7 (a new `explore` capability) built as recommended; the maintained spec is written by archive.
 Check: "Where documents or code disagree, ask which is intended" is dropped: it made a question whatever its answer would change, against "Ask only what would change the recommendation"; whether behavior is intended stays the owner's to say in `requires/explore.md`.
 
+### T-02 — Every skill asks the owner plainly
+
+Status: done
+
+Added a paragraph to the shared opening (`meanings` in
+`internal/instruct/instruct.go`), after "Grove itself commits nothing":
+question first after at most a few lines of context, standing on its own;
+options by what the owner gains and gives up, with a recommendation and its
+reason; about 150 words unless the owner asks for more; a file or commit
+cited only where the owner asks or a document needs it; no change ID, task
+ID, rule number or decision number without saying in words what it is.
+`TestExplore` checks that `grove instructions explore` and `propose` print
+it before "## What Grove requires of". Ran `bin/grove instructions` for
+explore, propose, plan and prototype "q?": each prints it on line 24, before
+the skill's own section on line 32. `just check` passed.
+
+Check: open question 1 (where the asking rules live) built as recommended: in the shared opening, so every skill, implement and archive included, prints it; it applies only when the agent asks the owner something.
+Check: open question 6 (length) built as recommended: "about 150 words unless the owner asks for more", guidance Grove does not count.
+
 ## Scenarios
 
 ## Reconciliation

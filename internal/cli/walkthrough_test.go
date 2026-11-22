@@ -278,6 +278,13 @@ func TestExplore(t *testing.T) {
 	if strings.Contains(out, "## Documents") || strings.Contains(out, "before anything is\nrecommended") {
 		t.Error("explore instructions offer a document to fill in, or hold back a recommendation")
 	}
+	for _, skill := range []string{"explore", "propose"} {
+		out := grove(t, "instructions", skill)
+		if i := strings.Index(out, "put the question first"); i < 0 || i > strings.Index(out, "## What Grove requires of") ||
+			!strings.Contains(out, "what the owner gains and gives up, and say which you recommend") || !strings.Contains(out, "rule number or decision number without saying in words") {
+			t.Errorf("%s instructions do not open with how to ask the owner", skill)
+		}
+	}
 }
 
 func TestPrototype(t *testing.T) {
