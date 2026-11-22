@@ -21,7 +21,7 @@ citation of every finding. In `requires/explore.md`, "your own inference
 stays open, and you say so" is gone; a question is settled when the owner
 answers it. `TestExplore` checks the new wording and that the old
 recommendation ban is gone. `just check` passed; instruction words 8227 at
-the base, 8199 after this task.
+the base, 8206 after this task, 8208 at the end of the change.
 
 Check: open question 2 (explore's limit) built as recommended: one question a turn, at most two in a first reply after investigating.
 Check: open question 7 (a new `explore` capability) built as recommended; the maintained spec is written by archive.
@@ -99,6 +99,52 @@ over `docs`, `README.md` and `dev/walkthrough.md` finds nothing.
 
 Check: the walkthrough's explore and propose steps were not run in Claude Code or Codex in this session; they describe what the new instructions say a run does, and `dev/walkthrough.md` is run by hand (CONTRIBUTING.md).
 
+### T-05 — A skill trial runs explore
+
+Status: done
+
+`dev/trials/g.sh`: case (g) runs `/grove-explore Should ledger keep its
+records in SQLite instead of records.json? Look into it and recommend.` on
+branch `explore`; to a message holding a recommendation the owner answers
+"Yes, I'll go with your recommendation."; `good` checks that `explore`
+changes no file against main, that the scripted answer was given or the
+last message recommends, and that the run took at most three of the
+owner's replies. `dev/trials.md` describes (g) and says there are seven
+cases; `dev/trials/run.sh` runs (g) by default. `RUNS=1 JUDGINGS=1 just
+trials g` printed:
+
+    | (g) | Claude Code | 1/1 | 0 | 0 | 0 | 0 | 0 | 236 |
+    | (g) | Codex | 1/1 | 0 | 0 | 0 | 0 | 0 | 234 |
+
+The first attempt stopped both runs: a run that writes no change leaves no
+`grove/changes`, and `find` failing there ended the trial under `set -e`;
+`run.sh` now tolerates it. That attempt's Claude Code run recommended
+"Keep `records.json`" under "Short answer:", which the first answer
+pattern ("recommend") missed, so the pattern also matches "short answer"
+and "I'd keep/go/…".
+
+Check: "a good run recommends" accepts either the scripted answer to a recommending message or a last message that recommends, because Codex recommended and finished in one turn, asking nothing, which the explore spec allows (at most two questions); the proposal's open question 8 named only the first.
+Check: (g) was run once per harness, not the default three runs and three judgings, to keep the cost down; the full `just trials` table was not run.
+Check: case (b) was also run once per harness on the new round: Codex 1/1; Claude Code 0/1 because it asked "Is it OK that deleting the highest ID lets the next `add` reuse that number?", which `b.sh`'s answer pattern does not match, so the scripted answer was not given. `b.sh` is left as it is: no task names it.
+Also changed: `CLAUDE.md` — its layout table said the skill trials are six cases.
+
 ## Scenarios
 
+- explore "Two ways to keep an older record editable": unverified; `TestExplore` checks the instructions say "say which you recommend and why" and that the owner's answer settles it, but the walkthrough's §2 run on the fixture was not done in this session.
+- explore "A question that changes nothing": unverified for the README case; `TestExplore` checks "only one whose answer would change your recommendation"; in trial (g) both harnesses asked at most one question, judged 0 unneeded questions.
+- explore "Look into it and recommend": `dev/trials/g.sh` case (g), passed in Claude Code and Codex (first reply findings and a recommendation after reading `ledger/records.py`, at most one question).
+- explore "A description that asks nothing to be looked into": unverified; the instructions keep "one question or a short account of what you will look up", not run on the fixture.
+- explore "Records move out of records.json": unverified; `TestExplore` checks "say so in one line", but no fixture holds such an archived decision and it was not run.
+- instructions "Every skill is told": `internal/cli/walkthrough_test.go` `TestExplore` (explore and propose), passed; `bin/grove instructions plan` and `prototype "q?"` print it on line 24, before line 32's skill section.
+- instructions "An archived change named in a question": unverified; how an agent words a question is for a person to judge, and it was not run on the fixture.
+- propose "The owner accepts the round": unverified; `TestPropose` checks the round wording, and trial (b) in Codex recorded its answers as decisions, but no run checked the quoted "yes".
+- propose "The round is ordered, and routine choices are not asked": partly by trial (b): both harnesses sent one message with the scope and at most five decisions, and Claude Code wrote routine choices as an open question; the unknown-ID case itself was not run.
+- propose "More than five decisions": unverified; `TestPropose` checks "at most five decisions", not run with seven.
+- propose "The owner declines one": unverified; the instructions' deferred-question rule is unchanged, not run.
+- propose "Nothing to assume": unverified; the instructions say "If there is nothing to ask, it says so", not run.
+
 ## Reconciliation
+
+- explore: created `grove/specs/explore/spec.md` from the change spec's ADDED requirements.
+- instructions: applied to `grove/specs/instructions/spec.md` (ADDED "Ask the owner plainly").
+- propose: applied to `grove/specs/propose/spec.md` (MODIFIED "Ask a round before writing"); its Purpose drops "asking one round of every decision it would otherwise assume", as the proposal's scope says.

@@ -3,7 +3,7 @@
 # case, or those named, in Claude Code and in Codex, on a fresh fixture,
 # with this checkout's build of grove. Prints the results table.
 #
-#   dev/trials/run.sh [a b c d e f]
+#   dev/trials/run.sh [a b c d e f g]
 #
 # HARNESSES (default "claude codex") picks the harnesses, RUNS (default 3)
 # the runs of each case and harness, JUDGINGS (default 3) the judgings of
@@ -20,7 +20,7 @@ runs_each=${RUNS:-3}
 judgings=${JUDGINGS:-3}
 harnesses=${HARNESSES:-claude codex}
 cases=("$@")
-[ ${#cases[@]} -gt 0 ] || cases=(a b c d e f)
+[ ${#cases[@]} -gt 0 ] || cases=(a b c d e f g)
 fallback="Yes, go with what you recommend."
 # Changing the agent under test never changes the grader: the judge and the
 # waiting check are fixed here. Every model runs at medium effort.
@@ -211,7 +211,8 @@ trial() {
   done
   save
   local changes
-  changes=$(find grove/changes -type f 2> /dev/null | sort)
+  # A run that writes no change, such as explore's, leaves no grove/changes.
+  changes=$(find grove/changes -type f 2> /dev/null | sort || true)
   # A case's good prints one line per check of its "a good run" that failed.
   good > "$dir/good.txt" 2>&1 || true
   # Each judging reads the saved transcript; no agent session starts after the last turn.
