@@ -1,0 +1,5 @@
+title: "Implement reconciles a requirement rewritten on the target"
+created: 2026-11-22T02:30:58Z
+description: "The implement instructions name each requirement the change modifies or removes that was rewritten on the target since its base, and the agent reconciles the change on its branch before building."
+schema: default
+base: 07d319f73104341844dfd0572a023389562d2075
