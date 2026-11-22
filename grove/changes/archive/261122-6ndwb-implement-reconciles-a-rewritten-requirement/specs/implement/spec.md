@@ -11,7 +11,7 @@ change is implemented and the maintained spec is reconciled.
 
 When a change MODIFIES or REMOVES a requirement that `grove check`, run
 in the working tree, would report as rewritten or removed since the
-change's `base` ([propose](../../../../specs/propose/spec.md), "Report a
+change's `base` ([propose](https://github.com/mascah/grove/blob/main/grove/specs/propose/spec.md), "Report a
 stale requirement"), the system shall name that capability and
 requirement in the implement instructions, saying which of the two
 happened and since which commit, and they shall have the agent, before

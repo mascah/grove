@@ -48,6 +48,8 @@ it. `TestCoordinating` runs that step.
 
 Check: the walkthrough step was not run by hand in Claude Code or Codex; `TestCoordinating` runs the same step on a disposable fixture repository and asserts the line.
 
+Check: revised the change spec on this branch while archiving: its link to the propose spec was relative to the change folder (`../../../../specs/propose/spec.md`) and archive copies requirements word for word, so it would have broken in the maintained spec; both now use the absolute GitHub URL `docs/` uses. Nothing the requirement says changed.
+
 ## Scenarios
 
 - implement "Rewritten by a change that landed first": internal/cli/walkthrough_test.go TestCoordinating, the "implement of a stale change" assertion, passed; the revise-and-archive half is the agent following the line, unverified by a test since it is the agent's behavior
@@ -57,3 +59,5 @@ Check: the walkthrough step was not run by hand in Claude Code or Codex; `TestCo
 - implement "Two members of one cycle": internal/cli/walkthrough_test.go TestCoordinating, the "implement --runner of a cycle member" assertion, passed
 
 ## Reconciliation
+
+- implement: applied to specs/implement/spec.md
