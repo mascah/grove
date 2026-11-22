@@ -1,0 +1,5 @@
+title: "Reading the project value starts a bounded number of git processes"
+created: 2026-11-22T20:59:43Z
+description: "grove changes --json, grove serve and grove check start no git process per change or run record."
+schema: bugfix
+base: 522f060abfd15126e1b5a49fd4e1d63128f7560a
