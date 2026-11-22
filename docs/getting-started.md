@@ -224,6 +224,21 @@ it edits without asking too, and writes an `Also changed:` line under the
 task in `implementation.md`, naming the file and why. You judge the edit
 in review.
 
+Work outside the change that no task needs, such as a bug next to the
+code or a document already false, it leaves alone. It writes a `Found:`
+line under the task it was building, saying what is wrong or missing,
+where, and how it saw it:
+
+```markdown
+Found: `ledger edit 999` prints a StopIteration traceback; seen running it beside `ledger delete 999`
+```
+
+Its report lists these after the `Check:` lines, blocked questions and
+unverified scenarios, and before what was done. They are merged with the
+code, so the work reaches whoever plans next; the
+[push-to-a-tracker guide](guides/push-to-a-tracker.md) turns each into an
+issue. Grove reads nothing from them.
+
 The agent may find that the agreed approach is wrong, or you may say
 something in the session that changes what the change says. Then it
 revises the change on this branch, through

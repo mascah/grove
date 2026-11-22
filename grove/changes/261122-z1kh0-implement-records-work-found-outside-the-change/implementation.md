@@ -35,13 +35,42 @@ Check: `internal/cli/walkthrough_test.go` changed on main after this change was 
 
 Found: the cycle instructions' finish line (`internal/instruct/requires/implement-cycle.md`) asks each change's subagent to report its status, `Check:` lines and blocked tasks, and the session to report those, but not `Found:` lines; seen reading it beside `implement.md`. The lines still reach each change's `implementation.md` through `instructions implement --runner`.
 
+### T-02 — Docs, the tracker guide and the walkthrough
+
+Status: done
+
+- `docs/getting-started.md`: after the `Also changed:` paragraph, work
+  outside the change is left alone and written as a `Found:` line, with
+  an example; the report lists those lines after the `Check:` lines,
+  blocked questions and unverified scenarios, before what was done; the
+  tracker guide turns each into an issue; Grove reads nothing from them.
+- `docs/reference.md`, "What a schema cannot change", beside
+  `Also changed:`: names `Found:` and says Grove does not read it.
+- `docs/concepts.md`: a glossary entry, "Found line".
+- `docs/guides/push-to-a-tracker.md`: the prompt opens one issue per
+  `Found:` line in the target's `implementation.md` files, labelled
+  `grove-found`, its body the line, a link to its change's folder and
+  `<!-- grove-found:<change-id>:<T-NN>:<n> -->`; it finds an existing one
+  by that marker, open or closed, and never closes one. The commands show
+  `git grep` finding the lines and `gh issue create` with the marker; "What
+  to expect" says the issues stay open until the owner closes them.
+- `dev/walkthrough.md`: a step "Work found outside the change" beside "A
+  file no task names": approve `ledger delete ID`, run
+  `/grove-implement`, see `ledger edit 999` print a traceback, `edit`
+  unchanged, a `Found:` line under T-01, listed after the `Check:` lines.
+- On the fixture, `python3 -m ledger edit 999 --note x` prints a
+  `StopIteration` traceback, as the step and the example say.
+
+Check: the walkthrough step was written, not run: running it needs a live `claude` session on the fixture. Its last sentence also covers the "Nothing found" scenario.
+Check: the tracker guide's prompt and commands were not run against GitHub; `git grep -n '^Found:' main -- 'grove/changes/**/implementation.md'` was run on this repository and finds this change's line once committed. The issue title is what the line says is wrong, which the change left open.
+Check: `docs/getting-started.md`, `docs/reference.md`, `docs/concepts.md` and `dev/walkthrough.md` changed on main after this change was proposed (#189, #194: explore and propose wording). None of those edits touch implement's text; this task's paragraphs sit beside them as main holds them.
+
 ## Scenarios
 
-<!-- Before finishing, one line per scenario of the change specs: the check
-that shows it and its result, or `unverified` and why:
-
-    - record-editing "Update the note on a legacy record": tests/test_cli.py test_edit_legacy, passed
--->
+- implement "A bug next to the work": unverified; the agent's behavior shows only in a live session, the walkthrough's "Work found outside the change" step, not run. `TestImplementInstructions` checks the instructions hold the rule and the report order, passed.
+- implement "A file the task makes false": unverified; agent behavior, the walkthrough's "A file no task names" step, not run. `TestImplementInstructions` checks the instructions keep such a file an `Also changed:` line, passed.
+- implement "Nothing found": unverified; agent behavior, the last sentence of the walkthrough's "Work found outside the change" step, not run.
+- implement "Grove does not read it": internal/cli/walkthrough_test.go TestArchive, "Grove reads nothing from a Found: line", passed.
 
 ## Reconciliation
 
