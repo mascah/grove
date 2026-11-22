@@ -74,7 +74,4 @@ Check: `docs/getting-started.md`, `docs/reference.md`, `docs/concepts.md` and `d
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- implement: applied to specs/implement/spec.md
