@@ -35,8 +35,11 @@ func TreeFS(dir, commit, subdir string) (fs.FS, error) {
 		ids = append(ids, fields[2])
 	}
 	blobs, err := Objects(dir, ids)
+	if err != nil {
+		return nil, err
+	}
 	for i, name := range names {
 		files[name].Data = blobs[i].Data
 	}
-	return files, err
+	return files, nil
 }
