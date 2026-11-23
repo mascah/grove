@@ -1,9 +1,7 @@
 package gitx
 
 import (
-	"bytes"
 	"io/fs"
-	"strconv"
 	"strings"
 	"testing/fstest"
 )
@@ -23,7 +21,7 @@ func TreeFS(dir, commit, subdir string) (fs.FS, error) {
 	// ever holds large files.
 	files := fstest.MapFS{}
 	var names []string
-	var ids strings.Builder
+	var ids []string
 	// Each record is "<mode> <type> <id>\t<path>"; -r lists leaves only.
 	for record := range strings.SplitSeq(string(out), "\x00") {
 		meta, name, ok := strings.Cut(record, "\t")
@@ -34,22 +32,11 @@ func TreeFS(dir, commit, subdir string) (fs.FS, error) {
 		name = strings.TrimPrefix(name, subdir+"/")
 		files[name] = &fstest.MapFile{Mode: 0o644}
 		names = append(names, name)
-		ids.WriteString(fields[2] + "\n")
+		ids = append(ids, fields[2])
 	}
-	if len(names) == 0 {
-		return files, nil
+	blobs, err := Objects(dir, ids)
+	for i, name := range names {
+		files[name].Data = blobs[i].Data
 	}
-	batch := command(dir, "cat-file", "--batch")
-	batch.Stdin = strings.NewReader(ids.String())
-	if out, err = run(batch); err != nil {
-		return nil, err
-	}
-	// Each reply is "<id> blob <size>\n<contents>\n", in the order asked.
-	for _, name := range names {
-		header, rest, _ := bytes.Cut(out, []byte("\n"))
-		size, _ := strconv.Atoi(string(header[bytes.LastIndexByte(header, ' ')+1:]))
-		files[name].Data = rest[:size:size]
-		out = rest[size+1:]
-	}
-	return files, nil
+	return files, err
 }
