@@ -50,7 +50,4 @@ part is unverified for that reason.
 
 ## Reconciliation
 
-<!-- One line per change spec, once applied to its maintained spec:
-
-    - record-editing: applied to specs/record-editing/spec.md
--->
+- propose: applied to specs/propose/spec.md
