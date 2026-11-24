@@ -1838,6 +1838,12 @@ func TestMovedFiles(t *testing.T) {
 	dir := setUp(t)
 	base := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
 	cid, folder := propose(t, dir, "older-edits", "Allow editing older records", "base: "+base+"\n")
+	// With no cycle and no task naming a file, check needs no target branch.
+	git(t, dir, "branch", "-q", "-m", "main", "trunk")
+	if out := grove(t, "check"); out != "No problems in grove/.\n" {
+		t.Errorf("check with no target branch:\n%s", out)
+	}
+	git(t, dir, "branch", "-q", "-m", "trunk", "main")
 	// One path per bullet, ledger/ naming every file under it.
 	tasks := "## T-01 — Allow editing older records\n\nResult: older records can be edited.\n\nFiles:\n- `ledger/`\n- `tests/test_cli.py`\nDelegated: test layout; `tests/test_records.py`\n\nAcceptance:\n- An older record saves.\n"
 	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(tasks), 0o644)
@@ -1914,6 +1920,18 @@ func TestMovedFiles(t *testing.T) {
 	for _, bad := range []string{"Files: ledger/cli.py", "Files: `../ledger/cli.py`", "Files:\n- `ledger/cli.py`, `tests/test_cli.py`"} {
 		os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(strings.Replace(tasks, files, bad, 1)), 0o644)
 		checks(rel + ":5: T-01's Files: line should list repo-relative paths in backticks, one per bullet or separated by commas, and a folder ends in /\n")
+	}
+
+	// A file renamed since base, whose old path one task names and new path
+	// another, is named under each; a short base reads as the full one.
+	git(t, dir, "mv", "ledger/report.py", "ledger/reports.py")
+	meta := filepath.Join(folder, ".grove.yaml")
+	os.WriteFile(meta, []byte(strings.Replace(read(t, meta), base, base[:7], 1)), 0o644)
+	os.WriteFile(filepath.Join(folder, "tasks.md"), []byte("## T-01 — Old\n\nFiles:\n- `ledger/report.py`\n\n## T-02 — New\n\nFiles:\n- `ledger/reports.py`\n"), 0o644)
+	commitAll(t, dir, "Rename report.py")
+	checks(rel + ": ledger/report.py and ledger/reports.py" + since)
+	if out := grove(t, "instructions", "implement", cid); !strings.Contains(out, "\n- Changed on main since base "+base[:7]+": T-01's `ledger/report.py`, T-02's `ledger/reports.py`.\n") {
+		t.Errorf("implement does not name both paths of the rename:\n%.3000s", out)
 	}
 }
 
@@ -2441,5 +2459,75 @@ func TestServe(t *testing.T) {
 		if code, _ := get(t, url+"api/doc?"+query); code != 400 {
 			t.Errorf("/api/doc?%s answered %d, want 400", query, code)
 		}
+	}
+}
+
+// TestGitProcesses counts, through a git on PATH that logs each call and
+// runs the real Git, the processes grove changes --json and grove check
+// start: added changes, run records and a branch with no Grove document
+// start none.
+func TestGitProcesses(t *testing.T) {
+	dir := setUp(t)
+	real, _ := exec.LookPath("git")
+	bin, log := t.TempDir(), filepath.Join(t.TempDir(), "git.log")
+	os.WriteFile(filepath.Join(bin, "git"), []byte("#!/bin/sh\necho \"$*\" >> '"+log+"'\nexec '"+real+"' \"$@\"\n"), 0o755)
+	t.Setenv("PATH", bin+string(os.PathListSeparator)+os.Getenv("PATH"))
+	maintain(t, dir, olderEdits)
+	commitAll(t, dir, "Record editing")
+	var tip string
+	var folders []string
+	add := func(i int) {
+		base := strings.TrimSpace(git(t, dir, "rev-parse", "main"))
+		_, folder := propose(t, dir, fmt.Sprintf("c%d", i), fmt.Sprintf("Change %d", i), "base: "+base+"\n")
+		os.WriteFile(filepath.Join(folder, "specs/record-editing/spec.md"), []byte("# Changes to record-editing\n\n## MODIFIED Requirements\n\n"+olderEdits), 0o644)
+		os.WriteFile(filepath.Join(folder, "tasks.md"), []byte(fmt.Sprintf("## T-01 — Change %d\n\nFiles:\n- `ledger/cli.py`\n", i)), 0o644)
+		commitAll(t, dir, "Propose")
+		git(t, dir, "switch", "-q", "main")
+		git(t, dir, "merge", "-q", "--no-ff", "-m", "Approve", fmt.Sprintf("c%d", i))
+		folders = append(folders, "grove/changes/"+filepath.Base(folder))
+		tree := strings.TrimSpace(git(t, dir, "hash-object", "-t", "tree", "-w", os.DevNull))
+		args := []string{"commit-tree", tree, "-m", fmt.Sprintf(`{"id":"r%d","changes":["x"],"branch":"grove/r%d"}`, i, i)}
+		if tip != "" {
+			args = append(args, "-p", tip)
+		}
+		tip = strings.TrimSpace(git(t, dir, args...))
+		git(t, dir, "update-ref", "refs/heads/grove/runs", tip)
+		git(t, dir, "switch", "-q", "-c", fmt.Sprintf("b%d", i))
+		os.WriteFile(filepath.Join(dir, fmt.Sprintf("ledger/b%d.py", i)), []byte("# b\n"), 0o644)
+		commitAll(t, dir, "Not Grove")
+		git(t, dir, "switch", "-q", "main")
+	}
+	moveOn := func(n int) {
+		maintain(t, dir, strings.Replace(olderEdits, "save the edit", fmt.Sprintf("save edit %d", n), 1))
+		os.WriteFile(filepath.Join(dir, "ledger/cli.py"), []byte(read(t, filepath.Join(dir, "ledger/cli.py"))+"# moved\n"), 0o644)
+		commitAll(t, dir, "Move on")
+	}
+	count := func(args ...string) (int, string) {
+		t.Helper()
+		os.Remove(log)
+		var stdout, stderr strings.Builder
+		run(args, &stdout, &stderr)
+		return strings.Count(read(t, log), "\n"), stdout.String()
+	}
+	add(1)
+	moveOn(1)
+	changes, _ := count("changes", "--json")
+	checks, _ := count("check")
+	add(2)
+	add(3)
+	moveOn(2)
+	if n, out := count("changes", "--json"); n != changes {
+		t.Errorf("grove changes --json started %d git processes with 3 changes, records and branches, %d with one", n, changes)
+	} else {
+		var v value
+		json.Unmarshal([]byte(out), &v)
+		for _, want := range []string{folders[2] + "/tasks.md: ledger/cli.py changed on main since base", folders[2] + `/specs/record-editing/spec.md:5: requirement "Edit older records" was rewritten since base`} {
+			if !slices.ContainsFunc(v.Problems, func(p string) bool { return strings.HasPrefix(p, want) }) {
+				t.Errorf("problems lack %q:\n%s", want, strings.Join(v.Problems, "\n"))
+			}
+		}
+	}
+	if n, _ := count("check"); n != checks {
+		t.Errorf("grove check started %d git processes with 3 changes, %d with one", n, checks)
 	}
 }

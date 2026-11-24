@@ -229,7 +229,8 @@ func instructionsChange(stdout io.Writer, p project, ip instruct.Project, tree *
 		in.Requires += fmt.Sprintf("- Changed on %s since %s: %s.\n", p.Target, since, strings.Join(named, ", "))
 	}
 	if mine := tree.Change(id); err == nil && mine != nil {
-		found, _ := rewritten(p, os.DirFS(filepath.Join(p.Top, p.Root)), tree, mine) // check reports a base that is no commit
+		bases, _ := atBases(p, []*doc.Change{mine})
+		found, _ := rewritten(p, os.DirFS(filepath.Join(p.Top, p.Root)), tree, mine, bases) // check reports a base that is no commit
 		var reqs []string
 		for _, r := range found {
 			reqs = append(reqs, fmt.Sprintf("`%s`'s %q was %s", mine.Touches[r.file], r.Name, r.how))

@@ -177,6 +177,7 @@ func (s *server) project(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) value() (*value, error) {
 	p := s.p
+	p.plans = map[*doc.Cycle][]string{}
 	commit, err := gitx.ResolveBranch(p.Top, p.Target)
 	if err != nil {
 		return nil, err
@@ -202,12 +203,25 @@ func (s *server) value() (*value, error) {
 		return nil, err
 	}
 	flight := inFlight(recs, c)
-	for i, a := range recs {
-		moved, err := gitx.Run(p.Top, "for-each-ref", "--sort=-committerdate", "--count=1", "--format=%(committerdate:iso-strict)", "refs/heads/"+a.Branch, "refs/remotes/origin/"+a.Branch)
+	moved := map[string]string{} // a branch's name to its latest commit time, local or on origin
+	if len(recs) > 0 {
+		refs, err := gitx.Run(p.Top, "for-each-ref", "--sort=-committerdate", "--format=%(refname) %(committerdate:iso-strict)", "refs/heads", "refs/remotes/origin")
 		if err != nil {
 			return nil, err
 		}
-		v.Runs = append(v.Runs, pageRun{a, slices.Contains(slices.Collect(maps.Values(flight)), &recs[i]), strings.TrimSpace(moved)})
+		for line := range strings.Lines(refs) {
+			ref, date, _ := strings.Cut(strings.TrimSpace(line), " ")
+			name, local := strings.CutPrefix(ref, "refs/heads/")
+			if !local {
+				name = strings.TrimPrefix(ref, "refs/remotes/origin/")
+			}
+			if _, ok := moved[name]; !ok {
+				moved[name] = date
+			}
+		}
+	}
+	for i, a := range recs {
+		v.Runs = append(v.Runs, pageRun{a, slices.Contains(slices.Collect(maps.Values(flight)), &recs[i]), moved[a.Branch]})
 	}
 	last := newest(recs, flight)
 	for _, ch := range slices.Concat(c.Changes, c.Archived) {
@@ -268,7 +282,7 @@ func (s *server) value() (*value, error) {
 	if v.History, err = history(p, commit); err != nil {
 		return nil, err
 	}
-	v.Problems, err = diagnose(p, fsys, c)
+	v.Problems, err = diagnose(p, fsys, c, ip)
 	return v, err
 }
 
@@ -310,11 +324,10 @@ func (s *server) branches(commit string, c *doc.Collection) ([]branchRow, error)
 		if !remote {
 			local[strings.TrimPrefix(f[0], "refs/heads/")] = len(rows)
 		}
-		changes, err := s.scan(f[2], commit, held, c)
-		if err != nil {
-			return nil, err
-		}
-		rows = append(rows, branchRow{Name: f[1], Tip: f[2], Date: f[3], Subject: f[4], OriginOnly: remote, Changes: changes})
+		rows = append(rows, branchRow{Name: f[1], Tip: f[2], Date: f[3], Subject: f[4], OriginOnly: remote})
+	}
+	if err := s.scan(rows, commit, held, c); err != nil {
+		return nil, err
 	}
 	status, err := gitx.Run(p.Top, "status", "--porcelain", "-z", "--untracked-files=all", "--no-renames", "--", p.Root)
 	if err != nil {
@@ -346,35 +359,45 @@ func (s *server) branches(commit string, c *doc.Collection) ([]branchRow, error)
 	return slices.DeleteFunc(rows, func(b branchRow) bool { return len(b.Changes) == 0 }), nil
 }
 
-// scan returns the changes of tip with a file whose blob held lacks.
-func (s *server) scan(tip, commit string, held map[string]bool, c *doc.Collection) ([]branchChange, error) {
-	key := tip + " " + commit
-	if changes, ok := s.scans[key]; ok {
-		return changes, nil
+// scan sets the changes of each of rows that have a file whose blob held
+// lacks, diffing every tip not scanned before against commit in one git
+// diff-tree. Diffed from commit rather than from the merge-base, a file
+// differs that the target changed since, but its blob is held all the same.
+func (s *server) scan(rows []branchRow, commit string, held map[string]bool, c *doc.Collection) error {
+	var pairs [][2]string
+	for _, r := range rows {
+		if _, ok := s.scans[r.Tip+" "+commit]; !ok && !slices.Contains(pairs, [2]string{r.Tip, commit}) {
+			pairs = append(pairs, [2]string{r.Tip, commit})
+		}
 	}
-	raw, err := gitx.Run(s.p.Top, "diff", "--raw", "--no-abbrev", "--no-renames", commit+"..."+tip, "--", s.p.Root)
+	diffs, err := diffTree(s.p, pairs, "--raw", "--no-abbrev", "--no-renames", "--", s.p.Root)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	var fresh []string
-	for line := range strings.Lines(raw) {
-		meta, file, _ := strings.Cut(strings.TrimSuffix(line, "\n"), "\t")
-		if m := strings.Fields(meta); m[4] != "D" && !held[m[3]] {
-			fresh = append(fresh, file)
+	for i, pair := range pairs {
+		var fresh []string
+		for _, line := range diffs[i] {
+			meta, file, _ := strings.Cut(line, "\t")
+			if m := strings.Fields(meta); m[4] != "D" && !held[m[3]] {
+				fresh = append(fresh, file)
+			}
 		}
+		var changes []branchChange
+		if len(fresh) > 0 {
+			fsys, err := gitx.TreeFS(s.p.Top, pair[0], s.p.Root)
+			if err != nil {
+				return err
+			}
+			if changes, err = s.classify(fresh, fsys, c); err != nil {
+				return err
+			}
+		}
+		s.scans[pair[0]+" "+commit] = changes
 	}
-	var changes []branchChange
-	if len(fresh) > 0 {
-		fsys, err := gitx.TreeFS(s.p.Top, tip, s.p.Root)
-		if err != nil {
-			return nil, err
-		}
-		if changes, err = s.classify(fresh, fsys, c); err != nil {
-			return nil, err
-		}
+	for i := range rows {
+		rows[i].Changes = s.scans[rows[i].Tip+" "+commit]
 	}
-	s.scans[key] = changes
-	return changes, nil
+	return nil
 }
 
 // classify returns the changes in fsys, a branch's root, that a file of

@@ -22,6 +22,9 @@ type project struct {
 	Schema  string            `yaml:"schema"`
 	Context string            `yaml:"context"`
 	Rules   instruct.Rules    `yaml:"rules"`
+	// plans holds sincePlan's paths for each cycle while one project value
+	// is built, which asks it of a cycle up to three times.
+	plans map[*doc.Cycle][]string
 }
 
 func openProject() (project, error) {

@@ -39,7 +39,7 @@ func check(stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	found, err := diagnose(p, root, c)
+	found, err := diagnose(p, root, c, instruct.Project{})
 	if err != nil {
 		return err
 	}
@@ -54,15 +54,18 @@ func check(stdout io.Writer) error {
 }
 
 // diagnose returns every problem in c, the documents in root, each from
-// the project's top.
-func diagnose(p project, root fs.FS, c *doc.Collection) ([]string, error) {
-	if err := stale(p, root, c); err != nil {
+// the project's top. target is the target's commit and documents, read
+// here only when a cycle or task needs them and target lacks them.
+func diagnose(p project, root fs.FS, c *doc.Collection, target instruct.Project) ([]string, error) {
+	bases, err := atBases(p, c.Changes)
+	if err != nil {
 		return nil, err
 	}
-	if err := stalePlans(p, c); err != nil {
+	stale(p, root, c, bases)
+	if err := stalePlans(p, c, &target); err != nil {
 		return nil, err
 	}
-	if err := movedSinceBase(p, c); err != nil {
+	if err := movedSinceBase(p, c, &target, bases); err != nil {
 		return nil, err
 	}
 	shapes(root, c)
@@ -84,9 +87,9 @@ func diagnose(p project, root fs.FS, c *doc.Collection) ([]string, error) {
 }
 
 // stale reports, for each change in c, each requirement rewritten returns.
-func stale(p project, root fs.FS, c *doc.Collection) error {
+func stale(p project, root fs.FS, c *doc.Collection, bases map[string]gitx.Object) {
 	for _, ch := range c.Changes {
-		found, err := rewritten(p, root, c, ch)
+		found, err := rewritten(p, root, c, ch, bases)
 		if err != nil {
 			ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: ch.Dir + "/.grove.yaml", Message: missing(p, "base", ch.Meta.Base)})
 		}
@@ -95,7 +98,30 @@ func stale(p project, root fs.FS, c *doc.Collection) error {
 				Message: fmt.Sprintf("requirement %q was %s since base %s; revise the change with propose", r.Name, r.how, ch.Meta.Base[:min(7, len(ch.Meta.Base))])})
 		}
 	}
-	return nil
+}
+
+// atBases reads, in one git cat-file --batch, each change's base as
+// "<base>^{commit}" and each maintained spec it touches there as
+// "<base>:<root>/specs/<capability>/spec.md", keyed so; a name that is no
+// object is left out.
+func atBases(p project, changes []*doc.Change) (map[string]gitx.Object, error) {
+	var names []string
+	for _, ch := range changes {
+		if ch.Meta.Base != "" {
+			names = append(names, ch.Meta.Base+"^{commit}")
+			for _, capability := range ch.Touches {
+				names = append(names, ch.Meta.Base+":"+p.Root+"/specs/"+capability+"/spec.md")
+			}
+		}
+	}
+	objects, err := gitx.Objects(p.Top, names)
+	out := map[string]gitx.Object{}
+	for i, o := range objects {
+		if o.ID != "" {
+			out[names[i]] = o
+		}
+	}
+	return out, err
 }
 
 // staleRequirement is a requirement of change spec file, rewritten or
@@ -110,25 +136,25 @@ type staleRequirement struct {
 // base, nor what ch itself or a change it depends on, in c, gives it.
 // Reading root rather than the target, it sees a dependency archived on
 // this branch; allowing the change's own text, it stays quiet after archive
-// has reconciled the spec.
-func rewritten(p project, root fs.FS, c *doc.Collection, ch *doc.Change) ([]staleRequirement, error) {
+// has reconciled the spec. bases is what atBases read.
+func rewritten(p project, root fs.FS, c *doc.Collection, ch *doc.Change, bases map[string]gitx.Object) ([]staleRequirement, error) {
 	if ch.Meta.Base == "" {
 		return nil, nil
 	}
-	base, err := gitx.TreeFS(p.Top, ch.Meta.Base, p.Root)
-	if err != nil {
-		return nil, err
+	if _, ok := bases[ch.Meta.Base+"^{commit}"]; !ok {
+		return nil, fmt.Errorf("base %s is no commit", ch.Meta.Base)
 	}
 	var out []staleRequirement
 	for _, file := range slices.Sorted(maps.Keys(ch.Touches)) {
 		spec := "specs/" + ch.Touches[file] + "/spec.md"
 		b, _ := fs.ReadFile(root, file)
 		for _, r := range doc.Requirements(string(b)) {
-			was, ok := requirement(base, spec, r.Name)
+			was, ok := requirement(string(bases[ch.Meta.Base+":"+p.Root+"/"+spec].Data), r.Name)
 			if (r.Section != "MODIFIED" && r.Section != "REMOVED") || !ok {
 				continue
 			}
-			now, present := requirement(root, spec, r.Name)
+			b, _ := fs.ReadFile(root, spec)
+			now, present := requirement(string(b), r.Name)
 			fine := present && now == was
 			for _, g := range gives(root, behind(c, ch), ch.Touches[file], r.Name) {
 				fine = fine || g.Section == "REMOVED" && !present || g.Section != "REMOVED" && present && g.Text == now
@@ -168,17 +194,16 @@ func shapes(root fs.FS, c *doc.Collection) {
 }
 
 // stalePlans reports each member of a cycle in c, not done, that changed
-// on the target since the cycle's plan. Only then is the target read, so a
-// project with no such cycle checks without it.
-func stalePlans(p project, c *doc.Collection) error {
-	var target instruct.Project
+// on the target since the cycle's plan. Only then is the target read, if
+// target lacks it, so a project with no such cycle checks without it.
+func stalePlans(p project, c *doc.Collection, target *instruct.Project) error {
 	for _, cy := range c.Cycles {
 		if cy.Done || cy.Meta.Planned == "" {
 			continue
 		}
 		if target.Agreed == nil {
 			var err error
-			if target, err = p.agreed(); err != nil {
+			if *target, err = p.agreed(); err != nil {
 				return err
 			}
 		}
@@ -198,23 +223,34 @@ func stalePlans(p project, c *doc.Collection) error {
 // done, naming each file its tasks name that differs on the target from the
 // change's base.
 // A member of such a cycle is its plan's to report instead (stalePlans).
-func movedSinceBase(p project, c *doc.Collection) error {
-	commit := ""
+// The target is resolved only then, if target lacks it, and the files each
+// base differs in are read in one git diff-tree from what atBases read.
+func movedSinceBase(p project, c *doc.Collection, target *instruct.Project, bases map[string]gitx.Object) error {
+	var watched []*doc.Change
+	var pairs [][2]string // the target and each distinct base
 	for _, ch := range c.Changes {
 		if inOpenCycle(c, ch.ID) || ch.Meta.Base == "" || !slices.ContainsFunc(ch.Tasks, func(t doc.Task) bool { return len(t.Files) > 0 }) {
 			continue
 		}
-		if commit == "" {
+		if target.Commit == "" {
 			var err error
-			if commit, err = gitx.ResolveBranch(p.Top, p.Target); err != nil {
+			if target.Commit, err = gitx.ResolveBranch(p.Top, p.Target); err != nil {
 				return err
 			}
 		}
-		tasks, err := moved(p, commit, ch)
-		if err != nil { // stale reports a base that is no commit
-			continue
+		if base, ok := bases[ch.Meta.Base+"^{commit}"]; ok { // stale reports a base that is no commit
+			if watched = append(watched, ch); !slices.Contains(pairs, [2]string{target.Commit, base.ID}) {
+				pairs = append(pairs, [2]string{target.Commit, base.ID})
+			}
 		}
+	}
+	diffs, err := diffTree(p, pairs, "--name-only", "--no-renames")
+	if err != nil {
+		return err
+	}
+	for _, ch := range watched {
 		var files []string
+		tasks := naming(ch, diffs[slices.Index(pairs, [2]string{target.Commit, bases[ch.Meta.Base+"^{commit}"].ID})])
 		for _, t := range tasks {
 			files = append(files, t.Files...)
 		}
@@ -231,10 +267,34 @@ func inOpenCycle(c *doc.Collection, id string) bool {
 	return slices.ContainsFunc(c.Cycles, func(cy *doc.Cycle) bool { return !cy.Done && slices.Contains(cy.Meta.Changes, id) })
 }
 
+// diffTree runs one git diff-tree --stdin --always -r with args, given
+// pairs, each a commit and the one to diff it from, and returns the lines
+// it prints for each pair, in order. --always heads each pair's lines with
+// its commit, even when they differ in nothing.
+func diffTree(p project, pairs [][2]string, args ...string) ([][]string, error) {
+	if len(pairs) == 0 {
+		return nil, nil
+	}
+	var in strings.Builder
+	for _, pair := range pairs {
+		in.WriteString(pair[0] + " " + pair[1] + "\n")
+	}
+	out, err := gitx.Input(p.Top, in.String(), append([]string{"diff-tree", "--stdin", "--always", "-r"}, args...)...)
+	var diffs [][]string
+	for line := range strings.Lines(out) {
+		if line, n := strings.TrimSuffix(line, "\n"), len(diffs); n < len(pairs) && line == pairs[n][0] {
+			diffs = append(diffs, nil)
+		} else {
+			diffs[n-1] = append(diffs[n-1], line)
+		}
+	}
+	return diffs, err
+}
+
 // moved returns ch's tasks that name a file differing at commit from it at
 // ch's base, each with only those files.
 func moved(p project, commit string, ch *doc.Change) ([]doc.Task, error) {
-	diff, err := gitx.Run(p.Top, append([]string{"diff", "--name-only", "--end-of-options", ch.Meta.Base, commit, "--"}, named(ch)...)...)
+	diff, err := gitx.Run(p.Top, append([]string{"diff", "--name-only", "--no-renames", "--end-of-options", ch.Meta.Base, commit, "--"}, named(ch)...)...)
 	if err != nil {
 		return nil, err
 	}
@@ -289,9 +349,15 @@ func named(ch *doc.Change) []string {
 // commit, holds open, whose folder, or a file its tasks name, sincePlan
 // lists.
 func changedSincePlan(p project, commit string, at *doc.Collection, cy *doc.Cycle) ([]string, error) {
-	paths, err := sincePlan(p, commit, at, cy)
-	if err != nil {
-		return nil, err
+	paths, ok := p.plans[cy]
+	if !ok {
+		var err error
+		if paths, err = sincePlan(p, commit, at, cy); err != nil {
+			return nil, err
+		}
+		if p.plans != nil {
+			p.plans[cy] = paths
+		}
 	}
 	var out []string
 	for _, id := range cy.Meta.Changes {
@@ -423,11 +489,10 @@ func gives(root fs.FS, changes []*doc.Change, capability, name string) []doc.Req
 	return out
 }
 
-// requirement returns the text of requirement name in the spec file of
-// fsys, and whether it has one.
-func requirement(fsys fs.FS, file, name string) (string, bool) {
-	b, _ := fs.ReadFile(fsys, file)
-	for _, r := range doc.Requirements(string(b)) {
+// requirement returns the text of requirement name in spec, and whether
+// it has one.
+func requirement(spec, name string) (string, bool) {
+	for _, r := range doc.Requirements(spec) {
 		if r.Name == name {
 			return r.Text, true
 		}
