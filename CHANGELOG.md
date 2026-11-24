@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/mascah/grove/compare/v0.15.0...v0.15.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **cli:** bound the git processes reading the project value starts ([#199](https://github.com/mascah/grove/issues/199)) ([65067c2](https://github.com/mascah/grove/commit/65067c2ba709a40a85cf6554fb28b22165d34eec))
+
 ## [0.15.0](https://github.com/mascah/grove/compare/v0.14.0...v0.15.0) (2026-11-22)
 
 
