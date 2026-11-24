@@ -330,8 +330,10 @@ func TestPropose(t *testing.T) {
 		!strings.Contains(out, "before you write any document, send the owner one message,\n  the round, and wait") || !strings.Contains(out, "It asks at most five decisions you\n  would otherwise assume, the most consequential") || !strings.Contains(out, "Before you tell the owner the change is written, check") || !strings.Contains(out, "### 4. Check the change") || strings.Contains(out, "Assumptions to confirm") || strings.Contains(out, "implementing unattended ignores it") || strings.Contains(out, "Leave none out") {
 		t.Errorf("propose from a description:\n%.3000s", out)
 	}
+	depGuide := "When a change in `depends_on` adds or modifies a requirement of the\n  capability, put that requirement under MODIFIED, written from the text\n  that change gives it and naming that change, even where no maintained\n  spec exists at `base`."
 	for _, s := range []string{"it\n  says so and offers to split it", "`depends_on`", "worded so that \"yes\" accepts it: first\n  what changes behavior, scope or compatibility or loses data", "Write every\n  other decision you would otherwise assume as an open question with your\n  recommended answer, its reason and the task it decides",
-		"Write a task's `Delegated:` line", "only where the\n  owner agreed to it in the round", "A task may have a `Delegated:` line, right after `Files:`", "Implementing honors it.", "Delegated: test layout and private helpers"} {
+		"Write a task's `Delegated:` line", "only where the\n  owner agreed to it in the round", "A task may have a `Delegated:` line, right after `Files:`", "Implementing honors it.", "Delegated: test layout and private helpers",
+		"write every agreed part now, in this\n  session", "written against the requirements the earlier parts\n  leave", "Defer no part because an earlier one rewrites the same\n  requirements", depGuide} {
 		if !strings.Contains(out, s) {
 			t.Errorf("propose instructions lack %q", s)
 		}
@@ -353,8 +355,8 @@ func TestPropose(t *testing.T) {
 			t.Errorf("unattended propose instructions lack %q", s)
 		}
 	}
-	if bug := grove(t, "instructions", "propose", "--schema", "bugfix", "x"); !strings.Contains(bug, "It asks at most five decisions") || strings.Contains(bug, "Leave none out") {
-		t.Error("bugfix propose does not ask at most five decisions")
+	if bug := grove(t, "instructions", "propose", "--schema", "bugfix", "x"); !strings.Contains(bug, "It asks at most five decisions") || !strings.Contains(bug, depGuide) || strings.Contains(bug, "Leave none out") {
+		t.Error("bugfix propose does not ask at most five decisions, or lacks the guide to a dependency's requirement")
 	}
 	if bug := grove(t, "instructions", "propose", "--unattended", "--schema", "bugfix", "x"); !strings.Contains(bug, "**Propose a bug fix") || !strings.Contains(bug, "Ask and wait for no one.") {
 		t.Errorf("unattended bugfix propose:\n%.3000s", bug)

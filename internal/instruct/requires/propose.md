@@ -34,9 +34,12 @@
   what changes behavior, scope or compatibility or loses data, then
   architecture or interfaces costly to reverse. If there is nothing to ask,
   it says so, and you write once the owner confirms the scope.
-- If the owner agrees to split, write each part as its own change on this
-  branch, each from its own run of Grove's `instructions propose`, the later
-  naming the earlier in `depends_on`; otherwise write one. Write each change
+- If the owner agrees to split, write every agreed part now, in this
+  session, as its own change on this branch, each from its own run of
+  Grove's `instructions propose`, the later naming the earlier in
+  `depends_on` and written against the requirements the earlier parts
+  leave. Defer no part because an earlier one rewrites the same
+  requirements. Otherwise write one. Write each change
   the owner says must land first in `depends_on`; leave the field out when
   there is none. Keep `base` as the template has it: the target commit the
   change is proposed from.

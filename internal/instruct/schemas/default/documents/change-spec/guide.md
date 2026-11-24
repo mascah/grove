@@ -7,8 +7,13 @@ Write one change spec for each affected capability, inside the change folder.
 - When no maintained spec exists, name the capability by choosing its spec ID,
   put every proposed requirement under ADDED, and describe what the code does
   today under "Observed current behavior", each observation with its source
-  path and revision. Do not use MODIFIED or REMOVED: nothing agreed exists to
-  modify. Do not present observed behavior as agreed behavior.
+  path and revision. Do not use MODIFIED or REMOVED, but as the next bullet
+  says: nothing agreed exists to modify. Do not present observed behavior as
+  agreed behavior.
+- When a change in `depends_on` adds or modifies a requirement of the
+  capability, put that requirement under MODIFIED, written from the text
+  that change gives it and naming that change, even where no maintained
+  spec exists at `base`.
 - Name what the proposal starts from by commit, "no maintained spec at <base
   commit>", never as a claim about the target branch that a later merge could
   make false.
