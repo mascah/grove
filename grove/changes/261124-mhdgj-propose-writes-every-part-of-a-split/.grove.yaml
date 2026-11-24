@@ -1,0 +1,5 @@
+title: "Propose writes every part of an agreed split"
+created: 2026-11-24T02:44:31Z
+description: "Once the owner agrees to split, propose writes every part in that session, each later part's change spec written from the text the part it depends on gives a requirement."
+schema: default
+base: acf076d16679e25f9aea5ba5dc0f57fb4b1be739
