@@ -27,6 +27,7 @@ repository with this change open prints `No problems in grove/.`;
 `just check` passes.
 
 Check: a MODIFIED requirement's earlier text is the last text a change it depends on gives it, else what `base` holds, as the proposal recommends; the spec's "before" count is the spec at `base`, so a dependency's other additions to the spec are not counted in either total. No test covers a dependency.
+Found: `TestServe` in `internal/cli/walkthrough_test.go` fails intermittently at its first `serving` call ("grove serve printed \"\"", expecting `http://127.0.0.1:7070/`), on main at 9d55895 as on this branch: 4 of 5 runs of `go test ./internal/cli -run TestServe -count=5` failed on both, with nothing listening on port 7070; seen when `just check` failed once on the untouched baseline.
 Check: the messages print plain numbers (`3000`, not `3,000`), and a spec report names the change spec's path with no line.
 
 ### T-02 — The change-spec guide, the reference and the walkthrough
@@ -63,3 +64,5 @@ Checks: `TestSizes`, passed; the step run by hand on a fresh fixture with
 - requirements "The propose instructions": TestSizes (the guide's line in `grove instructions propose`), passed
 
 ## Reconciliation
+
+- requirements: applied to specs/requirements/spec.md
