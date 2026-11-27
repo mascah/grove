@@ -20,6 +20,7 @@ nav:
       - Specs of the code you already have: guides/spec-existing-code.md
       - Split a maintained spec: guides/split-a-maintained-spec.md
       - Reconcile a maintained spec: guides/reconcile-a-maintained-spec.md
+      - Trim the archive: guides/trim-the-archive.md
   - Reference: reference.md
 
 theme:

@@ -66,6 +66,7 @@ without you, from any harness. Grove starts no agent.
   [running on a timer](guides/run-on-a-timer.md),
   [keeping a glossary and decision records](guides/glossary-and-decisions.md),
   [writing specs of the code you already have](guides/spec-existing-code.md),
-  [splitting a maintained spec](guides/split-a-maintained-spec.md) and
-  [reconciling one with current behavior](guides/reconcile-a-maintained-spec.md).
+  [splitting a maintained spec](guides/split-a-maintained-spec.md),
+  [reconciling one with current behavior](guides/reconcile-a-maintained-spec.md) and
+  [trimming the archive](guides/trim-the-archive.md).
 - [Reference](reference.md): every command, skill and setting.
