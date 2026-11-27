@@ -1,0 +1,5 @@
+title: "Check limits the size of rules and specs"
+created: 2026-11-27T19:06:57Z
+description: grove check reports a change that adds a rule over 60 words, lengthens one, or leaves a spec over 2,500 words larger than it found it.
+schema: default
+base: 3cfd2ef8d661f7ee02f437c69c459327592a22c1
