@@ -2,7 +2,8 @@
 
 ## Purpose
 
-`grove check` wants "shall" and a scenario in each requirement, and `grove
+`grove check` wants "shall" and a scenario in each requirement and
+reports a change that grows a rule or a spec past its limit, and `grove
 archive` refuses a fold that does not hold the change's requirements word
 for word. A requirement is one `### Requirement: <name>` block of a
 maintained spec or a change spec: a rule that says "shall", with at least

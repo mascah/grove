@@ -69,6 +69,7 @@ func diagnose(p project, root fs.FS, c *doc.Collection, target instruct.Project)
 		return nil, err
 	}
 	shapes(root, c)
+	sizes(p, root, c, bases)
 	diags := slices.Clone(c.Diagnostics)
 	for _, d := range c.Specs {
 		diags = append(diags, d.Diagnostics...)
@@ -155,9 +156,9 @@ func rewritten(p project, root fs.FS, c *doc.Collection, ch *doc.Change, bases m
 			}
 			b, _ := fs.ReadFile(root, spec)
 			now, present := requirement(string(b), r.Name)
-			fine := present && now == was
+			fine := present && now.Text == was.Text
 			for _, g := range gives(root, behind(c, ch), ch.Touches[file], r.Name) {
-				fine = fine || g.Section == "REMOVED" && !present || g.Section != "REMOVED" && present && g.Text == now
+				fine = fine || g.Section == "REMOVED" && !present || g.Section != "REMOVED" && present && g.Text == now.Text
 			}
 			if !fine {
 				out = append(out, staleRequirement{r, file, map[bool]string{true: "rewritten", false: "removed"}[present]})
@@ -489,15 +490,68 @@ func gives(root fs.FS, changes []*doc.Change, capability, name string) []doc.Req
 	return out
 }
 
-// requirement returns the text of requirement name in spec, and whether
-// it has one.
-func requirement(spec, name string) (string, bool) {
+// requirement returns requirement name in spec, and whether it has one.
+func requirement(spec, name string) (doc.Requirement, bool) {
 	for _, r := range doc.Requirements(spec) {
 		if r.Name == name {
-			return r.Text, true
+			return r, true
 		}
 	}
-	return "", false
+	return doc.Requirement{}, false
+}
+
+// The words a rule and a maintained spec may hold before a change that
+// grows them is reported (requirements spec).
+const ruleLimit, specLimit = 60, 2500
+
+// sizes reports, for each change in c, each rule it adds over ruleLimit,
+// each rule it leaves over ruleLimit and longer than it was, and each
+// maintained spec it leaves over specLimit and larger than at its base. A
+// requirement was what a change it depends on gives it, else what base
+// holds, so shortening a dependency's long rule is not growth.
+func sizes(p project, root fs.FS, c *doc.Collection, bases map[string]gitx.Object) {
+	for _, ch := range c.Changes {
+		for _, file := range slices.Sorted(maps.Keys(ch.Touches)) {
+			capability := ch.Touches[file]
+			at := string(bases[ch.Meta.Base+":"+p.Root+"/specs/"+capability+"/spec.md"].Data)
+			before := len(strings.Fields(at))
+			after := before
+			b, _ := fs.ReadFile(root, file)
+			for _, r := range doc.Requirements(string(b)) {
+				if r.Section == "" {
+					continue
+				}
+				was, ok := requirement(at, r.Name)
+				for _, g := range gives(root, behind(c, ch)[1:], capability, r.Name) {
+					was, ok = g, g.Section != "REMOVED"
+				}
+				if ok {
+					after -= words(was)
+				}
+				if r.Section == "REMOVED" {
+					continue
+				}
+				after += words(r)
+				if n := r.RuleWords(); n > ruleLimit && (!ok || r.Section == "ADDED") {
+					ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: file, Line: r.Line,
+						Message: fmt.Sprintf("requirement %q has a rule of %d words against a limit of %d", r.Name, n, ruleLimit)})
+				} else if n > ruleLimit && n > was.RuleWords() {
+					ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: file, Line: r.Line,
+						Message: fmt.Sprintf("the rule of requirement %q grew from %d words to %d against a limit of %d", r.Name, was.RuleWords(), n, ruleLimit)})
+				}
+			}
+			if after > specLimit && after > before {
+				ch.Diagnostics = append(ch.Diagnostics, doc.Diagnostic{Path: file,
+					Message: fmt.Sprintf("this change takes the %s spec from %d words to %d against a limit of %d", capability, before, after, specLimit)})
+			}
+		}
+	}
+}
+
+// words returns the number of words in r, its heading included, as wc -w
+// counts them.
+func words(r doc.Requirement) int {
+	return len(strings.Fields("### Requirement: " + r.Name + "\n" + r.Text))
 }
 
 // configFields are grove.yaml's fields, as project reads them.
