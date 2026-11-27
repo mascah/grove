@@ -19,5 +19,8 @@ Write one change spec for each affected capability, inside the change folder.
   make false.
 - Each requirement is one EARS sentence about behavior a user or caller can
   observe, followed by at least one scenario at the boundary that matters.
+- Keep a rule, the text before its first scenario, to 60 words, and leave
+  no maintained spec over 2,500 words larger than you found it: `grove
+  check` reports a change that does either.
 - Do not edit the maintained specs to describe this change. Future behavior
   stays in the change until it is implemented and archived.

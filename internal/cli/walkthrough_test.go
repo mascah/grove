@@ -747,6 +747,69 @@ func TestFold(t *testing.T) {
 	}
 }
 
+// TestSizes checks the limits on a rule and a spec (requirements spec),
+// only a change that grows text past them being reported, and follows the
+// walkthrough's "A rule over its limit".
+func TestSizes(t *testing.T) {
+	dir := setUp(t)
+	fill := func(n int) string { return strings.Repeat(" w", n) }
+	// blk is a requirement of rule+scen+6 words, its rule rule words long.
+	blk := func(name string, rule, scen int) string {
+		return "### Requirement: " + name + "\n\nIt shall" + fill(rule-2) + "\n\n#### Scenario: S\n\n- THEN" + fill(scen-2) + "\n\n"
+	}
+	write := func(file, body string) {
+		os.MkdirAll(filepath.Join(dir, "grove", filepath.Dir(file)), 0o755)
+		os.WriteFile(filepath.Join(dir, "grove", file), []byte(body), 0o644)
+	}
+	// spec writes a maintained spec of total words, padded by requirement Pad.
+	spec := func(capability string, total int, reqs string) {
+		write("specs/"+capability+"/spec.md", "# "+capability+"\n\n## Requirements\n\n"+reqs+blk("Pad", 10, total-4-len(strings.Fields(reqs))-16))
+	}
+	spec("rules", 1000, blk("Long", 80, 4)+blk("Short", 50, 4)+blk("Same", 80, 4)+blk("Cut", 80, 4)+blk("Untouched", 90, 4))
+	spec("over", 3000, "")
+	spec("mixed", 3000, blk("Old", 10, 284))
+	spec("near", 2400, "")
+	spec("under", 1000, "")
+	commitAll(t, dir, "Specs")
+	base := strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))
+	change := func(folder string, specs map[string]string) {
+		write("changes/"+folder+"/.grove.yaml", "title: T\ncreated: 2026-11-27T00:00:00Z\nbase: "+base+"\n")
+		write("changes/"+folder+"/proposal.md", "# T\n")
+		for capability, body := range specs {
+			write("changes/"+folder+"/specs/"+capability+"/spec.md", "# Changes to "+capability+"\n\n"+body)
+		}
+	}
+	rules := "## ADDED Requirements\n\n" + blk("Export", 61, 4) + blk("Import", 60, 400) +
+		"## MODIFIED Requirements\n\n" + blk("Long", 95, 4) + blk("Cut", 70, 4) + blk("Short", 65, 4) + blk("Same", 80, 4) + "#### Scenario: T\n\n- THEN more\n\n"
+	added := "## ADDED Requirements\n\n" + blk("New", 10, 184)
+	change("261127-aaaaa-rules", map[string]string{"rules": rules})
+	change("261127-bbbbb-specs", map[string]string{"over": added, "near": added, "under": added,
+		"mixed":   added + "## REMOVED Requirements\n\n### Requirement: Old\n\nNot wanted.\n",
+		"exports": "## ADDED Requirements\n\n" + blk("Export", 10, 2584)})
+	line := func(body, name string) string {
+		return fmt.Sprint(strings.Count(body[:strings.Index(body, "### Requirement: "+name+"\n")], "\n") + 3)
+	}
+	a, b := "grove/changes/261127-aaaaa-rules/specs/rules/spec.md:", "grove/changes/261127-bbbbb-specs/specs/"
+	want := a + line(rules, "Export") + ": requirement \"Export\" has a rule of 61 words against a limit of 60\n" +
+		a + line(rules, "Long") + ": the rule of requirement \"Long\" grew from 80 words to 95 against a limit of 60\n" +
+		a + line(rules, "Short") + ": the rule of requirement \"Short\" grew from 50 words to 65 against a limit of 60\n" +
+		b + "exports/spec.md: this change takes the exports spec from 0 words to 2600 against a limit of 2500\n" +
+		b + "near/spec.md: this change takes the near spec from 2400 words to 2600 against a limit of 2500\n" +
+		b + "over/spec.md: this change takes the over spec from 3000 words to 3200 against a limit of 2500\n"
+	var stdout, stderr strings.Builder
+	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != want {
+		t.Errorf("check: status %d\n%s%s", code, stdout.String(), stderr.String())
+	}
+	change("261127-aaaaa-rules", map[string]string{"rules": strings.Replace(rules, blk("Export", 61, 4), blk("Export", 60, 4), 1)})
+	stdout.Reset()
+	if run([]string{"check"}, &stdout, &stderr); stdout.String() != want[strings.Index(want, "\n")+1:] {
+		t.Errorf("check after shortening the rule:\n%s", stdout.String())
+	}
+	if out := grove(t, "instructions", "propose"); !strings.Contains(out, "Keep a rule, the text before its first scenario, to 60 words, and leave\n  no maintained spec over 2,500 words larger than you found it: `grove\n  check` reports a change that does either.") {
+		t.Errorf("propose instructions give no limits:\n%.3000s", out)
+	}
+}
+
 // TestSchemas follows the walkthrough's "A bug": a project schema chosen
 // for a new change, and kept by the change.
 func TestSchemas(t *testing.T) {

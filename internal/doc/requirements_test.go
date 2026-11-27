@@ -57,3 +57,16 @@ func TestShape(t *testing.T) {
 		t.Errorf("Problems: %q", got)
 	}
 }
+
+func TestRuleWords(t *testing.T) {
+	sixty := strings.Repeat("word ", 59) + "shall"
+	for text, want := range map[string]int{
+		sixty + "\n\n#### Scenario: S\n\n- GIVEN many more words here":              60,
+		"It shall run:\n\n```sh\n#### Scenario: not one\n```\n\n#### Scenario: S\n": 9,
+		"It shall hold.": 3,
+	} {
+		if got := (Requirement{Text: text}).RuleWords(); got != want {
+			t.Errorf("RuleWords(%q) = %d, want %d", text, got, want)
+		}
+	}
+}

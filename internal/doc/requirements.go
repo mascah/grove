@@ -38,6 +38,19 @@ func (r Requirement) Problems() []string {
 	return out
 }
 
+// RuleWords returns the number of words, as wc -w counts them, in r's
+// rule: its text before its first scenario heading outside fenced code.
+func (r Requirement) RuleWords() int {
+	n, fenced := 0, false
+	for _, l := range strings.Split(r.Text, "\n") {
+		if fenced = fenced != fence(l); !fenced && strings.HasPrefix(l, "#### Scenario:") {
+			break
+		}
+		n += len(strings.Fields(l))
+	}
+	return n
+}
+
 // ChangeHeadings returns the line of each ADDED, MODIFIED or REMOVED
 // Requirements heading in src outside fenced code.
 func ChangeHeadings(src string) []int {
