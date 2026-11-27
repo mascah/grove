@@ -29,6 +29,37 @@ repository with this change open prints `No problems in grove/.`;
 Check: a MODIFIED requirement's earlier text is the last text a change it depends on gives it, else what `base` holds, as the proposal recommends; the spec's "before" count is the spec at `base`, so a dependency's other additions to the spec are not counted in either total. No test covers a dependency.
 Check: the messages print plain numbers (`3000`, not `3,000`), and a spec report names the change spec's path with no line.
 
+### T-02 — The change-spec guide, the reference and the walkthrough
+
+Status: done
+
+The change-spec guide gains a bullet giving both limits and saying
+`grove check` reports a change that exceeds either (instruction text 8,492
+words of 9,000). `docs/reference.md`'s `grove check` row names the reports
+and the limits, linking the requirements spec and the guides to splitting
+and reconciling a maintained spec. `dev/walkthrough.md` gains "A rule over
+its limit" under Other paths, which `TestSizes` follows: shortening the
+rule clears its report, and `grove instructions propose` prints the
+guide's line.
+
+Checks: `TestSizes`, passed; the step run by hand on a fresh fixture with
+`bin/grove` (a rule of 61 words reported at line 5, exit 1; one word cut,
+`No problems in grove/.`); `just check` passes.
+
 ## Scenarios
+
+- requirements "A rule of 61 words": internal/cli/walkthrough_test.go TestSizes ("Export"), passed
+- requirements "A rule of 60 words with long scenarios": TestSizes ("Import"), passed
+- requirements "A long rule no open change names": TestSizes ("Untouched", 90 words), passed
+- requirements "A long rule made longer": TestSizes ("Long", 80 to 95), passed
+- requirements "A long rule made shorter": TestSizes ("Cut", 80 to 70), passed
+- requirements "A short rule taken over the limit": TestSizes ("Short", 50 to 65), passed
+- requirements "Only the scenarios change": TestSizes ("Same"), passed
+- requirements "Adding to a spec already over": TestSizes (`over`, 3000 to 3200), passed
+- requirements "Adding and removing": TestSizes (`mixed`), passed
+- requirements "Taking a spec over": TestSizes (`near`, 2400 to 2600), passed
+- requirements "A spec that stays under": TestSizes (`under`), passed
+- requirements "A new capability": TestSizes (`exports`, 0 to 2600), passed
+- requirements "The propose instructions": TestSizes (the guide's line in `grove instructions propose`), passed
 
 ## Reconciliation

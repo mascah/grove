@@ -1017,6 +1017,12 @@ the browser's console shows no error.
   wrapped at other places, and `grove archive <change-id>` archives it.
   Paste `## ADDED Requirements` above it, or delete its scenario, and
   `grove check` reports that line.
+- **A rule over its limit** (reference, `grove check`). After the main
+  line, on a new branch, write a change whose change spec ADDs a
+  requirement with a rule of 61 words. `grove check` reports
+  > grove/changes/\<folder>/specs/record-editing/spec.md:\<line>: requirement "\<name>" has a rule of 61 words against a limit of 60
+
+  and exits non-zero. Cut a word from the rule and `grove check` is clean.
 - **Drop a change** (concepts, "The loop"). `/grove-archive <change-id>` on
   an approved change nobody will build asks why, writes `Status: dropped`
   and the reason in `implementation.md`, and moves it without touching the

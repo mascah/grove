@@ -747,8 +747,9 @@ func TestFold(t *testing.T) {
 	}
 }
 
-// TestSizes checks the limits on a rule and a spec (requirements spec):
-// only a change that grows text past them is reported.
+// TestSizes checks the limits on a rule and a spec (requirements spec),
+// only a change that grows text past them being reported, and follows the
+// walkthrough's "A rule over its limit".
 func TestSizes(t *testing.T) {
 	dir := setUp(t)
 	fill := func(n int) string { return strings.Repeat(" w", n) }
@@ -798,6 +799,14 @@ func TestSizes(t *testing.T) {
 	var stdout, stderr strings.Builder
 	if code := run([]string{"check"}, &stdout, &stderr); code != 1 || stdout.String() != want {
 		t.Errorf("check: status %d\n%s%s", code, stdout.String(), stderr.String())
+	}
+	change("261127-aaaaa-rules", map[string]string{"rules": strings.Replace(rules, blk("Export", 61, 4), blk("Export", 60, 4), 1)})
+	stdout.Reset()
+	if run([]string{"check"}, &stdout, &stderr); stdout.String() != want[strings.Index(want, "\n")+1:] {
+		t.Errorf("check after shortening the rule:\n%s", stdout.String())
+	}
+	if out := grove(t, "instructions", "propose"); !strings.Contains(out, "Keep a rule, the text before its first scenario, to 60 words, and leave\n  no maintained spec over 2,500 words larger than you found it: `grove\n  check` reports a change that does either.") {
+		t.Errorf("propose instructions give no limits:\n%.3000s", out)
 	}
 }
 
