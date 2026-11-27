@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.16.0](https://github.com/mascah/grove/compare/v0.15.1...v0.16.0) (2026-11-27)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** `grove check` now fails an open change that adds a rule over 60 words, lengthens a rule over 60 words, or leaves a maintained spec over 2,500 words larger than at its `base`. Shorten the rule, or split or reconcile the spec.
+
+### Features
+
+* **cli:** check limits the size of rules and specs ([#207](https://github.com/mascah/grove/issues/207)) ([712fefd](https://github.com/mascah/grove/commit/712fefdd31ee6fb4e67650410da9efea8447c2f9))
+* **propose:** write every part of an agreed split ([#203](https://github.com/mascah/grove/issues/203)) ([3cfd2ef](https://github.com/mascah/grove/commit/3cfd2ef8d661f7ee02f437c69c459327592a22c1))
+
 ## [0.15.1](https://github.com/mascah/grove/compare/v0.15.0...v0.15.1) (2026-11-24)
 
 
